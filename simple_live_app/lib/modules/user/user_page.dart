@@ -160,7 +160,7 @@ class UserPage extends StatelessWidget {
                     color: Colors.grey,
                   ),
                   onTap: () {
-                    Utils.checkUpdate();
+                    Utils.checkUpdate(showMsg: true);
                   },
                 ),
                 ListTile(

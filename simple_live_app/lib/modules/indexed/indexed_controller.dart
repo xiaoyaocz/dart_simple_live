@@ -46,11 +46,14 @@ class IndexedController extends GetxController {
     super.onInit();
   }
 
-  void showFirstRun() {
+  void showFirstRun() async {
     var settingsController = Get.find<AppSettingsController>();
     if (settingsController.firstRun) {
       settingsController.setNoFirstRun();
-      Utils.showStatement();
+      await Utils.showStatement();
+      Utils.checkUpdate();
+    } else {
+      Utils.checkUpdate();
     }
   }
 }

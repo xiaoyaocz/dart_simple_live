@@ -37,7 +37,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.7.1'
+          flutter-version: '3.7.5'
           cache: true 
       #更新Flutter的packages
       - name: Restore packages
@@ -48,14 +48,16 @@ jobs:
       - name: Build APK
         run: |
           cd simple_live_app
-          flutter build apk --release
+          flutter build apk --release --split-per-abi
       #上传APK至Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: app-release.apk
           path: |
-            simple_live_app/build/app/outputs/flutter-apk/app-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
       #打包iOS
       - name: Build IPA
         run: |
@@ -93,7 +95,7 @@ jobs:
         with:
           allowUpdates: true
           artifactErrorsFailBuild: true
-          artifacts: "simple_live_app/build/app/outputs/flutter-apk/app-release.apk,simple_live_app/build/ios/iphoneos/ios_no_sign.ipa"
+          artifacts: "simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk,simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk,simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk,simple_live_app/build/ios/iphoneos/ios_no_sign.ipa"
           name: "${{ fromJson(steps.version.outputs.content).version }}"
           body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
           token: ${{ secrets.TOKEN }}

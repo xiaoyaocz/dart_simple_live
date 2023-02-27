@@ -1,8 +1,20 @@
-# simple_live
 
-[AllLive](https://github.com/xiaoyaocz/AllLive)项目的dart实现，支持跨平台获取各个网站的直播信息及弹幕。
 
-支持以下网站：
+
+<p align="center">
+    <img width="128" src="/assets/logo.png" alt="Simple Live logo">
+</p>
+<h2 align="center">Simple Live</h2>
+
+<p align="center">
+支持跨平台获取各个平台的直播信息及弹幕,基于<a href="https://github.com/xiaoyaocz/AllLive">AllLive</a>项目实现
+</p>
+
+![浅色模式](/assets/screenshot_light.jpg)
+
+![深色模式](/assets/screenshot_dark.jpg)
+
+## 支持平台：
 
 - 虎牙直播
 

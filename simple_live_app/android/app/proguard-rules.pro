@@ -1,0 +1,1 @@
+-keep class org.videolan.libvlc.** { *; }

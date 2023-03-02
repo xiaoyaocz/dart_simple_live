@@ -1,6 +1,7 @@
 {
-    "version": "1.0.0-test",
-    "version_num": 10000,
-    "version_desc": "测试版本",
+    "version": "1.0.1-dev",
+    "version_num": 10001,
+    "version_desc": "测试版本1.0.1",
+    "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

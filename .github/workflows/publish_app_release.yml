@@ -37,7 +37,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.7.5'
+          flutter-version: '3.7.6'
           cache: true 
       #更新Flutter的packages
       - name: Restore packages
@@ -98,6 +98,7 @@ jobs:
           artifacts: "simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk,simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk,simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk,simple_live_app/build/ios/iphoneos/ios_no_sign.ipa"
           name: "${{ fromJson(steps.version.outputs.content).version }}"
           body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
+          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
           token: ${{ secrets.TOKEN }}
       #完成
       - run: echo "🍏 This job's status is ${{ job.status }}."

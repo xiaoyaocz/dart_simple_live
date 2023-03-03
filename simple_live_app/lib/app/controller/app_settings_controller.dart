@@ -32,6 +32,10 @@ class AppSettingsController extends GetxController {
 
     chatTextGap.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextGap, 4.0);
+
+    qualityLevel.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kQualityLevel, 1);
+
     super.onInit();
   }
 
@@ -131,5 +135,12 @@ class AppSettingsController extends GetxController {
   void setDanmuEnable(bool e) {
     danmuEnable.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuEnable, e);
+  }
+
+  var qualityLevel = 1.obs;
+  void setQualityLevel(int level) {
+    qualityLevel.value = level;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kQualityLevel, level);
   }
 }

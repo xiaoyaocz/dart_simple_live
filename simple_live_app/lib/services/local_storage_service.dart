@@ -50,6 +50,9 @@ class LocalStorageService extends GetxService {
   /// 聊天区间隔
   static const String kChatTextGap = "ChatTextGap";
 
+  /// 播放清晰度，0=低，1=中，2=高
+  static const String kQualityLevel = "QualityLevel";
+
   late Box settingsBox;
   Future init() async {
     settingsBox = await Hive.openBox(

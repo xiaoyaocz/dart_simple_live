@@ -21,9 +21,9 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
                 Expanded(
                   child: Padding(
                     padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-                    child: const Text(
+                    child: Text(
                       "弹幕默认开关",
-                      style: TextStyle(fontSize: 14),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
                 ),
@@ -36,10 +36,10 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
               ],
             ),
             Padding(
-              padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
+              padding: AppStyle.edgeInsetsH12.copyWith(top: 24),
               child: Text(
                 "弹幕区域: ${(controller.danmuArea.value * 100).toInt()}%",
-                style: const TextStyle(fontSize: 14),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             Slider(
@@ -54,7 +54,7 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
               padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
               child: Text(
                 "不透明度: ${(controller.danmuOpacity.value * 100).toInt()}%",
-                style: const TextStyle(fontSize: 14),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             Slider(
@@ -69,7 +69,7 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
               padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
               child: Text(
                 "弹幕大小: ${(controller.danmuSize.value).toInt()}",
-                style: const TextStyle(fontSize: 14),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             Slider(
@@ -84,7 +84,7 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
               padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
               child: Text(
                 "弹幕速度: ${(controller.danmuSpeed.value).toInt()} (越小越快)",
-                style: const TextStyle(fontSize: 14),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
             Slider(

@@ -214,7 +214,19 @@ class LiveRoomController extends BaseController {
       return;
     }
     qualites.value = playQualites;
-    currentQuality = 0;
+
+    if (settingsController.qualityLevel.value == 2) {
+      //最高
+      currentQuality = 0;
+    } else if (settingsController.qualityLevel.value == 0) {
+      //最低
+      currentQuality = playQualites.length - 1;
+    } else {
+      //中间值
+      int middle = (playQualites.length / 2).floor();
+      currentQuality = middle;
+    }
+
     getPlayUrl();
   }
 

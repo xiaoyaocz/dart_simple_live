@@ -28,12 +28,12 @@ class IndexedPage extends GetView<IndexedController> {
               label: "首页",
             ),
             NavigationDestination(
-              icon: Icon(Remix.apps_line),
-              label: "分类",
+              icon: Icon(Remix.heart_line),
+              label: "关注",
             ),
             NavigationDestination(
-              icon: Icon(Remix.tools_line),
-              label: "工具箱",
+              icon: Icon(Remix.apps_line),
+              label: "分类",
             ),
             NavigationDestination(
               icon: Icon(Remix.user_smile_line),

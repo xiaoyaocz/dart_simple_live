@@ -8,6 +8,8 @@ import 'package:simple_live_app/modules/category/category_page.dart';
 import 'package:simple_live_app/modules/home/home_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
+import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
+import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/user/user_page.dart';
 
 class IndexedController extends GetxController {
@@ -23,13 +25,14 @@ class IndexedController extends GetxController {
     if (pages[i] is SizedBox) {
       switch (i) {
         case 1:
+          Get.put(FollowUserController());
+          pages[i] = const FollowUserPage();
+          break;
+        case 2:
           Get.put(CategoryController());
           pages[i] = const CategoryPage();
           break;
-        case 2:
-          Get.put(ToolBoxController());
-          pages[i] = const ToolBoxPage();
-          break;
+
         case 3:
           pages[i] = const UserPage();
           break;

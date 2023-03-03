@@ -9,6 +9,8 @@ import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
+import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
+import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
 import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
@@ -92,6 +94,14 @@ class AppPages {
     GetPage(
       name: RoutePath.kSponsor,
       page: () => const SponsorPage(),
+    ),
+    //工具箱
+    GetPage(
+      name: RoutePath.kTools,
+      page: () => const ToolBoxPage(),
+      bindings: [
+        BindingsBuilder.put(() => ToolBoxController()),
+      ],
     ),
   ];
 }

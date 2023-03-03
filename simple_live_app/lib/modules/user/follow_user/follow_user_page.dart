@@ -19,7 +19,6 @@ class FollowUserPage extends GetView<FollowUserController> {
       ),
       body: PageListView(
         pageController: controller,
-        padding: AppStyle.edgeInsetsV12,
         firstRefresh: true,
         itemBuilder: (_, i) {
           var item = controller.list[i];

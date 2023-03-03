@@ -268,7 +268,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                         controller.showQualites.value = true;
                       },
                       child: Text(
-                        controller.qualites[controller.currentQuality].quality,
+                        controller.currentQuality == -1
+                            ? ""
+                            : controller
+                                .qualites[controller.currentQuality].quality,
                         style:
                             const TextStyle(color: Colors.white, fontSize: 15),
                       ),

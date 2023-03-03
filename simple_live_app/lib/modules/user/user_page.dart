@@ -66,18 +66,23 @@ class UserPage extends StatelessWidget {
                     Get.toNamed(RoutePath.kHistory);
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Remix.heart_line),
-                  title: const Text("我的关注"),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey,
-                  ),
-                  onTap: () {
-                    Get.toNamed(RoutePath.kFollowUser);
-                  },
-                ),
               ],
+            ),
+            Divider(
+              indent: 12,
+              endIndent: 12,
+              color: Colors.grey.withOpacity(.1),
+            ),
+            ListTile(
+              leading: const Icon(Remix.link),
+              title: const Text("链接解析"),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
+              ),
+              onTap: () {
+                Get.toNamed(RoutePath.kTools);
+              },
             ),
             Divider(
               indent: 12,

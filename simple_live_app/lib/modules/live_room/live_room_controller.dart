@@ -8,8 +8,10 @@ import 'package:remixicon/remixicon.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
@@ -709,6 +711,7 @@ class LiveRoomController extends BaseController {
       ),
     );
     followed.value = true;
+    EventBus.instance.emit(Constant.kUpdateFollow, id);
   }
 
   /// 取消关注用户
@@ -719,6 +722,7 @@ class LiveRoomController extends BaseController {
     var id = "${site.id}_$roomId";
     DBService.instance.deleteFollow(id);
     followed.value = false;
+    EventBus.instance.emit(Constant.kUpdateFollow, id);
   }
 
   void share() {

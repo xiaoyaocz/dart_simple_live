@@ -87,8 +87,8 @@ class CategoryListView extends StatelessWidget {
         children: [
           NetImage(
             item.pic ?? "",
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             borderRadius: 8,
           ),
           AppStyle.vGap4,

@@ -20,14 +20,17 @@ class AppStyle {
   static ThemeData lightTheme = ThemeData(
     colorScheme: AppColors.lightColorScheme,
     useMaterial3: true,
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       //elevation: 0,
       centerTitle: true,
-      titleTextStyle: TextStyle(
+      titleTextStyle: const TextStyle(
         fontSize: 16,
         color: AppColors.black333,
       ),
       foregroundColor: AppColors.black333,
+      systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+        systemNavigationBarColor: Colors.transparent,
+      ),
     ),
 
     // radioTheme: RadioThemeData(
@@ -55,15 +58,18 @@ class AppStyle {
   static ThemeData darkTheme = ThemeData.dark().copyWith(
     colorScheme: AppColors.darkColorScheme,
     useMaterial3: true,
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       //elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle.light,
+
       centerTitle: true,
-      titleTextStyle: TextStyle(
+      titleTextStyle: const TextStyle(
         fontSize: 16,
         color: Colors.white,
       ),
       foregroundColor: Colors.white,
+      systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+        systemNavigationBarColor: Colors.transparent,
+      ),
     ),
     // radioTheme: RadioThemeData(
     //   fillColor: MaterialStateProperty.all(AppColors.darkColorScheme.primary),

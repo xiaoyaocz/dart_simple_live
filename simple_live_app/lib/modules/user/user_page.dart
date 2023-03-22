@@ -15,8 +15,12 @@ class UserPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: Get.isDarkMode
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+          ? SystemUiOverlayStyle.light.copyWith(
+              systemNavigationBarColor: Colors.transparent,
+            )
+          : SystemUiOverlayStyle.dark.copyWith(
+              systemNavigationBarColor: Colors.transparent,
+            ),
       child: SafeArea(
         child: ListView(
           padding: AppStyle.edgeInsetsA4,

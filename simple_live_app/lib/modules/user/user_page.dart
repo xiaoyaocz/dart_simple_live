@@ -172,17 +172,6 @@ class UserPage extends StatelessWidget {
                     Utils.checkUpdate(showMsg: true);
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Remix.cup_line),
-                  title: const Text("赞助作者"),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey,
-                  ),
-                  onTap: () {
-                    Get.toNamed(RoutePath.kSponsor);
-                  },
-                ),
               ],
             ),
           ],

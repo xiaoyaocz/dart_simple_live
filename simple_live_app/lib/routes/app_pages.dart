@@ -17,7 +17,6 @@ import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/user/history/history_controller.dart';
 import 'package:simple_live_app/modules/user/history/history_page.dart';
 import 'package:simple_live_app/modules/user/play_settings_page.dart';
-import 'package:simple_live_app/modules/user/sponsor_page.dart';
 
 import '../modules/indexed/indexed_page.dart';
 import 'route_path.dart';
@@ -89,11 +88,6 @@ class AppPages {
     GetPage(
       name: RoutePath.kSettingsPlay,
       page: () => const PlaySettingsPage(),
-    ),
-    //赞助
-    GetPage(
-      name: RoutePath.kSponsor,
-      page: () => const SponsorPage(),
     ),
     //工具箱
     GetPage(

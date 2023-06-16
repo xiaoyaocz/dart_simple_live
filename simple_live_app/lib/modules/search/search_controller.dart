@@ -6,11 +6,11 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/search/search_list_controller.dart';
 
-class SearchController extends GetxController
+class AppSearchController extends GetxController
     with GetSingleTickerProviderStateMixin {
   late TabController tabController;
   int index = 0;
-  SearchController() {
+  AppSearchController() {
     tabController =
         TabController(length: Sites.supportSites.length, vsync: this);
     tabController.animation?.addListener(() {

@@ -90,7 +90,7 @@ class DouyuSite implements LiveSite {
   Future<List<LivePlayQuality>> getPlayQualites(
       {required LiveRoomDetail detail}) async {
     var data = detail.data.toString();
-    data += "&cdn=&rate=0";
+    data += "&cdn=&rate=-1&ver=Douyu_223061205&iar=1&ive=1&hevc=0&fa=0";
     List<LivePlayQuality> qualities = [];
     var result = await HttpClient.instance.postJson(
       "https://www.douyu.com/lapi/live/getH5Play/${detail.roomId}",
@@ -134,6 +134,11 @@ class DouyuSite implements LiveSite {
     var result = await HttpClient.instance.postJson(
       "https://www.douyu.com/lapi/live/getH5Play/$roomId",
       data: args,
+      header: {
+        'referer': 'https://www.douyu.com/$roomId',
+        'user-agent':
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
+      },
       formUrlEncoded: true,
     );
 
@@ -167,31 +172,39 @@ class DouyuSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    var resultText = await HttpClient.instance.getText(
-        "https://www.douyu.com/$roomId",
+    var result = await HttpClient.instance.getJson(
+        "https://m.douyu.com/$roomId/index.pageContext.json",
         queryParameters: {},
-        header: {});
-    var resultJson = await HttpClient.instance
-        .getText("https://m.douyu.com/$roomId", queryParameters: {}, header: {
-      "user-agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69",
-    });
-    var regExp = RegExp(r"\$ROOM.=.{(.*?)}", dotAll: true, multiLine: true);
-    var objStr = regExp.firstMatch(resultJson)?.group(1) ?? "";
-    var obj = json.decode("{$objStr}");
+        header: {
+          'referer': 'https://m.douyu.com/$roomId',
+          'user-agent':
+              'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/114.0.0.0',
+        });
+    var roomInfo =
+        result["pageContext"]["pageProps"]["room"]["roomInfo"]["roomInfo"];
+
+    var jsEncResult = await HttpClient.instance.getText(
+        "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId",
+        queryParameters: {},
+        header: {
+          'referer': 'https://www.douyu.com/$roomId',
+          'user-agent':
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
+        });
+    var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
 
     return LiveRoomDetail(
-      cover: obj["roomSrc"].toString(),
-      online: parseHotNum(obj["hn"].toString()),
-      roomId: obj["rid"].toString(),
-      title: obj["roomName"].toString(),
-      userName: obj["nickname"].toString(),
-      userAvatar: obj["avatar"].toString(),
+      cover: roomInfo["roomSrc"].toString(),
+      online: parseHotNum(roomInfo["hn"].toString()),
+      roomId: roomInfo["rid"].toString(),
+      title: roomInfo["roomName"].toString(),
+      userName: roomInfo["nickname"].toString(),
+      userAvatar: roomInfo["avatar"].toString(),
       introduction: "",
-      notice: obj["notice"].toString(),
-      status: obj["isLive"] == 1,
-      danmakuData: obj["rid"].toString(),
-      data: await getPlayArgs(resultText, obj["rid"].toString()),
+      notice: roomInfo["notice"].toString(),
+      status: roomInfo["isLive"] == 1,
+      danmakuData: roomInfo["rid"].toString(),
+      data: await getPlayArgs(crptext, roomInfo["rid"].toString()),
       url: "https://www.douyu.com/$roomId",
     );
   }

@@ -1,7 +1,7 @@
 {
-    "version": "1.0.2-dev",
-    "version_num": 10002,
-    "version_desc": "正在开发中的版本，功能可能会随时变动。\n1. 将“关注”功能移至首页\n2. 在“关注”列表中，默认按照已开播进行排序\n3. 在“播放设置”中，可以调整默认播放清晰度（高、中、低）",
+    "version": "1.0.3-dev",
+    "version_num": 10003,
+    "version_desc": "正在开发中的版本，功能可能会随时变动。\n1. 修复斗鱼失效问题\n2. 更新Flutter版本至3.10",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

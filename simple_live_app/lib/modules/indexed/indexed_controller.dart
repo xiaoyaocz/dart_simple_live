@@ -6,8 +6,6 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_page.dart';
 import 'package:simple_live_app/modules/home/home_page.dart';
-import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
-import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/user/user_page.dart';

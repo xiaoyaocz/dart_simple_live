@@ -54,7 +54,7 @@ class AppPages {
       name: RoutePath.kSearch,
       page: () => const SearchPage(),
       bindings: [
-        BindingsBuilder.put(() => SearchController()),
+        BindingsBuilder.put(() => AppSearchController()),
       ],
     ),
     //分类详情

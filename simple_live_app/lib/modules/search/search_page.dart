@@ -17,14 +17,40 @@ class SearchPage extends GetView<AppSearchController> {
           controller: controller.searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: "搜索直播间",
+            hintText: "搜点什么吧",
             border: OutlineInputBorder(
               borderRadius: AppStyle.radius24,
             ),
             contentPadding: AppStyle.edgeInsetsH12,
-            prefixIcon: IconButton(
-              onPressed: Get.back,
-              icon: const Icon(Icons.arrow_back),
+            prefixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: Get.back,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+                Obx(
+                  () => DropdownButton<int>(
+                    underline: const SizedBox(),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 0,
+                        child: Text("房间"),
+                      ),
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text("主播"),
+                      ),
+                    ],
+                    value: controller.searchMode.value,
+                    onChanged: (e) {
+                      controller.searchMode.value = e ?? 0;
+                      controller.doSearch();
+                    },
+                  ),
+                ),
+                AppStyle.hGap8,
+              ],
             ),
             suffixIcon: IconButton(
               onPressed: controller.doSearch,

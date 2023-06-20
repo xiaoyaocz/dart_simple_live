@@ -1,3 +1,5 @@
+import 'package:simple_live_core/src/model/live_anchor_item.dart';
+
 import '../interface/live_danmaku.dart';
 import '../model/live_category_result.dart';
 import '../model/live_message.dart';
@@ -23,10 +25,16 @@ class LiveSite {
     return Future.value(<LiveCategory>[]);
   }
 
-  /// 搜索
-  Future<LiveSearchResult> search(String keyword, {int page = 1}) {
+  /// 搜索直播间
+  Future<LiveSearchRoomResult> searchRooms(String keyword, {int page = 1}) {
     return Future.value(
-        LiveSearchResult(hasMore: false, items: <LiveRoomItem>[]));
+        LiveSearchRoomResult(hasMore: false, items: <LiveRoomItem>[]));
+  }
+
+  /// 搜索直播间
+  Future<LiveSearchAnchorResult> searchAnchors(String keyword, {int page = 1}) {
+    return Future.value(
+        LiveSearchAnchorResult(hasMore: false, items: <LiveAnchorItem>[]));
   }
 
   /// 读取类目下房间

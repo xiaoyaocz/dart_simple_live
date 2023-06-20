@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:perfect_volume_control/perfect_volume_control.dart';
 import 'package:remixicon/remixicon.dart';
@@ -18,7 +20,6 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:wakelock/wakelock.dart';
 
 class LiveRoomController extends BaseController {
@@ -31,6 +32,9 @@ class LiveRoomController extends BaseController {
   }) {
     liveDanmaku = site.liveSite.getDanmaku();
   }
+
+  final AppSettingsController settingsController =
+      Get.find<AppSettingsController>();
   final ScrollController scrollController = ScrollController();
   RxList<LiveMessage> messages = RxList<LiveMessage>();
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
@@ -52,10 +56,14 @@ class LiveRoomController extends BaseController {
   var showQualites = false.obs;
   var showLines = false.obs;
   DanmakuController? danmakuController;
-  Rx<VlcPlayerController?> vlcPlayerController = Rx<VlcPlayerController?>(null);
-  final AppSettingsController settingsController =
-      Get.find<AppSettingsController>();
-  VlcPlayer? vlcPlayer;
+  late final player = Player();
+  late final videoController = VideoController(
+    player,
+    configuration: VideoControllerConfiguration(
+      enableHardwareAcceleration: settingsController.hardwareDecode.value,
+    ),
+  );
+
   DanmakuView? danmakuView;
 
   /// 清晰度数据
@@ -75,14 +83,15 @@ class LiveRoomController extends BaseController {
 
   @override
   void onInit() {
+    playerListener();
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     setSystem();
     loadData();
+
     super.onInit();
   }
 
   void refreshRoom() {
-    stopPlay();
     superChats.clear();
     liveDanmaku.stop();
 
@@ -245,59 +254,46 @@ class LiveRoomController extends BaseController {
   }
 
   void setPlayer() {
-    if (vlcPlayerController.value == null) {
-      VlcHttpOptions? httpOptions;
-      if (site.id == "bilibili") {
-        httpOptions = VlcHttpOptions([
-          VlcHttpOptions.httpReconnect(true),
-          ":http-referrer=https://live.bilibili.com",
-          ":http-user-agent=Mozilla/5.0 BiliDroid/1.12.0 (bbcallen@gmail.com)"
-        ]);
-      }
-      vlcPlayerController.value = VlcPlayerController.network(
-        playUrls[currentUrl.value],
-        hwAcc: settingsController.hardwareDecode.value
-            ? HwAcc.auto
-            : HwAcc.disabled,
-        options: VlcPlayerOptions(
-          http: httpOptions,
-        ),
-      );
-      vlcPlayerController.value?.addOnInitListener(vlcOnInitListener);
-      vlcPlayerController.value?.addListener(vlcListener);
-    } else {
-      vlcPlayerController.value?.setMediaFromNetwork(
-        playUrls[currentUrl.value],
-        autoPlay: true,
-        hwAcc: settingsController.hardwareDecode.value
-            ? HwAcc.auto
-            : HwAcc.disabled,
-      );
+    Map<String, String> headers = {};
+    if (site.id == "bilibili") {
+      headers = {
+        "referer": "https://live.bilibili.com",
+        "user-agent": "Mozilla/5.0 BiliDroid/1.12.0 (bbcallen@gmail.com)"
+      };
     }
+    player.open(
+      Media(
+        playUrls[currentUrl.value],
+        httpHeaders: headers,
+      ),
+    );
   }
 
-  /// VLC事件监听
-  void vlcListener() {
-    if (vlcPlayerController.value == null) {
-      return;
-    }
-    var vlcController = vlcPlayerController.value!;
+  /// 事件监听
+  void playerListener() {
+    // if (vlcPlayerController.value == null) {
+    //   return;
+    // }
+    // var vlcController = vlcPlayerController.value!;
 
-    if (vlcController.value.isBuffering) {
-      playerLoadding.value = true;
-    }
-    if (vlcController.value.isPlaying) {
-      playerLoadding.value = false;
-    }
-    if (vlcController.value.isEnded ||
-        vlcController.value.playingState == PlayingState.ended) {
-      //重连,尝试切换线路
-      mediaEnd();
-    } else if (vlcController.value.hasError ||
-        vlcController.value.playingState == PlayingState.error) {
-      mediaError();
-    }
+    // if (vlcController.value.isBuffering) {
+    //   playerLoadding.value = true;
+    // }
+    // if (vlcController.value.isPlaying) {
+    //   playerLoadding.value = false;
+    // }
+    // if (vlcController.value.isEnded ||
+    //     vlcController.value.playingState == PlayingState.ended) {
+    //   //重连,尝试切换线路
+    //   mediaEnd();
+    // } else if (vlcController.value.hasError ||
+    //     vlcController.value.playingState == PlayingState.error) {
+    //   mediaError();
+    // }
   }
+
+  /// 取消事件监听
+  void playerCancelListener() {}
 
   void mediaEnd() {
     if (playUrls.length - 1 == currentUrl.value) {
@@ -312,7 +308,7 @@ class LiveRoomController extends BaseController {
     if (playUrls.length - 1 == currentUrl.value) {
       liveStatus.value = false;
       errorMsg.value = "播放失败";
-      Log.w(vlcPlayerController.value?.value.errorDescription ?? "");
+      //Log.w(player.state..errorDescription ?? "");
     } else {
       currentUrl.value += 1;
       setPlayer();
@@ -324,15 +320,6 @@ class LiveRoomController extends BaseController {
     Log.w(
       "VLC OnInitListener",
     );
-  }
-
-  /// 停止播放
-  Future stopPlay() async {
-    try {
-      await vlcPlayerController.value?.stop();
-    } catch (e) {
-      Log.logPrint(e);
-    }
   }
 
   /// 添加一条系统消息
@@ -746,18 +733,14 @@ class LiveRoomController extends BaseController {
 
   @override
   void onClose() async {
-    vlcPlayerController.value?.removeListener(vlcListener);
-    vlcPlayerController.value?.removeOnInitListener(vlcOnInitListener);
-
+    playerCancelListener();
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
     await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     screenBrightness.resetScreenBrightness();
     Wakelock.disable();
 
-    vlcPlayerController.value?.stop();
-    vlcPlayerController.value?.stopRendererScanning();
-    vlcPlayerController.value?.dispose();
+    player.dispose();
 
     liveDanmaku.stop();
     danmakuController = null;

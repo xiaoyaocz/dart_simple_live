@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:get/get.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -701,30 +701,28 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildVlcPlayer() {
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Container(
-        color: Colors.black,
-        child: Obx(
-          () {
-            if (controller.vlcPlayerController.value == null) {
-              return const Center(
-                child: Text(
-                  "正在加载信息",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              );
-            } else {
-              controller.vlcPlayer ??= VlcPlayer(
-                key: controller.globalPlayerKey,
-                controller: controller.vlcPlayerController.value!,
-                aspectRatio: 16 / 9,
-                placeholder: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-              return controller.vlcPlayer!;
-            }
-          },
-        ),
+      child: Video(
+        key: controller.globalPlayerKey,
+        controller: controller.videoController,
+        // child: Obx(
+        //   () {
+        //     if (controller.vlcPlayerController.value == null) {
+        //       return const Center(
+        //         child: Text(
+        //           "正在加载信息",
+        //           style: TextStyle(fontSize: 16, color: Colors.white),
+        //         ),
+        //       );
+        //     } else {
+        //       controller.vlcPlayer ??= Video(
+        //         key: controller.globalPlayerKey,
+        //         controller: controller.vlcPlayerController.value!,
+        //         aspectRatio: 16 / 9,
+        //       );
+        //       return controller.vlcPlayer!;
+        //     }
+        //   },
+        // ),
       ),
     );
   }

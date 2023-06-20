@@ -751,10 +751,7 @@ class LiveRoomController extends BaseController {
 
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     screenBrightness.resetScreenBrightness();
     Wakelock.disable();
 

@@ -4,6 +4,7 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/douyu_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
+import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
@@ -210,13 +211,19 @@ class DouyuSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchResult> search(String keyword, {int page = 1}) async {
+  Future<LiveSearchRoomResult> searchRooms(String keyword,
+      {int page = 1}) async {
     var result = await HttpClient.instance.getJson(
       "https://www.douyu.com/japi/search/api/searchShow",
       queryParameters: {
         "kw": keyword,
         "page": page,
         "pageSize": 20,
+      },
+      header: {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51',
+        'referer': 'https://www.douyu.com/search/',
       },
     );
 
@@ -232,7 +239,40 @@ class DouyuSite implements LiveSite {
       items.add(roomItem);
     }
     var hasMore = result["data"]["relateShow"].isNotEmpty;
-    return LiveSearchResult(hasMore: hasMore, items: items);
+    return LiveSearchRoomResult(hasMore: hasMore, items: items);
+  }
+
+  @override
+  Future<LiveSearchAnchorResult> searchAnchors(String keyword,
+      {int page = 1}) async {
+    var result = await HttpClient.instance.getJson(
+      "https://www.douyu.com/japi/search/api/searchUser",
+      queryParameters: {
+        "kw": keyword,
+        "page": page,
+        "pageSize": 20,
+        "filterType": 1,
+      },
+      header: {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51',
+        'referer': 'https://www.douyu.com/search/',
+      },
+    );
+
+    var items = <LiveAnchorItem>[];
+    for (var item in result["data"]["relateUser"]) {
+      var roomItem = LiveAnchorItem(
+        roomId: item["anchorInfo"]["rid"].toString(),
+        avatar: item["anchorInfo"]["avatar"].toString(),
+        userName: item["anchorInfo"]["nickName"].toString(),
+        liveStatus:
+            (int.tryParse(item["anchorInfo"]["isLive"].toString()) ?? 0) == 1,
+      );
+      items.add(roomItem);
+    }
+    var hasMore = result["data"]["relateUser"].isNotEmpty;
+    return LiveSearchAnchorResult(hasMore: hasMore, items: items);
   }
 
   @override

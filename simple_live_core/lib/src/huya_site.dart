@@ -5,6 +5,7 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/huya_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
+import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
@@ -276,7 +277,8 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchResult> search(String keyword, {int page = 1}) async {
+  Future<LiveSearchRoomResult> searchRooms(String keyword,
+      {int page = 1}) async {
     var resultText = await HttpClient.instance.getJson(
       "https://search.cdn.huya.com/",
       queryParameters: {
@@ -295,7 +297,7 @@ class HuyaSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["response"]["3"]["docs"]) {
       var cover = item["game_screenshot"].toString();
-      if (!cover.contains("?x-oss-process")) {
+      if (!cover.contains("?")) {
         cover += "?x-oss-process=style/w338_h190&";
       }
 
@@ -314,7 +316,39 @@ class HuyaSite implements LiveSite {
       items.add(roomItem);
     }
     var hasMore = result["response"]["3"]["numFound"] > (page * 20);
-    return LiveSearchResult(hasMore: hasMore, items: items);
+    return LiveSearchRoomResult(hasMore: hasMore, items: items);
+  }
+
+  @override
+  Future<LiveSearchAnchorResult> searchAnchors(String keyword,
+      {int page = 1}) async {
+    var resultText = await HttpClient.instance.getJson(
+      "https://search.cdn.huya.com/",
+      queryParameters: {
+        "m": "Search",
+        "do": "getSearchContent",
+        "q": keyword,
+        "uid": 0,
+        "v": 1,
+        "typ": -5,
+        "livestate": 0,
+        "rows": 20,
+        "start": (page - 1) * 20,
+      },
+    );
+    var result = json.decode(resultText);
+    var items = <LiveAnchorItem>[];
+    for (var item in result["response"]["1"]["docs"]) {
+      var anchorItem = LiveAnchorItem(
+        roomId: item["room_id"].toString(),
+        avatar: item["game_avatarUrl180"].toString(),
+        userName: item["game_nick"].toString(),
+        liveStatus: item["gameLiveOn"],
+      );
+      items.add(anchorItem);
+    }
+    var hasMore = result["response"]["1"]["numFound"] > (page * 20);
+    return LiveSearchAnchorResult(hasMore: hasMore, items: items);
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/bilibili_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
+import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
@@ -172,7 +173,8 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchResult> search(String keyword, {int page = 1}) async {
+  Future<LiveSearchRoomResult> searchRooms(String keyword,
+      {int page = 1}) async {
     var result = await HttpClient.instance.getJson(
       "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
       queryParameters: {
@@ -190,16 +192,53 @@ class BiliBiliSite implements LiveSite {
 
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["result"]["live_room"] ?? []) {
+      var title = item["title"].toString();
+      //移除title中的<em></em>标签
+      title = title.replaceAll(RegExp(r"<.*?em.*?>"), "");
       var roomItem = LiveRoomItem(
         roomId: item["roomid"].toString(),
-        title: item["title"].toString().replaceAll("<em.*?/em>", ""),
+        title: title,
         cover: "https:${item["cover"]}@400w.jpg",
         userName: item["uname"].toString(),
         online: int.tryParse(item["online"].toString()) ?? 0,
       );
       items.add(roomItem);
     }
-    return LiveSearchResult(hasMore: items.length >= 40, items: items);
+    return LiveSearchRoomResult(hasMore: items.length >= 40, items: items);
+  }
+
+  @override
+  Future<LiveSearchAnchorResult> searchAnchors(String keyword,
+      {int page = 1}) async {
+    var result = await HttpClient.instance.getJson(
+      "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live_user&cover_type=user_cover",
+      queryParameters: {
+        "order": "",
+        "keyword": keyword,
+        "category_id": "",
+        "__refresh__": "",
+        "_extra": "",
+        "highlight": 0,
+        "single_column": 0,
+        "page": page
+      },
+      header: {"cookie": "buvid3=infoc;"},
+    );
+
+    var items = <LiveAnchorItem>[];
+    for (var item in result["data"]["result"] ?? []) {
+      var uname = item["uname"].toString();
+      //移除title中的<em></em>标签
+      uname = uname.replaceAll(RegExp(r"<.*?em.*?>"), "");
+      var anchorItem = LiveAnchorItem(
+        roomId: item["roomid"].toString(),
+        avatar: "https:${item["uface"]}@400w.jpg",
+        userName: uname,
+        liveStatus: item["is_live"],
+      );
+      items.add(anchorItem);
+    }
+    return LiveSearchAnchorResult(hasMore: items.length >= 40, items: items);
   }
 
   @override

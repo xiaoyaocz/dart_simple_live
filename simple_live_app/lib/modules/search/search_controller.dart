@@ -10,6 +10,9 @@ class AppSearchController extends GetxController
     with GetSingleTickerProviderStateMixin {
   late TabController tabController;
   int index = 0;
+
+  var searchMode = 0.obs;
+
   AppSearchController() {
     tabController =
         TabController(length: Sites.supportSites.length, vsync: this);
@@ -55,6 +58,7 @@ class AppSearchController extends GetxController
       var controller = Get.find<SearchListController>(tag: site.id);
       controller.clear();
       controller.keyword = searchController.text;
+      controller.searchMode.value = searchMode.value;
     }
     var controller =
         Get.find<SearchListController>(tag: Sites.supportSites[index].id);

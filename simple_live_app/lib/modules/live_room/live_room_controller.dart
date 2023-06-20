@@ -62,13 +62,13 @@ class LiveRoomController extends BaseController {
   RxList<LivePlayQuality> qualites = RxList<LivePlayQuality>();
 
   /// 当前清晰度
-  int currentQuality = -1;
+  var currentQuality = (-1).obs;
 
   /// 线路数据
   RxList<String> playUrls = RxList<String>();
 
   /// 当前线路
-  int currentUrl = -1;
+  var currentUrl = (-1).obs;
 
   /// 显示播放控制
   Rx<bool> showControls = true.obs;
@@ -205,7 +205,7 @@ class LiveRoomController extends BaseController {
   /// 初始化播放器
   void getPlayQualites() async {
     qualites.clear();
-    currentQuality = -1;
+    currentQuality.value = -1;
     var playQualites =
         await site.liveSite.getPlayQualites(detail: detail.value!);
 
@@ -217,14 +217,14 @@ class LiveRoomController extends BaseController {
 
     if (settingsController.qualityLevel.value == 2) {
       //最高
-      currentQuality = 0;
+      currentQuality.value = 0;
     } else if (settingsController.qualityLevel.value == 0) {
       //最低
-      currentQuality = playQualites.length - 1;
+      currentQuality.value = playQualites.length - 1;
     } else {
       //中间值
       int middle = (playQualites.length / 2).floor();
-      currentQuality = middle;
+      currentQuality.value = middle;
     }
 
     getPlayUrl();
@@ -232,15 +232,15 @@ class LiveRoomController extends BaseController {
 
   void getPlayUrl() async {
     playUrls.clear();
-    currentUrl = -1;
-    var playUrl = await site.liveSite
-        .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
+    currentUrl.value = -1;
+    var playUrl = await site.liveSite.getPlayUrls(
+        detail: detail.value!, quality: qualites[currentQuality.value]);
     if (playUrl.isEmpty) {
       SmartDialog.showToast("无法读取播放地址");
       return;
     }
     playUrls.value = playUrl;
-    currentUrl = 0;
+    currentUrl.value = 0;
     setPlayer();
   }
 
@@ -255,7 +255,7 @@ class LiveRoomController extends BaseController {
         ]);
       }
       vlcPlayerController.value = VlcPlayerController.network(
-        playUrls[currentUrl],
+        playUrls[currentUrl.value],
         hwAcc: settingsController.hardwareDecode.value
             ? HwAcc.auto
             : HwAcc.disabled,
@@ -267,7 +267,7 @@ class LiveRoomController extends BaseController {
       vlcPlayerController.value?.addListener(vlcListener);
     } else {
       vlcPlayerController.value?.setMediaFromNetwork(
-        playUrls[currentUrl],
+        playUrls[currentUrl.value],
         autoPlay: true,
         hwAcc: settingsController.hardwareDecode.value
             ? HwAcc.auto
@@ -300,21 +300,21 @@ class LiveRoomController extends BaseController {
   }
 
   void mediaEnd() {
-    if (playUrls.length - 1 == currentUrl) {
+    if (playUrls.length - 1 == currentUrl.value) {
       liveStatus.value = false;
     } else {
-      currentUrl += 1;
+      currentUrl.value += 1;
       setPlayer();
     }
   }
 
   void mediaError() {
-    if (playUrls.length - 1 == currentUrl) {
+    if (playUrls.length - 1 == currentUrl.value) {
       liveStatus.value = false;
       errorMsg.value = "播放失败";
       Log.w(vlcPlayerController.value?.value.errorDescription ?? "");
     } else {
-      currentUrl += 1;
+      currentUrl.value += 1;
       setPlayer();
     }
   }
@@ -470,11 +470,11 @@ class LiveRoomController extends BaseController {
                   var item = qualites[i];
                   return RadioListTile(
                     value: i,
-                    groupValue: currentQuality,
+                    groupValue: currentQuality.value,
                     title: Text(item.quality),
                     onChanged: (e) {
                       Get.back();
-                      currentQuality = i;
+                      currentQuality.value = i;
                       getPlayUrl();
                     },
                   );
@@ -525,11 +525,11 @@ class LiveRoomController extends BaseController {
                 itemBuilder: (_, i) {
                   return RadioListTile(
                     value: i,
-                    groupValue: currentUrl,
+                    groupValue: currentUrl.value,
                     title: Text("线路${i + 1}"),
                     onChanged: (e) {
                       Get.back();
-                      currentUrl = i;
+                      currentUrl.value = i;
                       setPlayer();
                     },
                   );

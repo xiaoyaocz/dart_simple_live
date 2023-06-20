@@ -265,15 +265,22 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     offstage: isPortrait,
                     child: TextButton(
                       onPressed: () {
-                        controller.showQualites.value = true;
+                        if (controller.fullScreen.value) {
+                          controller.showQualites.value = true;
+                        } else {
+                          controller.showQualitySheet();
+                        }
                       },
-                      child: Text(
-                        controller.currentQuality == -1
-                            ? ""
-                            : controller
-                                .qualites[controller.currentQuality].quality,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 15),
+                      child: Obx(
+                        () => Text(
+                          controller.currentQuality.value == -1
+                              ? ""
+                              : controller
+                                  .qualites[controller.currentQuality.value]
+                                  .quality,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 15),
+                        ),
                       ),
                     ),
                   ),
@@ -281,12 +288,18 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     offstage: isPortrait,
                     child: TextButton(
                       onPressed: () {
-                        controller.showLines.value = true;
+                        if (controller.fullScreen.value) {
+                          controller.showLines.value = true;
+                        } else {
+                          controller.showPlayUrlsSheet();
+                        }
                       },
-                      child: Text(
-                        "线路${controller.currentUrl + 1}",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 15),
+                      child: Obx(
+                        () => Text(
+                          "线路${controller.currentUrl.value + 1}",
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 15),
+                        ),
                       ),
                     ),
                   ),
@@ -470,9 +483,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     onPressed: () {
                       controller.showQualites.value = true;
                     },
-                    child: Text(
-                      controller.qualites[controller.currentQuality].quality,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    child: Obx(
+                      () => Text(
+                        controller
+                            .qualites[controller.currentQuality.value].quality,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
+                      ),
                     ),
                   ),
                   TextButton(
@@ -517,7 +534,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   itemBuilder: (_, i) {
                     var item = controller.qualites[i];
                     return ListTile(
-                      selected: controller.currentQuality == i,
+                      selected: controller.currentQuality.value == i,
                       textColor: Colors.white,
                       title: Text(
                         item.quality,
@@ -526,7 +543,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       minLeadingWidth: 16,
                       onTap: () {
                         controller.showQualites.value = false;
-                        controller.currentQuality = i;
+                        controller.currentQuality.value = i;
                         controller.getPlayUrl();
                       },
                     );
@@ -554,7 +571,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   itemCount: controller.playUrls.length,
                   itemBuilder: (_, i) {
                     return ListTile(
-                      selected: controller.currentUrl == i,
+                      selected: controller.currentUrl.value == i,
                       textColor: Colors.white,
                       title: Text(
                         "线路${i + 1}",
@@ -563,7 +580,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       minLeadingWidth: 16,
                       onTap: () {
                         controller.showLines.value = false;
-                        controller.currentUrl = i;
+                        controller.currentUrl.value = i;
                         controller.setPlayer();
                       },
                     );

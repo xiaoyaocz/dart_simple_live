@@ -273,11 +273,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       },
                       child: Obx(
                         () => Text(
-                          controller.currentQuality.value == -1
-                              ? ""
-                              : controller
-                                  .qualites[controller.currentQuality.value]
-                                  .quality,
+                          controller.currentQualityInfo.value,
                           style: const TextStyle(
                               color: Colors.white, fontSize: 15),
                         ),
@@ -294,12 +290,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                           controller.showPlayUrlsSheet();
                         }
                       },
-                      child: Obx(
-                        () => Text(
-                          "线路${controller.currentUrl.value + 1}",
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 15),
-                        ),
+                      child: Text(
+                        controller.currentUrlInfo.value,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
                       ),
                     ),
                   ),
@@ -485,8 +479,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     },
                     child: Obx(
                       () => Text(
-                        controller
-                            .qualites[controller.currentQuality.value].quality,
+                        controller.currentQualityInfo.value,
                         style:
                             const TextStyle(color: Colors.white, fontSize: 15),
                       ),
@@ -497,7 +490,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       controller.showLines.value = true;
                     },
                     child: Text(
-                      "线路${controller.currentUrl + 1}",
+                      controller.currentUrlInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ),
@@ -534,7 +527,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   itemBuilder: (_, i) {
                     var item = controller.qualites[i];
                     return ListTile(
-                      selected: controller.currentQuality.value == i,
+                      selected: controller.currentQuality == i,
                       textColor: Colors.white,
                       title: Text(
                         item.quality,
@@ -543,7 +536,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       minLeadingWidth: 16,
                       onTap: () {
                         controller.showQualites.value = false;
-                        controller.currentQuality.value = i;
+                        controller.currentQuality = i;
                         controller.getPlayUrl();
                       },
                     );
@@ -571,7 +564,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   itemCount: controller.playUrls.length,
                   itemBuilder: (_, i) {
                     return ListTile(
-                      selected: controller.currentUrl.value == i,
+                      selected: controller.currentUrl == i,
                       textColor: Colors.white,
                       title: Text(
                         "线路${i + 1}",
@@ -580,7 +573,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       minLeadingWidth: 16,
                       onTap: () {
                         controller.showLines.value = false;
-                        controller.currentUrl.value = i;
+                        controller.currentUrl = i;
                         controller.setPlayer();
                       },
                     );

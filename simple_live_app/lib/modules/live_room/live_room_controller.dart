@@ -70,13 +70,15 @@ class LiveRoomController extends BaseController {
   RxList<LivePlayQuality> qualites = RxList<LivePlayQuality>();
 
   /// 当前清晰度
-  var currentQuality = (-1).obs;
+  var currentQuality = -1;
+  var currentQualityInfo = "".obs;
 
   /// 线路数据
   RxList<String> playUrls = RxList<String>();
 
   /// 当前线路
-  var currentUrl = (-1).obs;
+  var currentUrl = -1;
+  var currentUrlInfo = "".obs;
 
   /// 显示播放控制
   Rx<bool> showControls = true.obs;
@@ -214,7 +216,7 @@ class LiveRoomController extends BaseController {
   /// 初始化播放器
   void getPlayQualites() async {
     qualites.clear();
-    currentQuality.value = -1;
+    currentQuality = -1;
     var playQualites =
         await site.liveSite.getPlayQualites(detail: detail.value!);
 
@@ -226,14 +228,14 @@ class LiveRoomController extends BaseController {
 
     if (settingsController.qualityLevel.value == 2) {
       //最高
-      currentQuality.value = 0;
+      currentQuality = 0;
     } else if (settingsController.qualityLevel.value == 0) {
       //最低
-      currentQuality.value = playQualites.length - 1;
+      currentQuality = playQualites.length - 1;
     } else {
       //中间值
       int middle = (playQualites.length / 2).floor();
-      currentQuality.value = middle;
+      currentQuality = middle;
     }
 
     getPlayUrl();
@@ -241,19 +243,23 @@ class LiveRoomController extends BaseController {
 
   void getPlayUrl() async {
     playUrls.clear();
-    currentUrl.value = -1;
-    var playUrl = await site.liveSite.getPlayUrls(
-        detail: detail.value!, quality: qualites[currentQuality.value]);
+    currentQualityInfo.value = qualites[currentQuality].quality;
+    currentUrlInfo.value = "";
+    currentUrl = -1;
+    var playUrl = await site.liveSite
+        .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.isEmpty) {
       SmartDialog.showToast("无法读取播放地址");
       return;
     }
     playUrls.value = playUrl;
-    currentUrl.value = 0;
+    currentUrl = 0;
+    currentUrlInfo.value = "线路${currentUrl + 1}";
     setPlayer();
   }
 
   void setPlayer() {
+    currentUrlInfo.value = "线路${currentUrl + 1}";
     Map<String, String> headers = {};
     if (site.id == "bilibili") {
       headers = {
@@ -263,7 +269,7 @@ class LiveRoomController extends BaseController {
     }
     player.open(
       Media(
-        playUrls[currentUrl.value],
+        playUrls[currentUrl],
         httpHeaders: headers,
       ),
     );
@@ -296,21 +302,21 @@ class LiveRoomController extends BaseController {
   void playerCancelListener() {}
 
   void mediaEnd() {
-    if (playUrls.length - 1 == currentUrl.value) {
+    if (playUrls.length - 1 == currentUrl) {
       liveStatus.value = false;
     } else {
-      currentUrl.value += 1;
+      currentUrl += 1;
       setPlayer();
     }
   }
 
   void mediaError() {
-    if (playUrls.length - 1 == currentUrl.value) {
+    if (playUrls.length - 1 == currentUrl) {
       liveStatus.value = false;
       errorMsg.value = "播放失败";
       //Log.w(player.state..errorDescription ?? "");
     } else {
-      currentUrl.value += 1;
+      currentUrl += 1;
       setPlayer();
     }
   }
@@ -457,11 +463,11 @@ class LiveRoomController extends BaseController {
                   var item = qualites[i];
                   return RadioListTile(
                     value: i,
-                    groupValue: currentQuality.value,
+                    groupValue: currentQuality,
                     title: Text(item.quality),
                     onChanged: (e) {
                       Get.back();
-                      currentQuality.value = i;
+                      currentQuality = i;
                       getPlayUrl();
                     },
                   );
@@ -512,11 +518,11 @@ class LiveRoomController extends BaseController {
                 itemBuilder: (_, i) {
                   return RadioListTile(
                     value: i,
-                    groupValue: currentUrl.value,
+                    groupValue: currentUrl,
                     title: Text("线路${i + 1}"),
                     onChanged: (e) {
                       Get.back();
-                      currentUrl.value = i;
+                      currentUrl = i;
                       setPlayer();
                     },
                   );

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LiveCategory {
   final String name;
   final String id;
@@ -7,6 +9,15 @@ class LiveCategory {
     required this.name,
     required this.children,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "name": name,
+      "id": id,
+      "children": children,
+    });
+  }
 }
 
 class LiveSubCategory {
@@ -20,4 +31,14 @@ class LiveSubCategory {
     required this.parentId,
     this.pic,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "name": name,
+      "id": id,
+      "parentId": parentId,
+      "pic": pic,
+    });
+  }
 }

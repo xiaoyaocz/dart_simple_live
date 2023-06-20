@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum LiveMessageType {
   /// 聊天
   chat,
@@ -35,6 +37,17 @@ class LiveMessage {
     this.data,
     required this.color,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "type": type.index,
+      "userName": userName,
+      "message": message,
+      "data": data.toString(),
+      "color": color.toString(),
+    });
+  }
 }
 
 class LiveMessageColor {
@@ -91,4 +104,18 @@ class LiveSuperChatMessage {
     required this.startTime,
     required this.userName,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "userName": userName,
+      "face": face,
+      "message": message,
+      "price": price,
+      "startTime": startTime,
+      "endTime": endTime,
+      "backgroundColor": backgroundColor,
+      "backgroundBottomColor": backgroundBottomColor,
+    });
+  }
 }

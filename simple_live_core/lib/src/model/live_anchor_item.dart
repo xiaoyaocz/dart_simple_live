@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LiveAnchorItem {
   /// 房间ID
   final String roomId;
@@ -17,4 +19,14 @@ class LiveAnchorItem {
     required this.userName,
     required this.liveStatus,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "roomId": roomId,
+      "avatar": avatar,
+      "userName": userName,
+      "liveStatus": liveStatus,
+    });
+  }
 }

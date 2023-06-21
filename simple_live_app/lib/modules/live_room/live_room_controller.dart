@@ -7,9 +7,9 @@ import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
-import 'package:perfect_volume_control/perfect_volume_control.dart';
+//import 'package:perfect_volume_control/perfect_volume_control.dart';
 import 'package:remixicon/remixicon.dart';
-import 'package:screen_brightness/screen_brightness.dart';
+//import 'package:screen_brightness/screen_brightness.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/constant.dart';
@@ -40,7 +40,7 @@ class LiveRoomController extends BaseController {
   final ScrollController scrollController = ScrollController();
   RxList<LiveMessage> messages = RxList<LiveMessage>();
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
-  final screenBrightness = ScreenBrightness();
+  //final screenBrightness = ScreenBrightness();
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
   GlobalKey globalPlayerKey = GlobalKey();
   GlobalKey globalDanmuKey = GlobalKey();
@@ -104,7 +104,7 @@ class LiveRoomController extends BaseController {
 
   /// 设置系统状态
   void setSystem() {
-    PerfectVolumeControl.hideUI = false;
+    //PerfectVolumeControl.hideUI = false;
 
     //屏幕常亮
     Wakelock.enable();
@@ -749,7 +749,7 @@ class LiveRoomController extends BaseController {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
     await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-    screenBrightness.resetScreenBrightness();
+    //screenBrightness.resetScreenBrightness();
     Wakelock.disable();
 
     player.dispose();
@@ -772,8 +772,8 @@ class LiveRoomController extends BaseController {
     verticalDragging = true;
     _verStart = details.globalPosition.dy;
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
-    _currentVolume = await PerfectVolumeControl.volume;
-    _currentBrightness = await screenBrightness.current;
+    //_currentVolume = await PerfectVolumeControl.volume;
+    //_currentBrightness = await screenBrightness.current;
     showTip.value = true;
   }
 
@@ -794,7 +794,7 @@ class LiveRoomController extends BaseController {
         if (seek < 0) {
           seek = 0;
         }
-        PerfectVolumeControl.setVolume(seek);
+        // PerfectVolumeControl.setVolume(seek);
         seekTip.value = "音量 ${(seek * 100).toInt()}%";
         Log.logPrint(value);
       } else {
@@ -804,7 +804,7 @@ class LiveRoomController extends BaseController {
           seek = 1;
         }
 
-        PerfectVolumeControl.setVolume(seek);
+        // PerfectVolumeControl.setVolume(seek);
 
         seekTip.value = "音量 ${(seek * 100).toInt()}%";
         Log.logPrint(value);
@@ -819,7 +819,7 @@ class LiveRoomController extends BaseController {
         if (seek < 0) {
           seek = 0;
         }
-        screenBrightness.setScreenBrightness(seek);
+        //screenBrightness.setScreenBrightness(seek);
 
         seekTip.value = "亮度 ${(seek * 100).toInt()}%";
         Log.logPrint(value);
@@ -830,7 +830,7 @@ class LiveRoomController extends BaseController {
           seek = 1;
         }
 
-        screenBrightness.setScreenBrightness(seek);
+        // screenBrightness.setScreenBrightness(seek);
         seekTip.value = "亮度 ${(seek * 100).toInt()}%";
         Log.logPrint(value);
       }

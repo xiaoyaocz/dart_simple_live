@@ -20,6 +20,12 @@ class Sites {
       name: "虎牙直播",
       liveSite: HuyaSite(),
     ),
+    Site(
+      id: "douyin",
+      logo: "assets/images/douyin.png",
+      name: "抖音直播",
+      liveSite: DouyinSite(),
+    ),
   ];
 }
 

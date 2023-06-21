@@ -5,11 +5,13 @@ export 'src/interface/live_danmaku.dart';
 export 'src/huya_site.dart';
 export 'src/bilibili_site.dart';
 export 'src/douyu_site.dart';
+export 'src/douyin_site.dart';
 export 'src/common/core_log.dart';
 export 'src/model/live_message.dart';
 export 'src/danmaku/bilibili_danmaku.dart';
 export 'src/danmaku/douyu_danmaku.dart';
 export 'src/danmaku/huya_danmaku.dart';
+export 'src/danmaku/douyin_danmaku.dart';
 
 export 'src/model/live_category_result.dart';
 export 'src/model/live_category.dart';

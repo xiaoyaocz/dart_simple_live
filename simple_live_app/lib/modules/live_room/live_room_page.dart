@@ -173,7 +173,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Container(
           alignment: Alignment.center,
           color: Colors.black,
-          child: buildVlcPlayer(),
+          child: buildMediaPlayer(),
         ),
         Positioned.fill(
           child: Obx(
@@ -191,6 +191,9 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             onTap: () {
               controller.showControls.value = !controller.showControls.value;
             },
+            onVerticalDragStart: controller.onVerticalDragStart,
+            onVerticalDragUpdate: controller.onVerticalDragUpdate,
+            onVerticalDragEnd: controller.onVerticalDragEnd,
             child: Container(
               width: double.infinity,
               height: double.infinity,
@@ -311,6 +314,24 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
+        Obx(
+          () => Offstage(
+            offstage: !controller.showTip.value,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  controller.seekTip.value,
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -322,8 +343,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Container(
           alignment: Alignment.center,
           color: Colors.black,
-          child: buildVlcPlayer(),
+          child: buildMediaPlayer(),
         ),
+
+        buildDanmuView(),
         Positioned.fill(
           child: Obx(
             () => Offstage(
@@ -334,7 +357,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
-        buildDanmuView(),
         Positioned.fill(
           child: GestureDetector(
             onTap: () {
@@ -343,6 +365,9 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               controller.showQualites.value = false;
               controller.showDanmuSettings.value = false;
             },
+            onVerticalDragStart: controller.onVerticalDragStart,
+            onVerticalDragUpdate: controller.onVerticalDragUpdate,
+            onVerticalDragEnd: controller.onVerticalDragEnd,
             child: Container(
               width: double.infinity,
               height: double.infinity,
@@ -687,11 +712,29 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
+        Obx(
+          () => Offstage(
+            offstage: !controller.showTip.value,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  controller.seekTip.value,
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget buildVlcPlayer() {
+  Widget buildMediaPlayer() {
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Video(

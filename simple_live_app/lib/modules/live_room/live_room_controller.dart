@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -267,6 +269,7 @@ class LiveRoomController extends BaseController {
         "user-agent": "Mozilla/5.0 BiliDroid/1.12.0 (bbcallen@gmail.com)"
       };
     }
+    playerLoadding.value = true;
     player.open(
       Media(
         playUrls[currentUrl],
@@ -275,31 +278,41 @@ class LiveRoomController extends BaseController {
     );
   }
 
+  StreamSubscription? bufferingStream;
+  StreamSubscription? errorStream;
+  StreamSubscription? endStream;
+  StreamSubscription? playingStream;
+
   /// 事件监听
   void playerListener() {
-    // if (vlcPlayerController.value == null) {
-    //   return;
-    // }
-    // var vlcController = vlcPlayerController.value!;
-
-    // if (vlcController.value.isBuffering) {
-    //   playerLoadding.value = true;
-    // }
-    // if (vlcController.value.isPlaying) {
-    //   playerLoadding.value = false;
-    // }
-    // if (vlcController.value.isEnded ||
-    //     vlcController.value.playingState == PlayingState.ended) {
-    //   //重连,尝试切换线路
-    //   mediaEnd();
-    // } else if (vlcController.value.hasError ||
-    //     vlcController.value.playingState == PlayingState.error) {
-    //   mediaError();
-    // }
+    bufferingStream = player.streams.buffering.listen((event) {
+      Log.w('Buffering:$event');
+      playerLoadding.value = event;
+    });
+    playingStream = player.streams.playing.listen((event) {
+      Log.w('Playing:$event');
+      if (event) {
+        playerLoadding.value = false;
+      }
+    });
+    errorStream = player.streams.error.listen((event) {
+      Log.w('${event.code}: ${event.message}');
+      mediaError();
+    });
+    endStream = player.streams.completed.listen((event) {
+      if (event) {
+        mediaEnd();
+      }
+    });
   }
 
   /// 取消事件监听
-  void playerCancelListener() {}
+  void playerCancelListener() {
+    bufferingStream?.cancel();
+    playingStream?.cancel();
+    errorStream?.cancel();
+    endStream?.cancel();
+  }
 
   void mediaEnd() {
     if (playUrls.length - 1 == currentUrl) {
@@ -319,13 +332,6 @@ class LiveRoomController extends BaseController {
       currentUrl += 1;
       setPlayer();
     }
-  }
-
-  /// VLC初始化完毕
-  void vlcOnInitListener() {
-    Log.w(
-      "VLC OnInitListener",
-    );
   }
 
   /// 添加一条系统消息
@@ -751,5 +757,90 @@ class LiveRoomController extends BaseController {
     liveDanmaku.stop();
     danmakuController = null;
     super.onClose();
+  }
+
+  bool verticalDragging = false;
+  bool leftVerticalDrag = false;
+  var _currentVolume = 0.0;
+  var _currentBrightness = 1.0;
+  var _verStart = 0.0;
+  var showTip = false.obs;
+  var seekTip = "".obs;
+
+  /// 竖向手势开始
+  void onVerticalDragStart(DragStartDetails details) async {
+    verticalDragging = true;
+    _verStart = details.globalPosition.dy;
+    leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
+    _currentVolume = await PerfectVolumeControl.volume;
+    _currentBrightness = await screenBrightness.current;
+    showTip.value = true;
+  }
+
+  /// 竖向手势更新
+  void onVerticalDragUpdate(DragUpdateDetails e) async {
+    if (verticalDragging == false) return;
+    //String text = "";
+    double value = 0.0;
+
+    Log.logPrint("$_verStart/${e.globalPosition.dy}");
+
+    //音量
+    if (!leftVerticalDrag) {
+      if (e.globalPosition.dy > _verStart) {
+        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
+
+        var seek = _currentVolume - value;
+        if (seek < 0) {
+          seek = 0;
+        }
+        PerfectVolumeControl.setVolume(seek);
+        seekTip.value = "音量 ${(seek * 100).toInt()}%";
+        Log.logPrint(value);
+      } else {
+        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
+        var seek = value.abs() + _currentVolume;
+        if (seek > 1) {
+          seek = 1;
+        }
+
+        PerfectVolumeControl.setVolume(seek);
+
+        seekTip.value = "音量 ${(seek * 100).toInt()}%";
+        Log.logPrint(value);
+      }
+    } else {
+      //亮度
+
+      if (e.globalPosition.dy > _verStart) {
+        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
+
+        var seek = _currentBrightness - value;
+        if (seek < 0) {
+          seek = 0;
+        }
+        screenBrightness.setScreenBrightness(seek);
+
+        seekTip.value = "亮度 ${(seek * 100).toInt()}%";
+        Log.logPrint(value);
+      } else {
+        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
+        var seek = value.abs() + _currentBrightness;
+        if (seek > 1) {
+          seek = 1;
+        }
+
+        screenBrightness.setScreenBrightness(seek);
+        seekTip.value = "亮度 ${(seek * 100).toInt()}%";
+        Log.logPrint(value);
+      }
+    }
+  }
+
+  /// 竖向手势完成
+  void onVerticalDragEnd(DragEndDetails details) async {
+    verticalDragging = false;
+    leftVerticalDrag = false;
+    showTip.value = false;
   }
 }

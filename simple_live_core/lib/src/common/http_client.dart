@@ -125,4 +125,35 @@ class HttpClient {
       }
     }
   }
+
+  /// Head请求，返回Response
+  /// * [url] 请求链接
+  /// * [queryParameters] 请求参数
+  /// * [cancel] 任务取消Token
+  Future<Response> head(
+    String url, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? header,
+    CancelToken? cancel,
+  }) async {
+    try {
+      queryParameters ??= {};
+      header ??= {};
+      var result = await dio.head(
+        url,
+        queryParameters: queryParameters,
+        options: Options(
+          headers: header,
+        ),
+        cancelToken: cancel,
+      );
+      return result;
+    } catch (e) {
+      if (e is DioError && e.type == DioErrorType.response) {
+        throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
+      } else {
+        throw CoreError("发送HEAD请求失败");
+      }
+    }
+  }
 }

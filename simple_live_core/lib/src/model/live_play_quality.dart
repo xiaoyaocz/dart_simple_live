@@ -6,9 +6,13 @@ class LivePlayQuality {
 
   /// 清晰度信息
   final dynamic data;
+
+  final int sort;
+
   LivePlayQuality({
     required this.quality,
     required this.data,
+    this.sort = 0,
   });
 
   @override

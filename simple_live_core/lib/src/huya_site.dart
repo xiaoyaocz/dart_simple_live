@@ -81,7 +81,7 @@ class HuyaSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["datas"]) {
       var cover = item["screenshot"].toString();
-      if (!cover.contains("?x-oss-process")) {
+      if (!cover.contains("?")) {
         cover += "?x-oss-process=style/w338_h190&";
       }
       var title = item["roomName"]?.toString() ?? "";
@@ -174,7 +174,7 @@ class HuyaSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["datas"]) {
       var cover = item["screenshot"].toString();
-      if (!cover.contains("?x-oss-process")) {
+      if (!cover.contains("?")) {
         cover += "?x-oss-process=style/w338_h190&";
       }
       var title = item["roomName"]?.toString() ?? "";

@@ -2,19 +2,22 @@ PODS:
   - auto_orientation (0.0.1):
     - Flutter
   - Flutter (1.0.0)
-  - flutter_vlc_player (3.0.3):
+  - image_gallery_saver (2.0.2):
     - Flutter
-    - MobileVLCKit (~> 3.5.1)
-  - image_gallery_saver (1.5.0):
+  - media_kit_libs_ios_video (1.0.4):
     - Flutter
-  - MobileVLCKit (3.5.1)
+  - media_kit_native_event_loop (1.0.0):
+    - Flutter
+  - media_kit_video (0.0.1):
+    - Flutter
   - package_info_plus (0.4.5):
     - Flutter
-  - path_provider_ios (0.0.1):
+  - path_provider_foundation (0.0.1):
     - Flutter
+    - FlutterMacOS
   - perfect_volume_control (0.0.1):
     - Flutter
-  - permission_handler_apple (9.0.4):
+  - permission_handler_apple (9.1.0):
     - Flutter
   - screen_brightness_ios (0.1.0):
     - Flutter
@@ -28,10 +31,12 @@ PODS:
 DEPENDENCIES:
   - auto_orientation (from `.symlinks/plugins/auto_orientation/ios`)
   - Flutter (from `Flutter`)
-  - flutter_vlc_player (from `.symlinks/plugins/flutter_vlc_player/ios`)
   - image_gallery_saver (from `.symlinks/plugins/image_gallery_saver/ios`)
+  - media_kit_libs_ios_video (from `.symlinks/plugins/media_kit_libs_ios_video/ios`)
+  - media_kit_native_event_loop (from `.symlinks/plugins/media_kit_native_event_loop/ios`)
+  - media_kit_video (from `.symlinks/plugins/media_kit_video/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
-  - path_provider_ios (from `.symlinks/plugins/path_provider_ios/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - perfect_volume_control (from `.symlinks/plugins/perfect_volume_control/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - screen_brightness_ios (from `.symlinks/plugins/screen_brightness_ios/ios`)
@@ -39,23 +44,23 @@ DEPENDENCIES:
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - wakelock (from `.symlinks/plugins/wakelock/ios`)
 
-SPEC REPOS:
-  trunk:
-    - MobileVLCKit
-
 EXTERNAL SOURCES:
   auto_orientation:
     :path: ".symlinks/plugins/auto_orientation/ios"
   Flutter:
     :path: Flutter
-  flutter_vlc_player:
-    :path: ".symlinks/plugins/flutter_vlc_player/ios"
   image_gallery_saver:
     :path: ".symlinks/plugins/image_gallery_saver/ios"
+  media_kit_libs_ios_video:
+    :path: ".symlinks/plugins/media_kit_libs_ios_video/ios"
+  media_kit_native_event_loop:
+    :path: ".symlinks/plugins/media_kit_native_event_loop/ios"
+  media_kit_video:
+    :path: ".symlinks/plugins/media_kit_video/ios"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
-  path_provider_ios:
-    :path: ".symlinks/plugins/path_provider_ios/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   perfect_volume_control:
     :path: ".symlinks/plugins/perfect_volume_control/ios"
   permission_handler_apple:
@@ -70,18 +75,19 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/wakelock/ios"
 
 SPEC CHECKSUMS:
-  auto_orientation: 2941c44ebe5c3d41016001597ab03e81a92a26ce
+  auto_orientation: 102ed811a5938d52c86520ddd7ecd3a126b5d39d
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
-  flutter_vlc_player: e321a4dcfaa0b9018a644791231e3e24e73d2fc7
-  image_gallery_saver: 259eab68fb271cfd57d599904f7acdc7832e7ef2
-  MobileVLCKit: 144d5f565512d1147d63b0fa1379231b3fd66535
-  package_info_plus: 6c92f08e1f853dc01228d6f553146438dafcd14e
-  path_provider_ios: 14f3d2fd28c4fdb42f44e0f751d12861c43cee02
+  image_gallery_saver: cb43cc43141711190510e92c460eb1655cd343cb
+  media_kit_libs_ios_video: 96259eccffaa309b63a7ee610c2c7786a3b335e5
+  media_kit_native_event_loop: 9f9eb778d0d806ab9486eff7513f7f90f07d50f8
+  media_kit_video: c6ae801433b484912087b519b45f1beac97b960b
+  package_info_plus: fd030dabf36271f146f1f3beacd48f564b0f17f7
+  path_provider_foundation: eaf5b3e458fc0e5fbb9940fb09980e853fe058b8
   perfect_volume_control: 79b165ecd79d6ee20e60bf15534de61ebf3bb5f3
-  permission_handler_apple: 44366e37eaf29454a1e7b1b7d736c2cceaeb17ce
+  permission_handler_apple: 8f116445eff3c0e7c65ad60f5fef5490aa94b4e4
   screen_brightness_ios: 715ca807df953bf676d339f11464e438143ee625
-  share_plus: 056a1e8ac890df3e33cb503afffaf1e9b4fbae68
-  url_launcher_ios: fb12c43172927bb5cf75aeebd073f883801f1993
+  share_plus: 599aa54e4ea31d4b4c0e9c911bcc26c55e791028
+  url_launcher_ios: 08a3dfac5fb39e8759aeb0abbd5d9480f30fc8b4
   wakelock: d0fc7c864128eac40eba1617cb5264d9c940b46f
 
 PODFILE CHECKSUM: ef19549a9bc3046e7bb7d2fab4d021637c0c58a3

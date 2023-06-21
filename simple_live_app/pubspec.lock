@@ -313,22 +313,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_vlc_player:
-    dependency: "direct main"
-    description:
-      name: flutter_vlc_player
-      sha256: "0fbe714db09646617e46610195f5d81086d41d065a6301f2bb728a07f09f96b9"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "7.2.0"
-  flutter_vlc_player_platform_interface:
-    dependency: transitive
-    description:
-      name: flutter_vlc_player_platform_interface
-      sha256: "8562d5c31213a44cc5e009cb6776a030e0a0c8cbfb825da4fdf27b730170563c"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.0.2"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -518,6 +502,46 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.2.0"
+  media_kit:
+    dependency: "direct main"
+    description:
+      name: media_kit
+      sha256: "080cfb5af8d04f8cc454cb4c5ea34b19de5b8e1a1b3af62a34e766364b5244ad"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.0.11"
+  media_kit_libs_android_video:
+    dependency: "direct main"
+    description:
+      name: media_kit_libs_android_video
+      sha256: daeaeb254aee1089fa77f11cbeb0864a1238cbd0cb2a1c5ab9b2a2e66cc5ff42
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.6"
+  media_kit_libs_ios_video:
+    dependency: "direct main"
+    description:
+      name: media_kit_libs_ios_video
+      sha256: "28c6ddd5ed43263641293832c8d1fb3f24af81b4eba0b61d6da9bedadbf2e1b1"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.4"
+  media_kit_native_event_loop:
+    dependency: "direct main"
+    description:
+      name: media_kit_native_event_loop
+      sha256: "521125e534603c3f603b93283db3938f557f33ecc383fbd62edd4beb3bf73747"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.4"
+  media_kit_video:
+    dependency: "direct main"
+    description:
+      name: media_kit_video
+      sha256: "89d3c2cdb0f74d1bb597a9c9a7678f656fe538d20620ad1317b7354fd5d1af15"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.0.12"
   meta:
     dependency: transitive
     description:
@@ -735,6 +759,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.0.0"
+  safe_local_storage:
+    dependency: transitive
+    description:
+      name: safe_local_storage
+      sha256: ede4eb6cb7d88a116b3d3bf1df70790b9e2038bc37cb19112e381217c74d9440
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.2"
   screen_brightness:
     dependency: "direct main"
     description:
@@ -891,6 +923,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.2.0"
+  synchronized:
+    dependency: transitive
+    description:
+      name: synchronized
+      sha256: "5fcbd27688af6082f5abd611af56ee575342c30e87541d0245f7ff99faa02c60"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.1.0"
   term_glyph:
     dependency: transitive
     description:
@@ -923,6 +963,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.3.2"
+  uri_parser:
+    dependency: transitive
+    description:
+      name: uri_parser
+      sha256: "6543c9fd86d2862fac55d800a43e67c0dcd1a41677cb69c2f8edfe73bbcf1835"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.0.2"
   url_launcher:
     dependency: "direct main"
     description:
@@ -967,10 +1015,10 @@ packages:
     dependency: transitive
     description:
       name: url_launcher_platform_interface
-      sha256: "6c9ca697a5ae218ce56cece69d46128169a58aa8653c1b01d26fcd4aad8c4370"
+      sha256: bfdfa402f1f3298637d71ca8ecfe840b4696698213d5346e9d12d4ab647ee2ea
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.2"
+    version: "2.1.3"
   url_launcher_web:
     dependency: transitive
     description:

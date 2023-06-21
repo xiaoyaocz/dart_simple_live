@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LivePlayQuality {
   /// 清晰度
   final String quality;
@@ -8,4 +10,12 @@ class LivePlayQuality {
     required this.quality,
     required this.data,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "quality": quality,
+      "data": data.toString(),
+    });
+  }
 }

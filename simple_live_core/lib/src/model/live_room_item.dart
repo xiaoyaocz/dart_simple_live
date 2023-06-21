@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LiveRoomItem {
   /// 房间ID
   final String roomId;
@@ -20,4 +22,15 @@ class LiveRoomItem {
     required this.userName,
     this.online = 0,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "roomId": roomId,
+      "title": title,
+      "cover": cover,
+      "userName": userName,
+      "online": online,
+    });
+  }
 }

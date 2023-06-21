@@ -1,7 +1,7 @@
 {
-    "version": "1.0.3-dev",
-    "version_num": 10003,
-    "version_desc": "正在开发中的版本，功能可能会随时变动。\n1. 修复斗鱼失效问题\n2. 更新Flutter版本至3.10",
-    "prerelease":true,
+    "version": "1.1.0",
+    "version_num": 10100,
+    "version_desc": "1. 播放器由flutter_vlc_player变更为media_kit\n2. 优化搜索，区分主播与直播间\n3. 优化播放页面\n4. 修复一些BUG",
+    "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

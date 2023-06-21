@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LiveRoomDetail {
   /// 房间ID
   final String roomId;
@@ -48,4 +50,22 @@ class LiveRoomDetail {
     this.danmakuData,
     required this.url,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "roomId": roomId,
+      "title": title,
+      "cover": cover,
+      "userName": userName,
+      "userAvatar": userAvatar,
+      "online": online,
+      "introduction": introduction,
+      "notice": notice,
+      "status": status,
+      "data": data,
+      "danmakuData": danmakuData,
+      "url": url,
+    });
+  }
 }

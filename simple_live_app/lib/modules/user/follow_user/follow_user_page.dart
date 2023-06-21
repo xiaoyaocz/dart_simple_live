@@ -5,7 +5,7 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
-import 'package:simple_live_app/widgets/page_list_view.dart';
+import 'package:simple_live_app/widgets/page_grid_view.dart';
 import 'dart:ui' as ui;
 
 class FollowUserPage extends GetView<FollowUserController> {
@@ -13,11 +13,15 @@ class FollowUserPage extends GetView<FollowUserController> {
 
   @override
   Widget build(BuildContext context) {
+    var count = MediaQuery.of(context).size.width ~/ 500;
+    if (count < 1) count = 1;
     return Scaffold(
       appBar: AppBar(
         title: const Text("关注用户"),
       ),
-      body: PageListView(
+      body: PageGridView(
+        crossAxisSpacing: 12,
+        crossAxisCount: count,
         pageController: controller,
         firstRefresh: true,
         itemBuilder: (_, i) {

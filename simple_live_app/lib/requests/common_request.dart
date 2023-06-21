@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:simple_live_app/models/version_model.dart';
 
@@ -22,7 +24,10 @@ class CommonRequest {
         responseType: ResponseType.json,
       ),
     );
-    return VersionModel.fromJson(result.data);
+    if (result.data is Map) {
+      return VersionModel.fromJson(result.data);
+    }
+    return VersionModel.fromJson(json.decode(result.data));
   }
 
   /// 检查更新
@@ -36,6 +41,9 @@ class CommonRequest {
         responseType: ResponseType.json,
       ),
     );
-    return VersionModel.fromJson(result.data);
+    if (result.data is Map) {
+      return VersionModel.fromJson(result.data);
+    }
+    return VersionModel.fromJson(json.decode(result.data));
   }
 }

@@ -1,8 +1,18 @@
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_core/src/douyin_site.dart';
 
 void main() async {
-  CoreLog.enableLog = false;
-  LiveSite site = HuyaSite();
+  CoreLog.enableLog = true;
+  LiveSite site = DouyinSite();
+  // var categores = await site.getCategores();
+
+  // var categoryRooms =
+  //     await site.getCategoryRooms(categores.first.children.first);
+  var recommendRooms = await site.getRecommendRooms();
+  var roomDetail =
+      await site.getRoomDetail(roomId: recommendRooms.items.first.roomId);
+  var qutalities = await site.getPlayQualites(detail: roomDetail);
+  return;
   var danmaku = site.getDanmaku();
   danmaku.onMessage = (event) {
     if (event.type == LiveMessageType.chat) {

@@ -281,7 +281,7 @@ class LiveRoomController extends BaseController {
   StreamSubscription? bufferingStream;
   StreamSubscription? errorStream;
   StreamSubscription? endStream;
-  StreamSubscription? playingStream;
+  StreamSubscription? trackStream;
 
   /// 事件监听
   void playerListener() {
@@ -289,11 +289,11 @@ class LiveRoomController extends BaseController {
       Log.w('Buffering:$event');
       playerLoadding.value = event;
     });
-    playingStream = player.streams.playing.listen((event) {
-      Log.w('Playing:$event');
-      if (event) {
-        playerLoadding.value = false;
-      }
+
+    trackStream = player.streams.track.listen((event) {
+      Log.w('Track:$event');
+      //接收到轨道信息后，隐藏加载
+      playerLoadding.value = false;
     });
     errorStream = player.streams.error.listen((event) {
       Log.w('${event.code}: ${event.message}');
@@ -309,7 +309,7 @@ class LiveRoomController extends BaseController {
   /// 取消事件监听
   void playerCancelListener() {
     bufferingStream?.cancel();
-    playingStream?.cancel();
+    trackStream?.cancel();
     errorStream?.cancel();
     endStream?.cancel();
   }

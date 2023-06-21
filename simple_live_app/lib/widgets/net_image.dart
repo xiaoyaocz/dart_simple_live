@@ -18,7 +18,8 @@ class NetImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (picUrl.isEmpty) {
-      return SizedBox(
+      return Image.asset(
+        'assets/images/logo.png',
         width: width,
         height: height,
       );

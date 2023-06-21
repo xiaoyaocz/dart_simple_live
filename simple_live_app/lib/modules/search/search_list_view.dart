@@ -8,7 +8,6 @@ import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/live_room_card.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
-import 'package:simple_live_app/widgets/page_list_view.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class SearchListView extends StatelessWidget {
@@ -18,10 +17,11 @@ class SearchListView extends StatelessWidget {
       Get.find<SearchListController>(tag: tag);
   @override
   Widget build(BuildContext context) {
-    var c = MediaQuery.of(context).size.width ~/ 180;
-    if (c < 2) {
-      c = 2;
-    }
+    var roomRowCount = MediaQuery.of(context).size.width ~/ 180;
+    if (roomRowCount < 2) roomRowCount = 2;
+
+    var userRowCount = MediaQuery.of(context).size.width ~/ 500;
+    if (userRowCount < 1) userRowCount = 1;
     return KeepAliveWrapper(
       child: Obx(
         () => controller.searchMode.value == 0
@@ -31,14 +31,16 @@ class SearchListView extends StatelessWidget {
                 firstRefresh: false,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                crossAxisCount: c,
+                crossAxisCount: roomRowCount,
                 showPageLoadding: true,
                 itemBuilder: (_, i) {
                   var item = controller.list[i] as LiveRoomItem;
                   return LiveRoomCard(controller.site, item);
                 },
               )
-            : PageListView(
+            : PageGridView(
+                crossAxisSpacing: 12,
+                crossAxisCount: userRowCount,
                 pageController: controller,
                 firstRefresh: true,
                 itemBuilder: (_, i) {

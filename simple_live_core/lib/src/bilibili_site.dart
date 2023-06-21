@@ -124,18 +124,18 @@ class BiliBiliSite implements LiveSite {
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
     var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/room/v1/Area/getListByAreaID",
+      "https://api.live.bilibili.com/xlive/web-interface/v1/second/getListByArea",
       queryParameters: {
-        "areaId": 0,
+        "platform": "web",
         "sort": "online",
-        "pageSize": 30,
+        "page_size": 30,
         "page": page
       },
     );
 
-    var hasMore = (result["data"] as List).isNotEmpty;
+    var hasMore = (result["data"]["list"] as List).isNotEmpty;
     var items = <LiveRoomItem>[];
-    for (var item in result["data"]) {
+    for (var item in result["data"]["list"]) {
       var roomItem = LiveRoomItem(
         roomId: item["roomid"].toString(),
         title: item["title"].toString(),

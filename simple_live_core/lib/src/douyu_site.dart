@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/douyu_danmaku.dart';
@@ -213,6 +214,7 @@ class DouyuSite implements LiveSite {
   @override
   Future<LiveSearchRoomResult> searchRooms(String keyword,
       {int page = 1}) async {
+    var did = generateRandomString(32);
     var result = await HttpClient.instance.getJson(
       "https://www.douyu.com/japi/search/api/searchShow",
       queryParameters: {
@@ -224,9 +226,12 @@ class DouyuSite implements LiveSite {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51',
         'referer': 'https://www.douyu.com/search/',
+        'Cookie': 'dy_did=$did;acf_did=$did'
       },
     );
-
+    if (result['error'] != 0) {
+      throw Exception(result['msg']);
+    }
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["relateShow"]) {
       var roomItem = LiveRoomItem(
@@ -242,9 +247,21 @@ class DouyuSite implements LiveSite {
     return LiveSearchRoomResult(hasMore: hasMore, items: items);
   }
 
+  //生成指定长度的16进制随机字符串
+  String generateRandomString(int length) {
+    var random = Random.secure();
+    var values = List<int>.generate(length, (i) => random.nextInt(16));
+    StringBuffer stringBuffer = StringBuffer();
+    for (var item in values) {
+      stringBuffer.write(item.toRadixString(16));
+    }
+    return stringBuffer.toString();
+  }
+
   @override
   Future<LiveSearchAnchorResult> searchAnchors(String keyword,
       {int page = 1}) async {
+    var did = generateRandomString(32);
     var result = await HttpClient.instance.getJson(
       "https://www.douyu.com/japi/search/api/searchUser",
       queryParameters: {
@@ -257,6 +274,7 @@ class DouyuSite implements LiveSite {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51',
         'referer': 'https://www.douyu.com/search/',
+        'Cookie': 'dy_did=$did;acf_did=$did'
       },
     );
 

@@ -6,13 +6,15 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/user/history/history_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
-import 'package:simple_live_app/widgets/page_list_view.dart';
+import 'package:simple_live_app/widgets/page_grid_view.dart';
 
 class HistoryPage extends GetView<HistoryController> {
   const HistoryPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    var rowCount = MediaQuery.of(context).size.width ~/ 500;
+    if (rowCount < 1) rowCount = 1;
     return Scaffold(
       appBar: AppBar(
         title: const Text("观看记录"),
@@ -24,9 +26,10 @@ class HistoryPage extends GetView<HistoryController> {
           ),
         ],
       ),
-      body: PageListView(
+      body: PageGridView(
+        crossAxisSpacing: 12,
+        crossAxisCount: rowCount,
         pageController: controller,
-        padding: AppStyle.edgeInsetsV12,
         firstRefresh: true,
         itemBuilder: (_, i) {
           var item = controller.list[i];

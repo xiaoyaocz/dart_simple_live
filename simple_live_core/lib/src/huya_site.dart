@@ -81,12 +81,12 @@ class HuyaSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["datas"]) {
       var cover = item["screenshot"].toString();
-      if (!cover.contains("?x-oss-process")) {
+      if (!cover.contains("?")) {
         cover += "?x-oss-process=style/w338_h190&";
       }
-      var title = item["roomName"]?.toString() ?? "";
+      var title = item["introduction"]?.toString() ?? "";
       if (title.isEmpty) {
-        title = item["introduction"]?.toString() ?? "";
+        title = item["roomName"]?.toString() ?? "";
       }
 
       var roomItem = LiveRoomItem(
@@ -174,12 +174,12 @@ class HuyaSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["datas"]) {
       var cover = item["screenshot"].toString();
-      if (!cover.contains("?x-oss-process")) {
+      if (!cover.contains("?")) {
         cover += "?x-oss-process=style/w338_h190&";
       }
-      var title = item["roomName"]?.toString() ?? "";
+      var title = item["introduction"]?.toString() ?? "";
       if (title.isEmpty) {
-        title = item["introduction"]?.toString() ?? "";
+        title = item["roomName"]?.toString() ?? "";
       }
 
       var roomItem = LiveRoomItem(
@@ -301,9 +301,9 @@ class HuyaSite implements LiveSite {
         cover += "?x-oss-process=style/w338_h190&";
       }
 
-      var title = item["game_roomName"]?.toString() ?? "";
+      var title = item["game_introduction"]?.toString() ?? "";
       if (title.isEmpty) {
-        title = item["game_introduction"]?.toString() ?? "";
+        title = item["game_roomName"]?.toString() ?? "";
       }
 
       var roomItem = LiveRoomItem(

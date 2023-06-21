@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:get/get.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -173,7 +173,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Container(
           alignment: Alignment.center,
           color: Colors.black,
-          child: buildVlcPlayer(),
+          child: buildMediaPlayer(),
         ),
         Positioned.fill(
           child: Obx(
@@ -191,6 +191,9 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             onTap: () {
               controller.showControls.value = !controller.showControls.value;
             },
+            onVerticalDragStart: controller.onVerticalDragStart,
+            onVerticalDragUpdate: controller.onVerticalDragUpdate,
+            onVerticalDragEnd: controller.onVerticalDragEnd,
             child: Container(
               width: double.infinity,
               height: double.infinity,
@@ -265,15 +268,18 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     offstage: isPortrait,
                     child: TextButton(
                       onPressed: () {
-                        controller.showQualites.value = true;
+                        if (controller.fullScreen.value) {
+                          controller.showQualites.value = true;
+                        } else {
+                          controller.showQualitySheet();
+                        }
                       },
-                      child: Text(
-                        controller.currentQuality == -1
-                            ? ""
-                            : controller
-                                .qualites[controller.currentQuality].quality,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 15),
+                      child: Obx(
+                        () => Text(
+                          controller.currentQualityInfo.value,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 15),
+                        ),
                       ),
                     ),
                   ),
@@ -281,10 +287,14 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     offstage: isPortrait,
                     child: TextButton(
                       onPressed: () {
-                        controller.showLines.value = true;
+                        if (controller.fullScreen.value) {
+                          controller.showLines.value = true;
+                        } else {
+                          controller.showPlayUrlsSheet();
+                        }
                       },
                       child: Text(
-                        "线路${controller.currentUrl + 1}",
+                        controller.currentUrlInfo.value,
                         style:
                             const TextStyle(color: Colors.white, fontSize: 15),
                       ),
@@ -304,6 +314,24 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
+        Obx(
+          () => Offstage(
+            offstage: !controller.showTip.value,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  controller.seekTip.value,
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -315,8 +343,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Container(
           alignment: Alignment.center,
           color: Colors.black,
-          child: buildVlcPlayer(),
+          child: buildMediaPlayer(),
         ),
+
+        buildDanmuView(),
         Positioned.fill(
           child: Obx(
             () => Offstage(
@@ -327,7 +357,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
-        buildDanmuView(),
         Positioned.fill(
           child: GestureDetector(
             onTap: () {
@@ -336,6 +365,9 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               controller.showQualites.value = false;
               controller.showDanmuSettings.value = false;
             },
+            onVerticalDragStart: controller.onVerticalDragStart,
+            onVerticalDragUpdate: controller.onVerticalDragUpdate,
+            onVerticalDragEnd: controller.onVerticalDragEnd,
             child: Container(
               width: double.infinity,
               height: double.infinity,
@@ -470,9 +502,12 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     onPressed: () {
                       controller.showQualites.value = true;
                     },
-                    child: Text(
-                      controller.qualites[controller.currentQuality].quality,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    child: Obx(
+                      () => Text(
+                        controller.currentQualityInfo.value,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
+                      ),
                     ),
                   ),
                   TextButton(
@@ -480,7 +515,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       controller.showLines.value = true;
                     },
                     child: Text(
-                      "线路${controller.currentUrl + 1}",
+                      controller.currentUrlInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ),
@@ -677,37 +712,53 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
+        Obx(
+          () => Offstage(
+            offstage: !controller.showTip.value,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  controller.seekTip.value,
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget buildVlcPlayer() {
+  Widget buildMediaPlayer() {
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Container(
-        color: Colors.black,
-        child: Obx(
-          () {
-            if (controller.vlcPlayerController.value == null) {
-              return const Center(
-                child: Text(
-                  "正在加载信息",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              );
-            } else {
-              controller.vlcPlayer ??= VlcPlayer(
-                key: controller.globalPlayerKey,
-                controller: controller.vlcPlayerController.value!,
-                aspectRatio: 16 / 9,
-                placeholder: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-              return controller.vlcPlayer!;
-            }
-          },
-        ),
+      child: Video(
+        key: controller.globalPlayerKey,
+        controller: controller.videoController,
+        // child: Obx(
+        //   () {
+        //     if (controller.vlcPlayerController.value == null) {
+        //       return const Center(
+        //         child: Text(
+        //           "正在加载信息",
+        //           style: TextStyle(fontSize: 16, color: Colors.white),
+        //         ),
+        //       );
+        //     } else {
+        //       controller.vlcPlayer ??= Video(
+        //         key: controller.globalPlayerKey,
+        //         controller: controller.vlcPlayerController.value!,
+        //         aspectRatio: 16 / 9,
+        //       );
+        //       return controller.vlcPlayer!;
+        //     }
+        //   },
+        // ),
       ),
     );
   }

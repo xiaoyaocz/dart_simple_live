@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
@@ -48,6 +49,8 @@ class DouyinSite implements LiveSite {
       "https://live.douyin.com/hot_live",
       queryParameters: {},
       header: {
+        "Authority": "live.douyin.com",
+        "Referer": "https://live.douyin.com",
         "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
       },
@@ -167,6 +170,10 @@ class DouyinSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
+    if (!roomId.contains(',')) {
+      var rId = await getRoomId(roomId);
+      roomId = "$roomId,$rId";
+    }
     var ids = roomId.split(',');
     var webRid = ids[0];
     var roomIdStr = ids[1];
@@ -209,6 +216,32 @@ class DouyinSite implements LiveSite {
       danmakuData: roomId,
       data: roomInfo["stream_url"],
     );
+  }
+
+  Future<String> getRoomId(String webRid) async {
+    var result = await HttpClient.instance.getText(
+      "https://live.douyin.com/$webRid",
+      queryParameters: {},
+      header: {
+        "Accept":
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Authority": "live.douyin.com",
+        "Referer": "https://live.douyin.com",
+        "Cookie": "__ac_nonce=${generateRandomString(21)}",
+        "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+      },
+    );
+
+    var renderData =
+        RegExp(r'<script id="RENDER_DATA" type="application/json">(.*?)</script>')
+                .firstMatch(result)
+                ?.group(1) ??
+            "";
+    var renderDataJson = json.decode(Uri.decodeFull(renderData.trim()));
+    return renderDataJson["app"]["initialState"]["roomStore"]["roomInfo"]
+            ["room"]["id_str"]
+        .toString();
   }
 
   @override
@@ -320,5 +353,16 @@ class DouyinSite implements LiveSite {
   Future<List<LiveSuperChatMessage>> getSuperChatMessage(
       {required String roomId}) {
     return Future.value(<LiveSuperChatMessage>[]);
+  }
+
+  //生成指定长度的16进制随机字符串
+  String generateRandomString(int length) {
+    var random = Random.secure();
+    var values = List<int>.generate(length, (i) => random.nextInt(16));
+    StringBuffer stringBuffer = StringBuffer();
+    for (var item in values) {
+      stringBuffer.write(item.toRadixString(16));
+    }
+    return stringBuffer.toString();
   }
 }

@@ -5,7 +5,7 @@ import 'package:simple_live_core/src/common/web_socket_util.dart';
 
 class DouyinDanmaku implements LiveDanmaku {
   @override
-  int heartbeatTime = 45 * 1000;
+  int heartbeatTime = 10 * 1000;
 
   @override
   Function(LiveMessage msg)? onMessage;

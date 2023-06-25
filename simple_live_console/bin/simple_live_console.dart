@@ -111,5 +111,10 @@ List parseUrl(String url) {
     var id = RegExp(r"douyu\.com/([\d|\w]+)").firstMatch(url)?.group(1) ?? "";
     return [DouyuSite(), id];
   }
+  if (url.contains("live.douyin.com")) {
+    var id =
+        RegExp(r"live\.douyin\.com/([\d|\w]+)").firstMatch(url)?.group(1) ?? "";
+    return [DouyinSite(), id];
+  }
   throw Exception("链接解析失败");
 }

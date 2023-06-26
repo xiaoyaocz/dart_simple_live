@@ -121,7 +121,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: "${item["web_rid"]},${item["room"]["id_str"]}",
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -155,7 +155,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: "${item["web_rid"]},${item["room"]["id_str"]}",
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -170,14 +170,13 @@ class DouyinSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    if (!roomId.contains(',')) {
-      var rId = await getRoomId(roomId);
-      roomId = "$roomId,$rId";
-    }
-    var ids = roomId.split(',');
-    var webRid = ids[0];
-    var roomIdStr = ids[1];
-
+    var detail = await getRoomWebDetail(roomId);
+    var requestHeader = await getRequestHeaders();
+    var webRid = roomId;
+    var realRoomId = detail["initialState"]["roomStore"]["roomInfo"]["room"]
+            ["id_str"]
+        .toString();
+    var userUniqueId = detail["odin"]["user_unique_id"].toString();
     var result = await HttpClient.instance.getJson(
       "https://live.douyin.com/webcast/room/web/enter/",
       queryParameters: {
@@ -187,7 +186,7 @@ class DouyinSite implements LiveSite {
         "device_platform": "web",
         "enter_from": "web_live",
         "web_rid": webRid,
-        "room_id_str": roomIdStr,
+        "room_id_str": realRoomId,
         "enter_source": "",
         "Room-Enter-User-Login-Ab": 0,
         "is_need_double_stream": false,
@@ -199,26 +198,35 @@ class DouyinSite implements LiveSite {
         "browser_name": "Edge",
         "browser_version": "114.0.1823.51"
       },
-      header: await getRequestHeaders(),
+      header: requestHeader,
     );
     var roomInfo = result["data"]["data"][0];
+    var userInfo = result["data"]["user"];
+    var roomStatus = (asT<int?>(roomInfo["status"]) ?? 0) == 2;
     return LiveRoomDetail(
       roomId: roomId,
       title: roomInfo["title"].toString(),
-      cover: roomInfo["cover"]["url_list"][0].toString(),
-      userName: roomInfo["owner"]["nickname"].toString(),
-      userAvatar: roomInfo["owner"]["avatar_thumb"]["url_list"][0].toString(),
-      online: asT<int?>(roomInfo["room_view_stats"]["display_value"]) ?? 0,
-      status: (asT<int?>(roomInfo["status"]) ?? 0) == 2,
+      cover: roomStatus ? roomInfo["cover"]["url_list"][0].toString() : "",
+      userName: userInfo["nickname"].toString(),
+      userAvatar: userInfo["avatar_thumb"]["url_list"][0].toString(),
+      online: roomStatus
+          ? asT<int?>(roomInfo["room_view_stats"]["display_value"]) ?? 0
+          : 0,
+      status: roomStatus,
       url: "https://live.douyin.com/$webRid",
       introduction: roomInfo["title"].toString(),
       notice: "",
-      danmakuData: roomId,
+      danmakuData: DouyinDanmakuArgs(
+        webRid: webRid,
+        roomId: realRoomId,
+        userId: userUniqueId,
+        cookie: headers["cookie"],
+      ),
       data: roomInfo["stream_url"],
     );
   }
 
-  Future<String> getRoomId(String webRid) async {
+  Future<Map> getRoomWebDetail(String webRid) async {
     var result = await HttpClient.instance.getText(
       "https://live.douyin.com/$webRid",
       queryParameters: {},
@@ -239,9 +247,10 @@ class DouyinSite implements LiveSite {
                 ?.group(1) ??
             "";
     var renderDataJson = json.decode(Uri.decodeFull(renderData.trim()));
-    return renderDataJson["app"]["initialState"]["roomStore"]["roomInfo"]
-            ["room"]["id_str"]
-        .toString();
+    return renderDataJson["app"];
+    // return renderDataJson["app"]["initialState"]["roomStore"]["roomInfo"]
+    //         ["room"]["id_str"]
+    //     .toString();
   }
 
   @override
@@ -277,70 +286,13 @@ class DouyinSite implements LiveSite {
   @override
   Future<LiveSearchRoomResult> searchRooms(String keyword,
       {int page = 1}) async {
-    var result = await HttpClient.instance.getJson(
-      "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
-      queryParameters: {
-        "order": "",
-        "keyword": keyword,
-        "category_id": "",
-        "__refresh__": "",
-        "_extra": "",
-        "highlight": 0,
-        "single_column": 0,
-        "page": page
-      },
-      header: {"cookie": "buvid3=infoc;"},
-    );
-
-    var items = <LiveRoomItem>[];
-    for (var item in result["data"]["result"]["live_room"] ?? []) {
-      var title = item["title"].toString();
-      //移除title中的<em></em>标签
-      title = title.replaceAll(RegExp(r"<.*?em.*?>"), "");
-      var roomItem = LiveRoomItem(
-        roomId: item["roomid"].toString(),
-        title: title,
-        cover: "https:${item["cover"]}@400w.jpg",
-        userName: item["uname"].toString(),
-        online: int.tryParse(item["online"].toString()) ?? 0,
-      );
-      items.add(roomItem);
-    }
-    return LiveSearchRoomResult(hasMore: items.length >= 40, items: items);
+    throw Exception("抖音暂不支持搜索");
   }
 
   @override
   Future<LiveSearchAnchorResult> searchAnchors(String keyword,
       {int page = 1}) async {
-    var result = await HttpClient.instance.getJson(
-      "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live_user&cover_type=user_cover",
-      queryParameters: {
-        "order": "",
-        "keyword": keyword,
-        "category_id": "",
-        "__refresh__": "",
-        "_extra": "",
-        "highlight": 0,
-        "single_column": 0,
-        "page": page
-      },
-      header: {"cookie": "buvid3=infoc;"},
-    );
-
-    var items = <LiveAnchorItem>[];
-    for (var item in result["data"]["result"] ?? []) {
-      var uname = item["uname"].toString();
-      //移除title中的<em></em>标签
-      uname = uname.replaceAll(RegExp(r"<.*?em.*?>"), "");
-      var anchorItem = LiveAnchorItem(
-        roomId: item["roomid"].toString(),
-        avatar: "https:${item["uface"]}@400w.jpg",
-        userName: uname,
-        liveStatus: item["is_live"],
-      );
-      items.add(anchorItem);
-    }
-    return LiveSearchAnchorResult(hasMore: items.length >= 40, items: items);
+    throw Exception("抖音暂不支持搜索");
   }
 
   @override

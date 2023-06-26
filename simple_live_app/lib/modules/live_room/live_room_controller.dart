@@ -119,6 +119,7 @@ class LiveRoomController extends BaseController {
         area: settingsController.danmuArea.value,
         duration: settingsController.danmuSpeed.value,
         opacity: settingsController.danmuOpacity.value,
+        strokeWidth: settingsController.danmuStrokeWidth.value,
       ),
     );
   }
@@ -678,6 +679,24 @@ class LiveRoomController extends BaseController {
               settingsController.setDanmuSpeed(e);
               updateDanmuOption(
                 danmakuController?.option.copyWith(duration: e),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "弹幕描边: ${(settingsController.danmuStrokeWidth.value).toInt()}",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: settingsController.danmuStrokeWidth.value,
+            min: 0,
+            max: 10,
+            onChanged: (e) {
+              settingsController.setDanmuStrokeWidth(e);
+              updateDanmuOption(
+                danmakuController?.option.copyWith(strokeWidth: e),
               );
             },
           ),

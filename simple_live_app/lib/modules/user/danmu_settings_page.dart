@@ -95,6 +95,21 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
                 controller.setDanmuSpeed(e);
               },
             ),
+            Padding(
+              padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
+              child: Text(
+                "弹幕描边: ${(controller.danmuStrokeWidth.value).toInt()} ",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            Slider(
+              value: controller.danmuStrokeWidth.value,
+              min: 0,
+              max: 10,
+              onChanged: (e) {
+                controller.setDanmuStrokeWidth(e);
+              },
+            ),
           ],
         ),
       ),

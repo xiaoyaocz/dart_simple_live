@@ -184,7 +184,10 @@ class LiveRoomController extends BaseController {
       addHistory();
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status;
-      getPlayQualites();
+      if (liveStatus.value) {
+        getPlayQualites();
+      }
+
       addSysMsg("开始连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);

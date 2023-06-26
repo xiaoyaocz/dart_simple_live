@@ -137,6 +137,13 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuEnable, e);
   }
 
+  var danmuStrokeWidth = 2.0.obs;
+  void setDanmuStrokeWidth(double e) {
+    danmuStrokeWidth.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuStrokeWidth, e);
+  }
+
   var qualityLevel = 1.obs;
   void setQualityLevel(int level) {
     qualityLevel.value = level;

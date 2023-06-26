@@ -705,6 +705,27 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                           );
                         },
                       ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          "弹幕描边: ${(controller.settingsController.danmuStrokeWidth.value).toInt()}",
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 14),
+                        ),
+                      ),
+                      Slider(
+                        value: controller
+                            .settingsController.danmuStrokeWidth.value,
+                        min: 0,
+                        max: 10,
+                        onChanged: (e) {
+                          controller.settingsController.setDanmuStrokeWidth(e);
+                          controller.updateDanmuOption(
+                            controller.danmakuController?.option
+                                .copyWith(strokeWidth: e),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),

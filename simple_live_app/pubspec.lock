@@ -563,10 +563,10 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: bef1d2ae856d77316cdd76bf53dbbe5b2f28d778
+      resolved-ref: "0cfddc9aac0a5780fa4fce680bf73642d21ba779"
       url: "https://github.com/xiaoyaocz/flutter_ns_danmaku.git"
     source: git
-    version: "0.0.4"
+    version: "0.0.5"
   package_config:
     dependency: transitive
     description:
@@ -991,10 +991,10 @@ packages:
     dependency: transitive
     description:
       name: url_launcher_android
-      sha256: eed4e6a1164aa9794409325c3b707ff424d4d1c2a785e7db67f8bbda00e36e51
+      sha256: "15f5acbf0dce90146a0f5a2c4a002b1814a6303c4c5c075aa2623b2d16156f03"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.0.35"
+    version: "6.0.36"
   url_launcher_ios:
     dependency: transitive
     description:

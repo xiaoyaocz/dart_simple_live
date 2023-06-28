@@ -44,8 +44,8 @@ class DouyinDanmaku implements LiveDanmaku {
       "webcast_sdk_version": "1.3.0",
       "update_version_code": "1.3.0",
       "compress": "gzip",
-      "internal_ext":
-          "internal_src:dim|wss_push_room_id:${danmakuArgs.roomId}|wss_push_did:${danmakuArgs.userId}|dim_log_id:20230626152702E8F63662383A350588E1|fetch_time:1687764422114|seq:1|wss_info:0-1687764422114-0-0|wrds_kvs:WebcastRoomRankMessage-1687764036509597990_InputPanelComponentSyncData-1687736682345173033_WebcastRoomStatsMessage-1687764414427812578",
+      // "internal_ext":
+      //     "internal_src:dim|wss_push_room_id:${danmakuArgs.roomId}|wss_push_did:${danmakuArgs.userId}|dim_log_id:20230626152702E8F63662383A350588E1|fetch_time:1687764422114|seq:1|wss_info:0-1687764422114-0-0|wrds_kvs:WebcastRoomRankMessage-1687764036509597990_InputPanelComponentSyncData-1687736682345173033_WebcastRoomStatsMessage-1687764414427812578",
       "cursor": "h-1_t-${ts}_r-1_d-1_u-1",
       "host": "https://live.douyin.com",
       "aid": "6383",
@@ -179,5 +179,6 @@ class DouyinDanmaku implements LiveDanmaku {
   Future stop() async {
     onMessage = null;
     onClose = null;
+    webScoketUtils?.close();
   }
 }

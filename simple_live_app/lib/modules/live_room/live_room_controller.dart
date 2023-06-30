@@ -54,6 +54,10 @@ class LiveRoomController extends BaseController {
 
   /// 播放器加载中
   var playerLoadding = false.obs;
+
+  /// 是否为竖屏直播间
+  var isVertical = false.obs;
+
   var showDanmuSettings = false.obs;
   var showQualites = false.obs;
   var showLines = false.obs;
@@ -286,6 +290,8 @@ class LiveRoomController extends BaseController {
   StreamSubscription? errorStream;
   StreamSubscription? endStream;
   StreamSubscription? trackStream;
+  StreamSubscription? widthStream;
+  StreamSubscription? heightStream;
 
   /// 事件监听
   void playerListener() {
@@ -294,6 +300,19 @@ class LiveRoomController extends BaseController {
       playerLoadding.value = event;
     });
 
+    widthStream = player.streams.width.listen((event) {
+      Log.w(
+          'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+
+      isVertical.value =
+          (player.state.height ?? 9) > (player.state.width ?? 16);
+    });
+    heightStream = player.streams.height.listen((event) {
+      Log.w(
+          'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+      isVertical.value =
+          (player.state.height ?? 9) > (player.state.width ?? 16);
+    });
     trackStream = player.streams.track.listen((event) {
       Log.w('Track:$event');
       //接收到轨道信息后，隐藏加载
@@ -316,6 +335,8 @@ class LiveRoomController extends BaseController {
     trackStream?.cancel();
     errorStream?.cancel();
     endStream?.cancel();
+    widthStream?.cancel();
+    heightStream?.cancel();
   }
 
   void mediaEnd() {
@@ -375,11 +396,14 @@ class LiveRoomController extends BaseController {
     fullScreen.value = true;
     //全屏
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    //横屏
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    if (!isVertical.value) {
+      //横屏
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+
     danmakuController?.clear();
   }
 

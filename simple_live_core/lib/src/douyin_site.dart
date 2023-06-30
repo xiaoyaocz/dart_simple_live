@@ -286,13 +286,89 @@ class DouyinSite implements LiveSite {
   @override
   Future<LiveSearchRoomResult> searchRooms(String keyword,
       {int page = 1}) async {
-    throw Exception("抖音暂不支持搜索");
+    String serverUrl = "https://www.douyin.com/aweme/v1/web/live/search/";
+    var uri = Uri.parse(serverUrl)
+        .replace(scheme: "https", port: 443, queryParameters: {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "channel": "channel_pc_web",
+      "search_channel": "aweme_live",
+      "keyword": keyword,
+      "search_source": "switch_tab",
+      "query_correct_type": "1",
+      "is_filter_search": "0",
+      "from_group_id": "",
+      "offset": ((page - 1) * 10).toString(),
+      "count": "10",
+      "pc_client_type": "1",
+      "version_code": "170400",
+      "version_name": "17.4.0",
+      "cookie_enabled": "true",
+      "screen_width": "1980",
+      "screen_height": "1080",
+      "browser_language": "zh-CN",
+      "browser_platform": "Win32",
+      "browser_name": "Edge",
+      "browser_version": "114.0.1823.58",
+      "browser_online": "true",
+      "engine_name": "Blink",
+      "engine_version": "114.0.0.0",
+      "os_name": "Windows",
+      "os_version": "10",
+      "cpu_core_num": "12",
+      "device_memory": "8",
+      "platform": "PC",
+      "downlink": "4.7",
+      "effective_type": "4g",
+      "round_trip_time": "100",
+      "webid": "7247041636524377637",
+    });
+
+    // 发起一个签名请求
+    // 服务端代码：https://github.com/5ime/Tiktok_Signature
+    var signResult = await HttpClient.instance.postJson(
+      "https://tk.nsapps.cn/",
+      queryParameters: {},
+      header: {"Content-Type": "application/json"},
+      data: {
+        "url": uri.toString(),
+        "userAgent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51"
+      },
+    );
+    var requlestUrl = signResult["data"]["url"].toString();
+    var result = await HttpClient.instance.getJson(
+      requlestUrl,
+      queryParameters: {},
+      header: {
+        "Accept":
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Authority": "live.douyin.com",
+        "Referer": "https://www.douyin.com/",
+        "Cookie": "__ac_nonce=${generateRandomString(21)}",
+        "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+      },
+    );
+    var items = <LiveRoomItem>[];
+    for (var item in result["data"] ?? []) {
+      var itemData = json.decode(item["lives"]["rawdata"].toString());
+      var roomItem = LiveRoomItem(
+        roomId: itemData["owner"]["web_rid"].toString(),
+        title: itemData["title"].toString(),
+        cover: itemData["cover"]["url_list"][0].toString(),
+        userName: itemData["owner"]["nickname"].toString(),
+        online: int.tryParse(itemData["stats"]["total_user"].toString()) ?? 0,
+      );
+      items.add(roomItem);
+    }
+    return LiveSearchRoomResult(hasMore: items.length >= 10, items: items);
   }
 
   @override
   Future<LiveSearchAnchorResult> searchAnchors(String keyword,
       {int page = 1}) async {
-    throw Exception("抖音暂不支持搜索");
+    throw Exception("抖音暂不支持搜索主播，请直接搜索直播间");
   }
 
   @override

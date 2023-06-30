@@ -37,8 +37,7 @@ class DouyinDanmaku implements LiveDanmaku {
   Future start(dynamic args) async {
     danmakuArgs = args as DouyinDanmakuArgs;
     var ts = DateTime.now().millisecondsSinceEpoch;
-    var uri = Uri.parse(serverUrl)
-        .replace(scheme: "wss", port: 443, queryParameters: {
+    var uri = Uri.parse(serverUrl).replace(scheme: "wss", queryParameters: {
       "app_name": "douyin_web",
       "version_code": "180800",
       "webcast_sdk_version": "1.3.0",
@@ -74,9 +73,11 @@ class DouyinDanmaku implements LiveDanmaku {
       "signature": "00000000"
     });
     var url = uri.toString();
+    var backupUrl = url.replaceAll("webcast3-ws-web-lq", "webcast5-ws-web-lf");
     print(url);
     webScoketUtils = WebScoketUtils(
       url: url,
+      backupUrl: backupUrl,
       headers: {
         "User-Agnet":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",

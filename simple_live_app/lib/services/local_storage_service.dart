@@ -29,6 +29,9 @@ class LocalStorageService extends GetxService {
   /// 弹幕透明度
   static const String kDanmuOpacity = "DanmuOpacity";
 
+  /// 弹幕描边大小
+  static const String kDanmuStrokeWidth = "DanmuStrokeWidth";
+
   /// 弹幕-屏蔽滚动
   static const String kDanmuHideScroll = "DanmuHideScroll";
 
@@ -52,6 +55,12 @@ class LocalStorageService extends GetxService {
 
   /// 播放清晰度，0=低，1=中，2=高
   static const String kQualityLevel = "QualityLevel";
+
+  /// 开启定时关闭
+  static const String kAutoExitEnable = "AutoExitEnable";
+
+  /// 定时关闭时间（分钟）
+  static const String kAutoExitDuration = "AutoExitDuration";
 
   late Box settingsBox;
   Future init() async {

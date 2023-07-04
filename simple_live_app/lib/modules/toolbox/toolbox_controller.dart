@@ -126,6 +126,12 @@ class ToolBoxController extends GetxController {
 
       return [id, Sites.supportSites[2]];
     }
+    if (url.contains("live.douyin.com")) {
+      var regExp = RegExp(r"live\.douyin\.com/([\d|\w]+)");
+      id = regExp.firstMatch(url)?.group(1) ?? "";
+
+      return [id, Sites.supportSites[3]];
+    }
     return [];
   }
 

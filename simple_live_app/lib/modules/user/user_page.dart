@@ -128,6 +128,17 @@ class UserPage extends StatelessWidget {
                     Get.toNamed(RoutePath.kSettingsDanmu);
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Remix.timer_2_line),
+                  title: const Text("定时关闭"),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                  ),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kSettingsAutoExit);
+                  },
+                ),
               ],
             ),
             Divider(

@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:auto_orientation/auto_orientation.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -42,6 +45,7 @@ class LiveRoomController extends BaseController {
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
   final screenBrightness = ScreenBrightness();
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
+  final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   GlobalKey globalPlayerKey = GlobalKey();
   GlobalKey globalDanmuKey = GlobalKey();
   var online = 0.obs;
@@ -398,20 +402,17 @@ class LiveRoomController extends BaseController {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
     if (!isVertical.value) {
       //横屏
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+      setLandscapeOrientation();
     }
 
     danmakuController?.clear();
   }
 
   /// 退出全屏
-  void exitFull() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+  void exitFull() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    setPortraitOrientation();
     fullScreen.value = false;
     danmakuController?.clear();
   }
@@ -790,11 +791,11 @@ class LiveRoomController extends BaseController {
   }
 
   @override
-  void onClose() async {
+  void onClose() {
     playerCancelListener();
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    setPortraitOrientation();
     screenBrightness.resetScreenBrightness();
     Wakelock.disable();
 
@@ -803,6 +804,36 @@ class LiveRoomController extends BaseController {
     liveDanmaku.stop();
     danmakuController = null;
     super.onClose();
+  }
+
+  Future setLandscapeOrientation() async {
+    if (await beforeIOS16()) {
+      AutoOrientation.landscapeAutoMode();
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+  }
+
+  Future setPortraitOrientation() async {
+    if (await beforeIOS16()) {
+      AutoOrientation.portraitAutoMode();
+    } else {
+      await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    }
+  }
+
+  Future<bool> beforeIOS16() async {
+    if (Platform.isIOS) {
+      var info = await deviceInfo.iosInfo;
+      var version = info.systemVersion;
+      var versionInt = int.tryParse(version.split('.').first) ?? 0;
+      return versionInt < 16;
+    } else {
+      return false;
+    }
   }
 
   bool verticalDragging = false;

@@ -34,6 +34,7 @@ dependencies:
 
   #系统交互
   package_info_plus: ^4.0.2 #包信息
+  device_info_plus: ^9.0.2 #设备信息
   url_launcher: ^6.1.11 #打开链接
   share_plus: ^7.0.2 #分享
   path_provider: ^2.0.15 #常用路径

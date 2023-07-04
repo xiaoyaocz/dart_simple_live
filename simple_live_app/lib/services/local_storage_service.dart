@@ -56,6 +56,12 @@ class LocalStorageService extends GetxService {
   /// 播放清晰度，0=低，1=中，2=高
   static const String kQualityLevel = "QualityLevel";
 
+  /// 开启定时关闭
+  static const String kAutoExitEnable = "AutoExitEnable";
+
+  /// 定时关闭时间（分钟）
+  static const String kAutoExitDuration = "AutoExitDuration";
+
   late Box settingsBox;
   Future init() async {
     settingsBox = await Hive.openBox(

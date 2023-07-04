@@ -53,6 +53,11 @@ class LiveRoomController extends BaseController {
   var enableDanmaku = true.obs;
   var followed = false.obs;
 
+  /// 退出倒计时
+  var countdown = 60.obs;
+
+  Timer? autoExitTimer;
+
   /// 直播状态
   var liveStatus = false.obs;
 
@@ -95,12 +100,27 @@ class LiveRoomController extends BaseController {
 
   @override
   void onInit() {
+    initAutoExit();
     playerListener();
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     setSystem();
     loadData();
 
     super.onInit();
+  }
+
+  /// 初始化自动关闭倒计时
+  void initAutoExit() {
+    if (settingsController.autoExitEnable.value) {
+      countdown.value = settingsController.autoExitDuration.value * 60;
+      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        countdown.value -= 1;
+        if (countdown.value <= 0) {
+          timer.cancel();
+          exit(0);
+        }
+      });
+    }
   }
 
   void refreshRoom() {
@@ -792,6 +812,7 @@ class LiveRoomController extends BaseController {
 
   @override
   void onClose() {
+    autoExitTimer?.cancel();
     playerCancelListener();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);

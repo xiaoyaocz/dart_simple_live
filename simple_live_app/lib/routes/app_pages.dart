@@ -11,6 +11,7 @@ import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
+import 'package:simple_live_app/modules/user/auto_exit_settings_page.dart';
 import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
@@ -88,6 +89,11 @@ class AppPages {
     GetPage(
       name: RoutePath.kSettingsPlay,
       page: () => const PlaySettingsPage(),
+    ),
+    //播放设置
+    GetPage(
+      name: RoutePath.kSettingsAutoExit,
+      page: () => const AutoExitSettingsPage(),
     ),
     //工具箱
     GetPage(

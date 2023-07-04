@@ -113,10 +113,11 @@ class LiveRoomController extends BaseController {
   void initAutoExit() {
     if (settingsController.autoExitEnable.value) {
       countdown.value = settingsController.autoExitDuration.value * 60;
-      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
         countdown.value -= 1;
         if (countdown.value <= 0) {
           timer.cancel();
+          await Wakelock.disable();
           exit(0);
         }
       });

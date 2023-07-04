@@ -29,7 +29,7 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                   controller: controller.roomJumpToController,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播的链接",
+                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
                     contentPadding: AppStyle.edgeInsetsA12,
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
@@ -67,7 +67,7 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                   controller: controller.getUrlController,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播的链接",
+                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
                     contentPadding: AppStyle.edgeInsetsA12,
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(

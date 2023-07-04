@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:auto_orientation/auto_orientation.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -42,6 +45,7 @@ class LiveRoomController extends BaseController {
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
   final screenBrightness = ScreenBrightness();
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
+  final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   GlobalKey globalPlayerKey = GlobalKey();
   GlobalKey globalDanmuKey = GlobalKey();
   var online = 0.obs;
@@ -49,11 +53,20 @@ class LiveRoomController extends BaseController {
   var enableDanmaku = true.obs;
   var followed = false.obs;
 
+  /// 退出倒计时
+  var countdown = 60.obs;
+
+  Timer? autoExitTimer;
+
   /// 直播状态
   var liveStatus = false.obs;
 
   /// 播放器加载中
   var playerLoadding = false.obs;
+
+  /// 是否为竖屏直播间
+  var isVertical = false.obs;
+
   var showDanmuSettings = false.obs;
   var showQualites = false.obs;
   var showLines = false.obs;
@@ -87,12 +100,28 @@ class LiveRoomController extends BaseController {
 
   @override
   void onInit() {
+    initAutoExit();
     playerListener();
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     setSystem();
     loadData();
 
     super.onInit();
+  }
+
+  /// 初始化自动关闭倒计时
+  void initAutoExit() {
+    if (settingsController.autoExitEnable.value) {
+      countdown.value = settingsController.autoExitDuration.value * 60;
+      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+        countdown.value -= 1;
+        if (countdown.value <= 0) {
+          timer.cancel();
+          await Wakelock.disable();
+          exit(0);
+        }
+      });
+    }
   }
 
   void refreshRoom() {
@@ -119,6 +148,7 @@ class LiveRoomController extends BaseController {
         area: settingsController.danmuArea.value,
         duration: settingsController.danmuSpeed.value,
         opacity: settingsController.danmuOpacity.value,
+        strokeWidth: settingsController.danmuStrokeWidth.value,
       ),
     );
   }
@@ -184,7 +214,10 @@ class LiveRoomController extends BaseController {
       addHistory();
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status;
-      getPlayQualites();
+      if (liveStatus.value) {
+        getPlayQualites();
+      }
+
       addSysMsg("开始连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
@@ -282,6 +315,8 @@ class LiveRoomController extends BaseController {
   StreamSubscription? errorStream;
   StreamSubscription? endStream;
   StreamSubscription? trackStream;
+  StreamSubscription? widthStream;
+  StreamSubscription? heightStream;
 
   /// 事件监听
   void playerListener() {
@@ -290,6 +325,19 @@ class LiveRoomController extends BaseController {
       playerLoadding.value = event;
     });
 
+    widthStream = player.streams.width.listen((event) {
+      Log.w(
+          'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+
+      isVertical.value =
+          (player.state.height ?? 9) > (player.state.width ?? 16);
+    });
+    heightStream = player.streams.height.listen((event) {
+      Log.w(
+          'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+      isVertical.value =
+          (player.state.height ?? 9) > (player.state.width ?? 16);
+    });
     trackStream = player.streams.track.listen((event) {
       Log.w('Track:$event');
       //接收到轨道信息后，隐藏加载
@@ -312,6 +360,8 @@ class LiveRoomController extends BaseController {
     trackStream?.cancel();
     errorStream?.cancel();
     endStream?.cancel();
+    widthStream?.cancel();
+    heightStream?.cancel();
   }
 
   void mediaEnd() {
@@ -371,19 +421,19 @@ class LiveRoomController extends BaseController {
     fullScreen.value = true;
     //全屏
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    //横屏
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    if (!isVertical.value) {
+      //横屏
+      setLandscapeOrientation();
+    }
+
     danmakuController?.clear();
   }
 
   /// 退出全屏
-  void exitFull() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+  void exitFull() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    setPortraitOrientation();
     fullScreen.value = false;
     danmakuController?.clear();
   }
@@ -678,6 +728,24 @@ class LiveRoomController extends BaseController {
               );
             },
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "弹幕描边: ${(settingsController.danmuStrokeWidth.value).toInt()}",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: settingsController.danmuStrokeWidth.value,
+            min: 0,
+            max: 10,
+            onChanged: (e) {
+              settingsController.setDanmuStrokeWidth(e);
+              updateDanmuOption(
+                danmakuController?.option.copyWith(strokeWidth: e),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -744,11 +812,12 @@ class LiveRoomController extends BaseController {
   }
 
   @override
-  void onClose() async {
+  void onClose() {
+    autoExitTimer?.cancel();
     playerCancelListener();
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    setPortraitOrientation();
     screenBrightness.resetScreenBrightness();
     Wakelock.disable();
 
@@ -757,6 +826,36 @@ class LiveRoomController extends BaseController {
     liveDanmaku.stop();
     danmakuController = null;
     super.onClose();
+  }
+
+  Future setLandscapeOrientation() async {
+    if (await beforeIOS16()) {
+      AutoOrientation.landscapeAutoMode();
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+  }
+
+  Future setPortraitOrientation() async {
+    if (await beforeIOS16()) {
+      AutoOrientation.portraitAutoMode();
+    } else {
+      await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    }
+  }
+
+  Future<bool> beforeIOS16() async {
+    if (Platform.isIOS) {
+      var info = await deviceInfo.iosInfo;
+      var version = info.systemVersion;
+      var versionInt = int.tryParse(version.split('.').first) ?? 0;
+      return versionInt < 16;
+    } else {
+      return false;
+    }
   }
 
   bool verticalDragging = false;

@@ -14,6 +14,9 @@ class WebScoketUtils {
   /// 链接
   final String url;
 
+  /// 备用链接
+  final String? backupUrl;
+
   /// 心跳时间
   final int heartBeatTime;
 
@@ -43,6 +46,7 @@ class WebScoketUtils {
     this.onReady,
     this.onHeartBeat,
     this.headers,
+    this.backupUrl,
   });
   IOWebSocketChannel? webSocket;
   Timer? heartBeatTimer;
@@ -56,24 +60,32 @@ class WebScoketUtils {
 
   StreamSubscription<dynamic>? streamSubscription;
 
-  void connect() async {
+  void connect({bool retry = false}) async {
     close();
     try {
+      var wsurl = url;
+      if (backupUrl != null && backupUrl!.isNotEmpty && retry) {
+        wsurl = backupUrl!;
+      }
       webSocket = IOWebSocketChannel.connect(
-        url,
+        wsurl,
         connectTimeout: Duration(seconds: 10),
         headers: headers,
       );
 
       await webSocket?.ready;
-      reday();
+      ready();
     } catch (e) {
+      if (!retry) {
+        connect(retry: true);
+        return;
+      }
       onError(e, e);
     }
   }
 
   /// 连接完成
-  void reday() {
+  void ready() {
     status = SocketStatus.connected;
 
     streamSubscription = webSocket?.stream.listen(

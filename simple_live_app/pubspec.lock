@@ -210,6 +210,22 @@ packages:
       url: "https://github.com/xiaoyaocz/dart_tars_protocol.git"
     source: git
     version: "1.0.0"
+  device_info_plus:
+    dependency: "direct main"
+    description:
+      name: device_info_plus
+      sha256: "2c35b6d1682b028e42d07b3aee4b98fa62996c10bc12cb651ec856a80d6a761b"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "9.0.2"
+  device_info_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: device_info_plus_platform_interface
+      sha256: d3b01d5868b50ae571cd1dc6e502fc94d956b665756180f7b16ead09e836fd64
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.0.0"
   dio:
     dependency: "direct main"
     description:
@@ -563,10 +579,10 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: bef1d2ae856d77316cdd76bf53dbbe5b2f28d778
+      resolved-ref: "0cfddc9aac0a5780fa4fce680bf73642d21ba779"
       url: "https://github.com/xiaoyaocz/flutter_ns_danmaku.git"
     source: git
-    version: "0.0.4"
+    version: "0.0.5"
   package_config:
     dependency: transitive
     description:
@@ -735,6 +751,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "4.2.4"
+  protobuf:
+    dependency: transitive
+    description:
+      name: protobuf
+      sha256: "4034a02b7e231e7e60bff30a8ac13a7347abfdac0798595fae0b90a3f0afe759"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.0.0"
   pub_semver:
     dependency: transitive
     description:
@@ -983,10 +1007,10 @@ packages:
     dependency: transitive
     description:
       name: url_launcher_android
-      sha256: eed4e6a1164aa9794409325c3b707ff424d4d1c2a785e7db67f8bbda00e36e51
+      sha256: "15f5acbf0dce90146a0f5a2c4a002b1814a6303c4c5c075aa2623b2d16156f03"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.0.35"
+    version: "6.0.36"
   url_launcher_ios:
     dependency: transitive
     description:
@@ -1115,6 +1139,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "3.1.4"
+  win32_registry:
+    dependency: transitive
+    description:
+      name: win32_registry
+      sha256: e4506d60b7244251bc59df15656a3093501c37fb5af02105a944d73eb95be4c9
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.1.1"
   xdg_directories:
     dependency: transitive
     description:

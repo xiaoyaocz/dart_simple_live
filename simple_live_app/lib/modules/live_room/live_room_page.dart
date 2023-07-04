@@ -37,115 +37,109 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildOrientationUI() {
     return OrientationBuilder(
       builder: (context, orientation) {
-        if (orientation == Orientation.portrait) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Obx(
-                () => Text(controller.detail.value?.title ?? "直播间"),
-              ),
-              actions: buildAppbarActions(context),
+        return Scaffold(
+          appBar: AppBar(
+            title: Obx(
+              () => Text(controller.detail.value?.title ?? "直播间"),
             ),
-            body: buildVerticalUI(context),
-          );
-        } else {
-          return Scaffold(
-            appBar: AppBar(
-              title: Obx(
-                () => Text(controller.detail.value?.title ?? "直播间"),
-              ),
-              actions: buildAppbarActions(context),
-            ),
-            body: Column(
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Obx(
-                          () => buildPlayer(isPortrait: false),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: Column(
-                          children: [
-                            buildUserProfile(context),
-                            buildMessageArea(),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.grey.withOpacity(.1),
-                      ),
-                    ),
-                  ),
-                  padding: AppStyle.edgeInsetsV4.copyWith(
-                    bottom: AppStyle.bottomBarHeight + 4,
-                  ),
-                  child: Row(
-                    children: [
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 14),
-                        ),
-                        onPressed: controller.refreshRoom,
-                        icon: const Icon(Remix.refresh_line),
-                        label: const Text("刷新"),
-                      ),
-                      Obx(
-                        () => controller.followed.value
-                            ? TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  textStyle: const TextStyle(fontSize: 14),
-                                ),
-                                onPressed: controller.removeFollowUser,
-                                icon: const Icon(Remix.heart_fill),
-                                label: const Text("取消关注"),
-                              )
-                            : TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  textStyle: const TextStyle(fontSize: 14),
-                                ),
-                                onPressed: controller.followUser,
-                                icon: const Icon(Remix.heart_line),
-                                label: const Text("关注"),
-                              ),
-                      ),
-                      const Expanded(child: Center()),
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 14),
-                        ),
-                        onPressed: controller.share,
-                        icon: const Icon(Remix.share_line),
-                        label: const Text("分享"),
-                      ),
-                    ],
-                  ),
-                ),
-                //buildBottomActions(context),
-              ],
-            ),
-          );
-        }
+            actions: buildAppbarActions(context),
+          ),
+          body: orientation == Orientation.portrait
+              ? buildPhoneUI(context)
+              : buildTabletUI(context),
+        );
       },
     );
   }
 
-  Widget buildVerticalUI(BuildContext context) {
+  Widget buildPhoneUI(BuildContext context) {
     return Column(
       children: [
         Obx(() => buildPlayer()),
         buildUserProfile(context),
         buildMessageArea(),
         buildBottomActions(context),
+      ],
+    );
+  }
+
+  Widget buildTabletUI(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: Obx(
+                  () => buildPlayer(isPortrait: false),
+                ),
+              ),
+              SizedBox(
+                width: 300,
+                child: Column(
+                  children: [
+                    buildUserProfile(context),
+                    buildMessageArea(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            border: Border(
+              top: BorderSide(
+                color: Colors.grey.withOpacity(.1),
+              ),
+            ),
+          ),
+          padding: AppStyle.edgeInsetsV4.copyWith(
+            bottom: AppStyle.bottomBarHeight + 4,
+          ),
+          child: Row(
+            children: [
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(fontSize: 14),
+                ),
+                onPressed: controller.refreshRoom,
+                icon: const Icon(Remix.refresh_line),
+                label: const Text("刷新"),
+              ),
+              Obx(
+                () => controller.followed.value
+                    ? TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 14),
+                        ),
+                        onPressed: controller.removeFollowUser,
+                        icon: const Icon(Remix.heart_fill),
+                        label: const Text("取消关注"),
+                      )
+                    : TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 14),
+                        ),
+                        onPressed: controller.followUser,
+                        icon: const Icon(Remix.heart_line),
+                        label: const Text("关注"),
+                      ),
+              ),
+              const Expanded(child: Center()),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(fontSize: 14),
+                ),
+                onPressed: controller.share,
+                icon: const Icon(Remix.share_line),
+                label: const Text("分享"),
+              ),
+            ],
+          ),
+        ),
+        //buildBottomActions(context),
       ],
     );
   }
@@ -173,7 +167,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Container(
           alignment: Alignment.center,
           color: Colors.black,
-          child: buildMediaPlayer(),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: buildMediaPlayer(),
+          ),
         ),
         Positioned.fill(
           child: Obx(
@@ -343,7 +340,12 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Container(
           alignment: Alignment.center,
           color: Colors.black,
-          child: buildMediaPlayer(),
+          child: controller.isVertical.value
+              ? buildMediaPlayer()
+              : AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: buildMediaPlayer(),
+                ),
         ),
 
         buildDanmuView(),
@@ -705,6 +707,27 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                           );
                         },
                       ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          "弹幕描边: ${(controller.settingsController.danmuStrokeWidth.value).toInt()}",
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 14),
+                        ),
+                      ),
+                      Slider(
+                        value: controller
+                            .settingsController.danmuStrokeWidth.value,
+                        min: 0,
+                        max: 10,
+                        onChanged: (e) {
+                          controller.settingsController.setDanmuStrokeWidth(e);
+                          controller.updateDanmuOption(
+                            controller.danmakuController?.option
+                                .copyWith(strokeWidth: e),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -735,31 +758,28 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMediaPlayer() {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Video(
-        key: controller.globalPlayerKey,
-        controller: controller.videoController,
-        // child: Obx(
-        //   () {
-        //     if (controller.vlcPlayerController.value == null) {
-        //       return const Center(
-        //         child: Text(
-        //           "正在加载信息",
-        //           style: TextStyle(fontSize: 16, color: Colors.white),
-        //         ),
-        //       );
-        //     } else {
-        //       controller.vlcPlayer ??= Video(
-        //         key: controller.globalPlayerKey,
-        //         controller: controller.vlcPlayerController.value!,
-        //         aspectRatio: 16 / 9,
-        //       );
-        //       return controller.vlcPlayer!;
-        //     }
-        //   },
-        // ),
-      ),
+    return Video(
+      key: controller.globalPlayerKey,
+      controller: controller.videoController,
+      // child: Obx(
+      //   () {
+      //     if (controller.vlcPlayerController.value == null) {
+      //       return const Center(
+      //         child: Text(
+      //           "正在加载信息",
+      //           style: TextStyle(fontSize: 16, color: Colors.white),
+      //         ),
+      //       );
+      //     } else {
+      //       controller.vlcPlayer ??= Video(
+      //         key: controller.globalPlayerKey,
+      //         controller: controller.vlcPlayerController.value!,
+      //         aspectRatio: 16 / 9,
+      //       );
+      //       return controller.vlcPlayer!;
+      //     }
+      //   },
+      // ),
     );
   }
 

@@ -1,7 +1,7 @@
 {
-    "version": "1.1.0",
-    "version_num": 10100,
-    "version_desc": "1. 播放器由flutter_vlc_player变更为media_kit\n2. 优化搜索，区分主播与直播间\n3. 优化播放页面\n4. 修复一些BUG",
+    "version": "1.1.1",
+    "version_num": 10101,
+    "version_desc": "1. 支持抖音直播平台\n2. 新增定时关闭功能\n3. 修复一些BUG",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

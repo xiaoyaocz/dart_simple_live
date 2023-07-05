@@ -7,7 +7,7 @@
 <h2 align="center">Simple Live</h2>
 
 <p align="center">
-获取各个平台的直播信息及弹幕,基于<a href="https://github.com/xiaoyaocz/AllLive">AllLive</a>项目实现
+简简单单的看直播
 </p>
 
 ![浅色模式](/assets/screenshot_light.jpg)
@@ -22,6 +22,8 @@
 
 - 哔哩哔哩直播
 
+- 抖音直播
+
 ## APP支持平台
 
 - [x] Android
@@ -32,6 +34,8 @@
 
 请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
 
+Windows可前往应用商店下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)
+
 ## 项目结构
 
 - `simple_live_core` 项目核心库，实现获取各个网站的信息及弹幕。
@@ -40,7 +44,7 @@
 
 ## 参考及引用
 
-[AllLive](https://github.com/xiaoyaocz/AllLive)
+[AllLive](https://github.com/xiaoyaocz/AllLive) `本项目的C#版，有兴趣可以看看`
 
 [dart_tars_protocol](https://github.com/xiaoyaocz/dart_tars_protocol.git)
 
@@ -59,6 +63,8 @@
 [5ime/Tiktok_Signature](https://github.com/5ime/Tiktok_Signature)
 
 ## 声明
+
+本项目的所有功能都是基于互联网上公开的资料开发，无任何破解、逆向工程等行为。
 
 本项目仅用于学习交流编程技术，严禁将本项目用于商业目的。如有任何商业行为，均与本项目无关。
 

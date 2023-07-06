@@ -74,9 +74,14 @@ class LiveRoomController extends BaseController {
   late final player = Player();
   late final videoController = VideoController(
     player,
-    configuration: VideoControllerConfiguration(
-      enableHardwareAcceleration: settingsController.hardwareDecode.value,
-    ),
+    configuration: settingsController.playerCompatMode.value
+        ? const VideoControllerConfiguration(
+            vo: 'mediacodec_embed',
+            hwdec: 'mediacodec',
+          )
+        : VideoControllerConfiguration(
+            enableHardwareAcceleration: settingsController.hardwareDecode.value,
+          ),
   );
 
   DanmakuView? danmakuView;

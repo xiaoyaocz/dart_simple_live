@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -13,30 +15,36 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
         title: const Text("播放设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.edgeInsetsV12,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-                  child: Text(
-                    "硬件解码",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
+          Obx(
+            () => SwitchListTile(
+              title: Text(
+                "硬件解码",
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              Obx(
-                () => Switch(
-                  value: controller.hardwareDecode.value,
-                  onChanged: (e) {
-                    controller.setHardwareDecode(e);
-                  },
-                ),
-              ),
-            ],
+              value: controller.hardwareDecode.value,
+              onChanged: (e) {
+                controller.setHardwareDecode(e);
+              },
+            ),
           ),
-          AppStyle.vGap12,
+          Obx(
+            () => Visibility(
+              visible: Platform.isAndroid,
+              child: SwitchListTile(
+                title: Text(
+                  "兼容模式",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                subtitle: const Text("若播放卡顿可尝试打开此选项"),
+                value: controller.playerCompatMode.value,
+                onChanged: (e) {
+                  controller.setPlayerCompatMode(e);
+                },
+              ),
+            ),
+          ),
           Row(
             children: [
               Expanded(
@@ -84,6 +92,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                   ),
                 ),
               ),
+              AppStyle.hGap12,
             ],
           ),
           AppStyle.vGap12,

@@ -207,10 +207,10 @@ class HuyaSite implements LiveSite {
         .firstMatch(resultText)
         ?.group(1);
     var jsonObj = json.decode("{$text}");
-    var title = jsonObj["roomInfo"]["tLiveInfo"]["sRoomName"]?.toString() ?? "";
+    var title =
+        jsonObj["roomInfo"]["tLiveInfo"]["sIntroduction"]?.toString() ?? "";
     if (title.isEmpty) {
-      title =
-          jsonObj["roomInfo"]["tLiveInfo"]["sIntroduction"]?.toString() ?? "";
+      title = jsonObj["roomInfo"]["tLiveInfo"]["sRoomName"]?.toString() ?? "";
     }
     var huyaLines = <HuyaLineModel>[];
     var huyaBiterates = <HuyaBitRateModel>[];

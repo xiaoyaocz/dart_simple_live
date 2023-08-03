@@ -45,6 +45,7 @@ dependencies:
   screen_brightness: ^0.2.2 #亮度控制
   auto_orientation: ^2.3.1 #屏幕方向
   wakelock: ^0.6.2 #屏幕常亮
+  file_picker: ^5.3.3 #文件选择
   
   # 视频播放
   media_kit: ^1.1.1

@@ -465,6 +465,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               ),
               child: Row(
                 children: [
+                  IconButton(
+                    onPressed: () {
+                      controller.refreshRoom();
+                    },
+                    icon: const Icon(
+                      Remix.refresh_line,
+                      color: Colors.white,
+                    ),
+                  ),
                   Offstage(
                     offstage: controller.enableDanmaku.value,
                     child: IconButton(

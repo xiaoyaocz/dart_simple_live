@@ -257,28 +257,33 @@ class LiveRoomController extends BaseController {
   void getPlayQualites() async {
     qualites.clear();
     currentQuality = -1;
-    var playQualites =
-        await site.liveSite.getPlayQualites(detail: detail.value!);
+    try {
+      var playQualites =
+          await site.liveSite.getPlayQualites(detail: detail.value!);
 
-    if (playQualites.isEmpty) {
+      if (playQualites.isEmpty) {
+        SmartDialog.showToast("无法读取播放清晰度");
+        return;
+      }
+      qualites.value = playQualites;
+
+      if (settingsController.qualityLevel.value == 2) {
+        //最高
+        currentQuality = 0;
+      } else if (settingsController.qualityLevel.value == 0) {
+        //最低
+        currentQuality = playQualites.length - 1;
+      } else {
+        //中间值
+        int middle = (playQualites.length / 2).floor();
+        currentQuality = middle;
+      }
+
+      getPlayUrl();
+    } catch (e) {
+      Log.logPrint(e);
       SmartDialog.showToast("无法读取播放清晰度");
-      return;
     }
-    qualites.value = playQualites;
-
-    if (settingsController.qualityLevel.value == 2) {
-      //最高
-      currentQuality = 0;
-    } else if (settingsController.qualityLevel.value == 0) {
-      //最低
-      currentQuality = playQualites.length - 1;
-    } else {
-      //中间值
-      int middle = (playQualites.length / 2).floor();
-      currentQuality = middle;
-    }
-
-    getPlayUrl();
   }
 
   void getPlayUrl() async {
@@ -314,6 +319,7 @@ class LiveRoomController extends BaseController {
         httpHeaders: headers,
       ),
     );
+    Log.d("播放链接\r\n：${playUrls[currentUrl]}");
   }
 
   StreamSubscription? bufferingStream;

@@ -345,34 +345,34 @@ class LiveRoomController extends BaseController {
 
   /// 事件监听
   void playerListener() {
-    bufferingStream = player.streams.buffering.listen((event) {
+    bufferingStream = player.stream.buffering.listen((event) {
       Log.w('Buffering:$event');
       playerLoadding.value = event;
     });
 
-    widthStream = player.streams.width.listen((event) {
+    widthStream = player.stream.width.listen((event) {
       Log.w(
           'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
 
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
-    heightStream = player.streams.height.listen((event) {
+    heightStream = player.stream.height.listen((event) {
       Log.w(
           'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
-    trackStream = player.streams.track.listen((event) {
+    trackStream = player.stream.track.listen((event) {
       Log.w('Track:$event');
       //接收到轨道信息后，隐藏加载
       playerLoadding.value = false;
     });
-    errorStream = player.streams.error.listen((event) {
-      Log.w('${event.code}: ${event.message}');
+    errorStream = player.stream.error.listen((event) {
+      Log.w(event);
       mediaError();
     });
-    endStream = player.streams.completed.listen((event) {
+    endStream = player.stream.completed.listen((event) {
       if (event) {
         mediaEnd();
       }

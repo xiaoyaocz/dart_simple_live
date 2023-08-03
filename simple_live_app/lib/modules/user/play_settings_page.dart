@@ -20,6 +20,18 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
           Obx(
             () => SwitchListTile(
               title: Text(
+                "进入直播间自动全屏",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              value: controller.autoFullScreen.value,
+              onChanged: (e) {
+                controller.setAutoFullScreen(e);
+              },
+            ),
+          ),
+          Obx(
+            () => SwitchListTile(
+              title: Text(
                 "硬件解码",
                 style: Theme.of(context).textTheme.titleMedium,
               ),

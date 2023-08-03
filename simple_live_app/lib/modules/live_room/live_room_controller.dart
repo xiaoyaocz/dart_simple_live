@@ -143,6 +143,10 @@ class LiveRoomController extends BaseController {
 
     //屏幕常亮
     Wakelock.enable();
+
+    if (settingsController.autoFullScreen.value) {
+      setFull();
+    }
   }
 
   /// 弹幕控制器初始化，初始化一些选项

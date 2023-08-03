@@ -45,6 +45,9 @@ class AppSettingsController extends GetxController {
     playerCompatMode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerCompatMode, false);
 
+    autoFullScreen.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoFullScreen, false);
+
     super.onInit();
   }
 
@@ -179,5 +182,12 @@ class AppSettingsController extends GetxController {
     playerCompatMode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var autoFullScreen = false.obs;
+  void setAutoFullScreen(bool e) {
+    autoFullScreen.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoFullScreen, e);
   }
 }

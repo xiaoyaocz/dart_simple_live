@@ -65,6 +65,9 @@ class LocalStorageService extends GetxService {
   /// 播放器兼容模式
   static const String kPlayerCompatMode = "PlayerCompatMode";
 
+  /// 自动全屏
+  static const String kAutoFullScreen = "AutoFullScreen";
+
   late Box settingsBox;
   Future init() async {
     settingsBox = await Hive.openBox(

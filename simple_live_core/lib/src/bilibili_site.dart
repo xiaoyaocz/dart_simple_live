@@ -87,14 +87,26 @@ class BiliBiliSite implements LiveSite {
       {required LiveRoomDetail detail}) async {
     List<LivePlayQuality> qualities = [];
     var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/room/v1/Room/playUrl",
-      queryParameters: {"cid": detail.roomId, "qn": "", "platform": "web"},
+      "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
+      queryParameters: {
+        "room_id": detail.roomId,
+        "protocol": "0,1",
+        "format": "0,1,2",
+        "codec": "0,1",
+        "platform": "web",
+      },
     );
+    var qualitiesMap = <int, String>{};
+    for (var item in result["data"]["playurl_info"]["playurl"]["g_qn_desc"]) {
+      qualitiesMap[int.tryParse(item["qn"].toString()) ?? 0] =
+          item["desc"].toString();
+    }
 
-    for (var item in result["data"]["quality_description"]) {
+    for (var item in result["data"]["playurl_info"]["playurl"]["stream"][0]
+        ["format"][0]["codec"][0]["accept_qn"]) {
       var qualityItem = LivePlayQuality(
-        quality: item["desc"].toString(),
-        data: int.tryParse(item["qn"].toString()) ?? 0,
+        quality: qualitiesMap[item] ?? "未知清晰度",
+        data: item,
       );
       qualities.add(qualityItem);
     }
@@ -107,17 +119,33 @@ class BiliBiliSite implements LiveSite {
       required LivePlayQuality quality}) async {
     List<String> urls = [];
     var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/room/v1/Room/playUrl",
+      "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
       queryParameters: {
-        "cid": detail.roomId,
+        "room_id": detail.roomId,
+        "protocol": "0",
+        "format": "0",
+        "codec": "0",
+        "platform": "web",
         "qn": quality.data,
-        "platform": "web"
       },
     );
-
-    for (var item in result["data"]["durl"]) {
-      urls.add(item["url"].toString());
+    var streamList = result["data"]["playurl_info"]["playurl"]["stream"];
+    for (var streamItem in streamList) {
+      var formatList = streamItem["format"];
+      for (var formatItem in formatList) {
+        var codecList = formatItem["codec"];
+        for (var codecItem in codecList) {
+          var urlList = codecItem["url_info"];
+          var baseUrl = codecItem["base_url"].toString();
+          for (var urlItem in urlList) {
+            urls.add(
+              "${urlItem["host"]}$baseUrl${urlItem["extra"]}",
+            );
+          }
+        }
+      }
     }
+
     return urls;
   }
 

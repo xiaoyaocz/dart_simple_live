@@ -69,9 +69,14 @@ class LocalStorageService extends GetxService {
   static const String kAutoFullScreen = "AutoFullScreen";
 
   late Box settingsBox;
+  late Box<String> shieldBox;
+
   Future init() async {
     settingsBox = await Hive.openBox(
       "LocalStorage",
+    );
+    shieldBox = await Hive.openBox(
+      "DanmuShield",
     );
   }
 

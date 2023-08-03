@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 
 class DanmuSettingsPage extends GetView<AppSettingsController> {
   const DanmuSettingsPage({Key? key}) : super(key: key);
@@ -16,11 +17,24 @@ class DanmuSettingsPage extends GetView<AppSettingsController> {
         () => ListView(
           padding: AppStyle.edgeInsetsA12,
           children: [
+            ListTile(
+              leading: const Icon(Icons.disabled_visible),
+              contentPadding: AppStyle.edgeInsetsL8,
+              title: Text(
+                "弹幕关键词屏蔽",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
+              ),
+              onTap: () => Get.toNamed(RoutePath.kSettingsDanmuShield),
+            ),
             Row(
               children: [
                 Expanded(
                   child: Padding(
-                    padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
+                    padding: AppStyle.edgeInsetsH12,
                     child: Text(
                       "弹幕默认开关",
                       style: Theme.of(context).textTheme.titleMedium,

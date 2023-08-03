@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
@@ -18,6 +19,43 @@ class FollowUserPage extends GetView<FollowUserController> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("关注用户"),
+        actions: [
+          PopupMenuButton(
+            itemBuilder: (context) {
+              return const [
+                PopupMenuItem(
+                  value: 0,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Remix.save_2_line),
+                      AppStyle.hGap12,
+                      Text("导出列表")
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 1,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Remix.folder_open_line),
+                      AppStyle.hGap12,
+                      Text("导入列表")
+                    ],
+                  ),
+                ),
+              ];
+            },
+            onSelected: (value) {
+              if (value == 0) {
+                controller.exportList();
+              } else if (value == 1) {
+                controller.inputList();
+              }
+            },
+          ),
+        ],
       ),
       body: PageGridView(
         crossAxisSpacing: 12,
@@ -28,6 +66,7 @@ class FollowUserPage extends GetView<FollowUserController> {
           var item = controller.list[i];
           var site = Sites.supportSites.firstWhere((x) => x.id == item.siteId);
           return ListTile(
+            contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 4),
             leading: NetImage(
               item.face,
               width: 48,
@@ -91,6 +130,12 @@ class FollowUserPage extends GetView<FollowUserController> {
                   ),
                 ),
               ],
+            ),
+            trailing: IconButton(
+              onPressed: () {
+                controller.removeItem(item);
+              },
+              icon: const Icon(Remix.dislike_line),
             ),
             onTap: () {
               AppNavigator.toLiveRoomDetail(site: site, roomId: item.roomId);

@@ -1,5 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
@@ -56,5 +60,63 @@ class FollowUserController extends BasePageController<FollowUser> {
   void onClose() {
     subscription?.cancel();
     super.onClose();
+  }
+
+  void exportList() async {
+    if (list.isEmpty) {
+      SmartDialog.showToast("列表为空");
+      return;
+    }
+    var dir = await FilePicker.platform.getDirectoryPath();
+    if (dir == null) {
+      return;
+    }
+    try {
+      var jsonFile = File(
+          '$dir/SimpleLive_${DateTime.now().millisecondsSinceEpoch ~/ 1000}.json');
+      var data = list
+          .map(
+            (item) => {
+              "siteId": item.siteId,
+              "id": item.id,
+              "roomId": item.roomId,
+              "userName": item.userName,
+              "face": item.face,
+              "addTime": item.addTime.toString(),
+            },
+          )
+          .toList();
+
+      await jsonFile.writeAsString(jsonEncode(data));
+      SmartDialog.showToast("已导出关注列表");
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("导出失败");
+    }
+  }
+
+  void inputList() async {
+    var file = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    if (file == null) {
+      return;
+    }
+    try {
+      var jsonFile = File(file.files.single.path!);
+      var data = jsonDecode(await jsonFile.readAsString());
+
+      for (var item in data) {
+        var user = FollowUser.fromJson(item);
+        DBService.instance.followBox.put(user.id, user);
+      }
+      SmartDialog.showToast("导入成功");
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("导入失败");
+    } finally {
+      refreshData();
+    }
   }
 }

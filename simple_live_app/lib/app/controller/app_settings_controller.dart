@@ -48,6 +48,9 @@ class AppSettingsController extends GetxController {
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
 
+    // ignore: invalid_use_of_protected_member
+    shieldList.value = LocalStorageService.instance.shieldBox.values.toSet();
+
     super.onInit();
   }
 
@@ -189,5 +192,16 @@ class AppSettingsController extends GetxController {
     autoFullScreen.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kAutoFullScreen, e);
+  }
+
+  RxSet<String> shieldList = <String>{}.obs;
+  void addShieldList(String e) {
+    shieldList.add(e);
+    LocalStorageService.instance.shieldBox.put(e, e);
+  }
+
+  void removeShieldList(String e) {
+    shieldList.remove(e);
+    LocalStorageService.instance.shieldBox.delete(e);
   }
 }

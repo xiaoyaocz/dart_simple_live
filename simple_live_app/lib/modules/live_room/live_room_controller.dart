@@ -189,6 +189,15 @@ class LiveRoomController extends BaseController {
       if (messages.length > 200) {
         messages.removeAt(0);
       }
+
+      // 关键词屏蔽检查
+      for (var keyword in settingsController.shieldList) {
+        if (msg.message.contains(keyword)) {
+          Log.d("关键词：$keyword\n消息内容：${msg.message}");
+          return;
+        }
+      }
+
       messages.add(msg);
 
       WidgetsBinding.instance.addPostFrameCallback(

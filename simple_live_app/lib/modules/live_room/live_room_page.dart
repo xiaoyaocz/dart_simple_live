@@ -186,6 +186,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Positioned.fill(
           child: GestureDetector(
             onTap: () {
+              controller.hideControlsTimer?.cancel();
               controller.showControls.value = !controller.showControls.value;
             },
             onDoubleTap: () {
@@ -369,6 +370,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Positioned.fill(
           child: GestureDetector(
             onTap: () {
+              controller.hideControlsTimer?.cancel();
               controller.showControls.value = !controller.showControls.value;
               controller.showLines.value = false;
               controller.showQualites.value = false;

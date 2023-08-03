@@ -103,6 +103,8 @@ class LiveRoomController extends BaseController {
   /// 显示播放控制
   Rx<bool> showControls = true.obs;
 
+  Timer? hideControlsTimer;
+
   @override
   void onInit() {
     initAutoExit();
@@ -145,8 +147,17 @@ class LiveRoomController extends BaseController {
     Wakelock.enable();
 
     if (settingsController.autoFullScreen.value) {
+      //如果是抖音直接设置成竖屏
+      if (site.id == "douyin") {
+        isVertical.value = true;
+      }
       setFull();
     }
+
+    hideControlsTimer = Timer(const Duration(milliseconds: 3000), () {
+      //3秒后隐藏控制UI
+      showControls.value = false;
+    });
   }
 
   /// 弹幕控制器初始化，初始化一些选项
@@ -317,7 +328,7 @@ class LiveRoomController extends BaseController {
     setPlayer();
   }
 
-  void setPlayer() {
+  void setPlayer() async {
     currentUrlInfo.value = "线路${currentUrl + 1}";
     Map<String, String> headers = {};
     if (site.id == "bilibili") {
@@ -333,6 +344,7 @@ class LiveRoomController extends BaseController {
         httpHeaders: headers,
       ),
     );
+
     Log.d("播放链接\r\n：${playUrls[currentUrl]}");
   }
 
@@ -357,6 +369,7 @@ class LiveRoomController extends BaseController {
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
+
     heightStream = player.stream.height.listen((event) {
       Log.w(
           'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
@@ -370,8 +383,10 @@ class LiveRoomController extends BaseController {
     });
     errorStream = player.stream.error.listen((event) {
       Log.w(event);
-      mediaError();
+      // 切换清晰度时会触发此事件，暂时不做处理
+      // mediaError();
     });
+
     endStream = player.stream.completed.listen((event) {
       if (event) {
         mediaEnd();

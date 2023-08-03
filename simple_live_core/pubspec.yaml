@@ -1,5 +1,5 @@
 name: simple_live_core
-version: 1.0.1
+version: 1.0.2
 description: "聚合直播核心库"
 repository: https://github.com/xiaoyaocz/simple_live_client
 publish_to: "none"

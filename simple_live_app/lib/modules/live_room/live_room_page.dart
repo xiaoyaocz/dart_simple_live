@@ -188,6 +188,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             onTap: () {
               controller.showControls.value = !controller.showControls.value;
             },
+            onDoubleTap: () {
+              if (controller.fullScreen.value) {
+                controller.exitFull();
+              } else {
+                controller.setFull();
+              }
+            },
             onVerticalDragStart: controller.onVerticalDragStart,
             onVerticalDragUpdate: controller.onVerticalDragUpdate,
             onVerticalDragEnd: controller.onVerticalDragEnd,
@@ -367,6 +374,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               controller.showQualites.value = false;
               controller.showDanmuSettings.value = false;
             },
+            onDoubleTap: () {
+              if (controller.fullScreen.value) {
+                controller.exitFull();
+              } else {
+                controller.setFull();
+              }
+            },
             onVerticalDragStart: controller.onVerticalDragStart,
             onVerticalDragUpdate: controller.onVerticalDragUpdate,
             onVerticalDragEnd: controller.onVerticalDragEnd,
@@ -465,6 +479,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               ),
               child: Row(
                 children: [
+                  IconButton(
+                    onPressed: () {
+                      controller.refreshRoom();
+                    },
+                    icon: const Icon(
+                      Remix.refresh_line,
+                      color: Colors.white,
+                    ),
+                  ),
                   Offstage(
                     offstage: controller.enableDanmaku.value,
                     child: IconButton(

@@ -21,6 +21,9 @@ class RoutePath {
   /// 直播间设置
   static const kSettingsPlay = "/settings/play";
 
+  /// 弹幕关键词屏蔽
+  static const kSettingsDanmuShield = "/settings/danmu/shield";
+
   /// 赞助
   static const kSponsor = "/sponsor";
 

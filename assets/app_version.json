@@ -1,7 +1,7 @@
 {
-    "version": "1.1.1",
-    "version_num": 10101,
-    "version_desc": "1. 支持抖音直播平台\n2. 新增定时关闭功能\n3. 修复一些BUG",
+    "version": "1.2.0",
+    "version_num": 10200,
+    "version_desc": "1. 播放器增加兼容模式\n2. 修改虎牙直播间标题获取 #48\n3. 修复虎牙直播播放问题 #71\n4. 直播间全屏增加刷新按钮 #42\n5. 修复哔哩哔哩部分直播间无法观看问题 #59\n6. 修复弹幕默认开关设置无效问题 #65\n7. 增加进入直播间自动全屏选项 #41\n8. 增加弹幕关键词屏蔽功能 #70\n9. 增加双击全屏功能 #56",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

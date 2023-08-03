@@ -62,10 +62,21 @@ class LocalStorageService extends GetxService {
   /// 定时关闭时间（分钟）
   static const String kAutoExitDuration = "AutoExitDuration";
 
+  /// 播放器兼容模式
+  static const String kPlayerCompatMode = "PlayerCompatMode";
+
+  /// 自动全屏
+  static const String kAutoFullScreen = "AutoFullScreen";
+
   late Box settingsBox;
+  late Box<String> shieldBox;
+
   Future init() async {
     settingsBox = await Hive.openBox(
       "LocalStorage",
+    );
+    shieldBox = await Hive.openBox(
+      "DanmuShield",
     );
   }
 

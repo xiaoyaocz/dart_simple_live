@@ -74,9 +74,14 @@ class LiveRoomController extends BaseController {
   late final player = Player();
   late final videoController = VideoController(
     player,
-    configuration: VideoControllerConfiguration(
-      enableHardwareAcceleration: settingsController.hardwareDecode.value,
-    ),
+    configuration: settingsController.playerCompatMode.value
+        ? const VideoControllerConfiguration(
+            vo: 'mediacodec_embed',
+            hwdec: 'mediacodec',
+          )
+        : VideoControllerConfiguration(
+            enableHardwareAcceleration: settingsController.hardwareDecode.value,
+          ),
   );
 
   DanmakuView? danmakuView;
@@ -102,6 +107,7 @@ class LiveRoomController extends BaseController {
   void onInit() {
     initAutoExit();
     playerListener();
+    enableDanmaku.value = settingsController.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     setSystem();
     loadData();
@@ -137,6 +143,10 @@ class LiveRoomController extends BaseController {
 
     //屏幕常亮
     Wakelock.enable();
+
+    if (settingsController.autoFullScreen.value) {
+      setFull();
+    }
   }
 
   /// 弹幕控制器初始化，初始化一些选项
@@ -179,6 +189,15 @@ class LiveRoomController extends BaseController {
       if (messages.length > 200) {
         messages.removeAt(0);
       }
+
+      // 关键词屏蔽检查
+      for (var keyword in settingsController.shieldList) {
+        if (msg.message.contains(keyword)) {
+          Log.d("关键词：$keyword\n消息内容：${msg.message}");
+          return;
+        }
+      }
+
       messages.add(msg);
 
       WidgetsBinding.instance.addPostFrameCallback(
@@ -252,28 +271,33 @@ class LiveRoomController extends BaseController {
   void getPlayQualites() async {
     qualites.clear();
     currentQuality = -1;
-    var playQualites =
-        await site.liveSite.getPlayQualites(detail: detail.value!);
+    try {
+      var playQualites =
+          await site.liveSite.getPlayQualites(detail: detail.value!);
 
-    if (playQualites.isEmpty) {
+      if (playQualites.isEmpty) {
+        SmartDialog.showToast("无法读取播放清晰度");
+        return;
+      }
+      qualites.value = playQualites;
+
+      if (settingsController.qualityLevel.value == 2) {
+        //最高
+        currentQuality = 0;
+      } else if (settingsController.qualityLevel.value == 0) {
+        //最低
+        currentQuality = playQualites.length - 1;
+      } else {
+        //中间值
+        int middle = (playQualites.length / 2).floor();
+        currentQuality = middle;
+      }
+
+      getPlayUrl();
+    } catch (e) {
+      Log.logPrint(e);
       SmartDialog.showToast("无法读取播放清晰度");
-      return;
     }
-    qualites.value = playQualites;
-
-    if (settingsController.qualityLevel.value == 2) {
-      //最高
-      currentQuality = 0;
-    } else if (settingsController.qualityLevel.value == 0) {
-      //最低
-      currentQuality = playQualites.length - 1;
-    } else {
-      //中间值
-      int middle = (playQualites.length / 2).floor();
-      currentQuality = middle;
-    }
-
-    getPlayUrl();
   }
 
   void getPlayUrl() async {
@@ -309,6 +333,7 @@ class LiveRoomController extends BaseController {
         httpHeaders: headers,
       ),
     );
+    Log.d("播放链接\r\n：${playUrls[currentUrl]}");
   }
 
   StreamSubscription? bufferingStream;
@@ -320,34 +345,34 @@ class LiveRoomController extends BaseController {
 
   /// 事件监听
   void playerListener() {
-    bufferingStream = player.streams.buffering.listen((event) {
+    bufferingStream = player.stream.buffering.listen((event) {
       Log.w('Buffering:$event');
       playerLoadding.value = event;
     });
 
-    widthStream = player.streams.width.listen((event) {
+    widthStream = player.stream.width.listen((event) {
       Log.w(
           'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
 
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
-    heightStream = player.streams.height.listen((event) {
+    heightStream = player.stream.height.listen((event) {
       Log.w(
           'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
-    trackStream = player.streams.track.listen((event) {
+    trackStream = player.stream.track.listen((event) {
       Log.w('Track:$event');
       //接收到轨道信息后，隐藏加载
       playerLoadding.value = false;
     });
-    errorStream = player.streams.error.listen((event) {
-      Log.w('${event.code}: ${event.message}');
+    errorStream = player.stream.error.listen((event) {
+      Log.w(event);
       mediaError();
     });
-    endStream = player.streams.completed.listen((event) {
+    endStream = player.stream.completed.listen((event) {
       if (event) {
         mediaEnd();
       }

@@ -42,6 +42,15 @@ class AppSettingsController extends GetxController {
     autoExitDuration.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitDuration, 60);
 
+    playerCompatMode.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerCompatMode, false);
+
+    autoFullScreen.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoFullScreen, false);
+
+    // ignore: invalid_use_of_protected_member
+    shieldList.value = LocalStorageService.instance.shieldBox.values.toSet();
+
     super.onInit();
   }
 
@@ -169,5 +178,30 @@ class AppSettingsController extends GetxController {
     autoExitDuration.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kAutoExitDuration, e);
+  }
+
+  var playerCompatMode = false.obs;
+  void setPlayerCompatMode(bool e) {
+    playerCompatMode.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var autoFullScreen = false.obs;
+  void setAutoFullScreen(bool e) {
+    autoFullScreen.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoFullScreen, e);
+  }
+
+  RxSet<String> shieldList = <String>{}.obs;
+  void addShieldList(String e) {
+    shieldList.add(e);
+    LocalStorageService.instance.shieldBox.put(e, e);
+  }
+
+  void removeShieldList(String e) {
+    shieldList.remove(e);
+    LocalStorageService.instance.shieldBox.delete(e);
   }
 }

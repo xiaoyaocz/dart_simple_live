@@ -107,6 +107,7 @@ class LiveRoomController extends BaseController {
   void onInit() {
     initAutoExit();
     playerListener();
+    enableDanmaku.value = settingsController.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     setSystem();
     loadData();

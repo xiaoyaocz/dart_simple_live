@@ -618,8 +618,31 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     return ListTile(
                       selected: controller.currentUrl == i,
                       textColor: Colors.white,
-                      title: Text(
-                        "线路${i + 1}",
+                      title: Text.rich(
+                        TextSpan(
+                          text: "线路${i + 1}",
+                          children: [
+                            WidgetSpan(
+                                child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: AppStyle.radius4,
+                                border: Border.all(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              padding: AppStyle.edgeInsetsH4,
+                              margin: AppStyle.edgeInsetsL8,
+                              child: Text(
+                                controller.playUrls[i].contains(".flv")
+                                    ? "FLV"
+                                    : "HLS",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            )),
+                          ],
+                        ),
                         style: const TextStyle(fontSize: 14),
                       ),
                       minLeadingWidth: 16,
@@ -786,6 +809,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     return Video(
       key: controller.globalPlayerKey,
       controller: controller.videoController,
+      pauseUponEnteringBackgroundMode: false,
+      controls: NoVideoControls,
       // child: Obx(
       //   () {
       //     if (controller.vlcPlayerController.value == null) {

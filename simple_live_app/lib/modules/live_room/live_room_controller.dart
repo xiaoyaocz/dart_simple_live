@@ -330,11 +330,13 @@ class LiveRoomController extends BaseController {
 
   void setPlayer() async {
     currentUrlInfo.value = "线路${currentUrl + 1}";
+    errorMsg.value = "";
     Map<String, String> headers = {};
     if (site.id == "bilibili") {
       headers = {
         "referer": "https://live.bilibili.com",
-        "user-agent": "Mozilla/5.0 BiliDroid/1.12.0 (bbcallen@gmail.com)"
+        "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
       };
     }
     playerLoadding.value = true;
@@ -384,7 +386,7 @@ class LiveRoomController extends BaseController {
     errorStream = player.stream.error.listen((event) {
       Log.w(event);
       // 切换清晰度时会触发此事件，暂时不做处理
-      // mediaError();
+      mediaError();
     });
 
     endStream = player.stream.completed.listen((event) {
@@ -415,7 +417,7 @@ class LiveRoomController extends BaseController {
 
   void mediaError() {
     if (playUrls.length - 1 == currentUrl) {
-      liveStatus.value = false;
+      //liveStatus.value = false;
       errorMsg.value = "播放失败";
       //Log.w(player.state..errorDescription ?? "");
     } else {
@@ -616,6 +618,9 @@ class LiveRoomController extends BaseController {
                     value: i,
                     groupValue: currentUrl,
                     title: Text("线路${i + 1}"),
+                    secondary: Text(
+                      playUrls[i].contains(".flv") ? "FLV" : "HLS",
+                    ),
                     onChanged: (e) {
                       Get.back();
                       currentUrl = i;

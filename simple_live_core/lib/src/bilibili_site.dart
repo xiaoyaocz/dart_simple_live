@@ -122,8 +122,8 @@ class BiliBiliSite implements LiveSite {
       "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
       queryParameters: {
         "room_id": detail.roomId,
-        "protocol": "0",
-        "format": "0",
+        "protocol": "0,1",
+        "format": "0,2",
         "codec": "0",
         "platform": "web",
         "qn": quality.data,
@@ -145,7 +145,14 @@ class BiliBiliSite implements LiveSite {
         }
       }
     }
-
+    // 对链接进行排序，包含mcdn的在后
+    urls.sort((a, b) {
+      if (a.contains("mcdn")) {
+        return 1;
+      } else {
+        return -1;
+      }
+    });
     return urls;
   }
 

@@ -145,7 +145,14 @@ class BiliBiliSite implements LiveSite {
         }
       }
     }
-
+    // 对链接进行排序，包含mcdn的在后
+    urls.sort((a, b) {
+      if (a.contains("mcdn")) {
+        return 1;
+      } else {
+        return -1;
+      }
+    });
     return urls;
   }
 

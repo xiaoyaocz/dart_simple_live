@@ -9,6 +9,7 @@ assignees: xiaoyaocz
 
 **BUG内容**
 输入BUG详细内容
+反馈前请确认下是否存在相似的Issues！！！
 
 **重现步骤**
 请在此输入重现步骤

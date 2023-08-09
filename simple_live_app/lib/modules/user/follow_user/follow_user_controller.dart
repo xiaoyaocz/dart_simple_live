@@ -15,11 +15,20 @@ import 'package:simple_live_app/services/db_service.dart';
 
 class FollowUserController extends BasePageController<FollowUser> {
   StreamSubscription<dynamic>? subscription;
+  StreamSubscription<dynamic>? subscriptionIndexedUpdate;
   @override
   void onInit() {
     subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
       refreshData();
     });
+    subscriptionIndexedUpdate = EventBus.instance.listen(
+      EventBus.kBottomNavigationBarClicked,
+      (index) {
+        if (index == 1) {
+          scrollToTopOrRefresh();
+        }
+      },
+    );
     super.onInit();
   }
 
@@ -59,6 +68,7 @@ class FollowUserController extends BasePageController<FollowUser> {
   @override
   void onClose() {
     subscription?.cancel();
+    subscriptionIndexedUpdate?.cancel();
     super.onClose();
   }
 

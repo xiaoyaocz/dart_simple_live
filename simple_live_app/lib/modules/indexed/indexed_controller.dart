@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_page.dart';
@@ -37,7 +38,9 @@ class IndexedController extends GetxController {
         default:
       }
     }
-
+    if (index.value == i) {
+      EventBus.instance.emit<int>(EventBus.kBottomNavigationBarClicked, i);
+    }
     index.value = i;
   }
 

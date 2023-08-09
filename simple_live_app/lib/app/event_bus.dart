@@ -4,6 +4,9 @@ import 'package:simple_live_app/app/log.dart';
 
 /// 全局事件
 class EventBus {
+  /// 点击了底部导航
+  static const String kBottomNavigationBarClicked =
+      "BottomNavigationBarClicked";
   static EventBus? _instance;
 
   static EventBus get instance {

@@ -182,8 +182,7 @@ class DouyuSite implements LiveSite {
           'user-agent':
               'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/114.0.0.0',
         });
-    var roomInfo =
-        result["pageContext"]["pageProps"]["room"]["roomInfo"]["roomInfo"];
+    var roomInfo = result["pageProps"]["room"]["roomInfo"]["roomInfo"];
 
     var jsEncResult = await HttpClient.instance.getText(
         "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId",

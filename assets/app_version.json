@@ -1,7 +1,7 @@
 {
-    "version": "1.2.2",
-    "version_num": 10202,
-    "version_desc": "1. 修复进入后台自动暂停#89，#88，#85，#77\n2. 哔哩哔哩优选非PCDN链接\n3. 修复弹幕描边设置不生效 #81",
+    "version": "1.2.4",
+    "version_num": 10204,
+    "version_desc": "1. 修复斗鱼无法播放问题#98\n2. 启用v1+v2签名 #96\n3. 点击底部导航栏返回顶部/刷新 #84,#93",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

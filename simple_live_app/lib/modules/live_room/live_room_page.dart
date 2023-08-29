@@ -810,7 +810,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       key: controller.globalPlayerKey,
       controller: controller.videoController,
       pauseUponEnteringBackgroundMode: false,
-      controls: NoVideoControls,
+      controls: MaterialVideoControls,
       // child: Obx(
       //   () {
       //     if (controller.vlcPlayerController.value == null) {

@@ -25,7 +25,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class LiveRoomController extends BaseController {
   final Site site;
@@ -125,7 +125,7 @@ class LiveRoomController extends BaseController {
         countdown.value -= 1;
         if (countdown.value <= 0) {
           timer.cancel();
-          await Wakelock.disable();
+          await WakelockPlus.disable();
           exit(0);
         }
       });
@@ -144,7 +144,7 @@ class LiveRoomController extends BaseController {
     PerfectVolumeControl.hideUI = false;
 
     //屏幕常亮
-    Wakelock.enable();
+    WakelockPlus.enable();
 
     if (settingsController.autoFullScreen.value) {
       //如果是抖音直接设置成竖屏
@@ -864,7 +864,7 @@ class LiveRoomController extends BaseController {
         overlays: SystemUiOverlay.values);
     setPortraitOrientation();
     screenBrightness.resetScreenBrightness();
-    Wakelock.disable();
+    WakelockPlus.disable();
 
     player.dispose();
 

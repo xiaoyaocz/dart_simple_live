@@ -5,8 +5,8 @@ import 'package:simple_live_app/modules/categoty_detail/category_detail_controll
 import 'package:simple_live_app/modules/categoty_detail/category_detail_page.dart';
 import 'package:simple_live_app/modules/home/home_controller.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
-import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
-import 'package:simple_live_app/modules/live_room/live_room_page.dart';
+import 'package:simple_live_app/modules/live_room/live_room_new_controller.dart';
+import 'package:simple_live_app/modules/live_room/live_room_new_page.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
@@ -74,9 +74,9 @@ class AppPages {
     //直播间
     GetPage(
       name: RoutePath.kLiveRoomDetail,
-      page: () => const LiveRoomPage(),
+      page: () => const LiveRoomNewPage(),
       binding: BindingsBuilder.put(
-        () => LiveRoomController(
+        () => LiveRoomNewController(
           site: Get.arguments,
           roomId: Get.parameters["roomId"] ?? "",
         ),

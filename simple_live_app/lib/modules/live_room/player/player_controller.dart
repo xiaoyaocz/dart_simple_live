@@ -116,6 +116,15 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 
   void initDanmakuController(DanmakuController e) {
     danmakuController = e;
+    danmakuController?.updateOption(
+      DanmakuOption(
+        fontSize: AppSettingsController.instance.danmuSize.value,
+        area: AppSettingsController.instance.danmuArea.value,
+        duration: AppSettingsController.instance.danmuSpeed.value,
+        opacity: AppSettingsController.instance.danmuOpacity.value,
+        strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
+      ),
+    );
   }
 
   void updateDanmuOption(DanmakuOption? option) {

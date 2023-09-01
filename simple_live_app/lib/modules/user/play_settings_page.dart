@@ -108,6 +108,69 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
             ],
           ),
           AppStyle.vGap12,
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
+                  child: Text(
+                    "画面尺寸",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                height: 36,
+                child: Obx(
+                  () => DropdownButtonFormField(
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: AppStyle.edgeInsetsH12,
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 0,
+                        child: Text(
+                          "适应",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text(
+                          "填充",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 2,
+                        child: Text(
+                          "铺满",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 3,
+                        child: Text(
+                          "16:9",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 4,
+                        child: Text(
+                          "4:3",
+                        ),
+                      ),
+                    ],
+                    value: controller.scaleMode.value,
+                    onChanged: (e) {
+                      controller.setScaleMode(e ?? 0);
+                    },
+                  ),
+                ),
+              ),
+              AppStyle.hGap12,
+            ],
+          ),
+          AppStyle.vGap12,
           Obx(
             () => Padding(
               padding: AppStyle.edgeInsetsH12.copyWith(top: 12),

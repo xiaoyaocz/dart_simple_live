@@ -5,7 +5,6 @@ import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
-import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/modules/live_room/live_room_new_controller.dart';
 
 Widget playerControls(
@@ -19,15 +18,10 @@ Widget playerControls(
         controller,
       );
     }
-    return OrientationBuilder(
-      builder: (context, orientation) {
-        Log.d(orientation.toString());
-        return buildControls(
-          orientation == Orientation.portrait,
-          videoState,
-          controller,
-        );
-      },
+    return buildControls(
+      videoState.context.orientation == Orientation.portrait,
+      videoState,
+      controller,
     );
   });
 }

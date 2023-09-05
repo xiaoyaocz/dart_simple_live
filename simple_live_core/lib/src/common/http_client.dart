@@ -144,13 +144,15 @@ class HttpClient {
         queryParameters: queryParameters,
         options: Options(
           headers: header,
+          receiveDataWhenStatusError: true,
         ),
         cancelToken: cancel,
       );
       return result;
     } catch (e) {
       if (e is DioError && e.type == DioErrorType.response) {
-        throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
+        //throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
+        return e.response!;
       } else {
         throw CoreError("发送HEAD请求失败");
       }

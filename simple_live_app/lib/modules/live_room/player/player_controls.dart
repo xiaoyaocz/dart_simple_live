@@ -722,7 +722,7 @@ void showPlayerSettings(LiveRoomController controller) {
           RadioListTile(
             value: 1,
             contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("填充"),
+            title: const Text("拉伸"),
             visualDensity: VisualDensity.compact,
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {

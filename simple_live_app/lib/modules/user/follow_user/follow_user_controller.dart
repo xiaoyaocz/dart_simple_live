@@ -12,6 +12,7 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 class FollowUserController extends BasePageController<FollowUser> {
   StreamSubscription<dynamic>? subscription;
@@ -77,11 +78,18 @@ class FollowUserController extends BasePageController<FollowUser> {
       SmartDialog.showToast("列表为空");
       return;
     }
-    var dir = await FilePicker.platform.getDirectoryPath();
-    if (dir == null) {
-      return;
-    }
+
     try {
+      var dir = "";
+      if (Platform.isIOS) {
+        dir = (await getApplicationDocumentsDirectory()).path;
+      } else {
+        dir = await FilePicker.platform.getDirectoryPath() ?? "";
+      }
+
+      if (dir.isEmpty) {
+        return;
+      }
       var jsonFile = File(
           '$dir/SimpleLive_${DateTime.now().millisecondsSinceEpoch ~/ 1000}.json');
       var data = list

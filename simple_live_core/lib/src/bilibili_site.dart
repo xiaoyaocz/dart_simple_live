@@ -191,6 +191,17 @@ class BiliBiliSite implements LiveSite {
         "room_id": roomId,
       },
     );
+
+    var roomDanmakuResult = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo",
+      queryParameters: {
+        "id": roomId,
+      },
+    );
+    var buvid = await getBuvid();
+    List<String> serverHosts = (roomDanmakuResult["data"]["host_list"] as List)
+        .map<String>((e) => e["host"].toString())
+        .toList();
     return LiveRoomDetail(
       roomId: result["data"]["room_info"]["room_id"].toString(),
       title: result["data"]["room_info"]["title"].toString(),
@@ -203,7 +214,14 @@ class BiliBiliSite implements LiveSite {
       url: "https://live.bilibili.com/$roomId",
       introduction: result["data"]["room_info"]["description"].toString(),
       notice: "",
-      danmakuData: asT<int?>(result["data"]["room_info"]["room_id"]) ?? 0,
+      danmakuData: BiliBiliDanmakuArgs(
+        roomId: asT<int?>(result["data"]["room_info"]["room_id"]) ?? 0,
+        token: roomDanmakuResult["data"]["token"].toString(),
+        serverHost: serverHosts.isNotEmpty
+            ? serverHosts.first
+            : "broadcastlv.chat.bilibili.com",
+        buvid: buvid,
+      ),
     );
   }
 
@@ -315,5 +333,17 @@ class BiliBiliSite implements LiveSite {
       ls.add(message);
     }
     return ls;
+  }
+
+  Future<String> getBuvid() async {
+    try {
+      var result = await HttpClient.instance.getJson(
+        "https://api.bilibili.com/x/frontend/finger/spi",
+        queryParameters: {},
+      );
+      return result["data"]["b_3"].toString();
+    } catch (e) {
+      return "";
+    }
   }
 }

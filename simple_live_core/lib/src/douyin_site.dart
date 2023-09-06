@@ -56,15 +56,13 @@ class DouyinSite implements LiveSite {
       },
     );
 
-    var renderData =
-        RegExp(r'<script id="RENDER_DATA" type="application/json">(.*?)</script>')
-                .firstMatch(result)
-                ?.group(1) ??
-            "";
-    var renderDataJson = json.decode(Uri.decodeFull(renderData.trim()));
+    var renderData = RegExp(r'9:\[\\"\$\\",\\"\$L13\\",null,(.*?)\]\\n')
+            .firstMatch(result)
+            ?.group(1) ??
+        "";
+    var renderDataJson = json.decode(renderData.trim().replaceAll("\\", ""));
 
-    for (var item in renderDataJson["app"]["layoutData"]["categoryTab"]
-        ["categoryData"]) {
+    for (var item in renderDataJson["categoryData"]) {
       List<LiveSubCategory> subs = [];
       var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
       for (var subItem in item["sub_partition"]) {
@@ -173,10 +171,9 @@ class DouyinSite implements LiveSite {
     var detail = await getRoomWebDetail(roomId);
     var requestHeader = await getRequestHeaders();
     var webRid = roomId;
-    var realRoomId = detail["initialState"]["roomStore"]["roomInfo"]["room"]
-            ["id_str"]
-        .toString();
-    var userUniqueId = detail["odin"]["user_unique_id"].toString();
+    var realRoomId =
+        detail["roomStore"]["roomInfo"]["room"]["id_str"].toString();
+    var userUniqueId = detail["userStore"]["odin"]["user_unique_id"].toString();
     var result = await HttpClient.instance.getJson(
       "https://live.douyin.com/webcast/room/web/enter/",
       queryParameters: {
@@ -241,13 +238,14 @@ class DouyinSite implements LiveSite {
       },
     );
 
-    var renderData =
-        RegExp(r'<script id="RENDER_DATA" type="application/json">(.*?)</script>')
-                .firstMatch(result)
-                ?.group(1) ??
-            "";
-    var renderDataJson = json.decode(Uri.decodeFull(renderData.trim()));
-    return renderDataJson["app"];
+    var renderData = RegExp(r'c:\[\\"\$\\",\\"\$L13\\",null,(.*?)\]\\n')
+            .firstMatch(result)
+            ?.group(1) ??
+        "";
+    var str = renderData.trim().replaceAll('\\"', '"').replaceAll(r"\\", r"\");
+    var renderDataJson = json.decode(str);
+
+    return renderDataJson["state"];
     // return renderDataJson["app"]["initialState"]["roomStore"]["roomInfo"]
     //         ["room"]["id_str"]
     //     .toString();
@@ -323,20 +321,7 @@ class DouyinSite implements LiveSite {
       "round_trip_time": "100",
       "webid": "7247041636524377637",
     });
-
-    // 发起一个签名请求
-    // 服务端代码：https://github.com/5ime/Tiktok_Signature
-    var signResult = await HttpClient.instance.postJson(
-      "https://tk.nsapps.cn/",
-      queryParameters: {},
-      header: {"Content-Type": "application/json"},
-      data: {
-        "url": uri.toString(),
-        "userAgent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51"
-      },
-    );
-    var requlestUrl = signResult["data"]["url"].toString();
+    var requlestUrl = await signUrl(uri.toString());
     var result = await HttpClient.instance.getJson(
       requlestUrl,
       queryParameters: {},
@@ -392,5 +377,27 @@ class DouyinSite implements LiveSite {
       stringBuffer.write(item.toRadixString(16));
     }
     return stringBuffer.toString();
+  }
+
+  Future<String> signUrl(String url) async {
+    try {
+      // 发起一个签名请求
+      // 服务端代码：https://github.com/5ime/Tiktok_Signature
+      var signResult = await HttpClient.instance.postJson(
+        "https://tk.nsapps.cn/",
+        queryParameters: {},
+        header: {"Content-Type": "application/json"},
+        data: {
+          "url": url,
+          "userAgent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51"
+        },
+      );
+      var requlestUrl = signResult["data"]["url"].toString();
+      return requlestUrl;
+    } catch (e) {
+      CoreLog.error(e);
+      return url;
+    }
   }
 }

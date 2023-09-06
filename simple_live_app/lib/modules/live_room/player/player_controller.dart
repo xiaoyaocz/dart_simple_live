@@ -3,9 +3,11 @@ import 'dart:io';
 
 import 'package:auto_orientation/auto_orientation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
@@ -14,6 +16,7 @@ import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 mixin PlayerMixin {
@@ -84,11 +87,17 @@ mixin PlayerStateMixin {
 
   /// 隐藏控制器
   void hideControls() {
-    if (lockControlsState.value) {
-      return;
-    }
     showControlsState.value = false;
     hideControlsTimer?.cancel();
+  }
+
+  void setLockState() {
+    lockControlsState.value = !lockControlsState.value;
+    if (lockControlsState.value) {
+      showControlsState.value = false;
+    } else {
+      showControlsState.value = true;
+    }
   }
 
   /// 显示控制器
@@ -228,6 +237,35 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       return false;
     }
   }
+
+  Future saveScreenshot() async {
+    try {
+      SmartDialog.showLoading(msg: "正在保存截图");
+      //检查相册权限
+      var permission = await Utils.checkPhotoPermission();
+      if (!permission) {
+        SmartDialog.showToast("没有相册权限");
+        SmartDialog.dismiss(status: SmartStatus.loading);
+        return;
+      }
+
+      var imageData = await player.screenshot();
+      if (imageData == null) {
+        SmartDialog.showToast("截图失败,数据为空");
+        SmartDialog.dismiss(status: SmartStatus.loading);
+        return;
+      }
+      await ImageGallerySaver.saveImage(
+        imageData,
+      );
+      SmartDialog.showToast("已保存截图至相册");
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("截图失败");
+    } finally {
+      SmartDialog.dismiss(status: SmartStatus.loading);
+    }
+  }
 }
 mixin PlayerGestureControlMixin
     on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
@@ -242,6 +280,9 @@ mixin PlayerGestureControlMixin
 
   /// 双击全屏/退出全屏
   void onDoubleTap(TapDownDetails details) {
+    if (lockControlsState.value) {
+      return;
+    }
     if (fullScreenState.value) {
       exitFull();
     } else {
@@ -257,6 +298,9 @@ mixin PlayerGestureControlMixin
 
   /// 竖向手势开始
   void onVerticalDragStart(DragStartDetails details) async {
+    if (lockControlsState.value && fullScreenState.value) {
+      return;
+    }
     verStartPosition = details.globalPosition.dy;
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
 
@@ -269,6 +313,9 @@ mixin PlayerGestureControlMixin
 
   /// 竖向手势更新
   void onVerticalDragUpdate(DragUpdateDetails e) async {
+    if (lockControlsState.value && fullScreenState.value) {
+      return;
+    }
     if (verticalDragging == false) return;
 
     //String text = "";
@@ -337,6 +384,9 @@ mixin PlayerGestureControlMixin
 
   /// 竖向手势完成
   void onVerticalDragEnd(DragEndDetails details) async {
+    if (lockControlsState.value && fullScreenState.value) {
+      return;
+    }
     verticalDragging = false;
     leftVerticalDrag = false;
     showGestureTip.value = false;
@@ -359,7 +409,8 @@ class PlayerController extends BaseController
 
   StreamSubscription<String>? _errorSubscription;
   StreamSubscription? _completedSubscription;
-
+  StreamSubscription? _widthSubscription;
+  StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
@@ -367,6 +418,7 @@ class PlayerController extends BaseController
       //SmartDialog.showToast(event);
       mediaError(event);
     });
+
     _completedSubscription = player.stream.completed.listen((event) {
       if (event) {
         mediaEnd();
@@ -375,18 +427,122 @@ class PlayerController extends BaseController
     _logSubscription = player.stream.log.listen((event) {
       Log.d("播放器日志：$event");
     });
+    _widthSubscription = player.stream.width.listen((event) {
+      Log.w(
+          'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+      isVertical.value =
+          (player.state.height ?? 9) > (player.state.width ?? 16);
+    });
+    _heightSubscription = player.stream.height.listen((event) {
+      Log.w(
+          'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+      isVertical.value =
+          (player.state.height ?? 9) > (player.state.width ?? 16);
+    });
   }
 
   void disposeStream() {
     _errorSubscription?.cancel();
     _completedSubscription?.cancel();
-
+    _widthSubscription?.cancel();
+    _heightSubscription?.cancel();
     _logSubscription?.cancel();
   }
 
   void mediaEnd() {}
 
   void mediaError(String error) {}
+
+  void showDebugInfo() {
+    if (lockControlsState.value && fullScreenState.value) {
+      return;
+    }
+    Utils.showBottomSheet(
+      title: "播放信息",
+      child: ListView(
+        children: [
+          ListTile(
+            title: const Text("Media"),
+            subtitle: Text(player.state.playlist.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "Media\n${player.state.playlist}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("Resolution"),
+            subtitle: Text('${player.state.width}x${player.state.height}'),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text:
+                      "Resolution\n${player.state.width}x${player.state.height}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("VideoParams"),
+            subtitle: Text(player.state.videoParams.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "VideoParams\n${player.state.videoParams}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("AudioParams"),
+            subtitle: Text(player.state.audioParams.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "AudioParams\n${player.state.audioParams}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("AudioTrack"),
+            subtitle: Text(player.state.track.audio.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "AudioTrack\n${player.state.track.audio}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("VideoTrack"),
+            subtitle: Text(player.state.track.video.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "VideoTrack\n${player.state.track.audio}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("AudioBitrate"),
+            subtitle: Text(player.state.audioBitrate.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "AudioBitrate\n${player.state.audioBitrate}",
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void onClose() async {

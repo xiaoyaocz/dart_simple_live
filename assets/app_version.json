@@ -1,7 +1,7 @@
 {
-    "version": "1.2.4",
-    "version_num": 10204,
-    "version_desc": "1. 修复斗鱼无法播放问题#98\n2. 启用v1+v2签名 #96\n3. 点击底部导航栏返回顶部/刷新 #84,#93",
+    "version": "1.3.0",
+    "version_num": 10300,
+    "version_desc": "1. 优化播放器 #78,#113\n2. 支持画面尺寸调整 #61\n3. 支持锁定播放器 #53\n4. 取消关注增加提示框 #120\n5. 修复抖音直播问题 #121\n6. 优化哔哩哔哩直播弹幕获取\n7. 播放器支持截图",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

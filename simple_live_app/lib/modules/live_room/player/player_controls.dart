@@ -5,11 +5,12 @@ import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
-import 'package:simple_live_app/modules/live_room/live_room_new_controller.dart';
+import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 
 Widget playerControls(
   VideoState videoState,
-  LiveRoomNewController controller,
+  LiveRoomController controller,
 ) {
   return Obx(() {
     if (controller.fullScreenState.value) {
@@ -28,7 +29,7 @@ Widget playerControls(
 
 Widget buildFullControls(
   VideoState videoState,
-  LiveRoomNewController controller,
+  LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
   return Stack(
@@ -56,6 +57,7 @@ Widget buildFullControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
+          onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,
@@ -69,7 +71,10 @@ Widget buildFullControls(
         () => AnimatedPositioned(
           left: 0,
           right: 0,
-          top: controller.showControlsState.value ? 0 : -48,
+          top: (controller.showControlsState.value &&
+                  !controller.lockControlsState.value)
+              ? 0
+              : -48,
           duration: const Duration(milliseconds: 200),
           child: Container(
             height: 48,
@@ -97,9 +102,7 @@ Widget buildFullControls(
                     size: 24,
                   ),
                 ),
-                const SizedBox(
-                  width: 12,
-                ),
+                AppStyle.hGap12,
                 Expanded(
                   child: Text(
                     "${controller.detail.value?.title} - ${controller.detail.value?.userName}",
@@ -108,12 +111,20 @@ Widget buildFullControls(
                     style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ),
-                const SizedBox(
-                  width: 12,
+                AppStyle.hGap12,
+                IconButton(
+                  onPressed: () {
+                    controller.saveScreenshot();
+                  },
+                  icon: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
                 IconButton(
                   onPressed: () {
-                    controller.showDanmakuSettingState.value = true;
+                    showPlayerSettings(controller);
                   },
                   icon: const Icon(
                     Icons.more_horiz,
@@ -131,7 +142,10 @@ Widget buildFullControls(
         () => AnimatedPositioned(
           left: 0,
           right: 0,
-          bottom: controller.showControlsState.value ? 0 : -80,
+          bottom: (controller.showControlsState.value &&
+                  !controller.lockControlsState.value)
+              ? 0
+              : -80,
           duration: const Duration(milliseconds: 200),
           child: Container(
             decoration: const BoxDecoration(
@@ -186,7 +200,7 @@ Widget buildFullControls(
                 ),
                 IconButton(
                   onPressed: () {
-                    controller.showDanmakuSettingState.value = true;
+                    showDanmakuSettings(controller);
                   },
                   icon: const ImageIcon(
                     AssetImage('assets/icons/icon_danmaku_setting.png'),
@@ -197,7 +211,7 @@ Widget buildFullControls(
                 const Expanded(child: Center()),
                 TextButton(
                   onPressed: () {
-                    controller.showQualites.value = true;
+                    showQualitesInfo(controller);
                   },
                   child: Obx(
                     () => Text(
@@ -208,7 +222,7 @@ Widget buildFullControls(
                 ),
                 TextButton(
                   onPressed: () {
-                    controller.showLines.value = true;
+                    showLinesInfo(controller);
                   },
                   child: Text(
                     controller.currentUrlInfo.value,
@@ -229,227 +243,25 @@ Widget buildFullControls(
           ),
         ),
       ),
-      //清晰度
+
+      // 右侧锁定
       Obx(
         () => AnimatedPositioned(
-          right: controller.showQualites.value ? 0 : -200,
           top: 0,
           bottom: 0,
+          right: controller.showControlsState.value ? 12 : -64,
           duration: const Duration(milliseconds: 200),
-          child: Container(
-            width: 200,
-            color: Colors.grey.shade900,
-            padding: EdgeInsets.only(right: padding.right),
-            child: MediaQuery(
-              data: const MediaQueryData(padding: EdgeInsets.zero),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: controller.qualites.length,
-                itemBuilder: (_, i) {
-                  var item = controller.qualites[i];
-                  return ListTile(
-                    selected: controller.currentQuality == i,
-                    textColor: Colors.white,
-                    title: Text(
-                      item.quality,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    minLeadingWidth: 16,
-                    onTap: () {
-                      controller.showQualites.value = false;
-                      controller.currentQuality = i;
-                      controller.getPlayUrl();
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
+          child: buildLockButton(controller),
         ),
       ),
-      //线路
+      // 左侧锁定
       Obx(
         () => AnimatedPositioned(
-          right: controller.showLines.value ? 0 : -200,
           top: 0,
           bottom: 0,
+          left: controller.showControlsState.value ? 12 : -64,
           duration: const Duration(milliseconds: 200),
-          child: Container(
-            width: 200,
-            color: Colors.grey.shade900,
-            padding: EdgeInsets.only(right: padding.right),
-            child: MediaQuery(
-              data: const MediaQueryData(padding: EdgeInsets.zero),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: controller.playUrls.length,
-                itemBuilder: (_, i) {
-                  return ListTile(
-                    selected: controller.currentUrl == i,
-                    textColor: Colors.white,
-                    title: Text.rich(
-                      TextSpan(
-                        text: "线路${i + 1}",
-                        children: [
-                          WidgetSpan(
-                              child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: AppStyle.radius4,
-                              border: Border.all(
-                                color: Colors.grey,
-                              ),
-                            ),
-                            padding: AppStyle.edgeInsetsH4,
-                            margin: AppStyle.edgeInsetsL8,
-                            child: Text(
-                              controller.playUrls[i].contains(".flv")
-                                  ? "FLV"
-                                  : "HLS",
-                              style: const TextStyle(
-                                fontSize: 12,
-                              ),
-                            ),
-                          )),
-                        ],
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    minLeadingWidth: 16,
-                    onTap: () {
-                      controller.showLines.value = false;
-                      controller.currentUrl = i;
-                      controller.setPlayer();
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-      //设置
-      Obx(
-        () => AnimatedPositioned(
-          right: controller.showDanmakuSettingState.value ? 0 : -400,
-          top: 0,
-          bottom: 0,
-          duration: const Duration(milliseconds: 200),
-          child: Container(
-            width: 400,
-            color: Colors.grey.shade900,
-            padding: EdgeInsets.only(right: padding.right),
-            child: MediaQuery(
-              data: const MediaQueryData(padding: EdgeInsets.zero),
-              child: Obx(
-                () => ListView(
-                  padding: AppStyle.edgeInsetsV12,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "弹幕区域: ${(AppSettingsController.instance.danmuArea.value * 100).toInt()}%",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ),
-                    Slider(
-                      value: AppSettingsController.instance.danmuArea.value,
-                      max: 1.0,
-                      min: 0.1,
-                      onChanged: (e) {
-                        AppSettingsController.instance.setDanmuArea(e);
-                        controller.updateDanmuOption(
-                          controller.danmakuController?.option
-                              .copyWith(area: e),
-                        );
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "不透明度: ${(AppSettingsController.instance.danmuOpacity.value * 100).toInt()}%",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ),
-                    Slider(
-                      value: AppSettingsController.instance.danmuOpacity.value,
-                      max: 1.0,
-                      min: 0.1,
-                      onChanged: (e) {
-                        AppSettingsController.instance.setDanmuOpacity(e);
-                        controller.updateDanmuOption(
-                          controller.danmakuController?.option
-                              .copyWith(opacity: e),
-                        );
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "弹幕大小: ${(AppSettingsController.instance.danmuSize.value).toInt()}",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ),
-                    Slider(
-                      value: AppSettingsController.instance.danmuSize.value,
-                      min: 8,
-                      max: 36,
-                      onChanged: (e) {
-                        AppSettingsController.instance.setDanmuSize(e);
-                        controller.updateDanmuOption(
-                          controller.danmakuController?.option
-                              .copyWith(fontSize: e),
-                        );
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "弹幕速度: ${(AppSettingsController.instance.danmuSpeed.value).toInt()} (越小越快)",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ),
-                    Slider(
-                      value: AppSettingsController.instance.danmuSpeed.value,
-                      min: 4,
-                      max: 20,
-                      onChanged: (e) {
-                        AppSettingsController.instance.setDanmuSpeed(e);
-                        controller.updateDanmuOption(
-                          controller.danmakuController?.option
-                              .copyWith(duration: e),
-                        );
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "弹幕描边: ${(AppSettingsController.instance.danmuStrokeWidth.value).toInt()}",
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ),
-                    Slider(
-                      value:
-                          AppSettingsController.instance.danmuStrokeWidth.value,
-                      min: 0,
-                      max: 10,
-                      onChanged: (e) {
-                        AppSettingsController.instance.setDanmuStrokeWidth(e);
-                        controller.updateDanmuOption(
-                          controller.danmakuController?.option
-                              .copyWith(strokeWidth: e),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          child: buildLockButton(controller),
         ),
       ),
       Obx(
@@ -474,10 +286,36 @@ Widget buildFullControls(
   );
 }
 
+Widget buildLockButton(LiveRoomController controller) {
+  return Center(
+    child: InkWell(
+      onTap: () {
+        controller.setLockState();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black45,
+          borderRadius: AppStyle.radius8,
+        ),
+        width: 40,
+        height: 40,
+        child: Center(
+          child: Icon(
+            controller.lockControlsState.value
+                ? Icons.lock_open_outlined
+                : Icons.lock_outline_rounded,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 Widget buildControls(
   bool isPortrait,
   VideoState videoState,
-  LiveRoomNewController controller,
+  LiveRoomController controller,
 ) {
   return Stack(
     children: [
@@ -503,6 +341,7 @@ Widget buildControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
+          onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,
@@ -564,7 +403,7 @@ Widget buildControls(
                 ),
                 IconButton(
                   onPressed: () {
-                    controller.showBottomDanmuSettings();
+                    controller.showDanmuSettingsSheet();
                   },
                   icon: const ImageIcon(
                     AssetImage('assets/icons/icon_danmaku_setting.png'),
@@ -636,7 +475,7 @@ Widget buildControls(
   );
 }
 
-Widget buildDanmuView(LiveRoomNewController controller) {
+Widget buildDanmuView(LiveRoomController controller) {
   controller.danmakuView ??= DanmakuView(
     key: controller.globalDanmuKey,
     createdController: controller.initDanmakuController,
@@ -649,6 +488,273 @@ Widget buildDanmuView(LiveRoomNewController controller) {
       () => Offstage(
         offstage: !controller.showDanmakuState.value,
         child: controller.danmakuView!,
+      ),
+    ),
+  );
+}
+
+void showLinesInfo(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showPlayUrlsSheet();
+    return;
+  }
+  Utils.showRightDialog(
+    title: "线路",
+    useSystem: true,
+    child: ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: controller.playUrls.length,
+      itemBuilder: (_, i) {
+        return ListTile(
+          selected: controller.currentUrl == i,
+          title: Text.rich(
+            TextSpan(
+              text: "线路${i + 1}",
+              children: [
+                WidgetSpan(
+                    child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: AppStyle.radius4,
+                    border: Border.all(
+                      color: Colors.grey,
+                    ),
+                  ),
+                  padding: AppStyle.edgeInsetsH4,
+                  margin: AppStyle.edgeInsetsL8,
+                  child: Text(
+                    controller.playUrls[i].contains(".flv") ? "FLV" : "HLS",
+                    style: const TextStyle(
+                      fontSize: 12,
+                    ),
+                  ),
+                )),
+              ],
+            ),
+            style: const TextStyle(fontSize: 14),
+          ),
+          minLeadingWidth: 16,
+          onTap: () {
+            Utils.hideRightDialog();
+            controller.currentUrl = i;
+            controller.setPlayer();
+          },
+        );
+      },
+    ),
+  );
+}
+
+void showQualitesInfo(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showQualitySheet();
+    return;
+  }
+  Utils.showRightDialog(
+    title: "清晰度",
+    useSystem: true,
+    child: ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: controller.qualites.length,
+      itemBuilder: (_, i) {
+        var item = controller.qualites[i];
+        return ListTile(
+          selected: controller.currentQuality == i,
+          title: Text(
+            item.quality,
+            style: const TextStyle(fontSize: 14),
+          ),
+          minLeadingWidth: 16,
+          onTap: () {
+            Utils.hideRightDialog();
+            controller.currentQuality = i;
+            controller.getPlayUrl();
+          },
+        );
+      },
+    ),
+  );
+}
+
+void showDanmakuSettings(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showDanmuSettingsSheet();
+    return;
+  }
+  Utils.showRightDialog(
+    title: "弹幕设置",
+    width: 400,
+    useSystem: true,
+    child: Obx(
+      () => ListView(
+        padding: AppStyle.edgeInsetsV12,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "弹幕区域: ${(AppSettingsController.instance.danmuArea.value * 100).toInt()}%",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: AppSettingsController.instance.danmuArea.value,
+            max: 1.0,
+            min: 0.1,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuArea(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(area: e),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "不透明度: ${(AppSettingsController.instance.danmuOpacity.value * 100).toInt()}%",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: AppSettingsController.instance.danmuOpacity.value,
+            max: 1.0,
+            min: 0.1,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuOpacity(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(opacity: e),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "弹幕大小: ${(AppSettingsController.instance.danmuSize.value).toInt()}",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: AppSettingsController.instance.danmuSize.value,
+            min: 8,
+            max: 36,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuSize(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(fontSize: e),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "弹幕速度: ${(AppSettingsController.instance.danmuSpeed.value).toInt()} (越小越快)",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: AppSettingsController.instance.danmuSpeed.value,
+            min: 4,
+            max: 20,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuSpeed(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(duration: e),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "弹幕描边: ${(AppSettingsController.instance.danmuStrokeWidth.value).toInt()}",
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Slider(
+            value: AppSettingsController.instance.danmuStrokeWidth.value,
+            min: 0,
+            max: 10,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuStrokeWidth(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(strokeWidth: e),
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void showPlayerSettings(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showPlayerSettingsSheet();
+    return;
+  }
+  Utils.showRightDialog(
+    title: "设置",
+    width: 320,
+    useSystem: true,
+    child: Obx(
+      () => ListView(
+        padding: AppStyle.edgeInsetsV12,
+        children: [
+          Padding(
+            padding: AppStyle.edgeInsetsH16,
+            child: Text(
+              "画面尺寸",
+              style: Get.textTheme.titleMedium,
+            ),
+          ),
+          RadioListTile(
+            value: 0,
+            contentPadding: AppStyle.edgeInsetsH4,
+            title: const Text("适应"),
+            visualDensity: VisualDensity.compact,
+            groupValue: AppSettingsController.instance.scaleMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setScaleMode(e ?? 0);
+            },
+          ),
+          RadioListTile(
+            value: 1,
+            contentPadding: AppStyle.edgeInsetsH4,
+            title: const Text("填充"),
+            visualDensity: VisualDensity.compact,
+            groupValue: AppSettingsController.instance.scaleMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setScaleMode(e ?? 1);
+            },
+          ),
+          RadioListTile(
+            value: 2,
+            contentPadding: AppStyle.edgeInsetsH4,
+            title: const Text("铺满"),
+            visualDensity: VisualDensity.compact,
+            groupValue: AppSettingsController.instance.scaleMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setScaleMode(e ?? 2);
+            },
+          ),
+          RadioListTile(
+            value: 3,
+            contentPadding: AppStyle.edgeInsetsH4,
+            title: const Text("16:9"),
+            visualDensity: VisualDensity.compact,
+            groupValue: AppSettingsController.instance.scaleMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setScaleMode(e ?? 3);
+            },
+          ),
+          RadioListTile(
+            value: 4,
+            contentPadding: AppStyle.edgeInsetsH4,
+            title: const Text("4:3"),
+            visualDensity: VisualDensity.compact,
+            groupValue: AppSettingsController.instance.scaleMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setScaleMode(e ?? 4);
+            },
+          ),
+        ],
       ),
     ),
   );

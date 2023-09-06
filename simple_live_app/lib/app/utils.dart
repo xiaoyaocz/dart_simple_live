@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -103,6 +104,125 @@ class Utils {
       ),
     );
     return result ?? false;
+  }
+
+  static void showRightDialog({
+    required String title,
+    Function()? onDismiss,
+    required Widget child,
+    double width = 320,
+    bool useSystem = false,
+  }) {
+    SmartDialog.show(
+      alignment: Alignment.topRight,
+      animationBuilder: (controller, child, animationParam) {
+        //从右到左
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(controller.view),
+          child: child,
+        );
+      },
+      useSystem: useSystem,
+      maskColor: Colors.transparent,
+      animationTime: const Duration(milliseconds: 200),
+      builder: (context) => Container(
+        width: width + MediaQuery.of(context).padding.right,
+        padding: EdgeInsets.only(right: MediaQuery.of(context).padding.right),
+        decoration: BoxDecoration(
+          color: Get.theme.cardColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(4),
+            bottomLeft: Radius.circular(4),
+          ),
+        ),
+        child: SafeArea(
+          left: false,
+          right: false,
+          child: MediaQuery(
+            data: const MediaQueryData(padding: EdgeInsets.zero),
+            child: Column(
+              children: [
+                ListTile(
+                  visualDensity: VisualDensity.compact,
+                  contentPadding: EdgeInsets.zero,
+                  leading: IconButton(
+                    onPressed: () {
+                      SmartDialog.dismiss(status: SmartStatus.allCustom).then(
+                        (value) => onDismiss?.call(),
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                  title: Text(
+                    title,
+                    style: Get.textTheme.titleMedium,
+                  ),
+                ),
+                Divider(
+                  height: 1,
+                  color: Colors.grey.withOpacity(.1),
+                ),
+                Expanded(
+                  child: child,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static void hideRightDialog() {
+    SmartDialog.dismiss(status: SmartStatus.allCustom);
+  }
+
+  static void showBottomSheet({
+    required String title,
+    required Widget child,
+    double maxWidth = 600,
+  }) {
+    showModalBottomSheet(
+      context: Get.context!,
+      constraints: BoxConstraints(
+        maxWidth: maxWidth,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(Get.context!).cardColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
+          ),
+        ),
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: const EdgeInsets.only(
+                left: 12,
+              ),
+              title: Text(title),
+              trailing: IconButton(
+                onPressed: Get.back,
+                icon: const Icon(Remix.close_line),
+              ),
+            ),
+            Expanded(
+              child: child,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 文本编辑的弹窗
@@ -302,7 +422,7 @@ class Utils {
   /// 检查相册权限
   static Future<bool> checkPhotoPermission() async {
     try {
-      if (Platform.isAndroid) {
+      if (!Platform.isIOS) {
         return true;
       }
       var status = await Permission.photos.status;

@@ -101,7 +101,7 @@ class FollowUserController extends BasePageController<FollowUser> {
       SmartDialog.showToast("已导出关注列表");
     } catch (e) {
       Log.logPrint(e);
-      SmartDialog.showToast("导出失败");
+      SmartDialog.showToast("导出失败：$e");
     }
   }
 
@@ -124,7 +124,7 @@ class FollowUserController extends BasePageController<FollowUser> {
       SmartDialog.showToast("导入成功");
     } catch (e) {
       Log.logPrint(e);
-      SmartDialog.showToast("导入失败");
+      SmartDialog.showToast("导入失败:$e");
     } finally {
       refreshData();
     }

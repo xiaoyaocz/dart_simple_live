@@ -45,3 +45,5 @@ app.*.map.json
 
 /ios/Podfile.lock
 pubspec.lock
+
+.fvm/

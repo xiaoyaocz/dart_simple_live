@@ -306,9 +306,10 @@ Widget buildLockButton(LiveRoomController controller) {
         child: Center(
           child: Icon(
             controller.lockControlsState.value
-                ? Icons.lock_open_outlined
-                : Icons.lock_outline_rounded,
+                ? Icons.lock_outline_rounded
+                : Icons.lock_open_outlined,
             color: Colors.white,
+            size: 20,
           ),
         ),
       ),

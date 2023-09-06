@@ -138,7 +138,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                       DropdownMenuItem(
                         value: 1,
                         child: Text(
-                          "填充",
+                          "拉伸",
                         ),
                       ),
                       DropdownMenuItem(

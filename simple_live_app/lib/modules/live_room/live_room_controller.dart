@@ -547,7 +547,7 @@ class LiveRoomController extends PlayerController {
             ),
             RadioListTile(
               value: 1,
-              title: const Text("填充"),
+              title: const Text("拉伸"),
               visualDensity: VisualDensity.compact,
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {

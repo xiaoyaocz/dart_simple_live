@@ -249,7 +249,9 @@ Widget buildFullControls(
         () => AnimatedPositioned(
           top: 0,
           bottom: 0,
-          right: controller.showControlsState.value ? 12 : -64,
+          right: controller.showControlsState.value
+              ? padding.right + 12
+              : -(64 + padding.right),
           duration: const Duration(milliseconds: 200),
           child: buildLockButton(controller),
         ),
@@ -259,7 +261,9 @@ Widget buildFullControls(
         () => AnimatedPositioned(
           top: 0,
           bottom: 0,
-          left: controller.showControlsState.value ? 12 : -64,
+          left: controller.showControlsState.value
+              ? padding.left + 12
+              : -(64 + padding.right),
           duration: const Duration(milliseconds: 200),
           child: buildLockButton(controller),
         ),

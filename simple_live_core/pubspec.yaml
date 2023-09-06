@@ -13,6 +13,7 @@ dependencies:
   html_unescape: ^2.0.0
   protobuf: ^3.0.0
   crypto: ^3.0.2
+  brotli: ^0.6.0
   dart_tars_protocol:
     git: https://github.com/xiaoyaocz/dart_tars_protocol.git
 

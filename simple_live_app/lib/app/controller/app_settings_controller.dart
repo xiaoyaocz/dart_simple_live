@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AppSettingsController extends GetxController {
+  static AppSettingsController get instance =>
+      Get.find<AppSettingsController>();
+
+  /// 缩放模式
+  var scaleMode = 0.obs;
+
   var themeMode = 0.obs;
 
   var firstRun = false;
@@ -51,6 +57,11 @@ class AppSettingsController extends GetxController {
 
     // ignore: invalid_use_of_protected_member
     shieldList.value = LocalStorageService.instance.shieldBox.values.toSet();
+
+    scaleMode.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kPlayerScaleMode,
+      0,
+    );
 
     super.onInit();
   }
@@ -204,5 +215,13 @@ class AppSettingsController extends GetxController {
   void removeShieldList(String e) {
     shieldList.remove(e);
     LocalStorageService.instance.shieldBox.delete(e);
+  }
+
+  void setScaleMode(int value) {
+    scaleMode.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kPlayerScaleMode,
+      value,
+    );
   }
 }

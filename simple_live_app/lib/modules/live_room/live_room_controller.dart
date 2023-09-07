@@ -182,11 +182,13 @@ class LiveRoomController extends PlayerController {
 
       addHistory();
       online.value = detail.value!.online;
-      liveStatus.value = detail.value!.status;
+      liveStatus.value = detail.value!.status || detail.value!.isRecord;
       if (liveStatus.value) {
         getPlayQualites();
       }
-
+      if (detail.value!.isRecord) {
+        addSysMsg("当前主播未开播，正在轮播录像");
+      }
       addSysMsg("开始连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);

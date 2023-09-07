@@ -175,14 +175,19 @@ class DouyuSite implements LiveSite {
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
     var result = await HttpClient.instance.getJson(
-        "https://m.douyu.com/$roomId/index.pageContext.json",
+        "https://www.douyu.com/betard/$roomId",
         queryParameters: {},
         header: {
-          'referer': 'https://m.douyu.com/$roomId',
+          'referer': 'https://www.douyu.com/$roomId',
           'user-agent':
-              'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/114.0.0.0',
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
         });
-    var roomInfo = result["pageProps"]["room"]["roomInfo"]["roomInfo"];
+    Map roomInfo;
+    if (result is String) {
+      roomInfo = json.decode(result)["room"];
+    } else {
+      roomInfo = result["room"];
+    }
 
     var jsEncResult = await HttpClient.instance.getText(
         "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId",
@@ -195,18 +200,19 @@ class DouyuSite implements LiveSite {
     var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
 
     return LiveRoomDetail(
-      cover: roomInfo["roomSrc"].toString(),
-      online: parseHotNum(roomInfo["hn"].toString()),
-      roomId: roomInfo["rid"].toString(),
-      title: roomInfo["roomName"].toString(),
-      userName: roomInfo["nickname"].toString(),
-      userAvatar: roomInfo["avatar"].toString(),
-      introduction: "",
-      notice: roomInfo["notice"].toString(),
-      status: roomInfo["isLive"] == 1,
-      danmakuData: roomInfo["rid"].toString(),
-      data: await getPlayArgs(crptext, roomInfo["rid"].toString()),
+      cover: roomInfo["room_pic"].toString(),
+      online: int.tryParse(roomInfo["room_biz_all"]["hot"].toString()) ?? 0,
+      roomId: roomInfo["room_id"].toString(),
+      title: roomInfo["room_name"].toString(),
+      userName: roomInfo["owner_name"].toString(),
+      userAvatar: roomInfo["owner_avatar"].toString(),
+      introduction: roomInfo["show_details"].toString(),
+      notice: "",
+      status: roomInfo["rst"] != 3 && roomInfo["videoLoop"] != 1,
+      danmakuData: roomInfo["room_id"].toString(),
+      data: await getPlayArgs(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
+      isRecord: roomInfo["rst"] == 3,
     );
   }
 
@@ -279,12 +285,15 @@ class DouyuSite implements LiveSite {
 
     var items = <LiveAnchorItem>[];
     for (var item in result["data"]["relateUser"]) {
+      var liveStatus =
+          (int.tryParse(item["anchorInfo"]["isLive"].toString()) ?? 0) == 1;
+      var roomType =
+          (int.tryParse(item["anchorInfo"]["roomType"].toString()) ?? 0);
       var roomItem = LiveAnchorItem(
         roomId: item["anchorInfo"]["rid"].toString(),
         avatar: item["anchorInfo"]["avatar"].toString(),
         userName: item["anchorInfo"]["nickName"].toString(),
-        liveStatus:
-            (int.tryParse(item["anchorInfo"]["isLive"].toString()) ?? 0) == 1,
+        liveStatus: liveStatus && roomType == 0,
       );
       items.add(roomItem);
     }

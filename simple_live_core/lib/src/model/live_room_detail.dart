@@ -34,6 +34,9 @@ class LiveRoomDetail {
   /// 弹幕附加信息
   final dynamic danmakuData;
 
+  /// 是否录播
+  final bool isRecord;
+
   /// 链接
   final String url;
   LiveRoomDetail({
@@ -49,6 +52,7 @@ class LiveRoomDetail {
     this.data,
     this.danmakuData,
     required this.url,
+    this.isRecord = false,
   });
 
   @override
@@ -66,6 +70,7 @@ class LiveRoomDetail {
       "data": data,
       "danmakuData": danmakuData,
       "url": url,
+      "isRecord": isRecord,
     });
   }
 }

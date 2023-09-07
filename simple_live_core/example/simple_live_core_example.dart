@@ -2,7 +2,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 
 void main() async {
   CoreLog.enableLog = true;
-  LiveSite site = BiliBiliSite();
+  LiveSite site = DouyuSite();
   var danmaku = site.getDanmaku();
   danmaku.onMessage = (event) {
     if (event.type == LiveMessageType.chat) {
@@ -17,13 +17,16 @@ void main() async {
   danmaku.onClose = (event) {
     print(event);
   };
-  var detail = await site.getRoomDetail(roomId: "4245963");
+  var detail = await site.getRoomDetail(roomId: "138243");
   // var playQualites = await site.getPlayQualites(detail: detail);
   // var playUrls =
   //     await site.getPlayUrls(detail: detail, quality: playQualites.first);
   // for (var element in playUrls) {
   //   print(element);
   // }
+  print(detail);
+
   danmaku.start(detail.danmakuData);
+
   await Future.wait({});
 }

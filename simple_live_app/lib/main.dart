@@ -14,6 +14,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
@@ -23,10 +24,13 @@ import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initWindow();
   MediaKit.ensureInitialized();
+
   await Hive.initFlutter();
   //初始化服务
   await initServices();
@@ -40,6 +44,19 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
 
   runApp(const MyApp());
+}
+
+Future initWindow() async {
+  await windowManager.ensureInitialized();
+  WindowOptions windowOptions = const WindowOptions(
+    minimumSize: Size(400, 400),
+    center: true,
+    title: "Simple Live",
+  );
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
 }
 
 Future initServices() async {
@@ -104,6 +121,7 @@ class MyApp extends StatelessWidget {
       },
       //debugShowCheckedModeBanner: false,
       navigatorObservers: [FlutterSmartDialog.observer],
+
       builder: FlutterSmartDialog.init(
         loadingBuilder: ((msg) => const AppLoaddingWidget()),
         //字体大小不跟随系统变化
@@ -111,7 +129,24 @@ class MyApp extends StatelessWidget {
           data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
           child: Stack(
             children: [
-              child!,
+              //侧键返回
+              RawGestureDetector(
+                excludeFromSemantics: true,
+                gestures: <Type, GestureRecognizerFactory>{
+                  FourthButtonTapGestureRecognizer:
+                      GestureRecognizerFactoryWithHandlers<
+                          FourthButtonTapGestureRecognizer>(
+                    () => FourthButtonTapGestureRecognizer(),
+                    (FourthButtonTapGestureRecognizer instance) {
+                      instance.onTapDown = (TapDownDetails details) {
+                        Get.back();
+                      };
+                    },
+                  ),
+                },
+                child: child!,
+              ),
+
               //查看DEBUG日志按钮
               //只在Debug、Profile模式显示
               Visibility(

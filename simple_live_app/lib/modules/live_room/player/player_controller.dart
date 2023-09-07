@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:auto_orientation/auto_orientation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -18,6 +19,7 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:window_manager/window_manager.dart';
 
 mixin PlayerMixin {
   GlobalKey globalPlayerKey = GlobalKey();
@@ -158,7 +160,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 初始化一些系统状态
   void initSystem() async {
-    PerfectVolumeControl.hideUI = true;
+    if (Platform.isAndroid || Platform.isIOS) {
+      PerfectVolumeControl.hideUI = true;
+    }
 
     // 屏幕常亮
     WakelockPlus.enable();
@@ -180,28 +184,48 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     );
 
     await setPortraitOrientation();
-    await screenBrightness.resetScreenBrightness();
+    if (Platform.isAndroid ||
+        Platform.isIOS ||
+        Platform.isMacOS ||
+        Platform.isWindows) {
+      // 亮度重置,桌面平台可能会报错
+      try {
+        await screenBrightness.resetScreenBrightness();
+      } catch (e) {
+        Log.logPrint(e);
+      }
+    }
+
     await WakelockPlus.disable();
   }
 
   /// 进入全屏
   void enterFullScreen() {
     fullScreenState.value = true;
-    //全屏
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    if (!isVertical.value) {
-      //横屏
-      setLandscapeOrientation();
+    if (Platform.isAndroid || Platform.isIOS) {
+      //全屏
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+      if (!isVertical.value) {
+        //横屏
+        setLandscapeOrientation();
+      }
+    } else {
+      windowManager.setFullScreen(true);
     }
     //danmakuController?.clear();
   }
 
   /// 退出全屏
   void exitFull() {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge,
-        overlays: SystemUiOverlay.values);
-    setPortraitOrientation();
+    if (Platform.isAndroid || Platform.isIOS) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge,
+          overlays: SystemUiOverlay.values);
+      setPortraitOrientation();
+    } else {
+      windowManager.setFullScreen(false);
+    }
     fullScreenState.value = false;
+
     //danmakuController?.clear();
   }
 
@@ -241,7 +265,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   Future saveScreenshot() async {
     try {
       SmartDialog.showLoading(msg: "正在保存截图");
-      //检查相册权限
+      //检查相册权限,仅iOS需要
       var permission = await Utils.checkPhotoPermission();
       if (!permission) {
         SmartDialog.showToast("没有相册权限");
@@ -255,10 +279,28 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         SmartDialog.dismiss(status: SmartStatus.loading);
         return;
       }
-      await ImageGallerySaver.saveImage(
-        imageData,
-      );
-      SmartDialog.showToast("已保存截图至相册");
+
+      if (Platform.isIOS || Platform.isAndroid) {
+        await ImageGallerySaver.saveImage(
+          imageData,
+        );
+        SmartDialog.showToast("已保存截图至相册");
+      } else {
+        //选择保存文件夹
+        var path = await FilePicker.platform.saveFile(
+          allowedExtensions: ["jpg"],
+          type: FileType.image,
+          fileName: "${DateTime.now().millisecondsSinceEpoch}.jpg",
+        );
+        if (path == null) {
+          SmartDialog.showToast("取消保存");
+          SmartDialog.dismiss(status: SmartStatus.loading);
+          return;
+        }
+        var file = File(path);
+        await file.writeAsBytes(imageData);
+        SmartDialog.showToast("已保存截图至${file.path}");
+      }
     } catch (e) {
       Log.logPrint(e);
       SmartDialog.showToast("截图失败");
@@ -305,9 +347,16 @@ mixin PlayerGestureControlMixin
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
 
     verticalDragging = true;
+    if (Platform.isAndroid || Platform.isIOS) {
+      _currentVolume = await PerfectVolumeControl.volume;
+    }
+    if (Platform.isAndroid ||
+        Platform.isIOS ||
+        Platform.isMacOS ||
+        Platform.isWindows) {
+      _currentBrightness = await screenBrightness.current;
+    }
 
-    _currentVolume = await PerfectVolumeControl.volume;
-    _currentBrightness = await screenBrightness.current;
     showGestureTip.value = true;
   }
 
@@ -317,7 +366,9 @@ mixin PlayerGestureControlMixin
       return;
     }
     if (verticalDragging == false) return;
-
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return;
+    }
     //String text = "";
     //double value = 0.0;
 

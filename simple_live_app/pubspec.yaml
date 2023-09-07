@@ -42,10 +42,11 @@ dependencies:
   permission_handler: ^10.3.0 #权限处理
   image_gallery_saver: ^2.0.2 #图片保存到相册
   perfect_volume_control: ^1.0.5 #音量控制
-  screen_brightness: ^0.2.2 #亮度控制
+  screen_brightness: ^0.2.2+1 #亮度控制
   auto_orientation: ^2.3.1 #屏幕方向
   wakelock_plus: ^1.1.1 #屏幕常亮
   file_picker: ^5.3.3 #文件选择
+  window_manager: ^0.3.6 #窗口管理
   
   # 视频播放
   media_kit: ^1.1.7

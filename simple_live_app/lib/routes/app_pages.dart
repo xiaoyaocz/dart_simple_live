@@ -11,7 +11,10 @@ import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
+import 'package:simple_live_app/modules/user/auto_exit_settings_page.dart';
 import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
+import 'package:simple_live_app/modules/user/danmu_shield/danmu_shield_controller.dart';
+import 'package:simple_live_app/modules/user/danmu_shield/danmu_shield_page.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/user/history/history_controller.dart';
@@ -89,12 +92,25 @@ class AppPages {
       name: RoutePath.kSettingsPlay,
       page: () => const PlaySettingsPage(),
     ),
+    //播放设置
+    GetPage(
+      name: RoutePath.kSettingsAutoExit,
+      page: () => const AutoExitSettingsPage(),
+    ),
     //工具箱
     GetPage(
       name: RoutePath.kTools,
       page: () => const ToolBoxPage(),
       bindings: [
         BindingsBuilder.put(() => ToolBoxController()),
+      ],
+    ),
+    //关键词屏蔽
+    GetPage(
+      name: RoutePath.kSettingsDanmuShield,
+      page: () => const DanmuShieldPage(),
+      bindings: [
+        BindingsBuilder.put(() => DanmuShieldController()),
       ],
     ),
   ];

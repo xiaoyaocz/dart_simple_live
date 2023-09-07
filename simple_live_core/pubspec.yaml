@@ -1,5 +1,5 @@
 name: simple_live_core
-version: 1.0.1
+version: 1.0.2
 description: "聚合直播核心库"
 repository: https://github.com/xiaoyaocz/simple_live_client
 publish_to: "none"
@@ -11,7 +11,9 @@ dependencies:
   logger: ^1.1.0
   web_socket_channel: ^2.3.0
   html_unescape: ^2.0.0
+  protobuf: ^3.0.0
   crypto: ^3.0.2
+  brotli: ^0.6.0
   dart_tars_protocol:
     git: https://github.com/xiaoyaocz/dart_tars_protocol.git
 

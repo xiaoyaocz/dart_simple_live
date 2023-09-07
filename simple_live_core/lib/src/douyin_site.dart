@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
@@ -48,20 +49,20 @@ class DouyinSite implements LiveSite {
       "https://live.douyin.com/hot_live",
       queryParameters: {},
       header: {
+        "Authority": "live.douyin.com",
+        "Referer": "https://live.douyin.com",
         "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
       },
     );
 
-    var renderData =
-        RegExp(r'<script id="RENDER_DATA" type="application/json">(.*?)</script>')
-                .firstMatch(result)
-                ?.group(1) ??
-            "";
-    var renderDataJson = json.decode(Uri.decodeFull(renderData.trim()));
+    var renderData = RegExp(r'9:\[\\"\$\\",\\"\$L13\\",null,(.*?)\]\\n')
+            .firstMatch(result)
+            ?.group(1) ??
+        "";
+    var renderDataJson = json.decode(renderData.trim().replaceAll("\\", ""));
 
-    for (var item in renderDataJson["app"]["layoutData"]["categoryTab"]
-        ["categoryData"]) {
+    for (var item in renderDataJson["categoryData"]) {
       List<LiveSubCategory> subs = [];
       var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
       for (var subItem in item["sub_partition"]) {
@@ -118,7 +119,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: "${item["web_rid"]},${item["room"]["id_str"]}",
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -152,7 +153,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: "${item["web_rid"]},${item["room"]["id_str"]}",
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -167,10 +168,12 @@ class DouyinSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    var ids = roomId.split(',');
-    var webRid = ids[0];
-    var roomIdStr = ids[1];
-
+    var detail = await getRoomWebDetail(roomId);
+    var requestHeader = await getRequestHeaders();
+    var webRid = roomId;
+    var realRoomId =
+        detail["roomStore"]["roomInfo"]["room"]["id_str"].toString();
+    var userUniqueId = detail["userStore"]["odin"]["user_unique_id"].toString();
     var result = await HttpClient.instance.getJson(
       "https://live.douyin.com/webcast/room/web/enter/",
       queryParameters: {
@@ -180,7 +183,7 @@ class DouyinSite implements LiveSite {
         "device_platform": "web",
         "enter_from": "web_live",
         "web_rid": webRid,
-        "room_id_str": roomIdStr,
+        "room_id_str": realRoomId,
         "enter_source": "",
         "Room-Enter-User-Login-Ab": 0,
         "is_need_double_stream": false,
@@ -192,23 +195,60 @@ class DouyinSite implements LiveSite {
         "browser_name": "Edge",
         "browser_version": "114.0.1823.51"
       },
-      header: await getRequestHeaders(),
+      header: requestHeader,
     );
     var roomInfo = result["data"]["data"][0];
+    var userInfo = result["data"]["user"];
+    var roomStatus = (asT<int?>(roomInfo["status"]) ?? 0) == 2;
     return LiveRoomDetail(
       roomId: roomId,
       title: roomInfo["title"].toString(),
-      cover: roomInfo["cover"]["url_list"][0].toString(),
-      userName: roomInfo["owner"]["nickname"].toString(),
-      userAvatar: roomInfo["owner"]["avatar_thumb"]["url_list"][0].toString(),
-      online: asT<int?>(roomInfo["room_view_stats"]["display_value"]) ?? 0,
-      status: (asT<int?>(roomInfo["status"]) ?? 0) == 2,
+      cover: roomStatus ? roomInfo["cover"]["url_list"][0].toString() : "",
+      userName: userInfo["nickname"].toString(),
+      userAvatar: userInfo["avatar_thumb"]["url_list"][0].toString(),
+      online: roomStatus
+          ? asT<int?>(roomInfo["room_view_stats"]["display_value"]) ?? 0
+          : 0,
+      status: roomStatus,
       url: "https://live.douyin.com/$webRid",
       introduction: roomInfo["title"].toString(),
       notice: "",
-      danmakuData: roomId,
+      danmakuData: DouyinDanmakuArgs(
+        webRid: webRid,
+        roomId: realRoomId,
+        userId: userUniqueId,
+        cookie: headers["cookie"],
+      ),
       data: roomInfo["stream_url"],
     );
+  }
+
+  Future<Map> getRoomWebDetail(String webRid) async {
+    var result = await HttpClient.instance.getText(
+      "https://live.douyin.com/$webRid",
+      queryParameters: {},
+      header: {
+        "Accept":
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Authority": "live.douyin.com",
+        "Referer": "https://live.douyin.com",
+        "Cookie": "__ac_nonce=${generateRandomString(21)}",
+        "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+      },
+    );
+
+    var renderData = RegExp(r'c:\[\\"\$\\",\\"\$L13\\",null,(.*?)\]\\n')
+            .firstMatch(result)
+            ?.group(1) ??
+        "";
+    var str = renderData.trim().replaceAll('\\"', '"').replaceAll(r"\\", r"\");
+    var renderDataJson = json.decode(str);
+
+    return renderDataJson["state"];
+    // return renderDataJson["app"]["initialState"]["roomStore"]["roomInfo"]
+    //         ["room"]["id_str"]
+    //     .toString();
   }
 
   @override
@@ -244,70 +284,76 @@ class DouyinSite implements LiveSite {
   @override
   Future<LiveSearchRoomResult> searchRooms(String keyword,
       {int page = 1}) async {
+    String serverUrl = "https://www.douyin.com/aweme/v1/web/live/search/";
+    var uri = Uri.parse(serverUrl)
+        .replace(scheme: "https", port: 443, queryParameters: {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "channel": "channel_pc_web",
+      "search_channel": "aweme_live",
+      "keyword": keyword,
+      "search_source": "switch_tab",
+      "query_correct_type": "1",
+      "is_filter_search": "0",
+      "from_group_id": "",
+      "offset": ((page - 1) * 10).toString(),
+      "count": "10",
+      "pc_client_type": "1",
+      "version_code": "170400",
+      "version_name": "17.4.0",
+      "cookie_enabled": "true",
+      "screen_width": "1980",
+      "screen_height": "1080",
+      "browser_language": "zh-CN",
+      "browser_platform": "Win32",
+      "browser_name": "Edge",
+      "browser_version": "114.0.1823.58",
+      "browser_online": "true",
+      "engine_name": "Blink",
+      "engine_version": "114.0.0.0",
+      "os_name": "Windows",
+      "os_version": "10",
+      "cpu_core_num": "12",
+      "device_memory": "8",
+      "platform": "PC",
+      "downlink": "4.7",
+      "effective_type": "4g",
+      "round_trip_time": "100",
+      "webid": "7247041636524377637",
+    });
+    var requlestUrl = await signUrl(uri.toString());
     var result = await HttpClient.instance.getJson(
-      "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
-      queryParameters: {
-        "order": "",
-        "keyword": keyword,
-        "category_id": "",
-        "__refresh__": "",
-        "_extra": "",
-        "highlight": 0,
-        "single_column": 0,
-        "page": page
+      requlestUrl,
+      queryParameters: {},
+      header: {
+        "Accept":
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Authority": "live.douyin.com",
+        "Referer": "https://www.douyin.com/",
+        "Cookie": "__ac_nonce=${generateRandomString(21)}",
+        "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
       },
-      header: {"cookie": "buvid3=infoc;"},
     );
-
     var items = <LiveRoomItem>[];
-    for (var item in result["data"]["result"]["live_room"] ?? []) {
-      var title = item["title"].toString();
-      //移除title中的<em></em>标签
-      title = title.replaceAll(RegExp(r"<.*?em.*?>"), "");
+    for (var item in result["data"] ?? []) {
+      var itemData = json.decode(item["lives"]["rawdata"].toString());
       var roomItem = LiveRoomItem(
-        roomId: item["roomid"].toString(),
-        title: title,
-        cover: "https:${item["cover"]}@400w.jpg",
-        userName: item["uname"].toString(),
-        online: int.tryParse(item["online"].toString()) ?? 0,
+        roomId: itemData["owner"]["web_rid"].toString(),
+        title: itemData["title"].toString(),
+        cover: itemData["cover"]["url_list"][0].toString(),
+        userName: itemData["owner"]["nickname"].toString(),
+        online: int.tryParse(itemData["stats"]["total_user"].toString()) ?? 0,
       );
       items.add(roomItem);
     }
-    return LiveSearchRoomResult(hasMore: items.length >= 40, items: items);
+    return LiveSearchRoomResult(hasMore: items.length >= 10, items: items);
   }
 
   @override
   Future<LiveSearchAnchorResult> searchAnchors(String keyword,
       {int page = 1}) async {
-    var result = await HttpClient.instance.getJson(
-      "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live_user&cover_type=user_cover",
-      queryParameters: {
-        "order": "",
-        "keyword": keyword,
-        "category_id": "",
-        "__refresh__": "",
-        "_extra": "",
-        "highlight": 0,
-        "single_column": 0,
-        "page": page
-      },
-      header: {"cookie": "buvid3=infoc;"},
-    );
-
-    var items = <LiveAnchorItem>[];
-    for (var item in result["data"]["result"] ?? []) {
-      var uname = item["uname"].toString();
-      //移除title中的<em></em>标签
-      uname = uname.replaceAll(RegExp(r"<.*?em.*?>"), "");
-      var anchorItem = LiveAnchorItem(
-        roomId: item["roomid"].toString(),
-        avatar: "https:${item["uface"]}@400w.jpg",
-        userName: uname,
-        liveStatus: item["is_live"],
-      );
-      items.add(anchorItem);
-    }
-    return LiveSearchAnchorResult(hasMore: items.length >= 40, items: items);
+    throw Exception("抖音暂不支持搜索主播，请直接搜索直播间");
   }
 
   @override
@@ -320,5 +366,38 @@ class DouyinSite implements LiveSite {
   Future<List<LiveSuperChatMessage>> getSuperChatMessage(
       {required String roomId}) {
     return Future.value(<LiveSuperChatMessage>[]);
+  }
+
+  //生成指定长度的16进制随机字符串
+  String generateRandomString(int length) {
+    var random = Random.secure();
+    var values = List<int>.generate(length, (i) => random.nextInt(16));
+    StringBuffer stringBuffer = StringBuffer();
+    for (var item in values) {
+      stringBuffer.write(item.toRadixString(16));
+    }
+    return stringBuffer.toString();
+  }
+
+  Future<String> signUrl(String url) async {
+    try {
+      // 发起一个签名请求
+      // 服务端代码：https://github.com/5ime/Tiktok_Signature
+      var signResult = await HttpClient.instance.postJson(
+        "https://tk.nsapps.cn/",
+        queryParameters: {},
+        header: {"Content-Type": "application/json"},
+        data: {
+          "url": url,
+          "userAgent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51"
+        },
+      );
+      var requlestUrl = signResult["data"]["url"].toString();
+      return requlestUrl;
+    } catch (e) {
+      CoreLog.error(e);
+      return url;
+    }
   }
 }

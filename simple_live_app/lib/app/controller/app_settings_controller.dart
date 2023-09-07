@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AppSettingsController extends GetxController {
+  static AppSettingsController get instance =>
+      Get.find<AppSettingsController>();
+
+  /// 缩放模式
+  var scaleMode = 0.obs;
+
   var themeMode = 0.obs;
 
   var firstRun = false;
@@ -24,7 +30,8 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuSpeed, 10.0);
     danmuEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuEnable, true);
-
+    danmuStrokeWidth.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
     chatTextSize.value = LocalStorageService.instance
@@ -35,6 +42,26 @@ class AppSettingsController extends GetxController {
 
     qualityLevel.value = LocalStorageService.instance
         .getValue(LocalStorageService.kQualityLevel, 1);
+
+    autoExitEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoExitEnable, false);
+
+    autoExitDuration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoExitDuration, 60);
+
+    playerCompatMode.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerCompatMode, false);
+
+    autoFullScreen.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoFullScreen, false);
+
+    // ignore: invalid_use_of_protected_member
+    shieldList.value = LocalStorageService.instance.shieldBox.values.toSet();
+
+    scaleMode.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kPlayerScaleMode,
+      0,
+    );
 
     super.onInit();
   }
@@ -137,10 +164,64 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuEnable, e);
   }
 
+  var danmuStrokeWidth = 2.0.obs;
+  void setDanmuStrokeWidth(double e) {
+    danmuStrokeWidth.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuStrokeWidth, e);
+  }
+
   var qualityLevel = 1.obs;
   void setQualityLevel(int level) {
     qualityLevel.value = level;
     LocalStorageService.instance
         .setValue(LocalStorageService.kQualityLevel, level);
+  }
+
+  var autoExitEnable = false.obs;
+  void setAutoExitEnable(bool e) {
+    autoExitEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoExitEnable, e);
+  }
+
+  var autoExitDuration = 60.obs;
+  void setAutoExitDuration(int e) {
+    autoExitDuration.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoExitDuration, e);
+  }
+
+  var playerCompatMode = false.obs;
+  void setPlayerCompatMode(bool e) {
+    playerCompatMode.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var autoFullScreen = false.obs;
+  void setAutoFullScreen(bool e) {
+    autoFullScreen.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoFullScreen, e);
+  }
+
+  RxSet<String> shieldList = <String>{}.obs;
+  void addShieldList(String e) {
+    shieldList.add(e);
+    LocalStorageService.instance.shieldBox.put(e, e);
+  }
+
+  void removeShieldList(String e) {
+    shieldList.remove(e);
+    LocalStorageService.instance.shieldBox.delete(e);
+  }
+
+  void setScaleMode(int value) {
+    scaleMode.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kPlayerScaleMode,
+      value,
+    );
   }
 }

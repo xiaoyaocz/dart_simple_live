@@ -87,14 +87,26 @@ class BiliBiliSite implements LiveSite {
       {required LiveRoomDetail detail}) async {
     List<LivePlayQuality> qualities = [];
     var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/room/v1/Room/playUrl",
-      queryParameters: {"cid": detail.roomId, "qn": "", "platform": "web"},
+      "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
+      queryParameters: {
+        "room_id": detail.roomId,
+        "protocol": "0,1",
+        "format": "0,1,2",
+        "codec": "0,1",
+        "platform": "web",
+      },
     );
+    var qualitiesMap = <int, String>{};
+    for (var item in result["data"]["playurl_info"]["playurl"]["g_qn_desc"]) {
+      qualitiesMap[int.tryParse(item["qn"].toString()) ?? 0] =
+          item["desc"].toString();
+    }
 
-    for (var item in result["data"]["quality_description"]) {
+    for (var item in result["data"]["playurl_info"]["playurl"]["stream"][0]
+        ["format"][0]["codec"][0]["accept_qn"]) {
       var qualityItem = LivePlayQuality(
-        quality: item["desc"].toString(),
-        data: int.tryParse(item["qn"].toString()) ?? 0,
+        quality: qualitiesMap[item] ?? "未知清晰度",
+        data: item,
       );
       qualities.add(qualityItem);
     }
@@ -107,17 +119,40 @@ class BiliBiliSite implements LiveSite {
       required LivePlayQuality quality}) async {
     List<String> urls = [];
     var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/room/v1/Room/playUrl",
+      "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
       queryParameters: {
-        "cid": detail.roomId,
+        "room_id": detail.roomId,
+        "protocol": "0,1",
+        "format": "0,2",
+        "codec": "0",
+        "platform": "web",
         "qn": quality.data,
-        "platform": "web"
       },
     );
-
-    for (var item in result["data"]["durl"]) {
-      urls.add(item["url"].toString());
+    var streamList = result["data"]["playurl_info"]["playurl"]["stream"];
+    for (var streamItem in streamList) {
+      var formatList = streamItem["format"];
+      for (var formatItem in formatList) {
+        var codecList = formatItem["codec"];
+        for (var codecItem in codecList) {
+          var urlList = codecItem["url_info"];
+          var baseUrl = codecItem["base_url"].toString();
+          for (var urlItem in urlList) {
+            urls.add(
+              "${urlItem["host"]}$baseUrl${urlItem["extra"]}",
+            );
+          }
+        }
+      }
     }
+    // 对链接进行排序，包含mcdn的在后
+    urls.sort((a, b) {
+      if (a.contains("mcdn")) {
+        return 1;
+      } else {
+        return -1;
+      }
+    });
     return urls;
   }
 
@@ -156,6 +191,17 @@ class BiliBiliSite implements LiveSite {
         "room_id": roomId,
       },
     );
+
+    var roomDanmakuResult = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo",
+      queryParameters: {
+        "id": roomId,
+      },
+    );
+    var buvid = await getBuvid();
+    List<String> serverHosts = (roomDanmakuResult["data"]["host_list"] as List)
+        .map<String>((e) => e["host"].toString())
+        .toList();
     return LiveRoomDetail(
       roomId: result["data"]["room_info"]["room_id"].toString(),
       title: result["data"]["room_info"]["title"].toString(),
@@ -168,7 +214,14 @@ class BiliBiliSite implements LiveSite {
       url: "https://live.bilibili.com/$roomId",
       introduction: result["data"]["room_info"]["description"].toString(),
       notice: "",
-      danmakuData: asT<int?>(result["data"]["room_info"]["room_id"]) ?? 0,
+      danmakuData: BiliBiliDanmakuArgs(
+        roomId: asT<int?>(result["data"]["room_info"]["room_id"]) ?? 0,
+        token: roomDanmakuResult["data"]["token"].toString(),
+        serverHost: serverHosts.isNotEmpty
+            ? serverHosts.first
+            : "broadcastlv.chat.bilibili.com",
+        buvid: buvid,
+      ),
     );
   }
 
@@ -280,5 +333,17 @@ class BiliBiliSite implements LiveSite {
       ls.add(message);
     }
     return ls;
+  }
+
+  Future<String> getBuvid() async {
+    try {
+      var result = await HttpClient.instance.getJson(
+        "https://api.bilibili.com/x/frontend/finger/spi",
+        queryParameters: {},
+      );
+      return result["data"]["b_3"].toString();
+    } catch (e) {
+      return "";
+    }
   }
 }

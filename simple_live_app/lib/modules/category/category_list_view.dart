@@ -22,6 +22,7 @@ class CategoryListView extends StatelessWidget {
       child: Obx(
         () => EasyRefresh(
           firstRefresh: true,
+          controller: controller.easyRefreshController,
           onRefresh: controller.refreshData,
           header: MaterialHeader(
             completeDuration: const Duration(milliseconds: 400),

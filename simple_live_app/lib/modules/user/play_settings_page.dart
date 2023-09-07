@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -13,30 +15,48 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
         title: const Text("播放设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.edgeInsetsV12,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-                  child: Text(
-                    "硬件解码",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
+          Obx(
+            () => SwitchListTile(
+              title: Text(
+                "进入直播间自动全屏",
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              Obx(
-                () => Switch(
-                  value: controller.hardwareDecode.value,
-                  onChanged: (e) {
-                    controller.setHardwareDecode(e);
-                  },
-                ),
-              ),
-            ],
+              value: controller.autoFullScreen.value,
+              onChanged: (e) {
+                controller.setAutoFullScreen(e);
+              },
+            ),
           ),
-          AppStyle.vGap12,
+          Obx(
+            () => SwitchListTile(
+              title: Text(
+                "硬件解码",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              value: controller.hardwareDecode.value,
+              onChanged: (e) {
+                controller.setHardwareDecode(e);
+              },
+            ),
+          ),
+          Obx(
+            () => Visibility(
+              visible: Platform.isAndroid,
+              child: SwitchListTile(
+                title: Text(
+                  "兼容模式",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                subtitle: const Text("若播放卡顿可尝试打开此选项"),
+                value: controller.playerCompatMode.value,
+                onChanged: (e) {
+                  controller.setPlayerCompatMode(e);
+                },
+              ),
+            ),
+          ),
           Row(
             children: [
               Expanded(
@@ -84,6 +104,70 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                   ),
                 ),
               ),
+              AppStyle.hGap12,
+            ],
+          ),
+          AppStyle.vGap12,
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
+                  child: Text(
+                    "画面尺寸",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                height: 36,
+                child: Obx(
+                  () => DropdownButtonFormField(
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: AppStyle.edgeInsetsH12,
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 0,
+                        child: Text(
+                          "适应",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text(
+                          "拉伸",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 2,
+                        child: Text(
+                          "铺满",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 3,
+                        child: Text(
+                          "16:9",
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 4,
+                        child: Text(
+                          "4:3",
+                        ),
+                      ),
+                    ],
+                    value: controller.scaleMode.value,
+                    onChanged: (e) {
+                      controller.setScaleMode(e ?? 0);
+                    },
+                  ),
+                ),
+              ),
+              AppStyle.hGap12,
             ],
           ),
           AppStyle.vGap12,

@@ -1,30 +1,27 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
-//import 'package:perfect_volume_control/perfect_volume_control.dart';
-import 'package:remixicon/remixicon.dart';
-//import 'package:screen_brightness/screen_brightness.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
-import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
-class LiveRoomController extends BaseController {
+class LiveRoomController extends PlayerController {
   final Site site;
   final String roomId;
   late LiveDanmaku liveDanmaku;
@@ -33,40 +30,18 @@ class LiveRoomController extends BaseController {
     required this.roomId,
   }) {
     liveDanmaku = site.liveSite.getDanmaku();
+    // 抖音应该默认是竖屏的
+    if (site.id == "douyin") {
+      isVertical.value = true;
+    }
   }
-
-  final AppSettingsController settingsController =
-      Get.find<AppSettingsController>();
+  Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
+  var online = 0.obs;
+  var followed = false.obs;
+  var liveStatus = false.obs;
+  RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
   final ScrollController scrollController = ScrollController();
   RxList<LiveMessage> messages = RxList<LiveMessage>();
-  RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
-  //final screenBrightness = ScreenBrightness();
-  Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
-  GlobalKey globalPlayerKey = GlobalKey();
-  GlobalKey globalDanmuKey = GlobalKey();
-  var online = 0.obs;
-  var fullScreen = false.obs;
-  var enableDanmaku = true.obs;
-  var followed = false.obs;
-
-  /// 直播状态
-  var liveStatus = false.obs;
-
-  /// 播放器加载中
-  var playerLoadding = false.obs;
-  var showDanmuSettings = false.obs;
-  var showQualites = false.obs;
-  var showLines = false.obs;
-  DanmakuController? danmakuController;
-  late final player = Player();
-  late final videoController = VideoController(
-    player,
-    configuration: VideoControllerConfiguration(
-      enableHardwareAcceleration: settingsController.hardwareDecode.value,
-    ),
-  );
-
-  DanmakuView? danmakuView;
 
   /// 清晰度数据
   RxList<LivePlayQuality> qualites = RxList<LivePlayQuality>();
@@ -82,17 +57,34 @@ class LiveRoomController extends BaseController {
   var currentUrl = -1;
   var currentUrlInfo = "".obs;
 
-  /// 显示播放控制
-  Rx<bool> showControls = true.obs;
+  /// 退出倒计时
+  var countdown = 60.obs;
+
+  Timer? autoExitTimer;
 
   @override
   void onInit() {
-    playerListener();
+    initAutoExit();
+    showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
-    setSystem();
     loadData();
-
     super.onInit();
+  }
+
+  /// 初始化自动关闭倒计时
+  void initAutoExit() {
+    if (AppSettingsController.instance.autoExitEnable.value) {
+      countdown.value =
+          AppSettingsController.instance.autoExitDuration.value * 60;
+      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+        countdown.value -= 1;
+        if (countdown.value <= 0) {
+          timer.cancel();
+          await WakelockPlus.disable();
+          exit(0);
+        }
+      });
+    }
   }
 
   void refreshRoom() {
@@ -100,33 +92,6 @@ class LiveRoomController extends BaseController {
     liveDanmaku.stop();
 
     loadData();
-  }
-
-  /// 设置系统状态
-  void setSystem() {
-    //PerfectVolumeControl.hideUI = false;
-
-    //屏幕常亮
-    Wakelock.enable();
-  }
-
-  /// 弹幕控制器初始化，初始化一些选项
-  void setDanmakuController(DanmakuController controller) {
-    danmakuController = controller;
-    danmakuController?.updateOption(
-      DanmakuOption(
-        fontSize: settingsController.danmuSize.value,
-        area: settingsController.danmuArea.value,
-        duration: settingsController.danmuSpeed.value,
-        opacity: settingsController.danmuOpacity.value,
-      ),
-    );
-  }
-
-  /// 更新弹幕选项
-  void updateDanmuOption(DanmakuOption? option) {
-    if (danmakuController == null || option == null) return;
-    danmakuController!.updateOption(option);
   }
 
   /// 聊天栏始终滚动到底部
@@ -149,17 +114,51 @@ class LiveRoomController extends BaseController {
       if (messages.length > 200) {
         messages.removeAt(0);
       }
+
+      // 关键词屏蔽检查
+      for (var keyword in AppSettingsController.instance.shieldList) {
+        if (msg.message.contains(keyword)) {
+          Log.d("关键词：$keyword\n消息内容：${msg.message}");
+          return;
+        }
+      }
+
       messages.add(msg);
 
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => chatScrollToBottom(),
       );
-      addDanmaku(msg);
+      if (!liveStatus.value) {
+        return;
+      }
+      addDanmaku([
+        DanmakuItem(
+          msg.message,
+          color: Color.fromARGB(
+            255,
+            msg.color.r,
+            msg.color.g,
+            msg.color.b,
+          ),
+        ),
+      ]);
     } else if (msg.type == LiveMessageType.online) {
       online.value = msg.data;
     } else if (msg.type == LiveMessageType.superChat) {
       superChats.add(msg.data);
     }
+  }
+
+  /// 添加一条系统消息
+  void addSysMsg(String msg) {
+    messages.add(
+      LiveMessage(
+        type: LiveMessageType.chat,
+        userName: "LiveSysMessage",
+        message: msg,
+        color: LiveMessageColor.white,
+      ),
+    );
   }
 
   /// 接收到WebSocket关闭信息
@@ -176,7 +175,7 @@ class LiveRoomController extends BaseController {
   void loadData() async {
     try {
       SmartDialog.showLoading(msg: "");
-      errorMsg.value = "";
+
       addSysMsg("正在读取直播间信息");
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
       getSuperChatMessage();
@@ -184,7 +183,10 @@ class LiveRoomController extends BaseController {
       addHistory();
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status;
-      getPlayQualites();
+      if (liveStatus.value) {
+        getPlayQualites();
+      }
+
       addSysMsg("开始连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
@@ -192,6 +194,100 @@ class LiveRoomController extends BaseController {
       SmartDialog.showToast(e.toString());
     } finally {
       SmartDialog.dismiss(status: SmartStatus.loading);
+    }
+  }
+
+  /// 初始化播放器
+  void getPlayQualites() async {
+    qualites.clear();
+    currentQuality = -1;
+    try {
+      var playQualites =
+          await site.liveSite.getPlayQualites(detail: detail.value!);
+
+      if (playQualites.isEmpty) {
+        SmartDialog.showToast("无法读取播放清晰度");
+        return;
+      }
+      qualites.value = playQualites;
+
+      if (AppSettingsController.instance.qualityLevel.value == 2) {
+        //最高
+        currentQuality = 0;
+      } else if (AppSettingsController.instance.qualityLevel.value == 0) {
+        //最低
+        currentQuality = playQualites.length - 1;
+      } else {
+        //中间值
+        int middle = (playQualites.length / 2).floor();
+        currentQuality = middle;
+      }
+
+      getPlayUrl();
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("无法读取播放清晰度");
+    }
+  }
+
+  void getPlayUrl() async {
+    playUrls.clear();
+    currentQualityInfo.value = qualites[currentQuality].quality;
+    currentUrlInfo.value = "";
+    currentUrl = -1;
+    var playUrl = await site.liveSite
+        .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
+    if (playUrl.isEmpty) {
+      SmartDialog.showToast("无法读取播放地址");
+      return;
+    }
+    playUrls.value = playUrl;
+    currentUrl = 0;
+    currentUrlInfo.value = "线路${currentUrl + 1}";
+    setPlayer();
+  }
+
+  void setPlayer() async {
+    currentUrlInfo.value = "线路${currentUrl + 1}";
+    errorMsg.value = "";
+    Map<String, String> headers = {};
+    if (site.id == "bilibili") {
+      headers = {
+        "referer": "https://live.bilibili.com",
+        "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+      };
+    }
+
+    player.open(
+      Media(
+        playUrls[currentUrl],
+        httpHeaders: headers,
+      ),
+    );
+
+    Log.d("播放链接\r\n：${playUrls[currentUrl]}");
+  }
+
+  @override
+  void mediaEnd() {
+    // 遍历线路，如果全部链接都断开就是直播结束了
+    if (playUrls.length - 1 == currentUrl) {
+      liveStatus.value = false;
+    } else {
+      currentUrl += 1;
+      setPlayer();
+    }
+  }
+
+  @override
+  void mediaError(String error) {
+    if (playUrls.length - 1 == currentUrl) {
+      errorMsg.value = "播放失败";
+      SmartDialog.showToast("播放失败:$error");
+    } else {
+      currentUrl += 1;
+      setPlayer();
     }
   }
 
@@ -213,474 +309,6 @@ class LiveRoomController extends BaseController {
     superChats.value = superChats
         .where((x) => x.endTime.millisecondsSinceEpoch > now)
         .toList();
-  }
-
-  /// 初始化播放器
-  void getPlayQualites() async {
-    qualites.clear();
-    currentQuality = -1;
-    var playQualites =
-        await site.liveSite.getPlayQualites(detail: detail.value!);
-
-    if (playQualites.isEmpty) {
-      SmartDialog.showToast("无法读取播放清晰度");
-      return;
-    }
-    qualites.value = playQualites;
-
-    if (settingsController.qualityLevel.value == 2) {
-      //最高
-      currentQuality = 0;
-    } else if (settingsController.qualityLevel.value == 0) {
-      //最低
-      currentQuality = playQualites.length - 1;
-    } else {
-      //中间值
-      int middle = (playQualites.length / 2).floor();
-      currentQuality = middle;
-    }
-
-    getPlayUrl();
-  }
-
-  void getPlayUrl() async {
-    playUrls.clear();
-    currentQualityInfo.value = qualites[currentQuality].quality;
-    currentUrlInfo.value = "";
-    currentUrl = -1;
-    var playUrl = await site.liveSite
-        .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
-    if (playUrl.isEmpty) {
-      SmartDialog.showToast("无法读取播放地址");
-      return;
-    }
-    playUrls.value = playUrl;
-    currentUrl = 0;
-    currentUrlInfo.value = "线路${currentUrl + 1}";
-    setPlayer();
-  }
-
-  void setPlayer() {
-    currentUrlInfo.value = "线路${currentUrl + 1}";
-    Map<String, String> headers = {};
-    if (site.id == "bilibili") {
-      headers = {
-        "referer": "https://live.bilibili.com",
-        "user-agent": "Mozilla/5.0 BiliDroid/1.12.0 (bbcallen@gmail.com)"
-      };
-    }
-    playerLoadding.value = true;
-    player.open(
-      Media(
-        playUrls[currentUrl],
-        httpHeaders: headers,
-      ),
-    );
-  }
-
-  StreamSubscription? bufferingStream;
-  StreamSubscription? errorStream;
-  StreamSubscription? endStream;
-  StreamSubscription? trackStream;
-
-  /// 事件监听
-  void playerListener() {
-    bufferingStream = player.streams.buffering.listen((event) {
-      Log.w('Buffering:$event');
-      playerLoadding.value = event;
-    });
-
-    trackStream = player.streams.track.listen((event) {
-      Log.w('Track:$event');
-      //接收到轨道信息后，隐藏加载
-      playerLoadding.value = false;
-    });
-    errorStream = player.streams.error.listen((event) {
-      Log.w('${event.code}: ${event.message}');
-      mediaError();
-    });
-    endStream = player.streams.completed.listen((event) {
-      if (event) {
-        mediaEnd();
-      }
-    });
-  }
-
-  /// 取消事件监听
-  void playerCancelListener() {
-    bufferingStream?.cancel();
-    trackStream?.cancel();
-    errorStream?.cancel();
-    endStream?.cancel();
-  }
-
-  void mediaEnd() {
-    if (playUrls.length - 1 == currentUrl) {
-      liveStatus.value = false;
-    } else {
-      currentUrl += 1;
-      setPlayer();
-    }
-  }
-
-  void mediaError() {
-    if (playUrls.length - 1 == currentUrl) {
-      liveStatus.value = false;
-      errorMsg.value = "播放失败";
-      //Log.w(player.state..errorDescription ?? "");
-    } else {
-      currentUrl += 1;
-      setPlayer();
-    }
-  }
-
-  /// 添加一条系统消息
-  void addSysMsg(String msg) {
-    messages.add(
-      LiveMessage(
-        type: LiveMessageType.chat,
-        userName: "LiveSysMessage",
-        message: msg,
-        color: LiveMessageColor.white,
-      ),
-    );
-  }
-
-  /// 添加一条弹幕
-  void addDanmaku(LiveMessage msg) {
-    if (!enableDanmaku.value || !liveStatus.value) {
-      return;
-    }
-    danmakuController?.addItems(
-      [
-        DanmakuItem(
-          msg.message,
-          color: Color.fromARGB(
-            255,
-            msg.color.r,
-            msg.color.g,
-            msg.color.b,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 播放器全屏
-  void setFull() {
-    fullScreen.value = true;
-    //全屏
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-    //横屏
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    danmakuController?.clear();
-  }
-
-  /// 退出全屏
-  void exitFull() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-        overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-    fullScreen.value = false;
-    danmakuController?.clear();
-  }
-
-  /// 底部打开播放器设置
-  void showBottomDanmuSettings() {
-    showModalBottomSheet(
-      context: Get.context!,
-      constraints: const BoxConstraints(
-        maxWidth: 600,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-      ),
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(Get.context!).cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-          ),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: const EdgeInsets.only(
-                left: 12,
-              ),
-              title: const Text("弹幕设置"),
-              trailing: IconButton(
-                onPressed: Get.back,
-                icon: const Icon(Remix.close_line),
-              ),
-            ),
-            Expanded(
-              child: buildDanmuSettings(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void showQualitySheet() {
-    showModalBottomSheet(
-      context: Get.context!,
-      constraints: const BoxConstraints(
-        maxWidth: 600,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-      ),
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(Get.context!).cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-          ),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: const EdgeInsets.only(
-                left: 12,
-              ),
-              title: const Text("切换清晰度"),
-              trailing: IconButton(
-                onPressed: Get.back,
-                icon: const Icon(Remix.close_line),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: qualites.length,
-                itemBuilder: (_, i) {
-                  var item = qualites[i];
-                  return RadioListTile(
-                    value: i,
-                    groupValue: currentQuality,
-                    title: Text(item.quality),
-                    onChanged: (e) {
-                      Get.back();
-                      currentQuality = i;
-                      getPlayUrl();
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void showPlayUrlsSheet() {
-    showModalBottomSheet(
-      context: Get.context!,
-      constraints: const BoxConstraints(
-        maxWidth: 600,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-      ),
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(Get.context!).cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-          ),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: const EdgeInsets.only(
-                left: 12,
-              ),
-              title: const Text("切换线路"),
-              trailing: IconButton(
-                onPressed: Get.back,
-                icon: const Icon(Remix.close_line),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: playUrls.length,
-                itemBuilder: (_, i) {
-                  return RadioListTile(
-                    value: i,
-                    groupValue: currentUrl,
-                    title: Text("线路${i + 1}"),
-                    onChanged: (e) {
-                      Get.back();
-                      currentUrl = i;
-                      setPlayer();
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void showMore() {
-    showModalBottomSheet(
-      context: Get.context!,
-      constraints: const BoxConstraints(
-        maxWidth: 600,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-      ),
-      builder: (_) => Container(
-        padding: EdgeInsets.only(
-          bottom: AppStyle.bottomBarHeight,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.refresh),
-              title: const Text("刷新"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                refreshRoom();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.play_circle_outline),
-              trailing: const Icon(Icons.chevron_right),
-              title: const Text("切换清晰度"),
-              onTap: () {
-                Get.back();
-                showQualitySheet();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.switch_video),
-              title: const Text("切换线路"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                showPlayUrlsSheet();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_sharp),
-              title: const Text("分享"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                share();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildDanmuSettings() {
-    return Obx(
-      () => ListView(
-        padding: AppStyle.edgeInsetsV12,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕区域: ${(settingsController.danmuArea.value * 100).toInt()}%",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: settingsController.danmuArea.value,
-            max: 1.0,
-            min: 0.1,
-            onChanged: (e) {
-              settingsController.setDanmuArea(e);
-              updateDanmuOption(
-                danmakuController?.option.copyWith(area: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "不透明度: ${(settingsController.danmuOpacity.value * 100).toInt()}%",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: settingsController.danmuOpacity.value,
-            max: 1.0,
-            min: 0.1,
-            onChanged: (e) {
-              settingsController.setDanmuOpacity(e);
-              updateDanmuOption(
-                danmakuController?.option.copyWith(opacity: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕大小: ${(settingsController.danmuSize.value).toInt()}",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: settingsController.danmuSize.value,
-            min: 8,
-            max: 36,
-            onChanged: (e) {
-              settingsController.setDanmuSize(e);
-              updateDanmuOption(
-                danmakuController?.option.copyWith(fontSize: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕速度: ${(settingsController.danmuSpeed.value).toInt()} (越小越快)",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: settingsController.danmuSpeed.value,
-            min: 4,
-            max: 20,
-            onChanged: (e) {
-              settingsController.setDanmuSpeed(e);
-              updateDanmuOption(
-                danmakuController?.option.copyWith(duration: e),
-              );
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   /// 添加历史记录
@@ -726,10 +354,14 @@ class LiveRoomController extends BaseController {
   }
 
   /// 取消关注用户
-  void removeFollowUser() {
+  void removeFollowUser() async {
     if (detail.value == null) {
       return;
     }
+    if (!await Utils.showAlertDialog("确定要取消关注该用户吗？", title: "取消关注")) {
+      return;
+    }
+
     var id = "${site.id}_$roomId";
     DBService.instance.deleteFollow(id);
     followed.value = false;
@@ -743,104 +375,224 @@ class LiveRoomController extends BaseController {
     Share.share(detail.value!.url);
   }
 
-  @override
-  void onClose() async {
-    playerCancelListener();
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-        overlays: SystemUiOverlay.values);
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-    //screenBrightness.resetScreenBrightness();
-    Wakelock.disable();
+  /// 底部打开播放器设置
+  void showDanmuSettingsSheet() {
+    Utils.showBottomSheet(
+      title: "弹幕设置",
+      child: Obx(
+        () => ListView(
+          padding: AppStyle.edgeInsetsV12,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "弹幕区域: ${(AppSettingsController.instance.danmuArea.value * 100).toInt()}%",
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Slider(
+              value: AppSettingsController.instance.danmuArea.value,
+              max: 1.0,
+              min: 0.1,
+              onChanged: (e) {
+                AppSettingsController.instance.setDanmuArea(e);
+                updateDanmuOption(
+                  danmakuController?.option.copyWith(area: e),
+                );
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "不透明度: ${(AppSettingsController.instance.danmuOpacity.value * 100).toInt()}%",
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Slider(
+              value: AppSettingsController.instance.danmuOpacity.value,
+              max: 1.0,
+              min: 0.1,
+              onChanged: (e) {
+                AppSettingsController.instance.setDanmuOpacity(e);
 
-    player.dispose();
+                updateDanmuOption(
+                  danmakuController?.option.copyWith(opacity: e),
+                );
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "弹幕大小: ${(AppSettingsController.instance.danmuSize.value).toInt()}",
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Slider(
+              value: AppSettingsController.instance.danmuSize.value,
+              min: 8,
+              max: 36,
+              onChanged: (e) {
+                AppSettingsController.instance.setDanmuSize(e);
+
+                updateDanmuOption(
+                  danmakuController?.option.copyWith(fontSize: e),
+                );
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "弹幕速度: ${(AppSettingsController.instance.danmuSpeed.value).toInt()} (越小越快)",
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Slider(
+              value: AppSettingsController.instance.danmuSpeed.value,
+              min: 4,
+              max: 20,
+              onChanged: (e) {
+                AppSettingsController.instance.setDanmuSpeed(e);
+
+                updateDanmuOption(
+                  danmakuController?.option.copyWith(duration: e),
+                );
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "弹幕描边: ${(AppSettingsController.instance.danmuStrokeWidth.value).toInt()}",
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Slider(
+              value: AppSettingsController.instance.danmuStrokeWidth.value,
+              min: 0,
+              max: 10,
+              onChanged: (e) {
+                AppSettingsController.instance.setDanmuStrokeWidth(e);
+
+                updateDanmuOption(
+                  danmakuController?.option.copyWith(strokeWidth: e),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void showQualitySheet() {
+    Utils.showBottomSheet(
+      title: "切换清晰度",
+      child: ListView.builder(
+        itemCount: qualites.length,
+        itemBuilder: (_, i) {
+          var item = qualites[i];
+          return RadioListTile(
+            value: i,
+            groupValue: currentQuality,
+            title: Text(item.quality),
+            onChanged: (e) {
+              Get.back();
+              currentQuality = i;
+              getPlayUrl();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void showPlayUrlsSheet() {
+    Utils.showBottomSheet(
+      title: "切换线路",
+      child: ListView.builder(
+        itemCount: playUrls.length,
+        itemBuilder: (_, i) {
+          return RadioListTile(
+            value: i,
+            groupValue: currentUrl,
+            title: Text("线路${i + 1}"),
+            secondary: Text(
+              playUrls[i].contains(".flv") ? "FLV" : "HLS",
+            ),
+            onChanged: (e) {
+              Get.back();
+              currentUrl = i;
+              setPlayer();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void showPlayerSettingsSheet() {
+    Utils.showBottomSheet(
+      title: "画面尺寸",
+      child: Obx(
+        () => ListView(
+          padding: AppStyle.edgeInsetsV12,
+          children: [
+            RadioListTile(
+              value: 0,
+              title: const Text("适应"),
+              visualDensity: VisualDensity.compact,
+              groupValue: AppSettingsController.instance.scaleMode.value,
+              onChanged: (e) {
+                AppSettingsController.instance.setScaleMode(e ?? 0);
+              },
+            ),
+            RadioListTile(
+              value: 1,
+              title: const Text("拉伸"),
+              visualDensity: VisualDensity.compact,
+              groupValue: AppSettingsController.instance.scaleMode.value,
+              onChanged: (e) {
+                AppSettingsController.instance.setScaleMode(e ?? 1);
+              },
+            ),
+            RadioListTile(
+              value: 2,
+              title: const Text("铺满"),
+              visualDensity: VisualDensity.compact,
+              groupValue: AppSettingsController.instance.scaleMode.value,
+              onChanged: (e) {
+                AppSettingsController.instance.setScaleMode(e ?? 2);
+              },
+            ),
+            RadioListTile(
+              value: 3,
+              title: const Text("16:9"),
+              visualDensity: VisualDensity.compact,
+              groupValue: AppSettingsController.instance.scaleMode.value,
+              onChanged: (e) {
+                AppSettingsController.instance.setScaleMode(e ?? 3);
+              },
+            ),
+            RadioListTile(
+              value: 4,
+              title: const Text("4:3"),
+              visualDensity: VisualDensity.compact,
+              groupValue: AppSettingsController.instance.scaleMode.value,
+              onChanged: (e) {
+                AppSettingsController.instance.setScaleMode(e ?? 4);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void onClose() {
+    autoExitTimer?.cancel();
 
     liveDanmaku.stop();
     danmakuController = null;
     super.onClose();
-  }
-
-  bool verticalDragging = false;
-  bool leftVerticalDrag = false;
-  var _currentVolume = 0.0;
-  var _currentBrightness = 1.0;
-  var _verStart = 0.0;
-  var showTip = false.obs;
-  var seekTip = "".obs;
-
-  /// 竖向手势开始
-  void onVerticalDragStart(DragStartDetails details) async {
-    verticalDragging = true;
-    _verStart = details.globalPosition.dy;
-    leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
-    //_currentVolume = await PerfectVolumeControl.volume;
-    //_currentBrightness = await screenBrightness.current;
-    showTip.value = true;
-  }
-
-  /// 竖向手势更新
-  void onVerticalDragUpdate(DragUpdateDetails e) async {
-    if (verticalDragging == false) return;
-    //String text = "";
-    double value = 0.0;
-
-    Log.logPrint("$_verStart/${e.globalPosition.dy}");
-
-    //音量
-    if (!leftVerticalDrag) {
-      if (e.globalPosition.dy > _verStart) {
-        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
-
-        var seek = _currentVolume - value;
-        if (seek < 0) {
-          seek = 0;
-        }
-        // PerfectVolumeControl.setVolume(seek);
-        seekTip.value = "音量 ${(seek * 100).toInt()}%";
-        Log.logPrint(value);
-      } else {
-        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
-        var seek = value.abs() + _currentVolume;
-        if (seek > 1) {
-          seek = 1;
-        }
-
-        // PerfectVolumeControl.setVolume(seek);
-
-        seekTip.value = "音量 ${(seek * 100).toInt()}%";
-        Log.logPrint(value);
-      }
-    } else {
-      //亮度
-
-      if (e.globalPosition.dy > _verStart) {
-        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
-
-        var seek = _currentBrightness - value;
-        if (seek < 0) {
-          seek = 0;
-        }
-        //screenBrightness.setScreenBrightness(seek);
-
-        seekTip.value = "亮度 ${(seek * 100).toInt()}%";
-        Log.logPrint(value);
-      } else {
-        value = ((e.globalPosition.dy - _verStart) / (Get.height * 0.5));
-        var seek = value.abs() + _currentBrightness;
-        if (seek > 1) {
-          seek = 1;
-        }
-
-        // screenBrightness.setScreenBrightness(seek);
-        seekTip.value = "亮度 ${(seek * 100).toInt()}%";
-        Log.logPrint(value);
-      }
-    }
-  }
-
-  /// 竖向手势完成
-  void onVerticalDragEnd(DragEndDetails details) async {
-    verticalDragging = false;
-    leftVerticalDrag = false;
-    showTip.value = false;
   }
 }

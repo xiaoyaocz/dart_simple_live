@@ -1,0 +1,23 @@
+display_name: Simple Live
+package_name: simple_live
+maintainer:
+  name: xiaoyaocz
+  email: xiaoyaocz@52uwp.com
+priority: optional
+section: x11
+installed_size: 24400
+essential: false
+icon: assets/logo.png
+
+postinstall_scripts:
+  - sudo apt install libmpv-dev mpv
+
+keywords:
+  - Simple Live
+
+generic_name: Simple Live
+
+categories:
+  - Media
+
+startup_notify: true

@@ -20,6 +20,7 @@ class AppStyle {
   static ThemeData lightTheme = ThemeData(
     colorScheme: AppColors.lightColorScheme,
     useMaterial3: true,
+    visualDensity: VisualDensity.standard,
     appBarTheme: AppBarTheme(
       //elevation: 0,
       centerTitle: true,
@@ -58,6 +59,7 @@ class AppStyle {
   static ThemeData darkTheme = ThemeData.dark().copyWith(
     colorScheme: AppColors.darkColorScheme,
     useMaterial3: true,
+    visualDensity: VisualDensity.standard,
     appBarTheme: AppBarTheme(
       //elevation: 0,
 

@@ -12,7 +12,7 @@ class CategoryDetailPage extends GetView<CategoryDetailController> {
 
   @override
   Widget build(BuildContext context) {
-    var c = MediaQuery.of(context).size.width ~/ 180;
+    var c = MediaQuery.of(context).size.width ~/ 200;
     if (c < 2) {
       c = 2;
     }

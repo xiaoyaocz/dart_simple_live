@@ -54,5 +54,13 @@
 	<false/>
 	<key>FLTEnableImpeller</key>
   	<false />
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>保存图片至相册</string>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
 </dict>
 </plist>

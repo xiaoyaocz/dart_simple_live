@@ -54,8 +54,8 @@ class LiveRoomController extends PlayerController {
   RxList<String> playUrls = RxList<String>();
 
   /// 当前线路
-  var currentUrl = -1;
-  var currentUrlInfo = "".obs;
+  var currentLineIndex = -1;
+  var currentLineInfo = "".obs;
 
   /// 退出倒计时
   var countdown = 60.obs;
@@ -68,6 +68,7 @@ class LiveRoomController extends PlayerController {
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     loadData();
+
     super.onInit();
   }
 
@@ -235,8 +236,8 @@ class LiveRoomController extends PlayerController {
   void getPlayUrl() async {
     playUrls.clear();
     currentQualityInfo.value = qualites[currentQuality].quality;
-    currentUrlInfo.value = "";
-    currentUrl = -1;
+    currentLineInfo.value = "";
+    currentLineIndex = -1;
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.isEmpty) {
@@ -244,13 +245,22 @@ class LiveRoomController extends PlayerController {
       return;
     }
     playUrls.value = playUrl;
-    currentUrl = 0;
-    currentUrlInfo.value = "线路${currentUrl + 1}";
+    currentLineIndex = 0;
+    currentLineInfo.value = "线路${currentLineIndex + 1}";
+    //重置错误次数
+    mediaErrorRetryCount = 0;
+    setPlayer();
+  }
+
+  void changePlayLine(int index) {
+    currentLineIndex = index;
+    //重置错误次数
+    mediaErrorRetryCount = 0;
     setPlayer();
   }
 
   void setPlayer() async {
-    currentUrlInfo.value = "线路${currentUrl + 1}";
+    currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
     Map<String, String> headers = {};
     if (site.id == "bilibili") {
@@ -263,33 +273,61 @@ class LiveRoomController extends PlayerController {
 
     player.open(
       Media(
-        playUrls[currentUrl],
+        playUrls[currentLineIndex],
         httpHeaders: headers,
       ),
     );
 
-    Log.d("播放链接\r\n：${playUrls[currentUrl]}");
+    Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");
   }
 
   @override
-  void mediaEnd() {
+  void mediaEnd() async {
+    if (mediaErrorRetryCount < 2) {
+      Log.d("播放结束，尝试第${mediaErrorRetryCount + 1}次刷新");
+      if (mediaErrorRetryCount == 1) {
+        //延迟一秒再刷新
+        await Future.delayed(const Duration(seconds: 1));
+      }
+      mediaErrorRetryCount += 1;
+      //刷新一次
+      setPlayer();
+      return;
+    }
+
+    Log.d("播放结束");
     // 遍历线路，如果全部链接都断开就是直播结束了
-    if (playUrls.length - 1 == currentUrl) {
+    if (playUrls.length - 1 == currentLineIndex) {
       liveStatus.value = false;
     } else {
-      currentUrl += 1;
-      setPlayer();
+      changePlayLine(currentLineIndex + 1);
+
+      //setPlayer();
     }
   }
 
+  int mediaErrorRetryCount = 0;
   @override
-  void mediaError(String error) {
-    if (playUrls.length - 1 == currentUrl) {
+  void mediaError(String error) async {
+    if (mediaErrorRetryCount < 2) {
+      Log.d("播放失败，尝试第${mediaErrorRetryCount + 1}次刷新");
+      if (mediaErrorRetryCount == 1) {
+        //延迟一秒再刷新
+        await Future.delayed(const Duration(seconds: 1));
+      }
+      mediaErrorRetryCount += 1;
+      //刷新一次
+      setPlayer();
+      return;
+    }
+
+    if (playUrls.length - 1 == currentLineIndex) {
       errorMsg.value = "播放失败";
       SmartDialog.showToast("播放失败:$error");
     } else {
-      currentUrl += 1;
-      setPlayer();
+      //currentLineIndex += 1;
+      //setPlayer();
+      changePlayLine(currentLineIndex + 1);
     }
   }
 
@@ -515,15 +553,16 @@ class LiveRoomController extends PlayerController {
         itemBuilder: (_, i) {
           return RadioListTile(
             value: i,
-            groupValue: currentUrl,
+            groupValue: currentLineIndex,
             title: Text("线路${i + 1}"),
             secondary: Text(
               playUrls[i].contains(".flv") ? "FLV" : "HLS",
             ),
             onChanged: (e) {
               Get.back();
-              currentUrl = i;
-              setPlayer();
+              //currentLineIndex = i;
+              //setPlayer();
+              changePlayLine(i);
             },
           );
         },

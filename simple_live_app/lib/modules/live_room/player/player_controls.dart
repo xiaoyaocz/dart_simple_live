@@ -225,7 +225,7 @@ Widget buildFullControls(
                     showLinesInfo(controller);
                   },
                   child: Text(
-                    controller.currentUrlInfo.value,
+                    controller.currentLineInfo.value,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                   ),
                 ),
@@ -439,7 +439,7 @@ Widget buildControls(
                       controller.showPlayUrlsSheet();
                     },
                     child: Text(
-                      controller.currentUrlInfo.value,
+                      controller.currentLineInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ),
@@ -511,7 +511,7 @@ void showLinesInfo(LiveRoomController controller) {
       itemCount: controller.playUrls.length,
       itemBuilder: (_, i) {
         return ListTile(
-          selected: controller.currentUrl == i,
+          selected: controller.currentLineIndex == i,
           title: Text.rich(
             TextSpan(
               text: "线路${i + 1}",
@@ -540,8 +540,9 @@ void showLinesInfo(LiveRoomController controller) {
           minLeadingWidth: 16,
           onTap: () {
             Utils.hideRightDialog();
-            controller.currentUrl = i;
-            controller.setPlayer();
+            //controller.currentLineIndex = i;
+            //controller.setPlayer();
+            controller.changePlayLine(i);
           },
         );
       },

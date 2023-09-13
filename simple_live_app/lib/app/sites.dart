@@ -1,32 +1,39 @@
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class Sites {
-  static List<Site> supportSites = [
-    Site(
+  static final Map<String, Site> allSites = {
+    "bilibili": Site(
       id: "bilibili",
       logo: "assets/images/bilibili_2.png",
       name: "哔哩哔哩",
       liveSite: BiliBiliSite(),
     ),
-    Site(
+    "douyu": Site(
       id: "douyu",
       logo: "assets/images/douyu.png",
       name: "斗鱼直播",
       liveSite: DouyuSite(),
     ),
-    Site(
+    "huya": Site(
       id: "huya",
       logo: "assets/images/huya.png",
       name: "虎牙直播",
       liveSite: HuyaSite(),
     ),
-    Site(
+    "douyin": Site(
       id: "douyin",
       logo: "assets/images/douyin.png",
       name: "抖音直播",
       liveSite: DouyinSite(),
     ),
-  ];
+  };
+
+  static List<Site> get supportSites {
+    return AppSettingsController.instance.siteSort
+        .map((key) => allSites[key]!)
+        .toList();
+  }
 }
 
 class Site {

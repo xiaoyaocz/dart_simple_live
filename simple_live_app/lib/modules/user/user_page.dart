@@ -107,6 +107,17 @@ class UserPage extends StatelessWidget {
                   onTap: Get.find<AppSettingsController>().changeTheme,
                 ),
                 ListTile(
+                  leading: const Icon(Remix.home_2_line),
+                  title: const Text("主页设置"),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                  ),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kSettingsIndexed);
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Remix.play_circle_line),
                   title: const Text("播放设置"),
                   trailing: const Icon(

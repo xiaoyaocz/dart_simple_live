@@ -11,6 +11,12 @@ class LocalStorageService extends GetxService {
   /// 缩放模式
   static const String kPlayerScaleMode = "ScaleMode";
 
+  /// 网站排序
+  static const String kSiteSort = "SiteSort";
+
+  /// 首页排序
+  static const String kHomeSort = "HomeSort";
+
   /// 显示模式
   /// * [0] 跟随系统
   /// * [1] 浅色模式

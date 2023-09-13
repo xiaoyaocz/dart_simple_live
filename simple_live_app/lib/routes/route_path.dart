@@ -35,4 +35,7 @@ class RoutePath {
 
   /// 工具箱
   static const kTools = "/other/tools";
+
+  /// 主页设置
+  static const kSettingsIndexed = "/settings/indexed";
 }

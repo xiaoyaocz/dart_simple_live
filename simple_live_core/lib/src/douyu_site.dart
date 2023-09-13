@@ -208,11 +208,11 @@ class DouyuSite implements LiveSite {
       userAvatar: roomInfo["owner_avatar"].toString(),
       introduction: roomInfo["show_details"].toString(),
       notice: "",
-      status: roomInfo["rst"] != 3 && roomInfo["videoLoop"] != 1,
+      status: roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1,
       danmakuData: roomInfo["room_id"].toString(),
       data: await getPlayArgs(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
-      isRecord: roomInfo["rst"] == 3,
+      isRecord: roomInfo["videoLoop"] == 1,
     );
   }
 

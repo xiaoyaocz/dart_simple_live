@@ -737,11 +737,11 @@ class LiveRoomController extends PlayerController {
       webUrl = "https://www.douyu.com/${detail.value?.roomId}";
     }
     try {
-      launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);
+      await launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);
     } catch (e) {
       Log.logPrint(e);
       SmartDialog.showToast("无法打开APP，将使用浏览器打开");
-      launchUrlString(webUrl, mode: LaunchMode.externalApplication);
+      await launchUrlString(webUrl, mode: LaunchMode.externalApplication);
     }
   }
 

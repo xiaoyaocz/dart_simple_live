@@ -80,6 +80,12 @@ class FollowUserController extends BasePageController<FollowUser> {
     }
 
     try {
+      var status = await Utils.checkStorgePermission();
+      if (!status) {
+        SmartDialog.showToast("无权限");
+        return;
+      }
+
       var dir = "";
       if (Platform.isIOS) {
         dir = (await getApplicationDocumentsDirectory()).path;
@@ -114,14 +120,19 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void inputList() async {
-    var file = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-    );
-    if (file == null) {
-      return;
-    }
     try {
+      var status = await Utils.checkStorgePermission();
+      if (!status) {
+        SmartDialog.showToast("无权限");
+        return;
+      }
+      var file = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+      if (file == null) {
+        return;
+      }
       var jsonFile = File(file.files.single.path!);
       var data = jsonDecode(await jsonFile.readAsString());
 

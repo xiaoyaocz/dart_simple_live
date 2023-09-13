@@ -63,6 +63,12 @@ class LiveRoomController extends PlayerController {
 
   Timer? autoExitTimer;
 
+  /// 设置的自动关闭时间（分钟）
+  var autoExitMinutes = 60.obs;
+
+  /// 是否启用自动关闭
+  var autoExitEnable = false.obs;
+
   @override
   void onInit() {
     initAutoExit();
@@ -76,17 +82,28 @@ class LiveRoomController extends PlayerController {
   /// 初始化自动关闭倒计时
   void initAutoExit() {
     if (AppSettingsController.instance.autoExitEnable.value) {
-      countdown.value =
-          AppSettingsController.instance.autoExitDuration.value * 60;
-      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-        countdown.value -= 1;
-        if (countdown.value <= 0) {
-          timer.cancel();
-          await WakelockPlus.disable();
-          exit(0);
-        }
-      });
+      autoExitEnable.value = true;
+      autoExitMinutes.value =
+          AppSettingsController.instance.autoExitDuration.value;
+      setAutoExit();
     }
+  }
+
+  void setAutoExit() {
+    if (!autoExitEnable.value) {
+      autoExitTimer?.cancel();
+      return;
+    }
+    autoExitTimer?.cancel();
+    countdown.value = autoExitMinutes.value * 60;
+    autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      countdown.value -= 1;
+      if (countdown.value <= 0) {
+        timer.cancel();
+        await WakelockPlus.disable();
+        exit(0);
+      }
+    });
   }
 
   void refreshRoom() {
@@ -625,6 +642,76 @@ class LiveRoomController extends PlayerController {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void showAutoExitSheet() {
+    if (AppSettingsController.instance.autoExitEnable.value) {
+      SmartDialog.showToast("已设置了全局定时关闭");
+      return;
+    }
+    Utils.showBottomSheet(
+      title: "定时关闭",
+      child: ListView(
+        children: [
+          Obx(
+            () => SwitchListTile(
+              title: Text(
+                "启用定时关闭",
+                style: Get.textTheme.titleMedium,
+              ),
+              value: autoExitEnable.value,
+              onChanged: (e) {
+                autoExitEnable.value = e;
+
+                setAutoExit();
+                //controller.setAutoExitEnable(e);
+              },
+            ),
+          ),
+          Obx(
+            () => ListTile(
+              enabled: autoExitEnable.value,
+              title: Text(
+                "自动关闭时间：${autoExitMinutes.value ~/ 60}小时${autoExitMinutes.value % 60}分钟",
+                style: Get.textTheme.titleMedium,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                var value = await showTimePicker(
+                  context: Get.context!,
+                  initialTime: TimeOfDay(
+                    hour: autoExitMinutes.value ~/ 60,
+                    minute: autoExitMinutes.value % 60,
+                  ),
+                  initialEntryMode: TimePickerEntryMode.inputOnly,
+                  builder: (_, child) {
+                    return Theme(
+                      data: Get.theme.copyWith(
+                        useMaterial3: false,
+                      ),
+                      child: MediaQuery(
+                        data: Get.mediaQuery.copyWith(
+                          alwaysUse24HourFormat: true,
+                        ),
+                        child: child!,
+                      ),
+                    );
+                  },
+                );
+                if (value == null || (value.hour == 0 && value.minute == 0)) {
+                  return;
+                }
+                var duration =
+                    Duration(hours: value.hour, minutes: value.minute);
+                autoExitMinutes.value = duration.inMinutes;
+                //setAutoExitDuration(duration.inMinutes);
+                setAutoExit();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

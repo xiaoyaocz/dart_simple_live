@@ -56,11 +56,16 @@ class DouyinSite implements LiveSite {
       },
     );
 
-    var renderData = RegExp(r'9:\[\\"\$\\",\\"\$L13\\",null,(.*?)\]\\n')
-            .firstMatch(result)
-            ?.group(1) ??
-        "";
-    var renderDataJson = json.decode(renderData.trim().replaceAll("\\", ""));
+    var renderData =
+        RegExp(r'\{\\"pathname\\":\\"\/hot_live\\",\\"categoryData.*?\]\\n')
+                .firstMatch(result)
+                ?.group(0) ??
+            "";
+    var renderDataJson = json.decode(renderData
+        .trim()
+        .replaceAll('\\"', '"')
+        .replaceAll(r"\\", r"\")
+        .replaceAll(']\\n', ""));
 
     for (var item in renderDataJson["categoryData"]) {
       List<LiveSubCategory> subs = [];
@@ -238,11 +243,15 @@ class DouyinSite implements LiveSite {
       },
     );
 
-    var renderData = RegExp(r'c:\[\\"\$\\",\\"\$L13\\",null,(.*?)\]\\n')
+    var renderData = RegExp(r'\{\\"state\\":\{\\"isLiveModal.*?\]\\n')
             .firstMatch(result)
-            ?.group(1) ??
+            ?.group(0) ??
         "";
-    var str = renderData.trim().replaceAll('\\"', '"').replaceAll(r"\\", r"\");
+    var str = renderData
+        .trim()
+        .replaceAll('\\"', '"')
+        .replaceAll(r"\\", r"\")
+        .replaceAll(']\\n', "");
     var renderDataJson = json.decode(str);
 
     return renderDataJson["state"];

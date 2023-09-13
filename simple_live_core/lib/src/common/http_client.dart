@@ -15,9 +15,9 @@ class HttpClient {
   HttpClient() {
     dio = Dio(
       BaseOptions(
-        connectTimeout: 20 * 1000,
-        receiveTimeout: 20 * 1000,
-        sendTimeout: 20 * 1000,
+        connectTimeout: Duration(seconds: 20),
+        receiveTimeout: Duration(seconds: 20),
+        sendTimeout: Duration(seconds: 20),
       ),
     );
     dio.interceptors.add(CustomInterceptor());
@@ -47,8 +47,9 @@ class HttpClient {
       );
       return result.data;
     } catch (e) {
-      if (e is DioError && e.type == DioErrorType.response) {
-        throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
+      if (e is DioException && e.type == DioExceptionType.badResponse) {
+        throw CoreError(e.message ?? "",
+            statusCode: e.response?.statusCode ?? 0);
       } else {
         throw CoreError("发送GET请求失败");
       }
@@ -79,8 +80,9 @@ class HttpClient {
       );
       return result.data;
     } catch (e) {
-      if (e is DioError && e.type == DioErrorType.response) {
-        throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
+      if (e is DioException && e.type == DioExceptionType.badResponse) {
+        throw CoreError(e.message ?? "",
+            statusCode: e.response?.statusCode ?? 0);
       } else {
         throw CoreError("发送GET请求失败");
       }
@@ -118,8 +120,9 @@ class HttpClient {
       );
       return result.data;
     } catch (e) {
-      if (e is DioError && e.type == DioErrorType.response) {
-        throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
+      if (e is DioException && e.type == DioExceptionType.badResponse) {
+        throw CoreError(e.message ?? "",
+            statusCode: e.response?.statusCode ?? 0);
       } else {
         throw CoreError("发送POST请求失败");
       }
@@ -150,7 +153,7 @@ class HttpClient {
       );
       return result;
     } catch (e) {
-      if (e is DioError && e.type == DioErrorType.response) {
+      if (e is DioException && e.type == DioExceptionType.badResponse) {
         //throw CoreError(e.message, statusCode: e.response?.statusCode ?? 0);
         return e.response!;
       } else {

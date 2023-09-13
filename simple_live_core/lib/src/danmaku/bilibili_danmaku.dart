@@ -21,6 +21,15 @@ class BiliBiliDanmakuArgs {
     required this.serverHost,
     required this.buvid,
   });
+  @override
+  String toString() {
+    return json.encode({
+      "roomId": roomId,
+      "token": token,
+      "serverHost": serverHost,
+      "buvid": buvid,
+    });
+  }
 }
 
 class BiliBiliDanmaku implements LiveDanmaku {

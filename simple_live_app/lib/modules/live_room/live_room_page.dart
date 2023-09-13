@@ -7,6 +7,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
+import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -383,22 +384,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       },
                     ),
                   ),
-                  Obx(
-                    () => ListView.separated(
-                      padding: AppStyle.edgeInsetsA12,
-                      itemCount: controller.superChats.length,
-                      separatorBuilder: (_, i) => AppStyle.vGap12,
-                      itemBuilder: (_, i) {
-                        var item = controller.superChats[i];
-                        return SuperChatCard(
-                          item,
-                          onExpire: () {
-                            controller.removeSuperChats();
-                          },
-                        );
-                      },
-                    ),
-                  ),
+                  buildSuperChats(),
                   buildSettings(),
                 ],
               ),
@@ -452,11 +438,41 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     );
   }
 
+  Widget buildSuperChats() {
+    return KeepAliveWrapper(
+      child: Obx(
+        () => ListView.separated(
+          padding: AppStyle.edgeInsetsA12,
+          itemCount: controller.superChats.length,
+          separatorBuilder: (_, i) => AppStyle.vGap12,
+          itemBuilder: (_, i) {
+            var item = controller.superChats[i];
+            return SuperChatCard(
+              item,
+              onExpire: () {
+                controller.removeSuperChats();
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget buildSettings() {
     return Obx(
       () => ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
+          Obx(
+            () => Visibility(
+              visible: controller.autoExitEnable.value,
+              child: ListTile(
+                leading: const Icon(Icons.timer_outlined),
+                title: Text("${controller.countdown.value}秒后自动关闭"),
+              ),
+            ),
+          ),
           Padding(
             padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
             child: Text(
@@ -567,12 +583,30 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: const Text("定时关闭"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                controller.showAutoExitSheet();
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.share_sharp),
-              title: const Text("分享"),
+              title: const Text("分享链接"),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Get.back();
                 controller.share();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: const Text("APP中打开"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                controller.openNaviteAPP();
               },
             ),
           ],

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:simple_live_core/simple_live_core.dart';
@@ -17,6 +18,15 @@ class DouyinDanmakuArgs {
     required this.userId,
     required this.cookie,
   });
+  @override
+  String toString() {
+    return json.encode({
+      "webRid": webRid,
+      "roomId": roomId,
+      "userId": userId,
+      "cookie": cookie,
+    });
+  }
 }
 
 class DouyinDanmaku implements LiveDanmaku {

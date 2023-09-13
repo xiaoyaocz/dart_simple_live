@@ -3,7 +3,6 @@
 import 'package:get/get.dart';
 import 'package:simple_live_app/modules/categoty_detail/category_detail_controller.dart';
 import 'package:simple_live_app/modules/categoty_detail/category_detail_page.dart';
-import 'package:simple_live_app/modules/home/home_controller.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
@@ -19,6 +18,8 @@ import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.
 import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/user/history/history_controller.dart';
 import 'package:simple_live_app/modules/user/history/history_page.dart';
+import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_controller.dart';
+import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_page.dart';
 import 'package:simple_live_app/modules/user/play_settings_page.dart';
 
 import '../modules/indexed/indexed_page.dart';
@@ -33,7 +34,7 @@ class AppPages {
       page: () => const IndexedPage(),
       bindings: [
         BindingsBuilder.put(() => IndexedController()),
-        BindingsBuilder.put(() => HomeController()),
+        //BindingsBuilder.put(() => HomeController()),
       ],
     ),
     // 观看记录
@@ -111,6 +112,14 @@ class AppPages {
       page: () => const DanmuShieldPage(),
       bindings: [
         BindingsBuilder.put(() => DanmuShieldController()),
+      ],
+    ),
+    //主页设置
+    GetPage(
+      name: RoutePath.kSettingsIndexed,
+      page: () => const IndexedSettingsPage(),
+      bindings: [
+        BindingsBuilder.put(() => IndexedSettingsController()),
       ],
     ),
   ];

@@ -144,7 +144,7 @@ class ToolBoxController extends GetxController {
           followRedirects: false,
         ),
       );
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response!.statusCode == 302) {
         var redirectUrl = e.response!.headers.value("Location");
         if (redirectUrl != null) {

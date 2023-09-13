@@ -1,3 +1,5 @@
+import 'package:simple_live_app/app/constant.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
 import 'package:flutter/material.dart';
@@ -63,7 +65,49 @@ class AppSettingsController extends GetxController {
       0,
     );
 
+    initSiteSort();
+    initHomeSort();
     super.onInit();
+  }
+
+  void initSiteSort() {
+    var sort = LocalStorageService.instance
+        .getValue(
+          LocalStorageService.kSiteSort,
+          Sites.allSites.keys.join(","),
+        )
+        .split(",");
+    //如果数量与allSites的数量不一致，将缺失的添加上
+    if (sort.length != Sites.allSites.length) {
+      var keys = Sites.allSites.keys.toList();
+      for (var i = 0; i < keys.length; i++) {
+        if (!sort.contains(keys[i])) {
+          sort.add(keys[i]);
+        }
+      }
+    }
+
+    siteSort.value = sort;
+  }
+
+  void initHomeSort() {
+    var sort = LocalStorageService.instance
+        .getValue(
+          LocalStorageService.kHomeSort,
+          Constant.allHomePages.keys.join(","),
+        )
+        .split(",");
+    //如果数量与allSites的数量不一致，将缺失的添加上
+    if (sort.length != Constant.allHomePages.length) {
+      var keys = Constant.allHomePages.keys.toList();
+      for (var i = 0; i < keys.length; i++) {
+        if (!sort.contains(keys[i])) {
+          sort.add(keys[i]);
+        }
+      }
+    }
+
+    homeSort.value = sort;
   }
 
   void setNoFirstRun() {
@@ -222,6 +266,24 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(
       LocalStorageService.kPlayerScaleMode,
       value,
+    );
+  }
+
+  RxList<String> siteSort = RxList<String>();
+  void setSiteSort(List<String> e) {
+    siteSort.value = e;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kSiteSort,
+      siteSort.join(","),
+    );
+  }
+
+  RxList<String> homeSort = RxList<String>();
+  void setHomeSort(List<String> e) {
+    homeSort.value = e;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kHomeSort,
+      homeSort.join(","),
     );
   }
 }

@@ -19,6 +19,14 @@ class HuyaDanmakuArgs {
     required this.topSid,
     required this.subSid,
   });
+  @override
+  String toString() {
+    return json.encode({
+      "ayyuid": ayyuid,
+      "topSid": topSid,
+      "subSid": subSid,
+    });
+  }
 }
 
 class HuyaDanmaku implements LiveDanmaku {

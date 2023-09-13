@@ -1,7 +1,7 @@
 {
-    "version": "1.3.0",
-    "version_num": 10300,
-    "version_desc": "1. 优化播放器 #78,#113\n2. 支持画面尺寸调整 #61\n3. 支持锁定播放器 #53\n4. 取消关注增加提示框 #120\n5. 修复抖音直播问题 #121\n6. 优化哔哩哔哩直播弹幕获取\n7. 播放器支持截图",
+    "version": "1.3.1",
+    "version_num": 10301,
+    "version_desc": "1. 支持直播间内设置定时关闭 #124\n2. 支持主页与平台自定义排序 #16,#76\n3. 支持跳转至原APP中打开直播间 #118\n4. 斗鱼增加录播判断 #6,#103\n5. 修复抖音直播问题 #121\n6. 播放失败尝试自动重连",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

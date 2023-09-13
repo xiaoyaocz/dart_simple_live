@@ -19,6 +19,7 @@ import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class LiveRoomController extends PlayerController {
@@ -54,13 +55,19 @@ class LiveRoomController extends PlayerController {
   RxList<String> playUrls = RxList<String>();
 
   /// 当前线路
-  var currentUrl = -1;
-  var currentUrlInfo = "".obs;
+  var currentLineIndex = -1;
+  var currentLineInfo = "".obs;
 
   /// 退出倒计时
   var countdown = 60.obs;
 
   Timer? autoExitTimer;
+
+  /// 设置的自动关闭时间（分钟）
+  var autoExitMinutes = 60.obs;
+
+  /// 是否启用自动关闭
+  var autoExitEnable = false.obs;
 
   @override
   void onInit() {
@@ -68,23 +75,35 @@ class LiveRoomController extends PlayerController {
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     loadData();
+
     super.onInit();
   }
 
   /// 初始化自动关闭倒计时
   void initAutoExit() {
     if (AppSettingsController.instance.autoExitEnable.value) {
-      countdown.value =
-          AppSettingsController.instance.autoExitDuration.value * 60;
-      autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-        countdown.value -= 1;
-        if (countdown.value <= 0) {
-          timer.cancel();
-          await WakelockPlus.disable();
-          exit(0);
-        }
-      });
+      autoExitEnable.value = true;
+      autoExitMinutes.value =
+          AppSettingsController.instance.autoExitDuration.value;
+      setAutoExit();
     }
+  }
+
+  void setAutoExit() {
+    if (!autoExitEnable.value) {
+      autoExitTimer?.cancel();
+      return;
+    }
+    autoExitTimer?.cancel();
+    countdown.value = autoExitMinutes.value * 60;
+    autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      countdown.value -= 1;
+      if (countdown.value <= 0) {
+        timer.cancel();
+        await WakelockPlus.disable();
+        exit(0);
+      }
+    });
   }
 
   void refreshRoom() {
@@ -182,11 +201,13 @@ class LiveRoomController extends PlayerController {
 
       addHistory();
       online.value = detail.value!.online;
-      liveStatus.value = detail.value!.status;
+      liveStatus.value = detail.value!.status || detail.value!.isRecord;
       if (liveStatus.value) {
         getPlayQualites();
       }
-
+      if (detail.value!.isRecord) {
+        addSysMsg("当前主播未开播，正在轮播录像");
+      }
       addSysMsg("开始连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
@@ -233,8 +254,8 @@ class LiveRoomController extends PlayerController {
   void getPlayUrl() async {
     playUrls.clear();
     currentQualityInfo.value = qualites[currentQuality].quality;
-    currentUrlInfo.value = "";
-    currentUrl = -1;
+    currentLineInfo.value = "";
+    currentLineIndex = -1;
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.isEmpty) {
@@ -242,13 +263,22 @@ class LiveRoomController extends PlayerController {
       return;
     }
     playUrls.value = playUrl;
-    currentUrl = 0;
-    currentUrlInfo.value = "线路${currentUrl + 1}";
+    currentLineIndex = 0;
+    currentLineInfo.value = "线路${currentLineIndex + 1}";
+    //重置错误次数
+    mediaErrorRetryCount = 0;
+    setPlayer();
+  }
+
+  void changePlayLine(int index) {
+    currentLineIndex = index;
+    //重置错误次数
+    mediaErrorRetryCount = 0;
     setPlayer();
   }
 
   void setPlayer() async {
-    currentUrlInfo.value = "线路${currentUrl + 1}";
+    currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
     Map<String, String> headers = {};
     if (site.id == "bilibili") {
@@ -261,33 +291,61 @@ class LiveRoomController extends PlayerController {
 
     player.open(
       Media(
-        playUrls[currentUrl],
+        playUrls[currentLineIndex],
         httpHeaders: headers,
       ),
     );
 
-    Log.d("播放链接\r\n：${playUrls[currentUrl]}");
+    Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");
   }
 
   @override
-  void mediaEnd() {
+  void mediaEnd() async {
+    if (mediaErrorRetryCount < 2) {
+      Log.d("播放结束，尝试第${mediaErrorRetryCount + 1}次刷新");
+      if (mediaErrorRetryCount == 1) {
+        //延迟一秒再刷新
+        await Future.delayed(const Duration(seconds: 1));
+      }
+      mediaErrorRetryCount += 1;
+      //刷新一次
+      setPlayer();
+      return;
+    }
+
+    Log.d("播放结束");
     // 遍历线路，如果全部链接都断开就是直播结束了
-    if (playUrls.length - 1 == currentUrl) {
+    if (playUrls.length - 1 == currentLineIndex) {
       liveStatus.value = false;
     } else {
-      currentUrl += 1;
-      setPlayer();
+      changePlayLine(currentLineIndex + 1);
+
+      //setPlayer();
     }
   }
 
+  int mediaErrorRetryCount = 0;
   @override
-  void mediaError(String error) {
-    if (playUrls.length - 1 == currentUrl) {
+  void mediaError(String error) async {
+    if (mediaErrorRetryCount < 2) {
+      Log.d("播放失败，尝试第${mediaErrorRetryCount + 1}次刷新");
+      if (mediaErrorRetryCount == 1) {
+        //延迟一秒再刷新
+        await Future.delayed(const Duration(seconds: 1));
+      }
+      mediaErrorRetryCount += 1;
+      //刷新一次
+      setPlayer();
+      return;
+    }
+
+    if (playUrls.length - 1 == currentLineIndex) {
       errorMsg.value = "播放失败";
       SmartDialog.showToast("播放失败:$error");
     } else {
-      currentUrl += 1;
-      setPlayer();
+      //currentLineIndex += 1;
+      //setPlayer();
+      changePlayLine(currentLineIndex + 1);
     }
   }
 
@@ -513,15 +571,16 @@ class LiveRoomController extends PlayerController {
         itemBuilder: (_, i) {
           return RadioListTile(
             value: i,
-            groupValue: currentUrl,
+            groupValue: currentLineIndex,
             title: Text("线路${i + 1}"),
             secondary: Text(
               playUrls[i].contains(".flv") ? "FLV" : "HLS",
             ),
             onChanged: (e) {
               Get.back();
-              currentUrl = i;
-              setPlayer();
+              //currentLineIndex = i;
+              //setPlayer();
+              changePlayLine(i);
             },
           );
         },
@@ -585,6 +644,105 @@ class LiveRoomController extends PlayerController {
         ),
       ),
     );
+  }
+
+  void showAutoExitSheet() {
+    if (AppSettingsController.instance.autoExitEnable.value) {
+      SmartDialog.showToast("已设置了全局定时关闭");
+      return;
+    }
+    Utils.showBottomSheet(
+      title: "定时关闭",
+      child: ListView(
+        children: [
+          Obx(
+            () => SwitchListTile(
+              title: Text(
+                "启用定时关闭",
+                style: Get.textTheme.titleMedium,
+              ),
+              value: autoExitEnable.value,
+              onChanged: (e) {
+                autoExitEnable.value = e;
+
+                setAutoExit();
+                //controller.setAutoExitEnable(e);
+              },
+            ),
+          ),
+          Obx(
+            () => ListTile(
+              enabled: autoExitEnable.value,
+              title: Text(
+                "自动关闭时间：${autoExitMinutes.value ~/ 60}小时${autoExitMinutes.value % 60}分钟",
+                style: Get.textTheme.titleMedium,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                var value = await showTimePicker(
+                  context: Get.context!,
+                  initialTime: TimeOfDay(
+                    hour: autoExitMinutes.value ~/ 60,
+                    minute: autoExitMinutes.value % 60,
+                  ),
+                  initialEntryMode: TimePickerEntryMode.inputOnly,
+                  builder: (_, child) {
+                    return Theme(
+                      data: Get.theme.copyWith(
+                        useMaterial3: false,
+                      ),
+                      child: MediaQuery(
+                        data: Get.mediaQuery.copyWith(
+                          alwaysUse24HourFormat: true,
+                        ),
+                        child: child!,
+                      ),
+                    );
+                  },
+                );
+                if (value == null || (value.hour == 0 && value.minute == 0)) {
+                  return;
+                }
+                var duration =
+                    Duration(hours: value.hour, minutes: value.minute);
+                autoExitMinutes.value = duration.inMinutes;
+                //setAutoExitDuration(duration.inMinutes);
+                setAutoExit();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void openNaviteAPP() async {
+    var naviteUrl = "";
+    var webUrl = "";
+    if (site.id == "bilibili") {
+      naviteUrl = "bilibili://live/${detail.value?.roomId}";
+      webUrl = "https://live.bilibili.com/${detail.value?.roomId}";
+    } else if (site.id == "douyin") {
+      var args = detail.value?.danmakuData as DouyinDanmakuArgs;
+      naviteUrl = "snssdk1128://webcast_room?room_id=${args.roomId}";
+      webUrl = "https://www.douyu.com/${args.webRid}";
+    } else if (site.id == "huya") {
+      var args = detail.value?.danmakuData as HuyaDanmakuArgs;
+      naviteUrl =
+          "yykiwi://homepage/index.html?banneraction=https%3A%2F%2Fdiy-front.cdn.huya.com%2Fzt%2Ffrontpage%2Fcc%2Fupdate.html%3Fhyaction%3Dlive%26channelid%3D${args.subSid}%26subid%3D${args.subSid}%26liveuid%3D${args.subSid}%26screentype%3D1%26sourcetype%3D0%26fromapp%3Dhuya_wap%252Fclick%252Fopen_app_guide%26&fromapp=huya_wap/click/open_app_guide";
+      webUrl = "https://www.huya.com/${detail.value?.roomId}";
+    } else if (site.id == "douyu") {
+      naviteUrl =
+          "douyulink://?type=90001&schemeUrl=douyuapp%3A%2F%2Froom%3FliveType%3D0%26rid%3D${detail.value?.roomId}";
+      webUrl = "https://www.douyu.com/${detail.value?.roomId}";
+    }
+    try {
+      await launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("无法打开APP，将使用浏览器打开");
+      await launchUrlString(webUrl, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override

@@ -35,15 +35,15 @@ class CoreLog {
     if (!enableLog) {
       return;
     }
-    logger.e("${DateTime.now().toString()}\n$message", null, stackTrace);
+    logger.e("${DateTime.now().toString()}\n$message", stackTrace: stackTrace);
   }
 
   static void error(e) {
     onPrintLog?.call(Level.error, e.toString());
     logger.e(
       "${DateTime.now().toString()}\n${e.toString()}",
-      e,
-      (e is Error) ? e.stackTrace : StackTrace.current,
+      error: e,
+      stackTrace: (e is Error) ? e.stackTrace : StackTrace.current,
     );
   }
 

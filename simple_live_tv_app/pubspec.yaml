@@ -9,7 +9,36 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  simple_live_core:
+    path: ../simple_live_core
   cupertino_icons: ^1.0.2
+  remixicon: ^1.0.0 #Remix图标
+
+  # 框架、工具
+  get: ^4.6.6 #状态管理、路由管理、国际化
+  dio: ^5.3.2 #网络请求
+  hive: 2.2.3 #持久化存储
+  hive_flutter: 1.1.0 #持久化存储
+  logger: ^2.0.2 #日志
+  intl: ^0.18.1 #国际化
+  flutter_screenutil: ^5.9.0 #UI适配
+
+  #Widget
+  flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
+  flutter_easyrefresh: ^2.2.2 #下拉刷新、上拉加载
+  extended_image: ^8.1.1 #拓展Image,支持缓存
+  flutter_smart_dialog: ^4.9.4 #各种弹窗 Toast/Dialog/Popup
+  marquee: ^2.2.3 #跑马灯
+  lottie: ^2.6.0 #Lottie动画
+
+  #系统交互
+  package_info_plus: ^4.1.0 #包信息
+  url_launcher: ^6.1.14 #打开链接
+
+  # 视频播放
+  media_kit: ^1.1.7
+  media_kit_video: ^1.1.8
+  media_kit_libs_video: ^1.0.1
 
 dev_dependencies:
   flutter_test:
@@ -19,8 +48,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets: 
+    - assets/statement.txt
+    - assets/images/
+    - assets/icons/
+    - assets/lotties/

@@ -28,13 +28,17 @@
 
 - [x] Android
 - [x] iOS
-- [ ] Windows `TODO`
-- [ ] MacOS `TODO`
-- [ ] Linux `TODO`
+- [x] Windows `BETA`
+- [x] MacOS `BETA`
+- [x] Linux `BETA`
+- [ ] Android TV `TODO`
 
 请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
 
 Windows可前往应用商店下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)
+
+Android TV代码在[tv分支](https://github.com/xiaoyaocz/dart_simple_live/tree/tv)，
+桌面代码在[desktop分支](https://github.com/xiaoyaocz/dart_simple_live/tree/desktop)
 
 ## 项目结构
 
@@ -69,3 +73,9 @@ Windows可前往应用商店下载UWP版[聚合直播](https://www.microsoft.com
 本项目仅用于学习交流编程技术，严禁将本项目用于商业目的。如有任何商业行为，均与本项目无关。
 
 如果本项目存在侵犯您的合法权益的情况，请及时与开发者联系，开发者将会及时删除有关内容。
+
+## 赞助
+
+如果觉得此项目有用，可以考虑赞助我喝杯咖啡❤
+
+[爱发电](https://afdian.net/a/xiaoyaocz)

@@ -148,51 +148,49 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMediaPlayer() {
-    return Obx(
-      (() {
-        if (!controller.liveStatus.value) {
-          return Container(
-            alignment: Alignment.center,
-            color: Colors.black,
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Center(
+    return Stack(
+      children: [
+        Obx(() {
+          var boxFit = BoxFit.contain;
+          double? aspectRatio;
+          if (AppSettingsController.instance.scaleMode.value == 0) {
+            boxFit = BoxFit.contain;
+          } else if (AppSettingsController.instance.scaleMode.value == 1) {
+            boxFit = BoxFit.fill;
+          } else if (AppSettingsController.instance.scaleMode.value == 2) {
+            boxFit = BoxFit.cover;
+          } else if (AppSettingsController.instance.scaleMode.value == 3) {
+            boxFit = BoxFit.contain;
+            aspectRatio = 16 / 9;
+          } else if (AppSettingsController.instance.scaleMode.value == 4) {
+            boxFit = BoxFit.contain;
+            aspectRatio = 4 / 3;
+          }
+          return Video(
+            controller: controller.videoController,
+            pauseUponEnteringBackgroundMode: false,
+            controls: (state) {
+              return playerControls(state, controller);
+            },
+            aspectRatio: aspectRatio,
+            fit: boxFit,
+          );
+        }),
+        Obx(
+          () => Visibility(
+            visible: !controller.liveStatus.value,
+            child: Container(
+              color: Colors.black.withOpacity(.5),
+              child: const Center(
                 child: Text(
-                  controller.errorMsg.value.isEmpty
-                      ? "未开播"
-                      : controller.errorMsg.value,
-                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                  "未开播",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
             ),
-          );
-        }
-        var boxFit = BoxFit.contain;
-        double? aspectRatio;
-        if (AppSettingsController.instance.scaleMode.value == 0) {
-          boxFit = BoxFit.contain;
-        } else if (AppSettingsController.instance.scaleMode.value == 1) {
-          boxFit = BoxFit.fill;
-        } else if (AppSettingsController.instance.scaleMode.value == 2) {
-          boxFit = BoxFit.cover;
-        } else if (AppSettingsController.instance.scaleMode.value == 3) {
-          boxFit = BoxFit.contain;
-          aspectRatio = 16 / 9;
-        } else if (AppSettingsController.instance.scaleMode.value == 4) {
-          boxFit = BoxFit.contain;
-          aspectRatio = 4 / 3;
-        }
-
-        return Video(
-          controller: controller.videoController,
-          pauseUponEnteringBackgroundMode: false,
-          controls: (state) {
-            return playerControls(state, controller);
-          },
-          aspectRatio: aspectRatio,
-          fit: boxFit,
-        );
-      }),
+          ),
+        ),
+      ],
     );
   }
 

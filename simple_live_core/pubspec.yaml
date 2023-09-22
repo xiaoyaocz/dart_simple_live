@@ -8,7 +8,7 @@ environment:
 
 dependencies: 
   dio: ^5.3.2
-  logger: ^1.1.0
+  logger: ^2.0.2
   web_socket_channel: ^2.4.0
   html_unescape: ^2.0.0
   protobuf: ^3.1.0

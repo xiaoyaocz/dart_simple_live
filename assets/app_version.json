@@ -1,7 +1,7 @@
 {
-    "version": "1.3.1",
-    "version_num": 10301,
-    "version_desc": "1. 支持直播间内设置定时关闭 #124\n2. 支持主页与平台自定义排序 #16,#76\n3. 支持跳转至原APP中打开直播间 #118\n4. 斗鱼增加录播判断 #6,#103\n5. 修复抖音直播问题 #121\n6. 播放失败尝试自动重连",
+    "version": "1.3.3",
+    "version_num": 10303,
+    "version_desc": "1. 修复直播间黑屏问题 #125\n2. 更新Flutter版本至3.13.5",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

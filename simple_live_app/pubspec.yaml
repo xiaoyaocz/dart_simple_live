@@ -46,6 +46,7 @@ dependencies:
   auto_orientation: ^2.3.1 #屏幕方向
   wakelock_plus: ^1.1.1 #屏幕常亮
   file_picker: ^5.3.3 #文件选择
+  floating: ^2.0.1 #PIP画中画
   
   # 视频播放
   media_kit: ^1.1.7

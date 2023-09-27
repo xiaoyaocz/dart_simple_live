@@ -1,3 +1,4 @@
+import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -17,22 +18,25 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () {
-        if (controller.fullScreenState.value) {
-          return WillPopScope(
-            onWillPop: () async {
-              controller.exitFull();
-              return false;
-            },
-            child: Scaffold(
-              body: buildMediaPlayer(),
-            ),
-          );
-        } else {
-          return buildPageUI();
-        }
-      },
+    return PiPSwitcher(
+      childWhenDisabled: Obx(
+        () {
+          if (controller.fullScreenState.value) {
+            return WillPopScope(
+              onWillPop: () async {
+                controller.exitFull();
+                return false;
+              },
+              child: Scaffold(
+                body: buildMediaPlayer(),
+              ),
+            );
+          } else {
+            return buildPageUI();
+          }
+        },
+      ),
+      childWhenEnabled: buildMediaPlayer(),
     );
   }
 
@@ -578,6 +582,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 controller.saveScreenshot();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_in_picture),
+              title: const Text("小窗播放"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                controller.enablePIP();
               },
             ),
             ListTile(

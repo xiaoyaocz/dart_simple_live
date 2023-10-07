@@ -17,25 +17,36 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
+import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class LiveRoomController extends PlayerController {
-  final Site site;
-  final String roomId;
+  final Site pSite;
+  final String pRoomId;
   late LiveDanmaku liveDanmaku;
   LiveRoomController({
-    required this.site,
-    required this.roomId,
+    required this.pSite,
+    required this.pRoomId,
   }) {
+    rxSite = pSite.obs;
+    rxRoomId = pRoomId.obs;
     liveDanmaku = site.liveSite.getDanmaku();
     // 抖音应该默认是竖屏的
     if (site.id == "douyin") {
       isVertical.value = true;
     }
   }
+
+  late Rx<Site> rxSite;
+  Site get site => rxSite.value;
+  late Rx<String> rxRoomId;
+  String get roomId => rxRoomId.value;
+
+  FollowUserController followController = Get.put(FollowUserController());
+
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
   var online = 0.obs;
   var followed = false.obs;
@@ -71,6 +82,9 @@ class LiveRoomController extends PlayerController {
 
   @override
   void onInit() {
+    if (followController.allList.isEmpty) {
+      followController.refreshData();
+    }
     initAutoExit();
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
@@ -107,6 +121,7 @@ class LiveRoomController extends PlayerController {
   }
 
   void refreshRoom() {
+    messages.clear();
     superChats.clear();
     liveDanmaku.stop();
 
@@ -743,6 +758,30 @@ class LiveRoomController extends PlayerController {
       SmartDialog.showToast("无法打开APP，将使用浏览器打开");
       await launchUrlString(webUrl, mode: LaunchMode.externalApplication);
     }
+  }
+
+  void resetRoom(Site site, String roomId) {
+    if (this.site == site && this.roomId == roomId) {
+      return;
+    }
+
+    rxSite.value = site;
+    rxRoomId.value = roomId;
+
+    // 清除全部消息
+    liveDanmaku.stop();
+    messages.clear();
+    superChats.clear();
+    danmakuController?.clear();
+
+    // 重新设置LiveDanmaku
+    liveDanmaku = site.liveSite.getDanmaku();
+
+    // 停止播放
+    player.stop();
+
+    // 刷新信息
+    loadData();
   }
 
   @override

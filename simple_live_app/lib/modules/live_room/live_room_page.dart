@@ -5,9 +5,11 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
@@ -347,7 +349,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildMessageArea() {
     return Expanded(
       child: DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: [
             TabBar(
@@ -362,10 +364,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   child: Obx(
                     () => Text(
                       controller.superChats.isNotEmpty
-                          ? "醒目留言(${controller.superChats.length})"
-                          : "醒目留言",
+                          ? "SC(${controller.superChats.length})"
+                          : "SC",
                     ),
                   ),
+                ),
+                const Tab(
+                  text: "关注",
                 ),
                 const Tab(
                   text: "设置",
@@ -387,6 +392,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     ),
                   ),
                   buildSuperChats(),
+                  buildFollowList(),
                   buildSettings(),
                 ],
               ),
@@ -506,6 +512,33 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget buildFollowList() {
+    return Obx(
+      () => RefreshIndicator(
+        onRefresh: controller.followController.refreshData,
+        child: ListView.builder(
+          itemCount: controller.followController.allList.length,
+          itemBuilder: (_, i) {
+            var item = controller.followController.allList[i];
+            return Obx(
+              () => FollowUserItem(
+                item: item,
+                playing: controller.rxSite.value.id == item.siteId &&
+                    controller.rxRoomId.value == item.roomId,
+                onTap: () {
+                  controller.resetRoom(
+                    Sites.allSites[item.siteId]!,
+                    item.roomId,
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

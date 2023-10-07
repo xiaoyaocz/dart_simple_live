@@ -78,8 +78,8 @@ class AppPages {
       page: () => const LiveRoomPage(),
       binding: BindingsBuilder.put(
         () => LiveRoomController(
-          site: Get.arguments,
-          roomId: Get.parameters["roomId"] ?? "",
+          pSite: Get.arguments,
+          pRoomId: Get.parameters["roomId"] ?? "",
         ),
       ),
     ),

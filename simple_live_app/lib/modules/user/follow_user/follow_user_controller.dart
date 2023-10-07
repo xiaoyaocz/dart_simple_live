@@ -38,6 +38,9 @@ class FollowUserController extends BasePageController<FollowUser> {
         }
       },
     );
+    if (allList.isEmpty) {
+      refreshData();
+    }
     super.onInit();
   }
 
@@ -63,6 +66,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     } else if (filterMode.value == 2) {
       list.assignAll(allList.where((x) => x.liveStatus.value == 1));
     }
+    allList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
   }
 
   void setFilterMode(int mode) {
@@ -72,7 +76,7 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   void updateLiveStatus(FollowUser item) async {
     try {
-      var site = Sites.supportSites.firstWhere((x) => x.id == item.siteId);
+      var site = Sites.allSites[item.siteId]!;
       item.liveStatus.value =
           (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
 

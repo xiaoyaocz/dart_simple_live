@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
@@ -17,6 +18,12 @@ import 'package:path_provider/path_provider.dart';
 class FollowUserController extends BasePageController<FollowUser> {
   StreamSubscription<dynamic>? subscription;
   StreamSubscription<dynamic>? subscriptionIndexedUpdate;
+
+  RxList<FollowUser> allList = RxList<FollowUser>();
+
+  /// 0:全部 1:直播中 2:未直播
+  var filterMode = 0.obs;
+
   @override
   void onInit() {
     subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
@@ -42,7 +49,24 @@ class FollowUserController extends BasePageController<FollowUser> {
     for (var item in list) {
       updateLiveStatus(item);
     }
+    allList.assignAll(list);
     return Future.value(list);
+  }
+
+  void filterData() {
+    if (filterMode.value == 0) {
+      list.assignAll(allList);
+      list.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    } else if (filterMode.value == 1) {
+      list.assignAll(allList.where((x) => x.liveStatus.value == 2));
+    } else if (filterMode.value == 2) {
+      list.assignAll(allList.where((x) => x.liveStatus.value == 1));
+    }
+  }
+
+  void setFilterMode(int mode) {
+    filterMode.value = mode;
+    filterData();
   }
 
   void updateLiveStatus(FollowUser item) async {
@@ -50,7 +74,8 @@ class FollowUserController extends BasePageController<FollowUser> {
       var site = Sites.supportSites.firstWhere((x) => x.id == item.siteId);
       item.liveStatus.value =
           (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
-      list.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+
+      filterData();
     } catch (e) {
       Log.logPrint(e);
     }

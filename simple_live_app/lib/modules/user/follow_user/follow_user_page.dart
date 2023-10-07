@@ -31,7 +31,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                     children: [
                       Icon(Remix.save_2_line),
                       AppStyle.hGap12,
-                      Text("导出列表")
+                      Text("导出文件")
                     ],
                   ),
                 ),
@@ -42,7 +42,29 @@ class FollowUserPage extends GetView<FollowUserController> {
                     children: [
                       Icon(Remix.folder_open_line),
                       AppStyle.hGap12,
-                      Text("导入列表")
+                      Text("导入文件")
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 2,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Remix.text),
+                      AppStyle.hGap12,
+                      Text("导出文本"),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 3,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Remix.file_text_line),
+                      AppStyle.hGap12,
+                      Text("导入文本"),
                     ],
                   ),
                 ),
@@ -50,9 +72,13 @@ class FollowUserPage extends GetView<FollowUserController> {
             },
             onSelected: (value) {
               if (value == 0) {
-                controller.exportList();
+                controller.exportFile();
               } else if (value == 1) {
-                controller.inputList();
+                controller.inputFile();
+              } else if (value == 2) {
+                controller.exportText();
+              } else if (value == 3) {
+                controller.inputText();
               }
             },
           ),

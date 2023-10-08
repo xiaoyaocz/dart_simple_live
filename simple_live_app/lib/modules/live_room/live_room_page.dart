@@ -481,6 +481,19 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               ),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.disabled_visible),
+            contentPadding: AppStyle.edgeInsetsL8,
+            title: Text(
+              "关键词屏蔽",
+              style: Get.textTheme.titleMedium,
+            ),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: Colors.grey,
+            ),
+            onTap: () => controller.showDanmuShield(),
+          ),
           Padding(
             padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
             child: Text(

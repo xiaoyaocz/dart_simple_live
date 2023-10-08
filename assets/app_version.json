@@ -1,6 +1,6 @@
 {
-    "version": "1.4.0",
-    "version_num": 10400,
+    "version": "1.4.1",
+    "version_num": 10401,
     "version_desc": "1. 修复修改平台排序后链接解析失败 #156\n2. Android平台支持小窗播放 #157, #13\n3. 关注列表支持按状态筛选主播\n4. 支持将关注列表导出为文本\n5. 直播间内可快速切换关注的直播间\n6. 直播间内可设置屏蔽关键词 #153\n7. 全屏播放器手势限制滑动区域防误操作 #129",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"

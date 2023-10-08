@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:auto_orientation/auto_orientation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -82,7 +82,7 @@ mixin PlayerStateMixin {
   /// 是否为竖屏直播间
   var isVertical = false.obs;
 
-  DanmakuView? danmakuView;
+  Widget? danmakuView;
 
   var showQualites = false.obs;
   var showLines = false.obs;
@@ -158,6 +158,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   final screenBrightness = ScreenBrightness();
 
+  final pip = Floating();
+  StreamSubscription<PiPStatus>? _pipSubscription;
+
   /// 初始化一些系统状态
   void initSystem() async {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -178,6 +181,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 释放一些系统状态
   Future resetSystem() async {
+    _pipSubscription?.cancel();
+    pip.dispose();
     await SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
       overlays: SystemUiOverlay.values,
@@ -307,6 +312,46 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     } finally {
       SmartDialog.dismiss(status: SmartStatus.loading);
     }
+  }
+
+  /// 开启小窗播放前弹幕状态
+  bool danmakuStateBeforePIP = false;
+
+  Future enablePIP() async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+    if (await pip.isPipAvailable == false) {
+      SmartDialog.showToast("设备不支持小窗播放");
+      return;
+    }
+    danmakuStateBeforePIP = showDanmakuState.value;
+    //关闭并清除弹幕
+    showDanmakuState.value = false;
+    danmakuController?.clear();
+
+    //关闭控制器
+    showControlsState.value = false;
+
+    //监听事件
+    _pipSubscription ??= pip.pipStatus$.listen((event) {
+      if (event == PiPStatus.disabled) {
+        showDanmakuState.value = danmakuStateBeforePIP;
+      }
+      Log.w(event.toString());
+    });
+
+    var width = player.state.width ?? 0;
+    var height = player.state.height ?? 0;
+    Rational ratio = const Rational.landscape();
+    if (height > width) {
+      ratio = const Rational.vertical();
+    } else {
+      ratio = const Rational.landscape();
+    }
+    await pip.enable(
+      aspectRatio: ratio,
+    );
   }
 }
 mixin PlayerGestureControlMixin
@@ -463,6 +508,7 @@ class PlayerController extends BaseController
   StreamSubscription? _widthSubscription;
   StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
+
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
       Log.d("播放器错误：$event");
@@ -498,6 +544,7 @@ class PlayerController extends BaseController
     _widthSubscription?.cancel();
     _heightSubscription?.cancel();
     _logSubscription?.cancel();
+    _pipSubscription?.cancel();
   }
 
   void mediaEnd() {}

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
@@ -103,7 +104,7 @@ class ToolBoxController extends GetxController {
     if (url.contains("bilibili.com")) {
       var regExp = RegExp(r"bilibili\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
-      return [id, Sites.supportSites[0]];
+      return [id, Sites.allSites[Constant.kBiliBili]!];
     }
 
     if (url.contains("b23.tv")) {
@@ -118,19 +119,19 @@ class ToolBoxController extends GetxController {
       var regExp = RegExp(r"douyu\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
-      return [id, Sites.supportSites[1]];
+      return [id, Sites.allSites[Constant.kDouyu]!];
     }
     if (url.contains("huya.com")) {
       var regExp = RegExp(r"huya\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
-      return [id, Sites.supportSites[2]];
+      return [id, Sites.allSites[Constant.kHuya]!];
     }
     if (url.contains("live.douyin.com")) {
       var regExp = RegExp(r"live\.douyin\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
-      return [id, Sites.supportSites[3]];
+      return [id, Sites.allSites[Constant.kDouyin]!];
     }
     return [];
   }

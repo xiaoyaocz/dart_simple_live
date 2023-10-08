@@ -216,6 +216,7 @@ class BiliBiliSite implements LiveSite {
       notice: "",
       danmakuData: BiliBiliDanmakuArgs(
         roomId: asT<int?>(result["data"]["room_info"]["room_id"]) ?? 0,
+        uid: asT<int?>(result["data"]["room_info"]["uid"]) ?? 0,
         token: roomDanmakuResult["data"]["token"].toString(),
         serverHost: serverHosts.isNotEmpty
             ? serverHosts.first

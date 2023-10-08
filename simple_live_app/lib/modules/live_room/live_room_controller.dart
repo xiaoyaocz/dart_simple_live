@@ -17,25 +17,37 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
+import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class LiveRoomController extends PlayerController {
-  final Site site;
-  final String roomId;
+  final Site pSite;
+  final String pRoomId;
   late LiveDanmaku liveDanmaku;
   LiveRoomController({
-    required this.site,
-    required this.roomId,
+    required this.pSite,
+    required this.pRoomId,
   }) {
+    rxSite = pSite.obs;
+    rxRoomId = pRoomId.obs;
     liveDanmaku = site.liveSite.getDanmaku();
     // 抖音应该默认是竖屏的
     if (site.id == "douyin") {
       isVertical.value = true;
     }
   }
+
+  late Rx<Site> rxSite;
+  Site get site => rxSite.value;
+  late Rx<String> rxRoomId;
+  String get roomId => rxRoomId.value;
+
+  FollowUserController followController = Get.put(FollowUserController());
+
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
   var online = 0.obs;
   var followed = false.obs;
@@ -71,6 +83,9 @@ class LiveRoomController extends PlayerController {
 
   @override
   void onInit() {
+    if (followController.allList.isEmpty) {
+      followController.refreshData();
+    }
     initAutoExit();
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
@@ -107,6 +122,7 @@ class LiveRoomController extends PlayerController {
   }
 
   void refreshRoom() {
+    messages.clear();
     superChats.clear();
     liveDanmaku.stop();
 
@@ -281,7 +297,7 @@ class LiveRoomController extends PlayerController {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
     Map<String, String> headers = {};
-    if (site.id == "bilibili") {
+    if (site.id == Constant.kBiliBili) {
       headers = {
         "referer": "https://live.bilibili.com",
         "user-agent":
@@ -441,6 +457,22 @@ class LiveRoomController extends PlayerController {
         () => ListView(
           padding: AppStyle.edgeInsetsV12,
           children: [
+            ListTile(
+              leading: const Icon(Icons.disabled_visible),
+              title: Text(
+                "关键词屏蔽",
+                style: Get.textTheme.titleMedium,
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
+              ),
+              onTap: () {
+                Get.back();
+                showDanmuShield();
+              },
+            ),
+            AppStyle.vGap12,
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
@@ -646,6 +678,115 @@ class LiveRoomController extends PlayerController {
     );
   }
 
+  void showDanmuShield() {
+    TextEditingController keywordController = TextEditingController();
+
+    void addKeyword() {
+      if (keywordController.text.isEmpty) {
+        SmartDialog.showToast("请输入关键词");
+        return;
+      }
+
+      AppSettingsController.instance
+          .addShieldList(keywordController.text.trim());
+      keywordController.text = "";
+    }
+
+    Utils.showBottomSheet(
+      title: "关键词屏蔽",
+      child: ListView(
+        padding: AppStyle.edgeInsetsA12,
+        children: [
+          TextField(
+            controller: keywordController,
+            decoration: InputDecoration(
+              contentPadding: AppStyle.edgeInsetsH12,
+              border: const OutlineInputBorder(),
+              hintText: "请输入关键词",
+              suffixIcon: TextButton.icon(
+                onPressed: addKeyword,
+                icon: const Icon(Icons.add),
+                label: const Text("添加"),
+              ),
+            ),
+            onSubmitted: (e) {
+              addKeyword();
+            },
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Text(
+              "已添加${AppSettingsController.instance.shieldList.length}个关键词（点击移除）",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Wrap(
+              runSpacing: 12,
+              spacing: 12,
+              children: AppSettingsController.instance.shieldList
+                  .map(
+                    (item) => InkWell(
+                      borderRadius: AppStyle.radius24,
+                      onTap: () {
+                        AppSettingsController.instance.removeShieldList(item);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: AppStyle.radius24,
+                        ),
+                        padding: AppStyle.edgeInsetsH12.copyWith(
+                          top: 4,
+                          bottom: 4,
+                        ),
+                        child: Text(
+                          item,
+                          style: Get.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showFollowUserSheet() {
+    Utils.showBottomSheet(
+      title: "关注列表",
+      child: Obx(
+        () => RefreshIndicator(
+          onRefresh: followController.refreshData,
+          child: ListView.builder(
+            itemCount: followController.allList.length,
+            itemBuilder: (_, i) {
+              var item = followController.allList[i];
+              return Obx(
+                () => FollowUserItem(
+                  item: item,
+                  playing: rxSite.value.id == item.siteId &&
+                      rxRoomId.value == item.roomId,
+                  onTap: () {
+                    Get.back();
+                    resetRoom(
+                      Sites.allSites[item.siteId]!,
+                      item.roomId,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   void showAutoExitSheet() {
     if (AppSettingsController.instance.autoExitEnable.value) {
       SmartDialog.showToast("已设置了全局定时关闭");
@@ -719,19 +860,19 @@ class LiveRoomController extends PlayerController {
   void openNaviteAPP() async {
     var naviteUrl = "";
     var webUrl = "";
-    if (site.id == "bilibili") {
+    if (site.id == Constant.kBiliBili) {
       naviteUrl = "bilibili://live/${detail.value?.roomId}";
       webUrl = "https://live.bilibili.com/${detail.value?.roomId}";
-    } else if (site.id == "douyin") {
+    } else if (site.id == Constant.kDouyin) {
       var args = detail.value?.danmakuData as DouyinDanmakuArgs;
       naviteUrl = "snssdk1128://webcast_room?room_id=${args.roomId}";
       webUrl = "https://www.douyu.com/${args.webRid}";
-    } else if (site.id == "huya") {
+    } else if (site.id == Constant.kHuya) {
       var args = detail.value?.danmakuData as HuyaDanmakuArgs;
       naviteUrl =
           "yykiwi://homepage/index.html?banneraction=https%3A%2F%2Fdiy-front.cdn.huya.com%2Fzt%2Ffrontpage%2Fcc%2Fupdate.html%3Fhyaction%3Dlive%26channelid%3D${args.subSid}%26subid%3D${args.subSid}%26liveuid%3D${args.subSid}%26screentype%3D1%26sourcetype%3D0%26fromapp%3Dhuya_wap%252Fclick%252Fopen_app_guide%26&fromapp=huya_wap/click/open_app_guide";
       webUrl = "https://www.huya.com/${detail.value?.roomId}";
-    } else if (site.id == "douyu") {
+    } else if (site.id == Constant.kDouyu) {
       naviteUrl =
           "douyulink://?type=90001&schemeUrl=douyuapp%3A%2F%2Froom%3FliveType%3D0%26rid%3D${detail.value?.roomId}";
       webUrl = "https://www.douyu.com/${detail.value?.roomId}";
@@ -743,6 +884,30 @@ class LiveRoomController extends PlayerController {
       SmartDialog.showToast("无法打开APP，将使用浏览器打开");
       await launchUrlString(webUrl, mode: LaunchMode.externalApplication);
     }
+  }
+
+  void resetRoom(Site site, String roomId) async {
+    if (this.site == site && this.roomId == roomId) {
+      return;
+    }
+
+    rxSite.value = site;
+    rxRoomId.value = roomId;
+
+    // 清除全部消息
+    liveDanmaku.stop();
+    messages.clear();
+    superChats.clear();
+    danmakuController?.clear();
+
+    // 重新设置LiveDanmaku
+    liveDanmaku = site.liveSite.getDanmaku();
+
+    // 停止播放
+    await player.stop();
+
+    // 刷新信息
+    loadData();
   }
 
   @override

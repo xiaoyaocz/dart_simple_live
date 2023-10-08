@@ -56,15 +56,24 @@ Widget buildFullControls(
         ),
       ),
       Positioned.fill(
-        top: height * 0.25,
-        bottom: height * 0.25,
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
+          onLongPress: controller.showDebugInfo,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.transparent,
+          ),
+        ),
+      ),
+      Positioned.fill(
+        top: height * 0.25,
+        bottom: height * 0.25,
+        child: GestureDetector(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,

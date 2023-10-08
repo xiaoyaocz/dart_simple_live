@@ -347,7 +347,14 @@ mixin PlayerGestureControlMixin
     if (lockControlsState.value && fullScreenState.value) {
       return;
     }
-    verStartPosition = details.globalPosition.dy;
+
+    final dy = details.globalPosition.dy;
+    // 开始位置必须是中间2/4的位置
+    if (dy < Get.height * 0.25 || dy > Get.height * 0.75) {
+      return;
+    }
+
+    verStartPosition = dy;
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
 
     verticalDragging = true;

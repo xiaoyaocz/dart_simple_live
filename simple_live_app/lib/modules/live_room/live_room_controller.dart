@@ -19,6 +19,7 @@ import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -661,6 +662,37 @@ class LiveRoomController extends PlayerController {
     );
   }
 
+  void showFollowUserSheet() {
+    Utils.showBottomSheet(
+      title: "关注列表",
+      child: Obx(
+        () => RefreshIndicator(
+          onRefresh: followController.refreshData,
+          child: ListView.builder(
+            itemCount: followController.allList.length,
+            itemBuilder: (_, i) {
+              var item = followController.allList[i];
+              return Obx(
+                () => FollowUserItem(
+                  item: item,
+                  playing: rxSite.value.id == item.siteId &&
+                      rxRoomId.value == item.roomId,
+                  onTap: () {
+                    Get.back();
+                    resetRoom(
+                      Sites.allSites[item.siteId]!,
+                      item.roomId,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   void showAutoExitSheet() {
     if (AppSettingsController.instance.autoExitEnable.value) {
       SmartDialog.showToast("已设置了全局定时关闭");
@@ -760,7 +792,7 @@ class LiveRoomController extends PlayerController {
     }
   }
 
-  void resetRoom(Site site, String roomId) {
+  void resetRoom(Site site, String roomId) async {
     if (this.site == site && this.roomId == roomId) {
       return;
     }
@@ -778,7 +810,7 @@ class LiveRoomController extends PlayerController {
     liveDanmaku = site.liveSite.getDanmaku();
 
     // 停止播放
-    player.stop();
+    await player.stop();
 
     // 刷新信息
     loadData();

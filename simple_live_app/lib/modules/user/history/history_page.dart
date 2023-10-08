@@ -33,7 +33,7 @@ class HistoryPage extends GetView<HistoryController> {
         firstRefresh: true,
         itemBuilder: (_, i) {
           var item = controller.list[i];
-          var site = Sites.supportSites.firstWhere((x) => x.id == item.siteId);
+          var site = Sites.allSites[item.siteId]!;
           return ListTile(
             leading: NetImage(
               item.face,

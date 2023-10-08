@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -5,8 +7,10 @@ import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -32,10 +36,11 @@ Widget buildFullControls(
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
+  var height = MediaQuery.of(videoState.context).size.height;
   return Stack(
     children: [
       Container(),
-      buildDanmuView(controller),
+      buildDanmuView(videoState, controller),
 
       Center(
         child: // 中间
@@ -54,10 +59,21 @@ Widget buildFullControls(
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
+          onLongPress: controller.showDebugInfo,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.transparent,
+          ),
+        ),
+      ),
+      Positioned.fill(
+        top: height * 0.25,
+        bottom: height * 0.25,
+        child: GestureDetector(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,
@@ -74,13 +90,14 @@ Widget buildFullControls(
           top: (controller.showControlsState.value &&
                   !controller.lockControlsState.value)
               ? 0
-              : -48,
+              : -(48 + padding.top),
           duration: const Duration(milliseconds: 200),
           child: Container(
-            height: 48,
+            height: 48 + padding.top,
             padding: EdgeInsets.only(
               left: padding.left + 12,
               right: padding.right + 12,
+              top: padding.top,
             ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -95,7 +112,7 @@ Widget buildFullControls(
             child: Row(
               children: [
                 IconButton(
-                  onPressed: Get.back,
+                  onPressed: controller.exitFull,
                   icon: const Icon(
                     Icons.arrow_back,
                     color: Colors.white,
@@ -124,6 +141,29 @@ Widget buildFullControls(
                 ),
                 IconButton(
                   onPressed: () {
+                    showFollowUser(controller);
+                  },
+                  icon: const Icon(
+                    Remix.play_list_2_line,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                Visibility(
+                  visible: Platform.isAndroid,
+                  child: IconButton(
+                    onPressed: () {
+                      controller.enablePIP();
+                    },
+                    icon: const Icon(
+                      Icons.picture_in_picture,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
                     showPlayerSettings(controller);
                   },
                   icon: const Icon(
@@ -145,7 +185,7 @@ Widget buildFullControls(
           bottom: (controller.showControlsState.value &&
                   !controller.lockControlsState.value)
               ? 0
-              : -80,
+              : -(80 + padding.bottom),
           duration: const Duration(milliseconds: 200),
           child: Container(
             decoration: const BoxDecoration(
@@ -325,10 +365,10 @@ Widget buildControls(
   return Stack(
     children: [
       Container(),
-      buildDanmuView(controller),
+      buildDanmuView(videoState, controller),
+      // 中间
       Center(
-        child: // 中间
-            StreamBuilder(
+        child: StreamBuilder(
           stream: videoState.widget.controller.player.stream.buffering,
           initialData: videoState.widget.controller.player.state.buffering,
           builder: (_, s) => Visibility(
@@ -480,7 +520,8 @@ Widget buildControls(
   );
 }
 
-Widget buildDanmuView(LiveRoomController controller) {
+Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
+  var padding = MediaQuery.of(videoState.context).padding;
   controller.danmakuView ??= DanmakuView(
     key: controller.globalDanmuKey,
     createdController: controller.initDanmakuController,
@@ -489,6 +530,8 @@ Widget buildDanmuView(LiveRoomController controller) {
     ),
   );
   return Positioned.fill(
+    top: padding.top,
+    bottom: padding.bottom,
     child: Obx(
       () => Offstage(
         offstage: !controller.showDanmakuState.value,
@@ -761,6 +804,43 @@ void showPlayerSettings(LiveRoomController controller) {
             },
           ),
         ],
+      ),
+    ),
+  );
+}
+
+void showFollowUser(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showFollowUserSheet();
+    return;
+  }
+  Utils.showRightDialog(
+    title: "关注列表",
+    width: 400,
+    useSystem: true,
+    child: Obx(
+      () => RefreshIndicator(
+        onRefresh: controller.followController.refreshData,
+        child: ListView.builder(
+          itemCount: controller.followController.allList.length,
+          itemBuilder: (_, i) {
+            var item = controller.followController.allList[i];
+            return Obx(
+              () => FollowUserItem(
+                item: item,
+                playing: controller.rxSite.value.id == item.siteId &&
+                    controller.rxRoomId.value == item.roomId,
+                onTap: () {
+                  Utils.hideRightDialog();
+                  controller.resetRoom(
+                    Sites.allSites[item.siteId]!,
+                    item.roomId,
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     ),
   );

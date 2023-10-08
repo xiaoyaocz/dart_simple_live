@@ -25,7 +25,11 @@ mixin PlayerMixin {
   GlobalKey globalDanmuKey = GlobalKey();
 
   /// 播放器实例
-  late final player = Player();
+  late final player = Player(
+    configuration: const PlayerConfiguration(
+      bufferSize: 32 * 1024 * 1024,
+    ),
+  );
 
   /// 视频控制器
   late final videoController = VideoController(

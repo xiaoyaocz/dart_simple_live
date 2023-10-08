@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -630,14 +632,17 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 controller.saveScreenshot();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.picture_in_picture),
-              title: const Text("小窗播放"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.enablePIP();
-              },
+            Visibility(
+              visible: Platform.isAndroid,
+              child: ListTile(
+                leading: const Icon(Icons.picture_in_picture),
+                title: const Text("小窗播放"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.enablePIP();
+                },
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.timer_outlined),

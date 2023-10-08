@@ -36,6 +36,7 @@ Widget buildFullControls(
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
+  var height = MediaQuery.of(videoState.context).size.height;
   return Stack(
     children: [
       Container(),
@@ -55,6 +56,8 @@ Widget buildFullControls(
         ),
       ),
       Positioned.fill(
+        top: height * 0.25,
+        bottom: height * 0.25,
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
@@ -132,7 +135,7 @@ Widget buildFullControls(
                     showFollowUser(controller);
                   },
                   icon: const Icon(
-                    Remix.play_list_line,
+                    Remix.play_list_2_line,
                     color: Colors.white,
                     size: 24,
                   ),

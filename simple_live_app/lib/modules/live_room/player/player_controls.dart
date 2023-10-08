@@ -7,8 +7,10 @@ import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -121,6 +123,16 @@ Widget buildFullControls(
                   },
                   icon: const Icon(
                     Icons.camera_alt_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    showFollowUser(controller);
+                  },
+                  icon: const Icon(
+                    Remix.play_list_line,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -780,6 +792,43 @@ void showPlayerSettings(LiveRoomController controller) {
             },
           ),
         ],
+      ),
+    ),
+  );
+}
+
+void showFollowUser(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showFollowUserSheet();
+    return;
+  }
+  Utils.showRightDialog(
+    title: "关注列表",
+    width: 400,
+    useSystem: true,
+    child: Obx(
+      () => RefreshIndicator(
+        onRefresh: controller.followController.refreshData,
+        child: ListView.builder(
+          itemCount: controller.followController.allList.length,
+          itemBuilder: (_, i) {
+            var item = controller.followController.allList[i];
+            return Obx(
+              () => FollowUserItem(
+                item: item,
+                playing: controller.rxSite.value.id == item.siteId &&
+                    controller.rxRoomId.value == item.roomId,
+                onTap: () {
+                  Utils.hideRightDialog();
+                  controller.resetRoom(
+                    Sites.allSites[item.siteId]!,
+                    item.roomId,
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     ),
   );

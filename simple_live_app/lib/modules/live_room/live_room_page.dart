@@ -1,12 +1,17 @@
+import 'dart:io';
+
+import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
@@ -17,22 +22,25 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () {
-        if (controller.fullScreenState.value) {
-          return WillPopScope(
-            onWillPop: () async {
-              controller.exitFull();
-              return false;
-            },
-            child: Scaffold(
-              body: buildMediaPlayer(),
-            ),
-          );
-        } else {
-          return buildPageUI();
-        }
-      },
+    return PiPSwitcher(
+      childWhenDisabled: Obx(
+        () {
+          if (controller.fullScreenState.value) {
+            return WillPopScope(
+              onWillPop: () async {
+                controller.exitFull();
+                return false;
+              },
+              child: Scaffold(
+                body: buildMediaPlayer(),
+              ),
+            );
+          } else {
+            return buildPageUI();
+          }
+        },
+      ),
+      childWhenEnabled: buildMediaPlayer(),
     );
   }
 
@@ -343,7 +351,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildMessageArea() {
     return Expanded(
       child: DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: [
             TabBar(
@@ -358,10 +366,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   child: Obx(
                     () => Text(
                       controller.superChats.isNotEmpty
-                          ? "醒目留言(${controller.superChats.length})"
-                          : "醒目留言",
+                          ? "SC(${controller.superChats.length})"
+                          : "SC",
                     ),
                   ),
+                ),
+                const Tab(
+                  text: "关注",
                 ),
                 const Tab(
                   text: "设置",
@@ -383,6 +394,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     ),
                   ),
                   buildSuperChats(),
+                  buildFollowList(),
                   buildSettings(),
                 ],
               ),
@@ -471,6 +483,19 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               ),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.disabled_visible),
+            contentPadding: AppStyle.edgeInsetsL8,
+            title: Text(
+              "关键词屏蔽",
+              style: Get.textTheme.titleMedium,
+            ),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: Colors.grey,
+            ),
+            onTap: () => controller.showDanmuShield(),
+          ),
           Padding(
             padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
             child: Text(
@@ -502,6 +527,33 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget buildFollowList() {
+    return Obx(
+      () => RefreshIndicator(
+        onRefresh: controller.followController.refreshData,
+        child: ListView.builder(
+          itemCount: controller.followController.allList.length,
+          itemBuilder: (_, i) {
+            var item = controller.followController.allList[i];
+            return Obx(
+              () => FollowUserItem(
+                item: item,
+                playing: controller.rxSite.value.id == item.siteId &&
+                    controller.rxRoomId.value == item.roomId,
+                onTap: () {
+                  controller.resetRoom(
+                    Sites.allSites[item.siteId]!,
+                    item.roomId,
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -579,6 +631,18 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               onTap: () {
                 controller.saveScreenshot();
               },
+            ),
+            Visibility(
+              visible: Platform.isAndroid,
+              child: ListTile(
+                leading: const Icon(Icons.picture_in_picture),
+                title: const Text("小窗播放"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.enablePIP();
+                },
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.timer_outlined),

@@ -500,4 +500,31 @@ class Utils {
 
     return Colors.white;
   }
+
+  /// 复制内容到剪贴板
+  static void copyToClipboard(String text) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+      SmartDialog.showToast("已复制到剪贴板");
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("复制到剪贴板失败: $e");
+    }
+  }
+
+  /// 获取剪贴板内容
+  static Future<String?> getClipboard() async {
+    try {
+      var content = await Clipboard.getData(Clipboard.kTextPlain);
+      if (content == null) {
+        SmartDialog.showToast("无法读取剪贴板内容");
+        return null;
+      }
+      return content.text;
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("读取剪切板内容失败：$e");
+    }
+    return null;
+  }
 }

@@ -15,11 +15,13 @@ class BiliBiliDanmakuArgs {
   final String token;
   final String buvid;
   final String serverHost;
+  final int uid;
   BiliBiliDanmakuArgs({
     required this.roomId,
     required this.token,
     required this.serverHost,
     required this.buvid,
+    required this.uid,
   });
   @override
   String toString() {
@@ -28,6 +30,7 @@ class BiliBiliDanmakuArgs {
       "token": token,
       "serverHost": serverHost,
       "buvid": buvid,
+      "uid": uid,
     });
   }
 }
@@ -43,7 +46,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
   @override
   Function()? onReady;
 
-  // String serverUrl = "wss://broadcastlv.chat.bilibili.com/sub";
+  String serverUrl = "wss://broadcastlv.chat.bilibili.com/sub";
 
   WebScoketUtils? webScoketUtils;
   late BiliBiliDanmakuArgs danmakuArgs;
@@ -51,7 +54,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
   Future start(dynamic args) async {
     danmakuArgs = args as BiliBiliDanmakuArgs;
     webScoketUtils = WebScoketUtils(
-      url: "wss://${args.serverHost}/sub",
+      url: serverUrl,
       heartBeatTime: heartbeatTime,
       onMessage: (e) {
         decodeMessage(e);
@@ -80,7 +83,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
         "roomid": args.roomId,
         "protover": 3,
         "buvid": args.buvid,
-        //"platform": "web",
+        "platform": "web",
         "type": 2,
         "key": args.token,
       }),

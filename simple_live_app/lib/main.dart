@@ -143,7 +143,14 @@ class MyApp extends StatelessWidget {
                           FourthButtonTapGestureRecognizer>(
                     () => FourthButtonTapGestureRecognizer(),
                     (FourthButtonTapGestureRecognizer instance) {
-                      instance.onTapDown = (TapDownDetails details) {
+                      instance.onTapDown = (TapDownDetails details) async {
+                        //如果处于全屏状态，退出全屏
+                        if (!Platform.isAndroid && !Platform.isIOS) {
+                          if (await windowManager.isFullScreen()) {
+                            await windowManager.setFullScreen(false);
+                            return;
+                          }
+                        }
                         Get.back();
                       };
                     },

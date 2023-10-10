@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
@@ -53,7 +54,11 @@ class LiveRoomController extends PlayerController {
   var followed = false.obs;
   var liveStatus = false.obs;
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
+
+  /// 滚动控制
   final ScrollController scrollController = ScrollController();
+
+  /// 聊天信息
   RxList<LiveMessage> messages = RxList<LiveMessage>();
 
   /// 清晰度数据
@@ -81,6 +86,10 @@ class LiveRoomController extends PlayerController {
   /// 是否启用自动关闭
   var autoExitEnable = false.obs;
 
+  /// 是否禁用自动滚动聊天栏
+  /// - 当用户向上滚动聊天栏时，不再自动滚动
+  var disableAutoScroll = false.obs;
+
   @override
   void onInit() {
     if (followController.allList.isEmpty) {
@@ -91,7 +100,16 @@ class LiveRoomController extends PlayerController {
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     loadData();
 
+    scrollController.addListener(scrollListener);
+
     super.onInit();
+  }
+
+  void scrollListener() {
+    if (scrollController.position.userScrollDirection ==
+        ScrollDirection.forward) {
+      disableAutoScroll.value = true;
+    }
   }
 
   /// 初始化自动关闭倒计时
@@ -132,6 +150,10 @@ class LiveRoomController extends PlayerController {
   /// 聊天栏始终滚动到底部
   void chatScrollToBottom() {
     if (scrollController.hasClients) {
+      // 如果手动上拉过，就不自动滚动到底部
+      if (disableAutoScroll.value) {
+        return;
+      }
       scrollController.jumpTo(scrollController.position.maxScrollExtent);
     }
   }
@@ -146,7 +168,7 @@ class LiveRoomController extends PlayerController {
   /// 接收到WebSocket信息
   void onWSMessage(LiveMessage msg) {
     if (msg.type == LiveMessageType.chat) {
-      if (messages.length > 200) {
+      if (messages.length > 200 && !disableAutoScroll.value) {
         messages.removeAt(0);
       }
 
@@ -912,6 +934,7 @@ class LiveRoomController extends PlayerController {
 
   @override
   void onClose() {
+    scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
 
     liveDanmaku.stop();

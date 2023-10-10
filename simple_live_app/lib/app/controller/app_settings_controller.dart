@@ -42,6 +42,11 @@ class AppSettingsController extends GetxController {
     chatTextGap.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextGap, 4.0);
 
+    chatBubbleStyle.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kChatBubbleStyle,
+      false,
+    );
+
     qualityLevel.value = LocalStorageService.instance
         .getValue(LocalStorageService.kQualityLevel, 1);
 
@@ -176,6 +181,13 @@ class AppSettingsController extends GetxController {
   void setChatTextGap(double e) {
     chatTextGap.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kChatTextGap, e);
+  }
+
+  var chatBubbleStyle = false.obs;
+  void setChatBubbleStyle(bool e) {
+    chatBubbleStyle.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kChatBubbleStyle, e);
   }
 
   var danmuSize = 16.0.obs;

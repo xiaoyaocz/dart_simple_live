@@ -369,7 +369,30 @@ mixin PlayerGestureControlMixin
       showControls();
     }
   }
-
+  //桌面端操控
+  void onEnter(PointerEnterEvent event) {
+    if (!showControlsState.value) {
+      showControls();
+    }
+  }
+  void onExit(PointerExitEvent event){
+    if (showControlsState.value) {
+      hideControls();
+    }
+  }
+  void onHover(PointerHoverEvent event,BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
+    if (event.position.dy <= targetPosition) {
+      if (!showControlsState.value) {
+        showControls();
+      }
+    }else{
+      if (showControlsState.value) {
+        hideControls();
+      }
+    }
+  }
   /// 双击全屏/退出全屏
   void onDoubleTap(TapDownDetails details) {
     if (lockControlsState.value) {

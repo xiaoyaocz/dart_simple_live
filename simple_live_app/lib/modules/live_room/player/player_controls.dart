@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -36,6 +37,8 @@ Widget buildFullControls(
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
+  final screenWidth = MediaQuery.of(videoState.context).size.width;
+  final screenHeight = MediaQuery.of(videoState.context).size.height;
 
   return Stack(
     children: [
@@ -63,10 +66,15 @@ Widget buildFullControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.transparent,
+          child: MouseRegion(
+            onHover: (PointerHoverEvent event) {
+              controller.onHover(event, videoState.context);
+            },
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.transparent,
+            ),
           ),
         ),
       ),
@@ -376,10 +384,17 @@ Widget buildControls(
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
           onLongPress: controller.showDebugInfo,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.transparent,
+          child: MouseRegion(
+            onHover: (PointerHoverEvent event) {
+              // 处理鼠标悬停事件
+            },
+            onEnter: controller.onEnter,
+            //onExit: controller.onExit,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.transparent,
+            ),
           ),
         ),
       ),

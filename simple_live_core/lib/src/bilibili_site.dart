@@ -191,19 +191,20 @@ class BiliBiliSite implements LiveSite {
         "room_id": roomId,
       },
     );
-
+    var realRoomId = result["data"]["room_info"]["room_id"].toString();
     var roomDanmakuResult = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo",
       queryParameters: {
-        "id": roomId,
+        "id": realRoomId,
       },
     );
-    var buvid = await getBuvid();
     List<String> serverHosts = (roomDanmakuResult["data"]["host_list"] as List)
         .map<String>((e) => e["host"].toString())
         .toList();
+
+    var buvid = await getBuvid();
     return LiveRoomDetail(
-      roomId: result["data"]["room_info"]["room_id"].toString(),
+      roomId: realRoomId,
       title: result["data"]["room_info"]["title"].toString(),
       cover: result["data"]["room_info"]["cover"].toString(),
       userName: result["data"]["anchor_info"]["base_info"]["uname"].toString(),
@@ -215,7 +216,7 @@ class BiliBiliSite implements LiveSite {
       introduction: result["data"]["room_info"]["description"].toString(),
       notice: "",
       danmakuData: BiliBiliDanmakuArgs(
-        roomId: asT<int?>(result["data"]["room_info"]["room_id"]) ?? 0,
+        roomId: int.tryParse(realRoomId) ?? 0,
         uid: asT<int?>(result["data"]["room_info"]["uid"]) ?? 0,
         token: roomDanmakuResult["data"]["token"].toString(),
         serverHost: serverHosts.isNotEmpty

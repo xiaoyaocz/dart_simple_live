@@ -46,7 +46,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
   @override
   Function()? onReady;
 
-  String serverUrl = "wss://broadcastlv.chat.bilibili.com/sub";
+  //String serverUrl = "wss://broadcastlv.chat.bilibili.com/sub";
 
   WebScoketUtils? webScoketUtils;
   late BiliBiliDanmakuArgs danmakuArgs;
@@ -54,7 +54,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
   Future start(dynamic args) async {
     danmakuArgs = args as BiliBiliDanmakuArgs;
     webScoketUtils = WebScoketUtils(
-      url: serverUrl,
+      url: "wss://${args.serverHost}/sub",
       heartBeatTime: heartbeatTime,
       onMessage: (e) {
         decodeMessage(e);

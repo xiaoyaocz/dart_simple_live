@@ -12,7 +12,6 @@ import 'package:get/get.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:media_kit_video/media_kit_video_controls/src/controls/methods/video_state.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:perfect_volume_control/perfect_volume_control.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -50,7 +49,7 @@ mixin PlayerMixin {
 }
 mixin PlayerStateMixin {
   ///当前音量
-  final volume = 20.0.obs;
+  final volume = 80.0.obs;
 
   ///音量控制条计时器
   Timer? hidevolumeTimer;

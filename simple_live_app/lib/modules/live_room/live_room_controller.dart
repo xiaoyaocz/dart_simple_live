@@ -576,7 +576,7 @@ class LiveRoomController extends PlayerController {
   ///重置计时器
   void resethidevolumeTimer(){
     hidevolumeTimer?.cancel();
-    hidevolumeTimer = Timer(const Duration(seconds: 5), ()
+    hidevolumeTimer = Timer(const Duration(seconds: 3), ()
     {_overlayEntry?.remove();
     _overlayEntry = null;});
   }

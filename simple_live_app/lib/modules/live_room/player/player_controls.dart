@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
@@ -470,13 +471,13 @@ Widget buildControls(
                 ),
                 const Expanded(child: Center()),
                 IconButton(
-                  key: volumeButtonkey,
-                  onPressed: (){
-                    Offset buttonPosition = Utils.getPosition(volumeButtonkey);
-                    controller.showVolumeSlider(videoState.context,buttonPosition);
-                  },
-                  icon: Icon(Icons.volume_down,size: 24,color: Colors.white,),
-                ),
+                    key: volumeButtonkey,
+                    onPressed: (){
+                      Offset buttonPosition = Utils.getPosition(volumeButtonkey);
+                      controller.showVolumeSlider(videoState.context,buttonPosition);
+                    },
+                    icon: Icon(Icons.volume_down,size: 24,color: Colors.white,),
+                  ),
                 Offstage(
                   offstage: isPortrait,
                   child: TextButton(

@@ -11,6 +11,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 
 Widget playerControls(
@@ -39,7 +40,7 @@ Widget buildFullControls(
   var padding = MediaQuery.of(videoState.context).padding;
   final screenWidth = MediaQuery.of(videoState.context).size.width;
   final screenHeight = MediaQuery.of(videoState.context).size.height;
-
+  GlobalKey volumeButtonkey = GlobalKey();
   return Stack(
     children: [
       Container(),
@@ -246,6 +247,16 @@ Widget buildFullControls(
                   ),
                 ),
                 const Expanded(child: Center()),
+                IconButton(
+                  key: volumeButtonkey,
+                  onPressed: (){
+                    Offset buttonPosition = Utils.getPosition(volumeButtonkey);
+                    controller.showVolumeSlider(videoState.context,buttonPosition);
+
+                  },
+                  icon: Icon(Icons.volume_down,size: 24,color: Colors.white,),
+                ),
+
                 TextButton(
                   onPressed: () {
                     showQualitesInfo(controller);
@@ -359,6 +370,7 @@ Widget buildControls(
   VideoState videoState,
   LiveRoomController controller,
 ) {
+  GlobalKey volumeButtonkey = GlobalKey();
   return Stack(
     children: [
       Container(),
@@ -385,11 +397,7 @@ Widget buildControls(
           onVerticalDragEnd: controller.onVerticalDragEnd,
           onLongPress: controller.showDebugInfo,
           child: MouseRegion(
-            onHover: (PointerHoverEvent event) {
-              // 处理鼠标悬停事件
-            },
             onEnter: controller.onEnter,
-            //onExit: controller.onExit,
             child: Container(
               width: double.infinity,
               height: double.infinity,
@@ -461,6 +469,14 @@ Widget buildControls(
                   ),
                 ),
                 const Expanded(child: Center()),
+                IconButton(
+                  key: volumeButtonkey,
+                  onPressed: (){
+                    Offset buttonPosition = Utils.getPosition(volumeButtonkey);
+                    controller.showVolumeSlider(videoState.context,buttonPosition);
+                  },
+                  icon: Icon(Icons.volume_down,size: 24,color: Colors.white,),
+                ),
                 Offstage(
                   offstage: isPortrait,
                   child: TextButton(
@@ -621,6 +637,7 @@ void showQualitesInfo(LiveRoomController controller) {
             Utils.hideRightDialog();
             controller.currentQuality = i;
             controller.getPlayUrl();
+
           },
         );
       },

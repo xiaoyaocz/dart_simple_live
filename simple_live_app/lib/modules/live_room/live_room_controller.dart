@@ -573,6 +573,13 @@ class LiveRoomController extends PlayerController {
       ),
     );
   }
+  ///重置计时器
+  void resethidevolumeTimer(){
+    hidevolumeTimer?.cancel();
+    hidevolumeTimer = Timer(const Duration(seconds: 5), ()
+    {_overlayEntry?.remove();
+    _overlayEntry = null;});
+  }
   OverlayEntry? _overlayEntry;
   void showVolumeSlider(BuildContext context,Offset position) {
     if (_overlayEntry == null) {
@@ -593,6 +600,7 @@ class LiveRoomController extends PlayerController {
                 max: 100,
                 value: volume.value,
                 onChanged: (newValue) {
+                  resethidevolumeTimer();
                   player.setVolume(newValue);
                   volume.value=newValue;
                 },
@@ -602,6 +610,8 @@ class LiveRoomController extends PlayerController {
         },
       );
       Overlay.of(context).insert(_overlayEntry!);
+      //计时器
+      resethidevolumeTimer();
     }
     else{
       _overlayEntry?.remove();

@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:media_kit_video/media_kit_video_controls/src/controls/methods/video_state.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:perfect_volume_control/perfect_volume_control.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -48,6 +49,12 @@ mixin PlayerMixin {
   );
 }
 mixin PlayerStateMixin {
+  ///当前音量
+  final volume = 20.0.obs;
+
+  ///音量控制条计时器
+  Timer? hidevolumeTimer;
+
   /// 是否显示弹幕
   RxBool showDanmakuState = false.obs;
 
@@ -383,16 +390,13 @@ mixin PlayerGestureControlMixin
   void onHover(PointerHoverEvent event,BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
-    if (event.position.dy <= targetPosition) {
+    if (event.position.dy <= targetPosition||event.position.dy>=targetPosition*3) {
       if (!showControlsState.value) {
         showControls();
       }
-    }else{
-      if (showControlsState.value) {
-        hideControls();
-      }
     }
   }
+
   /// 双击全屏/退出全屏
   void onDoubleTap(TapDownDetails details) {
     if (lockControlsState.value) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -572,8 +573,44 @@ class LiveRoomController extends PlayerController {
       ),
     );
   }
+  OverlayEntry? _overlayEntry;
+  void showVolumeSlider(BuildContext context,Offset position) {
+    if (_overlayEntry == null) {
+      _overlayEntry = OverlayEntry(
+        builder: (BuildContext context) {
+          return Positioned(
+            top: position.dy-30,
+            left: position.dx-40,
+            child: Container(
+              width: 160,
+              height: 30,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(30)),
+                color: Color(0x59000000),
+              ),
+              child: Obx(()=>Slider(
+                min: 0,
+                max: 100,
+                value: volume.value,
+                onChanged: (newValue) {
+                  player.setVolume(newValue);
+                  volume.value=newValue;
+                },
+              ),)
+            ),
+          );
+        },
+      );
+      Overlay.of(context).insert(_overlayEntry!);
+    }
+    else{
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+  }
 
-  void showQualitySheet() {
+
+void showQualitySheet() {
     Utils.showBottomSheet(
       title: "切换清晰度",
       child: ListView.builder(
@@ -691,6 +728,9 @@ class LiveRoomController extends PlayerController {
           .addShieldList(keywordController.text.trim());
       keywordController.text = "";
     }
+  void showVoulumeslid(){
+
+  }
 
     Utils.showBottomSheet(
       title: "关键词屏蔽",
@@ -856,6 +896,7 @@ class LiveRoomController extends PlayerController {
       ),
     );
   }
+
 
   void openNaviteAPP() async {
     var naviteUrl = "";

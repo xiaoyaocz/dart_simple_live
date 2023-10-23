@@ -21,13 +21,13 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 mixin PlayerMixin {
-  GlobalKey globalPlayerKey = GlobalKey();
+  GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
   /// 播放器实例
   late final player = Player(
     configuration: const PlayerConfiguration(
-      bufferSize: 32 * 1024 * 1024,
+      title: "Simple Live Player",
     ),
   );
 
@@ -45,7 +45,7 @@ mixin PlayerMixin {
           ),
   );
 }
-mixin PlayerStateMixin {
+mixin PlayerStateMixin on PlayerMixin {
   /// 是否显示弹幕
   RxBool showDanmakuState = false.obs;
 
@@ -121,6 +121,32 @@ mixin PlayerStateMixin {
         seconds: 5,
       ),
       hideControls,
+    );
+  }
+
+  void updateScaleMode() {
+    var boxFit = BoxFit.contain;
+    double? aspectRatio;
+    if (player.state.width != null && player.state.height != null) {
+      aspectRatio = player.state.width! / player.state.height!;
+    }
+
+    if (AppSettingsController.instance.scaleMode.value == 0) {
+      boxFit = BoxFit.contain;
+    } else if (AppSettingsController.instance.scaleMode.value == 1) {
+      boxFit = BoxFit.fill;
+    } else if (AppSettingsController.instance.scaleMode.value == 2) {
+      boxFit = BoxFit.cover;
+    } else if (AppSettingsController.instance.scaleMode.value == 3) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 16 / 9;
+    } else if (AppSettingsController.instance.scaleMode.value == 4) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 4 / 3;
+    }
+    globalPlayerKey.currentState?.update(
+      aspectRatio: aspectRatio,
+      fit: boxFit,
     );
   }
 }

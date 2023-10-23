@@ -656,6 +656,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 0);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -665,6 +666,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 1);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -674,6 +676,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 2);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -683,6 +686,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 3);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -692,6 +696,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 4);
+                updateScaleMode();
               },
             ),
           ],

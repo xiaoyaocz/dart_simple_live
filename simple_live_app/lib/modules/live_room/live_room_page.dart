@@ -156,35 +156,34 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMediaPlayer() {
+    var boxFit = BoxFit.contain;
+    double? aspectRatio;
+    if (AppSettingsController.instance.scaleMode.value == 0) {
+      boxFit = BoxFit.contain;
+    } else if (AppSettingsController.instance.scaleMode.value == 1) {
+      boxFit = BoxFit.fill;
+    } else if (AppSettingsController.instance.scaleMode.value == 2) {
+      boxFit = BoxFit.cover;
+    } else if (AppSettingsController.instance.scaleMode.value == 3) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 16 / 9;
+    } else if (AppSettingsController.instance.scaleMode.value == 4) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 4 / 3;
+    }
     return Stack(
       children: [
-        Obx(() {
-          var boxFit = BoxFit.contain;
-          double? aspectRatio;
-          if (AppSettingsController.instance.scaleMode.value == 0) {
-            boxFit = BoxFit.contain;
-          } else if (AppSettingsController.instance.scaleMode.value == 1) {
-            boxFit = BoxFit.fill;
-          } else if (AppSettingsController.instance.scaleMode.value == 2) {
-            boxFit = BoxFit.cover;
-          } else if (AppSettingsController.instance.scaleMode.value == 3) {
-            boxFit = BoxFit.contain;
-            aspectRatio = 16 / 9;
-          } else if (AppSettingsController.instance.scaleMode.value == 4) {
-            boxFit = BoxFit.contain;
-            aspectRatio = 4 / 3;
-          }
-          return Video(
-            controller: controller.videoController,
-            pauseUponEnteringBackgroundMode: Platform.isIOS,
-            resumeUponEnteringForegroundMode: Platform.isIOS,
-            controls: (state) {
-              return playerControls(state, controller);
-            },
-            aspectRatio: aspectRatio,
-            fit: boxFit,
-          );
-        }),
+        Video(
+          key: controller.globalPlayerKey,
+          controller: controller.videoController,
+          pauseUponEnteringBackgroundMode: false,
+          //resumeUponEnteringForegroundMode: Platform.isIOS,
+          controls: (state) {
+            return playerControls(state, controller);
+          },
+          aspectRatio: aspectRatio,
+          fit: boxFit,
+        ),
         Obx(
           () => Visibility(
             visible: !controller.liveStatus.value,
@@ -643,12 +642,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       constraints: const BoxConstraints(
         maxWidth: 600,
       ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-      ),
+      showDragHandle: true,
       isScrollControlled: true,
       builder: (_) => Container(
         padding: EdgeInsets.only(

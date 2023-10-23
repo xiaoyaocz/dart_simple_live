@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:auto_orientation/auto_orientation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
@@ -48,9 +47,7 @@ mixin PlayerMixin {
   );
 }
 mixin PlayerStateMixin {
-  ///当前音量
   final volume = 100.0.obs;
-
   ///音量控制条计时器
   Timer? hidevolumeTimer;
 
@@ -184,6 +181,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
     // 开始隐藏计时
     resetHideControlsTimer();
+
 
     // 进入全屏模式
     if (AppSettingsController.instance.autoFullScreen.value) {
@@ -539,6 +537,7 @@ class PlayerController extends BaseController
   void onInit() {
     initSystem();
     initStream();
+
     super.onInit();
   }
 

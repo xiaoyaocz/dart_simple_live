@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +11,6 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
-import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 
 Widget playerControls(

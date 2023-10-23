@@ -156,8 +156,24 @@ class MyApp extends StatelessWidget {
                     },
                   ),
                 },
-                child: child!,
-              ),
+                child: RawKeyboardListener(
+                  focusNode: FocusNode(),
+                  onKey: (RawKeyEvent event) async {
+                    if (event.logicalKey == LogicalKeyboardKey.escape) {
+                      // ESC退出全屏
+                      // 如果处于全屏状态，退出全屏
+                      if (!Platform.isAndroid && !Platform.isIOS) {
+                        if (await windowManager.isFullScreen()) {
+                          await windowManager.setFullScreen(false);
+                          return;
+                        }
+                      }
+                    }
+                  },
+                  child: child!,
+                ),
+          ),
+
 
               //查看DEBUG日志按钮
               //只在Debug、Profile模式显示
@@ -179,10 +195,11 @@ class MyApp extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+          ],
+          ),
           ),
         ),
-      ),
-    );
+      );
+
   }
 }

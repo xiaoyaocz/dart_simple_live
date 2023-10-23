@@ -49,7 +49,7 @@ mixin PlayerMixin {
 }
 mixin PlayerStateMixin {
   ///当前音量
-  final volume = 80.0.obs;
+  final volume = 100.0.obs;
 
   ///音量控制条计时器
   Timer? hidevolumeTimer;

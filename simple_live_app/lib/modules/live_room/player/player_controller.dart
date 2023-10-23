@@ -132,6 +132,7 @@ mixin PlayerStateMixin {
       hideControls,
     );
   }
+
 }
 mixin PlayerDanmakuMixin on PlayerStateMixin {
   /// 弹幕控制器

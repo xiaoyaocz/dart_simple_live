@@ -12,6 +12,7 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
+import 'package:window_manager/window_manager.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -72,10 +73,23 @@ Widget buildFullControls(
               width: double.infinity,
               height: double.infinity,
               color: Colors.transparent,
+              child: Visibility( //拖拽区域
+                visible: controller.SmallwindowState.value,
+                child: DragToMoveArea(
+                  child:
+                  Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    color: Colors.transparent,
+                    )
+                  ),
+                ),
+              ),
             ),
           ),
         ),
-      ),
+
+
 
       // 顶部
       Obx(
@@ -107,7 +121,13 @@ Widget buildFullControls(
             child: Row(
               children: [
                 IconButton(
-                  onPressed: controller.exitFull,
+                  onPressed: (){
+                    if(controller.SmallwindowState.value){
+                      controller.exitsmallWindow();
+                    }else {
+                      controller.exitFull;
+                    }
+                    },
                   icon: const Icon(
                     Icons.arrow_back,
                     color: Colors.white,
@@ -280,7 +300,12 @@ Widget buildFullControls(
                 ),
                 IconButton(
                   onPressed: () {
-                    controller.exitFull();
+                    if(controller.SmallwindowState.value){
+                      controller.exitsmallWindow();
+                      }
+                    else {
+                      controller.exitFull();
+                    }
                   },
                   icon: const Icon(
                     Remix.fullscreen_exit_fill,
@@ -510,6 +535,19 @@ Widget buildControls(
                     child: Text(
                       controller.currentLineInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
+                ),
+                Visibility(
+                  visible: !Platform.isAndroid && !Platform.isIOS,
+                  child: IconButton(
+                      onPressed:(){
+                        controller.entersmallWindow();
+                  },
+                    icon: const Icon(
+                      Icons.picture_in_picture,
+                      color: Colors.white,
+                      size: 24,
                     ),
                   ),
                 ),

@@ -578,6 +578,7 @@ class LiveRoomController extends PlayerController {
       targetContext: targetContext,
       alignment: Alignment.topCenter,
       displayTime: const Duration(seconds: 3),
+      maskColor: Color(0x00000000),
       builder: (context) {
         return Container(
           decoration: BoxDecoration(

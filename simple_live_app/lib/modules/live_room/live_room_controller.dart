@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:share_plus/share_plus.dart';
@@ -295,8 +294,6 @@ class LiveRoomController extends PlayerController {
   }
 
   void setPlayer() async {
-    final playerinfo = GetStorage();
-    player.setVolume(playerinfo.read("volume"));
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
     Map<String, String> headers = {};
@@ -575,57 +572,39 @@ class LiveRoomController extends PlayerController {
       ),
     );
   }
-  ///重置计时器
-  void resethidevolumeTimer(){
-    hidevolumeTimer?.cancel();
-    hidevolumeTimer = Timer(const Duration(seconds: 3), ()
-    {_overlayEntry?.remove();
-    _overlayEntry = null;});
-  }
-  OverlayEntry? _overlayEntry;
-  void showVolumeSlider(BuildContext context,Offset position) {
-    final playerinfo = GetStorage();
-    volume.value = playerinfo.read("volume");
-    if (_overlayEntry == null) {
-      _overlayEntry = OverlayEntry(
-        builder: (BuildContext context) {
-          return Positioned(
-            top: position.dy-30,
-            left: position.dx-40,
-            child: Container(
-              width: 160,
-              height: 30,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(30)),
-                color: Color(0x59000000),
-              ),
-              child: Obx(()=>Slider(
+
+  void showVolumeSlider(BuildContext targetContext) {
+    SmartDialog.showAttach(
+      targetContext: targetContext,
+      alignment: Alignment.topCenter,
+      displayTime: const Duration(seconds: 3),
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: AppStyle.radius12,
+            color: Theme.of(context).cardColor,
+          ),
+          padding: AppStyle.edgeInsetsA4,
+          child: Obx(
+            () => SizedBox(
+              width: 200,
+              child: Slider(
                 min: 0,
                 max: 100,
-                value: volume.value,
+                value: AppSettingsController.instance.playerVolume.value,
                 onChanged: (newValue) {
-                  resethidevolumeTimer();
                   player.setVolume(newValue);
-                  volume.value=newValue;
-                  playerinfo.write("volume",volume.value);
+                  AppSettingsController.instance.setPlayerVolume(newValue);
                 },
-              ),)
+              ),
             ),
-          );
-        },
-      );
-      Overlay.of(context).insert(_overlayEntry!);
-      //计时器
-      resethidevolumeTimer();
-    }
-    else{
-      _overlayEntry?.remove();
-      _overlayEntry = null;
-    }
+          ),
+        );
+      },
+    );
   }
 
-
-void showQualitySheet() {
+  void showQualitySheet() {
     Utils.showBottomSheet(
       title: "切换清晰度",
       child: ListView.builder(
@@ -743,9 +722,6 @@ void showQualitySheet() {
           .addShieldList(keywordController.text.trim());
       keywordController.text = "";
     }
-  void showVoulumeslid(){
-
-  }
 
     Utils.showBottomSheet(
       title: "关键词屏蔽",
@@ -911,7 +887,6 @@ void showQualitySheet() {
       ),
     );
   }
-
 
   void openNaviteAPP() async {
     var naviteUrl = "";

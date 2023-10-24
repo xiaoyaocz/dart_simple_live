@@ -527,11 +527,4 @@ class Utils {
     }
     return null;
   }
-
-
-  static Offset getPosition(Key) {
-    RenderBox Box = Key.currentContext.findRenderObject() as RenderBox;
-    Offset Position = Box.localToGlobal(Offset.zero);
-    return Position;
-    }
 }

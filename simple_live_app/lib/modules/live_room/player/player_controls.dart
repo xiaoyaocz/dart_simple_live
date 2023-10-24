@@ -37,8 +37,6 @@ Widget buildFullControls(
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
-  final screenWidth = MediaQuery.of(videoState.context).size.width;
-  final screenHeight = MediaQuery.of(videoState.context).size.height;
   GlobalKey volumeButtonkey = GlobalKey();
   return Stack(
     children: [
@@ -246,16 +244,20 @@ Widget buildFullControls(
                   ),
                 ),
                 const Expanded(child: Center()),
-                IconButton(
-                  key: volumeButtonkey,
-                  onPressed: (){
-                    Offset buttonPosition = Utils.getPosition(volumeButtonkey);
-                    controller.showVolumeSlider(videoState.context,buttonPosition);
-
-                  },
-                  icon: Icon(Icons.volume_down,size: 24,color: Colors.white,),
+                Visibility(
+                  visible: !Platform.isAndroid && !Platform.isIOS,
+                  child: IconButton(
+                    key: volumeButtonkey,
+                    onPressed: () {
+                      controller.showVolumeSlider(videoState.context);
+                    },
+                    icon: const Icon(
+                      Icons.volume_down,
+                      size: 24,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-
                 TextButton(
                   onPressed: () {
                     showQualitesInfo(controller);
@@ -468,14 +470,22 @@ Widget buildControls(
                   ),
                 ),
                 const Expanded(child: Center()),
-                IconButton(
+                Visibility(
+                  visible: !Platform.isAndroid && !Platform.isIOS,
+                  child: IconButton(
                     key: volumeButtonkey,
-                    onPressed: (){
-                      Offset buttonPosition = Utils.getPosition(volumeButtonkey);
-                      controller.showVolumeSlider(videoState.context,buttonPosition);
+                    onPressed: () {
+                      controller.showVolumeSlider(
+                        volumeButtonkey.currentContext!,
+                      );
                     },
-                    icon: Icon(Icons.volume_down,size: 24,color: Colors.white,),
+                    icon: const Icon(
+                      Icons.volume_down,
+                      size: 24,
+                      color: Colors.white,
+                    ),
                   ),
+                ),
                 Offstage(
                   offstage: isPortrait,
                   child: TextButton(
@@ -636,7 +646,6 @@ void showQualitesInfo(LiveRoomController controller) {
             Utils.hideRightDialog();
             controller.currentQuality = i;
             controller.getPlayUrl();
-
           },
         );
       },

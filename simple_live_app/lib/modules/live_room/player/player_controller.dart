@@ -47,7 +47,6 @@ mixin PlayerMixin {
   );
 }
 mixin PlayerStateMixin {
-  final volume = 100.0.obs;
   ///音量控制条计时器
   Timer? hidevolumeTimer;
 
@@ -128,7 +127,6 @@ mixin PlayerStateMixin {
       hideControls,
     );
   }
-
 }
 mixin PlayerDanmakuMixin on PlayerStateMixin {
   /// 弹幕控制器
@@ -181,7 +179,6 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
     // 开始隐藏计时
     resetHideControlsTimer();
-
 
     // 进入全屏模式
     if (AppSettingsController.instance.autoFullScreen.value) {
@@ -374,21 +371,25 @@ mixin PlayerGestureControlMixin
       showControls();
     }
   }
+
   //桌面端操控
   void onEnter(PointerEnterEvent event) {
     if (!showControlsState.value) {
       showControls();
     }
   }
-  void onExit(PointerExitEvent event){
+
+  void onExit(PointerExitEvent event) {
     if (showControlsState.value) {
       hideControls();
     }
   }
-  void onHover(PointerHoverEvent event,BuildContext context) {
+
+  void onHover(PointerHoverEvent event, BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
-    if (event.position.dy <= targetPosition||event.position.dy>=targetPosition*3) {
+    if (event.position.dy <= targetPosition ||
+        event.position.dy >= targetPosition * 3) {
       if (!showControlsState.value) {
         showControls();
       }
@@ -537,7 +538,8 @@ class PlayerController extends BaseController
   void onInit() {
     initSystem();
     initStream();
-
+    //设置音量
+    player.setVolume(AppSettingsController.instance.playerVolume.value);
     super.onInit();
   }
 

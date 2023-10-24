@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 import 'package:media_kit/media_kit.dart';
@@ -33,7 +32,6 @@ void main() async {
 
   await initWindow();
   MediaKit.ensureInitialized();
-  await GetStorage.init();
   await Hive.initFlutter();
   //初始化服务
   await initServices();
@@ -172,8 +170,7 @@ class MyApp extends StatelessWidget {
                   },
                   child: child!,
                 ),
-          ),
-
+              ),
 
               //查看DEBUG日志按钮
               //只在Debug、Profile模式显示
@@ -195,11 +192,10 @@ class MyApp extends StatelessWidget {
                   ),
                 ),
               ),
-          ],
-          ),
+            ],
           ),
         ),
-      );
-
+      ),
+    );
   }
 }

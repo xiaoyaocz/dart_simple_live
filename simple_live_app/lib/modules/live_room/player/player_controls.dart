@@ -121,13 +121,14 @@ Widget buildFullControls(
             child: Row(
               children: [
                 IconButton(
-                  onPressed: (){
+                  onPressed: () {
                     if(controller.SmallwindowState.value){
                       controller.exitsmallWindow();
-                    }else {
-                      controller.exitFull;
                     }
-                    },
+                    else {
+                      controller.exitFull();
+                    }
+                  },
                   icon: const Icon(
                     Icons.arrow_back,
                     color: Colors.white,

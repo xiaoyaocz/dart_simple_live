@@ -249,7 +249,7 @@ Widget buildFullControls(
                   child: IconButton(
                     key: volumeButtonkey,
                     onPressed: () {
-                      controller.showVolumeSlider(videoState.context);
+                      controller.showVolumeSlider(volumeButtonkey.currentContext!);
                     },
                     icon: const Icon(
                       Icons.volume_down,
@@ -470,7 +470,7 @@ Widget buildControls(
                   ),
                 ),
                 const Expanded(child: Center()),
-                Visibility(
+              Visibility(
                   visible: !Platform.isAndroid && !Platform.isIOS,
                   child: IconButton(
                     key: volumeButtonkey,

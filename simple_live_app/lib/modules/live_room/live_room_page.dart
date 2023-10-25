@@ -188,13 +188,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         Obx(
           () => Visibility(
             visible: !controller.liveStatus.value,
-            child: Container(
-              color: Colors.black.withOpacity(.5),
-              child: const Center(
-                child: Text(
-                  "未开播",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
+            child: const Center(
+              child: Text(
+                "未开播",
+                style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
           ),
@@ -645,7 +642,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       constraints: const BoxConstraints(
         maxWidth: 600,
       ),
-      showDragHandle: true,
       isScrollControlled: true,
       builder: (_) => Container(
         padding: EdgeInsets.only(

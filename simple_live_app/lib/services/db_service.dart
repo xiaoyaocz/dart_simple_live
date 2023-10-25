@@ -9,7 +9,7 @@ class DBService extends GetxService {
   late Box<FollowUser> followBox;
 
   Future init() async {
-    historyBox = await Hive.openBox("Hostiry");
+    historyBox = await Hive.openBox("History");
     followBox = await Hive.openBox("FollowUser");
   }
 

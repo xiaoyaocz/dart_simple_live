@@ -11,6 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
@@ -27,12 +28,19 @@ import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:path/path.dart' as p;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await migrateData();
   await initWindow();
   MediaKit.ensureInitialized();
-  await Hive.initFlutter();
+  await migrateData();
+  await Hive.initFlutter(
+    (!Platform.isAndroid && !Platform.isIOS)
+        ? (await getApplicationSupportDirectory()).path
+        : null,
+  );
   //初始化服务
   await initServices();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -44,6 +52,46 @@ void main() async {
   );
   SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
   runApp(const MyApp());
+}
+
+/// 将Hive数据迁移到Application Support
+Future migrateData() async {
+  if (Platform.isAndroid || Platform.isIOS) {
+    return;
+  }
+  var hiveFileList = [
+    "followuser",
+    //旧版本写错成hostiry了
+    "hostiry",
+    "localstorage",
+    "danmushield",
+  ];
+  try {
+    var newDir = await getApplicationSupportDirectory();
+    var hiveFile = File(p.join(newDir.path, "followuser.hive"));
+    if (await hiveFile.exists()) {
+      return;
+    }
+
+    var oldDir = await getApplicationDocumentsDirectory();
+    for (var element in hiveFileList) {
+      var oldFile = File(p.join(oldDir.path, "$element.hive"));
+      if (await oldFile.exists()) {
+        var fileName = "$element.hive";
+        if (element == "hostiry") {
+          fileName = "history.hive";
+        }
+        await oldFile.copy(p.join(newDir.path, fileName));
+        await oldFile.delete();
+      }
+      var lockFile = File(p.join(oldDir.path, "$element.lock"));
+      if (await lockFile.exists()) {
+        await lockFile.delete();
+      }
+    }
+  } catch (e) {
+    Log.logPrint(e);
+  }
 }
 
 Future initWindow() async {

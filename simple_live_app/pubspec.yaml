@@ -48,6 +48,7 @@ dependencies:
   file_picker: ^5.3.3 #文件选择
   window_manager: ^0.3.7 #窗口管理
   floating: ^2.0.1 #PIP画中画
+  path: any
   
   # 视频播放
   media_kit: ^1.1.10

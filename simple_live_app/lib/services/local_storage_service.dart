@@ -83,6 +83,9 @@ class LocalStorageService extends GetxService {
   /// 播放器音量
   static const String kPlayerVolume = "PlayerVolume";
 
+  /// 小窗隐藏弹幕
+  static const String kPIPHideDanmu = "PIPHideDanmu";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

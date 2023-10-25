@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:auto_orientation/auto_orientation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
@@ -48,6 +47,12 @@ mixin PlayerMixin {
   );
 }
 mixin PlayerStateMixin {
+  ///音量控制条计时器
+  Timer? hidevolumeTimer;
+
+  /// 是否进入桌面端小窗
+  RxBool smallWindowState = false.obs;
+
   /// 是否显示弹幕
   RxBool showDanmakuState = false.obs;
 
@@ -239,6 +244,29 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     //danmakuController?.clear();
   }
 
+  ///小窗模式()
+  void enterSmallWindow() {
+    if (!(Platform.isAndroid || Platform.isIOS)) {
+      fullScreenState.value = true;
+      smallWindowState.value = true;
+      windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      windowManager.setSize(const Size(876, 493));
+      windowManager.setAlwaysOnTop(true);
+    }
+  }
+
+  ///退出小窗模式()
+  void exitSmallWindow() {
+    if (!(Platform.isAndroid || Platform.isIOS)) {
+      fullScreenState.value = false;
+      smallWindowState.value = false;
+      windowManager.setTitleBarStyle(TitleBarStyle.normal);
+      windowManager.setSize(const Size(1280, 720));
+      windowManager.setAlwaysOnTop(false);
+      windowManager.setAlignment(Alignment.center);
+    }
+  }
+
   /// 设置横屏
   Future setLandscapeOrientation() async {
     if (await beforeIOS16()) {
@@ -369,30 +397,31 @@ mixin PlayerGestureControlMixin
       showControls();
     }
   }
+
   //桌面端操控
   void onEnter(PointerEnterEvent event) {
     if (!showControlsState.value) {
       showControls();
     }
   }
-  void onExit(PointerExitEvent event){
+
+  void onExit(PointerExitEvent event) {
     if (showControlsState.value) {
       hideControls();
     }
   }
-  void onHover(PointerHoverEvent event,BuildContext context) {
+
+  void onHover(PointerHoverEvent event, BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
-    if (event.position.dy <= targetPosition) {
+    if (event.position.dy <= targetPosition ||
+        event.position.dy >= targetPosition * 3) {
       if (!showControlsState.value) {
         showControls();
       }
-    }else{
-      if (showControlsState.value) {
-        hideControls();
-      }
     }
   }
+
   /// 双击全屏/退出全屏
   void onDoubleTap(TapDownDetails details) {
     if (lockControlsState.value) {
@@ -535,6 +564,8 @@ class PlayerController extends BaseController
   void onInit() {
     initSystem();
     initStream();
+    //设置音量
+    player.setVolume(AppSettingsController.instance.playerVolume.value);
     super.onInit();
   }
 

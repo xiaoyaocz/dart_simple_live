@@ -32,7 +32,6 @@ void main() async {
 
   await initWindow();
   MediaKit.ensureInitialized();
-
   await Hive.initFlutter();
   //初始化服务
   await initServices();
@@ -44,7 +43,6 @@ void main() async {
     systemNavigationBarColor: Colors.transparent,
   );
   SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
-
   runApp(const MyApp());
 }
 
@@ -172,8 +170,7 @@ class MyApp extends StatelessWidget {
                   },
                   child: child!,
                 ),
-          ),
-
+              ),
 
               //查看DEBUG日志按钮
               //只在Debug、Profile模式显示
@@ -195,11 +192,10 @@ class MyApp extends StatelessWidget {
                   ),
                 ),
               ),
-          ],
-          ),
+            ],
           ),
         ),
-      );
-
+      ),
+    );
   }
 }

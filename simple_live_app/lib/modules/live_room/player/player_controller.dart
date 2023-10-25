@@ -316,20 +316,15 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
     danmakuStateBeforePIP = showDanmakuState.value;
     //关闭并清除弹幕
-    showDanmakuState.value = false;
+    if (AppSettingsController.instance.pipHideDanmu.value &&
+        danmakuStateBeforePIP) {
+      showDanmakuState.value = false;
+    }
     danmakuController?.clear();
-
     //关闭控制器
     showControlsState.value = false;
 
     //监听事件
-    _pipSubscription ??= pip.pipStatus$.listen((event) {
-      if (event == PiPStatus.disabled) {
-        showDanmakuState.value = danmakuStateBeforePIP;
-      }
-      Log.w(event.toString());
-    });
-
     var width = player.state.width ?? 0;
     var height = player.state.height ?? 0;
     Rational ratio = const Rational.landscape();
@@ -341,6 +336,14 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     await pip.enable(
       aspectRatio: ratio,
     );
+
+    _pipSubscription ??= pip.pipStatus$.listen((event) {
+      if (event == PiPStatus.disabled) {
+        danmakuController?.clear();
+        showDanmakuState.value = danmakuStateBeforePIP;
+      }
+      Log.w(event.toString());
+    });
   }
 }
 mixin PlayerGestureControlMixin

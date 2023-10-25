@@ -70,6 +70,9 @@ class AppSettingsController extends GetxController {
       0,
     );
 
+    pipHideDanmu.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPIPHideDanmu, true);
+
     initSiteSort();
     initHomeSort();
     super.onInit();
@@ -297,5 +300,11 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kHomeSort,
       homeSort.join(","),
     );
+  }
+
+  var pipHideDanmu = true.obs;
+  void setPIPHideDanmu(bool e) {
+    pipHideDanmu.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kPIPHideDanmu, e);
   }
 }

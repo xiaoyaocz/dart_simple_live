@@ -80,6 +80,9 @@ class LocalStorageService extends GetxService {
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
 
+  /// 小窗隐藏弹幕
+  static const String kPIPHideDanmu = "PIPHideDanmu";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

@@ -784,15 +784,16 @@ class LiveRoomController extends PlayerController {
   }
 
   void showFollowUserSheet() {
+    followController.setFilterMode(1);
     Utils.showBottomSheet(
       title: "关注列表",
       child: Obx(
         () => RefreshIndicator(
           onRefresh: followController.refreshData,
           child: ListView.builder(
-            itemCount: followController.allList.length,
+            itemCount: followController.list.length,
             itemBuilder: (_, i) {
-              var item = followController.allList[i];
+              var item = followController.list[i];
               return Obx(
                 () => FollowUserItem(
                   item: item,

@@ -51,7 +51,7 @@ mixin PlayerStateMixin {
   Timer? hidevolumeTimer;
 
   /// 是否进入桌面端小窗
-  RxBool SmallwindowState = false.obs;
+  RxBool smallWindowState = false.obs;
 
   /// 是否显示弹幕
   RxBool showDanmakuState = false.obs;
@@ -245,23 +245,23 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 
   ///小窗模式()
-  void entersmallWindow(){
-    if(!(Platform.isAndroid||Platform.isIOS)) {
+  void enterSmallWindow() {
+    if (!(Platform.isAndroid || Platform.isIOS)) {
       fullScreenState.value = true;
-      SmallwindowState.value = true;
+      smallWindowState.value = true;
       windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-      windowManager.setSize(Size(876,493));
+      windowManager.setSize(const Size(876, 493));
       windowManager.setAlwaysOnTop(true);
     }
   }
 
   ///退出小窗模式()
-  void exitsmallWindow(){
-    if(!(Platform.isAndroid||Platform.isIOS)) {
+  void exitSmallWindow() {
+    if (!(Platform.isAndroid || Platform.isIOS)) {
       fullScreenState.value = false;
-      SmallwindowState.value = false;
+      smallWindowState.value = false;
       windowManager.setTitleBarStyle(TitleBarStyle.normal);
-      windowManager.setSize(Size(1280,720));
+      windowManager.setSize(const Size(1280, 720));
       windowManager.setAlwaysOnTop(false);
       windowManager.setAlignment(Alignment.center);
     }

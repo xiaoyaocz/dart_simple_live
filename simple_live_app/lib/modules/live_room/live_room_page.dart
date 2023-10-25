@@ -23,24 +23,29 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   @override
   Widget build(BuildContext context) {
+    final page = Obx(
+      () {
+        if (controller.fullScreenState.value) {
+          return WillPopScope(
+            onWillPop: () async {
+              controller.exitFull();
+              return false;
+            },
+            child: Scaffold(
+              body: buildMediaPlayer(),
+            ),
+          );
+        } else {
+          return buildPageUI();
+        }
+      },
+    );
+    if (!Platform.isAndroid) {
+      return page;
+    }
     return PiPSwitcher(
-      childWhenDisabled: Obx(
-        () {
-          if (controller.fullScreenState.value) {
-            return WillPopScope(
-              onWillPop: () async {
-                controller.exitFull();
-                return false;
-              },
-              child: Scaffold(
-                body: buildMediaPlayer(),
-              ),
-            );
-          } else {
-            return buildPageUI();
-          }
-        },
-      ),
+      floating: controller.pip,
+      childWhenDisabled: page,
       childWhenEnabled: buildMediaPlayer(),
     );
   }

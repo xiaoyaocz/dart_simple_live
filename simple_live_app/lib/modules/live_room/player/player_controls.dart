@@ -73,23 +73,20 @@ Widget buildFullControls(
               width: double.infinity,
               height: double.infinity,
               color: Colors.transparent,
-              child: Visibility( //拖拽区域
-                visible: controller.SmallwindowState.value,
+              child: Visibility(
+                //拖拽区域
+                visible: controller.smallWindowState.value,
                 child: DragToMoveArea(
-                  child:
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.transparent,
-                    )
-                  ),
-                ),
+                    child: Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: Colors.transparent,
+                )),
               ),
             ),
           ),
         ),
-
-
+      ),
 
       // 顶部
       Obx(
@@ -122,10 +119,9 @@ Widget buildFullControls(
               children: [
                 IconButton(
                   onPressed: () {
-                    if(controller.SmallwindowState.value){
-                      controller.exitsmallWindow();
-                    }
-                    else {
+                    if (controller.smallWindowState.value) {
+                      controller.exitSmallWindow();
+                    } else {
                       controller.exitFull();
                     }
                   },
@@ -270,7 +266,8 @@ Widget buildFullControls(
                   child: IconButton(
                     key: volumeButtonkey,
                     onPressed: () {
-                      controller.showVolumeSlider(volumeButtonkey.currentContext!);
+                      controller
+                          .showVolumeSlider(volumeButtonkey.currentContext!);
                     },
                     icon: const Icon(
                       Icons.volume_down,
@@ -301,10 +298,9 @@ Widget buildFullControls(
                 ),
                 IconButton(
                   onPressed: () {
-                    if(controller.SmallwindowState.value){
-                      controller.exitsmallWindow();
-                      }
-                    else {
+                    if (controller.smallWindowState.value) {
+                      controller.exitSmallWindow();
+                    } else {
                       controller.exitFull();
                     }
                   },
@@ -496,7 +492,7 @@ Widget buildControls(
                   ),
                 ),
                 const Expanded(child: Center()),
-              Visibility(
+                Visibility(
                   visible: !Platform.isAndroid && !Platform.isIOS,
                   child: IconButton(
                     key: volumeButtonkey,
@@ -542,9 +538,9 @@ Widget buildControls(
                 Visibility(
                   visible: !Platform.isAndroid && !Platform.isIOS,
                   child: IconButton(
-                      onPressed:(){
-                        controller.entersmallWindow();
-                  },
+                    onPressed: () {
+                      controller.enterSmallWindow();
+                    },
                     icon: const Icon(
                       Icons.picture_in_picture,
                       color: Colors.white,

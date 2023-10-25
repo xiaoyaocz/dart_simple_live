@@ -22,13 +22,13 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
 mixin PlayerMixin {
-  GlobalKey globalPlayerKey = GlobalKey();
+  GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
   /// 播放器实例
   late final player = Player(
     configuration: const PlayerConfiguration(
-      bufferSize: 32 * 1024 * 1024,
+      title: "Simple Live Player",
     ),
   );
 
@@ -46,7 +46,7 @@ mixin PlayerMixin {
           ),
   );
 }
-mixin PlayerStateMixin {
+mixin PlayerStateMixin on PlayerMixin {
   ///音量控制条计时器
   Timer? hidevolumeTimer;
 
@@ -128,6 +128,32 @@ mixin PlayerStateMixin {
         seconds: 5,
       ),
       hideControls,
+    );
+  }
+
+  void updateScaleMode() {
+    var boxFit = BoxFit.contain;
+    double? aspectRatio;
+    if (player.state.width != null && player.state.height != null) {
+      aspectRatio = player.state.width! / player.state.height!;
+    }
+
+    if (AppSettingsController.instance.scaleMode.value == 0) {
+      boxFit = BoxFit.contain;
+    } else if (AppSettingsController.instance.scaleMode.value == 1) {
+      boxFit = BoxFit.fill;
+    } else if (AppSettingsController.instance.scaleMode.value == 2) {
+      boxFit = BoxFit.cover;
+    } else if (AppSettingsController.instance.scaleMode.value == 3) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 16 / 9;
+    } else if (AppSettingsController.instance.scaleMode.value == 4) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 4 / 3;
+    }
+    globalPlayerKey.currentState?.update(
+      aspectRatio: aspectRatio,
+      fit: boxFit,
     );
   }
 }
@@ -269,8 +295,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 设置横屏
   Future setLandscapeOrientation() async {
-    if (await beforeIOS16()) {
-      AutoOrientation.landscapeAutoMode();
+    if (await beforeIOS16() || Platform.isAndroid) {
+      AutoOrientation.landscapeAutoMode(forceSensor: true);
     } else {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
@@ -281,7 +307,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 设置竖屏
   Future setPortraitOrientation() async {
-    if (await beforeIOS16()) {
+    if (await beforeIOS16() || Platform.isAndroid) {
       AutoOrientation.portraitAutoMode();
     } else {
       await SystemChrome.setPreferredOrientations(DeviceOrientation.values);

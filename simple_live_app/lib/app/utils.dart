@@ -197,31 +197,22 @@ class Utils {
           topRight: Radius.circular(12),
         ),
       ),
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(Get.context!).cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
+      builder: (_) => Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.only(
+              left: 12,
+            ),
+            title: Text(title),
+            trailing: IconButton(
+              onPressed: Get.back,
+              icon: const Icon(Remix.close_line),
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: const EdgeInsets.only(
-                left: 12,
-              ),
-              title: Text(title),
-              trailing: IconButton(
-                onPressed: Get.back,
-                icon: const Icon(Remix.close_line),
-              ),
-            ),
-            Expanded(
-              child: child,
-            ),
-          ],
-        ),
+          Expanded(
+            child: child,
+          ),
+        ],
       ),
     );
   }

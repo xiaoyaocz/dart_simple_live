@@ -61,7 +61,9 @@ Widget buildFullControls(
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
-          onLongPress: controller.showDebugInfo,
+          onLongPress: () {
+            showFollowUser(controller);
+          },
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
@@ -418,7 +420,7 @@ Widget buildControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          onLongPress: controller.showDebugInfo,
+          //onLongPress: controller.showDebugInfo,
           child: MouseRegion(
             onEnter: controller.onEnter,
             child: Container(
@@ -825,6 +827,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 0);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -835,6 +838,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 1);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -845,6 +849,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 2);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -855,6 +860,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 3);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -865,6 +871,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 4);
+              controller.updateScaleMode();
             },
           ),
         ],

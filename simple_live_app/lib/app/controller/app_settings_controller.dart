@@ -65,6 +65,11 @@ class AppSettingsController extends GetxController {
       0,
     );
 
+    playerVolume.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kPlayerVolume,
+      100.0,
+    );
+
     initSiteSort();
     initHomeSort();
     super.onInit();
@@ -284,6 +289,15 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(
       LocalStorageService.kHomeSort,
       homeSort.join(","),
+    );
+  }
+
+  Rx<double> playerVolume = 100.0.obs;
+  void setPlayerVolume(double value) {
+    playerVolume.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kPlayerVolume,
+      value,
     );
   }
 }

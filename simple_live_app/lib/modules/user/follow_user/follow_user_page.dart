@@ -14,6 +14,7 @@ class FollowUserPage extends GetView<FollowUserController> {
 
   @override
   Widget build(BuildContext context) {
+    controller.filterMode.value=0;
     var count = MediaQuery.of(context).size.width ~/ 500;
     if (count < 1) count = 1;
     return Scaffold(

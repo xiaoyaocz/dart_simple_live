@@ -78,6 +78,22 @@ class UserPage extends StatelessWidget {
               color: Colors.grey.withOpacity(.1),
             ),
             ListTile(
+              leading: const Icon(Remix.account_circle_line),
+              title: const Text("账号管理"),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
+              ),
+              onTap: () {
+                Get.toNamed(RoutePath.kSettingsAccount);
+              },
+            ),
+            Divider(
+              indent: 12,
+              endIndent: 12,
+              color: Colors.grey.withOpacity(.1),
+            ),
+            ListTile(
               leading: const Icon(Remix.link),
               title: const Text("链接解析"),
               trailing: const Icon(

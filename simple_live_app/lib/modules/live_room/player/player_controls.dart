@@ -885,6 +885,8 @@ void showFollowUser(LiveRoomController controller) {
     controller.showFollowUserSheet();
     return;
   }
+  //只显示开播直播间
+  controller.followController.setFilterMode(1);
   Utils.showRightDialog(
     title: "关注列表",
     width: 400,
@@ -893,9 +895,9 @@ void showFollowUser(LiveRoomController controller) {
       () => RefreshIndicator(
         onRefresh: controller.followController.refreshData,
         child: ListView.builder(
-          itemCount: controller.followController.allList.length,
+          itemCount: controller.followController.list.length,
           itemBuilder: (_, i) {
-            var item = controller.followController.allList[i];
+            var item = controller.followController.list[i];
             return Obx(
               () => FollowUserItem(
                 item: item,
@@ -915,4 +917,6 @@ void showFollowUser(LiveRoomController controller) {
       ),
     ),
   );
+
+
 }

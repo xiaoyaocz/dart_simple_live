@@ -82,6 +82,9 @@ class LiveRoomController extends PlayerController {
   /// 设置的自动关闭时间（分钟）
   var autoExitMinutes = 60.obs;
 
+  ///是否延迟自动关闭
+  var delayAutoExit = false.obs;
+
   /// 是否启用自动关闭
   var autoExitEnable = false.obs;
 
@@ -131,12 +134,32 @@ class LiveRoomController extends PlayerController {
     autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       countdown.value -= 1;
       if (countdown.value <= 0) {
-        timer.cancel();
-        await WakelockPlus.disable();
-        exit(0);
+        timer = Timer(const Duration(seconds: 10), () async {
+          await WakelockPlus.disable();
+          exit(0);
+        });
+        autoExitTimer?.cancel();
+        var delay = await Utils.showAlertDialog(
+            "定时关闭已到时,是否延迟关闭?",
+            title: "延迟关闭",
+            confirm: "延迟",
+            cancel: "关闭",
+            selectable: true
+        );
+        if (delay) {
+          timer.cancel();
+          delayAutoExit.value = true;
+          showAutoExitSheet();
+          setAutoExit();
+        } else {
+          delayAutoExit.value = false;
+          await WakelockPlus.disable();
+          exit(0);
+        }
       }
     });
   }
+  // 弹窗逻辑
 
   void refreshRoom() {
     messages.clear();
@@ -816,15 +839,16 @@ class LiveRoomController extends PlayerController {
   }
 
   void showFollowUserSheet() {
+    followController.setFilterMode(1);
     Utils.showBottomSheet(
       title: "关注列表",
       child: Obx(
         () => RefreshIndicator(
           onRefresh: followController.refreshData,
           child: ListView.builder(
-            itemCount: followController.allList.length,
+            itemCount: followController.list.length,
             itemBuilder: (_, i) {
-              var item = followController.allList[i];
+              var item = followController.list[i];
               return Obx(
                 () => FollowUserItem(
                   item: item,
@@ -847,7 +871,8 @@ class LiveRoomController extends PlayerController {
   }
 
   void showAutoExitSheet() {
-    if (AppSettingsController.instance.autoExitEnable.value) {
+    if (AppSettingsController.instance.autoExitEnable.value &&
+        !delayAutoExit.value) {
       SmartDialog.showToast("已设置了全局定时关闭");
       return;
     }

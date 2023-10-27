@@ -1,6 +1,10 @@
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 /// APP页面跳转封装
@@ -14,7 +18,22 @@ class AppNavigator {
   }
 
   /// 跳转至直播间
-  static void toLiveRoomDetail({required Site site, required String roomId}) {
+  static void toLiveRoomDetail(
+      {required Site site, required String roomId}) async {
+    if (site.id == Constant.kBiliBili &&
+        !BiliBiliAccountService.instance.logined.value) {
+      var result = await Utils.showAlertDialog(
+        "哔哩哔哩需要登录才能观看高清直播，是否前往登录？",
+        title: "登录哔哩哔哩",
+      );
+      if (result == true) {
+        await Get.toNamed(RoutePath.kBiliBiliLogin);
+        if (!BiliBiliAccountService.instance.logined.value) {
+          SmartDialog.showToast("未完成登录");
+        }
+      }
+    }
+
     Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
       "roomId": roomId,
     });

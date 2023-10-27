@@ -83,6 +83,9 @@ class LocalStorageService extends GetxService {
   /// 小窗隐藏弹幕
   static const String kPIPHideDanmu = "PIPHideDanmu";
 
+  /// 哔哩哔哩cookie
+  static const String kBilibiliCookie = "BilibiliCookie";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

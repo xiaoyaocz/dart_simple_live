@@ -10,6 +10,10 @@ import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
+import 'package:simple_live_app/modules/user/account/account_controller.dart';
+import 'package:simple_live_app/modules/user/account/account_page.dart';
+import 'package:simple_live_app/modules/user/account/bilibili/bilibili_login_controller.dart';
+import 'package:simple_live_app/modules/user/account/bilibili/bilibili_login_page.dart';
 import 'package:simple_live_app/modules/user/auto_exit_settings_page.dart';
 import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
 import 'package:simple_live_app/modules/user/danmu_shield/danmu_shield_controller.dart';
@@ -120,6 +124,22 @@ class AppPages {
       page: () => const IndexedSettingsPage(),
       bindings: [
         BindingsBuilder.put(() => IndexedSettingsController()),
+      ],
+    ),
+    //账号设置
+    GetPage(
+      name: RoutePath.kSettingsAccount,
+      page: () => const AccountPage(),
+      bindings: [
+        BindingsBuilder.put(() => AccountController()),
+      ],
+    ),
+    //哔哩哔哩登录
+    GetPage(
+      name: RoutePath.kBiliBiliLogin,
+      page: () => const BiliBiliLoginPage(),
+      bindings: [
+        BindingsBuilder.put(() => BiliBiliLoginController()),
       ],
     ),
   ];

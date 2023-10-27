@@ -38,4 +38,10 @@ class RoutePath {
 
   /// 主页设置
   static const kSettingsIndexed = "/settings/indexed";
+
+  /// 账号管理
+  static const kSettingsAccount = "/settings/account";
+
+  /// BiliBili账号登录
+  static const kBiliBiliLogin = "/settings/account/bilibili_login";
 }

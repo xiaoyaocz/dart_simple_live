@@ -4,7 +4,7 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 
-class BiliBiliLoginController extends BaseController {
+class BiliBiliWebLoginController extends BaseController {
   InAppWebViewController? webViewController;
   final CookieManager cookieManager = CookieManager.instance();
   void onWebViewCreated(InAppWebViewController controller) {

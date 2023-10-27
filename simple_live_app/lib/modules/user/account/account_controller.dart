@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/utils.dart';
-import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 
 class AccountController extends GetxController {
@@ -11,7 +11,7 @@ class AccountController extends GetxController {
         BiliBiliAccountService.instance.logout();
       }
     } else {
-      Get.toNamed(RoutePath.kBiliBiliLogin);
+      AppNavigator.toBiliBiliLogin();
     }
   }
 }

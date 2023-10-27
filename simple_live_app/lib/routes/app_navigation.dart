@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
@@ -27,7 +29,7 @@ class AppNavigator {
         title: "登录哔哩哔哩",
       );
       if (result == true) {
-        await Get.toNamed(RoutePath.kBiliBiliLogin);
+        await toBiliBiliLogin();
         if (!BiliBiliAccountService.instance.logined.value) {
           SmartDialog.showToast("未完成登录");
         }
@@ -37,5 +39,14 @@ class AppNavigator {
     Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
       "roomId": roomId,
     });
+  }
+
+  /// 跳转至哔哩哔哩登录
+  static Future toBiliBiliLogin() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      await Get.toNamed(RoutePath.kBiliBiliWebLogin);
+    } else {
+      await Get.toNamed(RoutePath.kBiliBiliQRLogin);
+    }
   }
 }

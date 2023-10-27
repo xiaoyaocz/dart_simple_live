@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
-import 'package:simple_live_app/modules/user/account/bilibili/bilibili_login_controller.dart';
+import 'package:simple_live_app/modules/user/account/bilibili/web_login_controller.dart';
 
-class BiliBiliLoginPage extends GetView<BiliBiliLoginController> {
-  const BiliBiliLoginPage({Key? key}) : super(key: key);
+class BiliBiliWebLoginPage extends GetView<BiliBiliWebLoginController> {
+  const BiliBiliWebLoginPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

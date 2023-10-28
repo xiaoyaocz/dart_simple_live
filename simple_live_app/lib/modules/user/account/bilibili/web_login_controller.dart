@@ -12,7 +12,7 @@ class BiliBiliWebLoginController extends BaseController {
     webViewController = controller;
     webViewController!.loadUrl(
       urlRequest: URLRequest(
-        url: WebUri("https://passport.bilibili.com/login"),
+        url: Uri.parse("https://passport.bilibili.com/login"),
       ),
     );
   }
@@ -22,7 +22,7 @@ class BiliBiliWebLoginController extends BaseController {
     Get.back();
   }
 
-  void onLoadStop(InAppWebViewController controller, WebUri? uri) async {
+  void onLoadStop(InAppWebViewController controller, Uri? uri) async {
     if (uri == null) {
       return;
     }

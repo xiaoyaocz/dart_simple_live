@@ -16,6 +16,7 @@ import 'package:simple_live_app/modules/user/account/bilibili/qr_login_controlle
 import 'package:simple_live_app/modules/user/account/bilibili/qr_login_page.dart';
 import 'package:simple_live_app/modules/user/account/bilibili/web_login_controller.dart';
 import 'package:simple_live_app/modules/user/account/bilibili/web_login_page.dart';
+import 'package:simple_live_app/modules/user/appstyle_setting_page.dart';
 import 'package:simple_live_app/modules/user/auto_exit_settings_page.dart';
 import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
 import 'package:simple_live_app/modules/user/danmu_shield/danmu_shield_controller.dart';
@@ -93,6 +94,11 @@ class AppPages {
     GetPage(
       name: RoutePath.kSettingsDanmu,
       page: () => const DanmuSettingsPage(),
+    ),
+    //外观设置
+    GetPage(
+        name: RoutePath.kAppstyleSetting,
+        page: () => const AppstyleSettingPage()
     ),
     //播放设置
     GetPage(

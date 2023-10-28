@@ -24,6 +24,7 @@ import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,10 +86,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isDynamicColor = Get.find<AppSettingsController>().styleColor.value;
+    print("DDDD----${isDynamicColor}");
+    return DynamicColorBuilder(
+        builder: ((ColorScheme?lightDynamic,ColorScheme?darkDynamic) {
+        ColorScheme? lightColorScheme;
+        ColorScheme? darkColorScheme;
+        if(lightDynamic!=null&&darkDynamic!=null&&isDynamicColor) {
+          lightColorScheme = lightDynamic;
+          darkColorScheme = darkDynamic;
+        }
     return GetMaterialApp(
       title: "Simple Live",
-      theme: AppStyle.lightTheme,
-
+      theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
       darkTheme: AppStyle.darkTheme,
       themeMode:
           ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
@@ -140,5 +150,6 @@ class MyApp extends StatelessWidget {
         ),
       ),
     );
-  }
+  }));
+}
 }

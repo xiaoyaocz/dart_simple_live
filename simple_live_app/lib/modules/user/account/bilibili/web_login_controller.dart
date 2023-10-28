@@ -2,6 +2,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 
 class BiliBiliWebLoginController extends BaseController {
@@ -14,6 +15,11 @@ class BiliBiliWebLoginController extends BaseController {
         url: WebUri("https://passport.bilibili.com/login"),
       ),
     );
+  }
+
+  void toQRLogin() async {
+    await Get.toNamed(RoutePath.kBiliBiliQRLogin);
+    Get.back();
   }
 
   void onLoadStop(InAppWebViewController controller, WebUri? uri) async {

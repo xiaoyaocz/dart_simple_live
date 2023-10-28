@@ -243,8 +243,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 设置横屏
   Future setLandscapeOrientation() async {
-    if (await beforeIOS16() || Platform.isAndroid) {
-      AutoOrientation.landscapeAutoMode(forceSensor: true);
+    if (await beforeIOS16()) {
+      AutoOrientation.landscapeAutoMode();
     } else {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
@@ -255,7 +255,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 设置竖屏
   Future setPortraitOrientation() async {
-    if (await beforeIOS16() || Platform.isAndroid) {
+    if (await beforeIOS16()) {
       AutoOrientation.portraitAutoMode();
     } else {
       await SystemChrome.setPreferredOrientations(DeviceOrientation.values);

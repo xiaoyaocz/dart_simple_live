@@ -87,7 +87,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isDynamicColor = Get.find<AppSettingsController>().styleColor.value;
-    print("DDDD----${isDynamicColor}");
     return DynamicColorBuilder(
         builder: ((ColorScheme?lightDynamic,ColorScheme?darkDynamic) {
         ColorScheme? lightColorScheme;
@@ -99,7 +98,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: "Simple Live",
       theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
-      darkTheme: AppStyle.darkTheme,
+      darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
       themeMode:
           ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
       initialRoute: RoutePath.kIndex,

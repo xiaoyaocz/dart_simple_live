@@ -59,7 +59,9 @@ Widget buildFullControls(
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
-          onLongPress: controller.showDebugInfo,
+          onLongPress: () {
+            showFollowUser(controller);
+          },
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
@@ -375,7 +377,7 @@ Widget buildControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          onLongPress: controller.showDebugInfo,
+          //onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,
@@ -750,6 +752,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 0);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -760,6 +763,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 1);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -770,6 +774,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 2);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -780,6 +785,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 3);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -790,6 +796,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 4);
+              controller.updateScaleMode();
             },
           ),
         ],
@@ -803,6 +810,8 @@ void showFollowUser(LiveRoomController controller) {
     controller.showFollowUserSheet();
     return;
   }
+  //只显示开播直播间
+  controller.followController.setFilterMode(1);
   Utils.showRightDialog(
     title: "关注列表",
     width: 400,
@@ -811,9 +820,9 @@ void showFollowUser(LiveRoomController controller) {
       () => RefreshIndicator(
         onRefresh: controller.followController.refreshData,
         child: ListView.builder(
-          itemCount: controller.followController.allList.length,
+          itemCount: controller.followController.list.length,
           itemBuilder: (_, i) {
-            var item = controller.followController.allList[i];
+            var item = controller.followController.list[i];
             return Obx(
               () => FollowUserItem(
                 item: item,
@@ -833,4 +842,6 @@ void showFollowUser(LiveRoomController controller) {
       ),
     ),
   );
+
+
 }

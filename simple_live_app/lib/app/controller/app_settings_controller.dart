@@ -42,6 +42,11 @@ class AppSettingsController extends GetxController {
     chatTextGap.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextGap, 4.0);
 
+    chatBubbleStyle.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kChatBubbleStyle,
+      false,
+    );
+
     qualityLevel.value = LocalStorageService.instance
         .getValue(LocalStorageService.kQualityLevel, 1);
 
@@ -64,6 +69,9 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kPlayerScaleMode,
       0,
     );
+
+    pipHideDanmu.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPIPHideDanmu, true);
 
     initSiteSort();
     initHomeSort();
@@ -178,6 +186,13 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kChatTextGap, e);
   }
 
+  var chatBubbleStyle = false.obs;
+  void setChatBubbleStyle(bool e) {
+    chatBubbleStyle.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kChatBubbleStyle, e);
+  }
+
   var danmuSize = 16.0.obs;
   void setDanmuSize(double e) {
     danmuSize.value = e;
@@ -285,5 +300,11 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kHomeSort,
       homeSort.join(","),
     );
+  }
+
+  var pipHideDanmu = true.obs;
+  void setPIPHideDanmu(bool e) {
+    pipHideDanmu.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kPIPHideDanmu, e);
   }
 }

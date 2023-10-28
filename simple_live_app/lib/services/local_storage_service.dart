@@ -62,6 +62,9 @@ class LocalStorageService extends GetxService {
   /// 聊天区间隔
   static const String kChatTextGap = "ChatTextGap";
 
+  /// 聊天区-气泡样式
+  static const String kChatBubbleStyle = "ChatBubbleStyle";
+
   /// 播放清晰度，0=低，1=中，2=高
   static const String kQualityLevel = "QualityLevel";
 
@@ -76,6 +79,12 @@ class LocalStorageService extends GetxService {
 
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
+
+  /// 小窗隐藏弹幕
+  static const String kPIPHideDanmu = "PIPHideDanmu";
+
+  /// 哔哩哔哩cookie
+  static const String kBilibiliCookie = "BilibiliCookie";
 
   late Box settingsBox;
   late Box<String> shieldBox;

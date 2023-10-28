@@ -57,6 +57,21 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ),
             ),
           ),
+          Obx(
+            () => Visibility(
+              visible: Platform.isAndroid,
+              child: SwitchListTile(
+                title: Text(
+                  "进入小窗隐藏弹幕",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                value: controller.pipHideDanmu.value,
+                onChanged: (e) {
+                  controller.setPIPHideDanmu(e);
+                },
+              ),
+            ),
+          ),
           Row(
             children: [
               Expanded(

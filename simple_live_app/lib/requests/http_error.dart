@@ -1,11 +1,11 @@
-class CoreError extends Error {
+class HttpError extends Error {
   /// 错误码
   final int statusCode;
 
   /// 错误信息
   final String message;
 
-  CoreError(
+  HttpError(
     this.message, {
     this.statusCode = 0,
   });

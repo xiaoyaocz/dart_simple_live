@@ -16,12 +16,14 @@ class BiliBiliDanmakuArgs {
   final String buvid;
   final String serverHost;
   final int uid;
+  final String cookie;
   BiliBiliDanmakuArgs({
     required this.roomId,
     required this.token,
     required this.serverHost,
     required this.buvid,
     required this.uid,
+    required this.cookie,
   });
   @override
   String toString() {
@@ -31,6 +33,7 @@ class BiliBiliDanmakuArgs {
       "serverHost": serverHost,
       "buvid": buvid,
       "uid": uid,
+      "cookie": cookie,
     });
   }
 }
@@ -46,7 +49,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
   @override
   Function()? onReady;
 
-  String serverUrl = "wss://broadcastlv.chat.bilibili.com/sub";
+  //String serverUrl = "wss://broadcastlv.chat.bilibili.com/sub";
 
   WebScoketUtils? webScoketUtils;
   late BiliBiliDanmakuArgs danmakuArgs;
@@ -54,8 +57,13 @@ class BiliBiliDanmaku implements LiveDanmaku {
   Future start(dynamic args) async {
     danmakuArgs = args as BiliBiliDanmakuArgs;
     webScoketUtils = WebScoketUtils(
-      url: serverUrl,
+      url: "wss://${args.serverHost}/sub",
       heartBeatTime: heartbeatTime,
+      headers: args.cookie.isEmpty
+          ? null
+          : {
+              "cookie": args.cookie,
+            },
       onMessage: (e) {
         decodeMessage(e);
       },
@@ -79,7 +87,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
   void joinRoom(BiliBiliDanmakuArgs args) {
     var joinData = encodeData(
       json.encode({
-        "uid": 0,
+        "uid": args.uid,
         "roomid": args.roomId,
         "protover": 3,
         "buvid": args.buvid,

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
@@ -22,24 +23,29 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   @override
   Widget build(BuildContext context) {
+    final page = Obx(
+      () {
+        if (controller.fullScreenState.value) {
+          return WillPopScope(
+            onWillPop: () async {
+              controller.exitFull();
+              return false;
+            },
+            child: Scaffold(
+              body: buildMediaPlayer(),
+            ),
+          );
+        } else {
+          return buildPageUI();
+        }
+      },
+    );
+    if (!Platform.isAndroid) {
+      return page;
+    }
     return PiPSwitcher(
-      childWhenDisabled: Obx(
-        () {
-          if (controller.fullScreenState.value) {
-            return WillPopScope(
-              onWillPop: () async {
-                controller.exitFull();
-                return false;
-              },
-              child: Scaffold(
-                body: buildMediaPlayer(),
-              ),
-            );
-          } else {
-            return buildPageUI();
-          }
-        },
-      ),
+      floating: controller.pip,
+      childWhenDisabled: page,
       childWhenEnabled: buildMediaPlayer(),
     );
   }
@@ -156,45 +162,41 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMediaPlayer() {
+    var boxFit = BoxFit.contain;
+    double? aspectRatio;
+    if (AppSettingsController.instance.scaleMode.value == 0) {
+      boxFit = BoxFit.contain;
+    } else if (AppSettingsController.instance.scaleMode.value == 1) {
+      boxFit = BoxFit.fill;
+    } else if (AppSettingsController.instance.scaleMode.value == 2) {
+      boxFit = BoxFit.cover;
+    } else if (AppSettingsController.instance.scaleMode.value == 3) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 16 / 9;
+    } else if (AppSettingsController.instance.scaleMode.value == 4) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 4 / 3;
+    }
     return Stack(
       children: [
-        Obx(() {
-          var boxFit = BoxFit.contain;
-          double? aspectRatio;
-          if (AppSettingsController.instance.scaleMode.value == 0) {
-            boxFit = BoxFit.contain;
-          } else if (AppSettingsController.instance.scaleMode.value == 1) {
-            boxFit = BoxFit.fill;
-          } else if (AppSettingsController.instance.scaleMode.value == 2) {
-            boxFit = BoxFit.cover;
-          } else if (AppSettingsController.instance.scaleMode.value == 3) {
-            boxFit = BoxFit.contain;
-            aspectRatio = 16 / 9;
-          } else if (AppSettingsController.instance.scaleMode.value == 4) {
-            boxFit = BoxFit.contain;
-            aspectRatio = 4 / 3;
-          }
-          return Video(
-            controller: controller.videoController,
-            pauseUponEnteringBackgroundMode: Platform.isIOS,
-            resumeUponEnteringForegroundMode: Platform.isIOS,
-            controls: (state) {
-              return playerControls(state, controller);
-            },
-            aspectRatio: aspectRatio,
-            fit: boxFit,
-          );
-        }),
+        Video(
+          key: controller.globalPlayerKey,
+          controller: controller.videoController,
+          pauseUponEnteringBackgroundMode: false,
+          //resumeUponEnteringForegroundMode: Platform.isIOS,
+          controls: (state) {
+            return playerControls(state, controller);
+          },
+          aspectRatio: aspectRatio,
+          fit: boxFit,
+        ),
         Obx(
           () => Visibility(
             visible: !controller.liveStatus.value,
-            child: Container(
-              color: Colors.black.withOpacity(.5),
-              child: const Center(
-                child: Text(
-                  "未开播",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
+            child: const Center(
+              child: Text(
+                "未开播",
+                style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
           ),
@@ -352,7 +354,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildMessageArea() {
     return Expanded(
       child: DefaultTabController(
-        length: 4,
+        length: controller.site.id == Constant.kBiliBili ? 4 : 3,
         child: Column(
           children: [
             TabBar(
@@ -363,15 +365,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 const Tab(
                   text: "聊天",
                 ),
-                Tab(
-                  child: Obx(
-                    () => Text(
-                      controller.superChats.isNotEmpty
-                          ? "SC(${controller.superChats.length})"
-                          : "SC",
+                if (controller.site.id == Constant.kBiliBili)
+                  Tab(
+                    child: Obx(
+                      () => Text(
+                        controller.superChats.isNotEmpty
+                            ? "SC(${controller.superChats.length})"
+                            : "SC",
+                      ),
                     ),
                   ),
-                ),
                 const Tab(
                   text: "关注",
                 ),
@@ -384,17 +387,45 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               child: TabBarView(
                 children: [
                   Obx(
-                    () => ListView.builder(
-                      controller: controller.scrollController,
-                      padding: AppStyle.edgeInsetsA12,
-                      itemCount: controller.messages.length,
-                      itemBuilder: (_, i) {
-                        var item = controller.messages[i];
-                        return buildMessageItem(item);
-                      },
+                    () => Stack(
+                      children: [
+                        ListView.separated(
+                          controller: controller.scrollController,
+                          separatorBuilder: (_, i) => Obx(
+                            () => SizedBox(
+                              // *2与原来的EdgeInsets.symmetric(vertical: )做兼容
+                              height: AppSettingsController
+                                      .instance.chatTextGap.value *
+                                  2,
+                            ),
+                          ),
+                          padding: AppStyle.edgeInsetsA12,
+                          itemCount: controller.messages.length,
+                          itemBuilder: (_, i) {
+                            var item = controller.messages[i];
+                            return buildMessageItem(item);
+                          },
+                        ),
+                        Visibility(
+                          visible: controller.disableAutoScroll.value,
+                          child: Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                controller.disableAutoScroll.value = false;
+                                controller.chatScrollToBottom();
+                              },
+                              icon: const Icon(Icons.expand_more),
+                              label: const Text("最新"),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  buildSuperChats(),
+                  if (controller.site.id == Constant.kBiliBili)
+                    buildSuperChats(),
                   buildFollowList(),
                   buildSettings(),
                 ],
@@ -409,43 +440,76 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildMessageItem(LiveMessage message) {
     if (message.userName == "LiveSysMessage") {
       return Obx(
-        () => Container(
-          padding: EdgeInsets.symmetric(
-            vertical: AppSettingsController.instance.chatTextGap.value,
-          ),
-          child: Text(
-            message.message,
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: AppSettingsController.instance.chatTextSize.value,
-            ),
+        () => Text(
+          message.message,
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: AppSettingsController.instance.chatTextSize.value,
           ),
         ),
       );
     }
+
     return Obx(
-      () => Container(
-        padding: EdgeInsets.symmetric(
-          vertical: AppSettingsController.instance.chatTextGap.value,
-        ),
-        child: Text.rich(
-          TextSpan(
-            text: "${message.userName}：",
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: AppSettingsController.instance.chatTextSize.value,
-            ),
-            children: [
-              TextSpan(
-                text: message.message,
-                style: TextStyle(
-                  color: Get.isDarkMode ? Colors.white : AppColors.black333,
+      () => AppSettingsController.instance.chatBubbleStyle.value
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Flexible(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.withOpacity(.1),
+                      //borderRadius: AppStyle.radius8,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(12),
+                        bottomLeft: Radius.circular(12),
+                        bottomRight: Radius.circular(12),
+                      ),
+                    ),
+                    padding:
+                        AppStyle.edgeInsetsA4.copyWith(left: 12, right: 12),
+                    child: Text.rich(
+                      TextSpan(
+                        text: "${message.userName}：",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize:
+                              AppSettingsController.instance.chatTextSize.value,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: message.message,
+                            style: TextStyle(
+                              color: Get.isDarkMode
+                                  ? Colors.white
+                                  : AppColors.black333,
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              )
-            ],
-          ),
-        ),
-      ),
+              ],
+            )
+          : Text.rich(
+              TextSpan(
+                text: "${message.userName}：",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: AppSettingsController.instance.chatTextSize.value,
+                ),
+                children: [
+                  TextSpan(
+                    text: message.message,
+                    style: TextStyle(
+                      color: Get.isDarkMode ? Colors.white : AppColors.black333,
+                    ),
+                  )
+                ],
+              ),
+            ),
     );
   }
 
@@ -496,6 +560,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               color: Colors.grey,
             ),
             onTap: () => controller.showDanmuShield(),
+          ),
+          SwitchListTile(
+            value: AppSettingsController.instance.chatBubbleStyle.value,
+            title: const Text("聊天区气泡样式"),
+            onChanged: (e) {
+              AppSettingsController.instance.setChatBubbleStyle(e);
+            },
           ),
           Padding(
             padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
@@ -575,12 +646,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       context: Get.context!,
       constraints: const BoxConstraints(
         maxWidth: 600,
-      ),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
       ),
       isScrollControlled: true,
       builder: (_) => Container(

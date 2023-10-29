@@ -105,9 +105,6 @@ class ColorBox extends GetView<AppSettingsController>  {
     return  GestureDetector(
       onTap: (){
         controller.setStyleColor(color.value);
-        Get.changeTheme(Get.isDarkMode?
-            AppStyle.darkTheme.copyWith(colorScheme: ColorScheme.fromSeed(seedColor: color))
-            :AppStyle.lightTheme.copyWith(colorScheme: ColorScheme.fromSeed(seedColor: color)));
         Get.forceAppUpdate();
       },
       child: Column(

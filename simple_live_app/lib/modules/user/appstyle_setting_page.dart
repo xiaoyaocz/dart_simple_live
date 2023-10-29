@@ -37,6 +37,7 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
               groupValue: controller.isDynamic.value,
               onChanged: (e) {
                 controller.setIsDynamic(e ?? true);
+                Get.forceAppUpdate();
               },
               title: const Text("动态取色"),
             ),
@@ -48,6 +49,7 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
                 groupValue: controller.isDynamic.value,
                 onChanged: (e) {
                   controller.setIsDynamic(e ?? false);
+                  Get.forceAppUpdate();
                 },
                 title: const Text("选定颜色"),
               );
@@ -117,7 +119,17 @@ class ColorBox extends GetView<AppSettingsController>  {
               color: color,
               borderRadius: BorderRadius.circular(4.0)
             ),
-            child: controller.styleColor.value==color.value?Icon(Icons.check,color: Colors.white,):null
+            child: AnimatedOpacity(
+              opacity: controller.styleColor.value==color.value?1:0,
+              duration: 0.4.seconds,
+              child: Container(
+                decoration:  BoxDecoration(
+                    borderRadius: BorderRadius.circular(4.0),
+                    border: Border.all(color: Colors.black,width: 1),
+                ),
+                child: Icon(Icons.check,color: Colors.white,),
+              )
+            )
           ),
           ),
           Text(name)

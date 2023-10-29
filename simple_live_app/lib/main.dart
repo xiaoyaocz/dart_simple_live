@@ -86,7 +86,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isDynamicColor = Get.find<AppSettingsController>().styleColor.value;
+    bool isDynamicColor = Get.find<AppSettingsController>().isDynamic.value;
+    Color styleColor = Color(Get.find<AppSettingsController>().styleColor.value);
     return DynamicColorBuilder(
         builder: ((ColorScheme?lightDynamic,ColorScheme?darkDynamic) {
         ColorScheme? lightColorScheme;
@@ -94,6 +95,9 @@ class MyApp extends StatelessWidget {
         if(lightDynamic!=null&&darkDynamic!=null&&isDynamicColor) {
           lightColorScheme = lightDynamic;
           darkColorScheme = darkDynamic;
+        }else{
+          lightColorScheme = ColorScheme.fromSeed(seedColor: styleColor,brightness: Brightness.light,);
+          darkColorScheme = ColorScheme.fromSeed(seedColor: styleColor,brightness: Brightness.dark);
         }
     return GetMaterialApp(
       title: "Simple Live",

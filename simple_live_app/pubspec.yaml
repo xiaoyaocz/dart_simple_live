@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.4.3+10403
+version: 1.4.4+10404
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -48,7 +48,7 @@ dependencies:
   wakelock_plus: ^1.1.1 #屏幕常亮
   file_picker: ^5.3.3 #文件选择
   floating: ^2.0.1 #PIP画中画
-  flutter_inappwebview: ^6.0.0-beta.25 #WebView
+  flutter_inappwebview: ^5.8.0 #WebView
   
   # 视频播放
   media_kit: ^1.1.10

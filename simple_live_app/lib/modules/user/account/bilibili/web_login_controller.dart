@@ -27,12 +27,25 @@ class BiliBiliWebLoginController extends BaseController {
       return;
     }
     if (uri.host == "m.bilibili.com") {
-      var cookies = await cookieManager.getCookies(url: uri);
+      logined();
+    }
+  }
+
+  Future<bool> logined() async {
+    try {
+      var cookies = await cookieManager.getCookies(
+          url: Uri.parse("https://bilibili.com"));
+      if (cookies.isEmpty) {
+        return false;
+      }
       var cookieStr = cookies.map((e) => "${e.name}=${e.value}").join(";");
       Log.i(cookieStr);
       BiliBiliAccountService.instance.setCookie(cookieStr);
       await BiliBiliAccountService.instance.loadUserInfo();
       Get.back();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

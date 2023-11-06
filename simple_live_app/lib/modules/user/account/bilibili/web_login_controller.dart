@@ -12,7 +12,7 @@ class BiliBiliWebLoginController extends BaseController {
     webViewController = controller;
     webViewController!.loadUrl(
       urlRequest: URLRequest(
-        url: WebUri("https://passport.bilibili.com/login"),
+        url: Uri.parse("https://passport.bilibili.com/login"),
       ),
     );
   }
@@ -22,17 +22,30 @@ class BiliBiliWebLoginController extends BaseController {
     Get.back();
   }
 
-  void onLoadStop(InAppWebViewController controller, WebUri? uri) async {
+  void onLoadStop(InAppWebViewController controller, Uri? uri) async {
     if (uri == null) {
       return;
     }
     if (uri.host == "m.bilibili.com") {
-      var cookies = await cookieManager.getCookies(url: uri);
+      logined();
+    }
+  }
+
+  Future<bool> logined() async {
+    try {
+      var cookies = await cookieManager.getCookies(
+          url: Uri.parse("https://bilibili.com"));
+      if (cookies.isEmpty) {
+        return false;
+      }
       var cookieStr = cookies.map((e) => "${e.name}=${e.value}").join(";");
       Log.i(cookieStr);
       BiliBiliAccountService.instance.setCookie(cookieStr);
       await BiliBiliAccountService.instance.loadUserInfo();
       Get.back();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

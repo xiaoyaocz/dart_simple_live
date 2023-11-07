@@ -1,7 +1,7 @@
 {
-    "version": "1.4.4",
-    "version_num": 10404,
-    "version_desc": "- 优化聊天区使用体验 #52 #130 #139\n- 修复虎牙部分直播间观看一段时间后自动断开 #185\n- SC仅在哔哩哔哩平台显示\n- 修复全屏进入未直播的直播间无法返回问题 #205\n- 增加小窗时是否关闭弹幕选项\n- 房间内关注列表只显示开播房间 #183（#208 @AprDeci）\n- 添加自动关闭延迟弹窗 （#208 @AprDeci）\n- 哔哩哔哩支持登录账号，解决#209，#150\n\n桌面平台：\n- 鼠标侧键优先退出全屏 \n- esc退出全屏播放（#197 @AprDeci）\n- 添加桌面端鼠标滑动操控（#197 @AprDeci）\n- 支持音量调节 #147（#204 @AprDeci）\n- 桌面支持小窗（#204 @AprDeci）",
+    "version": "1.4.5",
+    "version_num": 10405,
+    "version_desc": "- 修复虎牙无法观看问题 #220\n- 修复手势提示不消失问题 #223\n- 刷新直播间不清空消息列表 #225\n- 增加动态取色/主题色选择（#213 @AprDeci）\n\n桌面平台：\n- 增加加载更多按钮 #228",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -113,14 +112,15 @@ class UserPage extends StatelessWidget {
               context,
               children: [
                 ListTile(
-                  leading:
-                      Icon(Get.isDarkMode ? Remix.moon_line : Remix.sun_line),
-                  title: const Text("显示主题"),
+                  leading: const Icon(Remix.moon_line),
+                  title: const Text("外观设置"),
                   trailing: const Icon(
                     Icons.chevron_right,
                     color: Colors.grey,
                   ),
-                  onTap: Get.find<AppSettingsController>().changeTheme,
+                  onTap: () {
+                    Get.toNamed(RoutePath.kAppstyleSetting);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Remix.home_2_line),

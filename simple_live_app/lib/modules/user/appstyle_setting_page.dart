@@ -4,9 +4,7 @@ import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 
-
 class AppstyleSettingPage extends GetView<AppSettingsController> {
-
   const AppstyleSettingPage({Key? key}) : super(key: key);
 
   @override
@@ -20,19 +18,19 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
         children: [
           ListTile(
             leading: Icon(Get.isDarkMode ? Remix.moon_line : Remix.sun_line),
-            title: Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: const Text("显示主题"),
+            title: const Padding(
+              padding: AppStyle.edgeInsetsL8,
+              child: Text("显示主题"),
             ),
             trailing: const Icon(
               Icons.chevron_right,
               color: Colors.grey,
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 24.0),
+            contentPadding: AppStyle.edgeInsetsH24,
             onTap: Get.find<AppSettingsController>().changeTheme,
           ),
           Obx(
-                () => RadioListTile(
+            () => RadioListTile(
               value: true,
               groupValue: controller.isDynamic.value,
               onChanged: (e) {
@@ -42,8 +40,8 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
               title: const Text("动态取色"),
             ),
           ),
-          Obx(()
-          {
+          Obx(
+            () {
               return RadioListTile(
                 value: false,
                 groupValue: controller.isDynamic.value,
@@ -60,35 +58,60 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
             endIndent: 12,
             color: Colors.grey.withOpacity(.1),
           ),
-          Obx(() => AnimatedOpacity(
-            opacity: controller.isDynamic.value?0:1,
-            duration: 0.5.seconds,
-            child: Container(
-              width: double.infinity,
-              child: Column(
-                children: [
-                  Row(
+          Obx(
+            () => AnimatedOpacity(
+              opacity: controller.isDynamic.value ? 0 : 1,
+              duration: 0.5.seconds,
+              child: const SizedBox(
+                width: double.infinity,
+                child: Column(
+                  children: [
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        ColorBox(color: Color(0xffEF5350), name: '红色',),
-                        ColorBox(color: Color(0xff3498db), name: '蓝色',),
-                        ColorBox(color: Color(0xffF06292), name: '粉色',),
-                        ColorBox(color: Color(0xff9575CD), name: '紫色',),
+                        ColorBox(
+                          color: Color(0xffEF5350),
+                          name: '红色',
+                        ),
+                        ColorBox(
+                          color: Color(0xff3498db),
+                          name: '蓝色',
+                        ),
+                        ColorBox(
+                          color: Color(0xffF06292),
+                          name: '粉色',
+                        ),
+                        ColorBox(
+                          color: Color(0xff9575CD),
+                          name: '紫色',
+                        ),
                       ],
                     ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ColorBox(color: Color(0xff26C6DA), name: '青色',),
-                      ColorBox(color: Color(0xff26A69A), name: '绿色',),
-                      ColorBox(color: Color(0xffFFF176), name: '黄色',),
-                      ColorBox(color: Color(0xffFF9800), name: '橙色',),
-                    ],
-                  )
-                ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ColorBox(
+                          color: Color(0xff26C6DA),
+                          name: '青色',
+                        ),
+                        ColorBox(
+                          color: Color(0xff26A69A),
+                          name: '绿色',
+                        ),
+                        ColorBox(
+                          color: Color(0xffFFF176),
+                          name: '黄色',
+                        ),
+                        ColorBox(
+                          color: Color(0xffFF9800),
+                          name: '橙色',
+                        ),
+                      ],
+                    )
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ],
       ),
@@ -96,47 +119,48 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
   }
 }
 
-class ColorBox extends GetView<AppSettingsController>  {
+class ColorBox extends GetView<AppSettingsController> {
   final Color color;
   final String name;
 
-  ColorBox({required this.color, required this.name});
+  const ColorBox({super.key, required this.color, required this.name});
 
   @override
   Widget build(BuildContext context) {
-    return  GestureDetector(
-      onTap: (){
+    return GestureDetector(
+      onTap: () {
         controller.setStyleColor(color.value);
         Get.forceAppUpdate();
       },
       child: Column(
         children: [
-          Obx(() => Container(
-            width: 70.0,
-            height: 40.0,
-            margin: const EdgeInsets.only(left: 7.0,right: 7.0,top: 7.0,bottom: 2.0),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4.0)
-            ),
-            child: AnimatedOpacity(
-              opacity: controller.styleColor.value==color.value?1:0,
-              duration: 0.4.seconds,
-              child: Container(
-                decoration:  BoxDecoration(
+          Obx(
+            () => Container(
+              width: 70.0,
+              height: 40.0,
+              margin: const EdgeInsets.only(
+                  left: 7.0, right: 7.0, top: 7.0, bottom: 2.0),
+              decoration: BoxDecoration(
+                  color: color, borderRadius: BorderRadius.circular(4.0)),
+              child: AnimatedOpacity(
+                opacity: controller.styleColor.value == color.value ? 1 : 0,
+                duration: 0.4.seconds,
+                child: Container(
+                  decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4.0),
-                    border: Border.all(color: Colors.black,width: 1),
+                    border: Border.all(color: Colors.black, width: 1),
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                  ),
                 ),
-                child: Icon(Icons.check,color: Colors.white,),
-              )
-            )
-          ),
+              ),
+            ),
           ),
           Text(name)
         ],
       ),
     );
-
   }
 }
-

@@ -39,6 +39,9 @@ class RoutePath {
   /// 主页设置
   static const kSettingsIndexed = "/settings/indexed";
 
+  /// 外观设置
+  static const kAppstyleSetting = "/settings/appstyle";
+
   /// 账号管理
   static const kSettingsAccount = "/settings/account";
 

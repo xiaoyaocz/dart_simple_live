@@ -86,6 +86,12 @@ class LocalStorageService extends GetxService {
   /// 哔哩哔哩cookie
   static const String kBilibiliCookie = "BilibiliCookie";
 
+  ///主题色
+  static const String kStyleColor = "kStyleColor";
+
+  ///动态取色
+  static const String kIsDynamic = "kIsDynamic";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

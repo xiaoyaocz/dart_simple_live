@@ -24,6 +24,7 @@ import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,11 +86,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isDynamicColor = Get.find<AppSettingsController>().isDynamic.value;
+    Color styleColor = Color(Get.find<AppSettingsController>().styleColor.value);
+    return DynamicColorBuilder(
+        builder: ((ColorScheme?lightDynamic,ColorScheme?darkDynamic) {
+        ColorScheme? lightColorScheme;
+        ColorScheme? darkColorScheme;
+        if(lightDynamic!=null&&darkDynamic!=null&&isDynamicColor) {
+          lightColorScheme = lightDynamic;
+          darkColorScheme = darkDynamic;
+        }else{
+          lightColorScheme = ColorScheme.fromSeed(seedColor: styleColor,brightness: Brightness.light,);
+          darkColorScheme = ColorScheme.fromSeed(seedColor: styleColor,brightness: Brightness.dark);
+        }
     return GetMaterialApp(
       title: "Simple Live",
-      theme: AppStyle.lightTheme,
-
-      darkTheme: AppStyle.darkTheme,
+      theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
+      darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
       themeMode:
           ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
       initialRoute: RoutePath.kIndex,
@@ -140,5 +153,6 @@ class MyApp extends StatelessWidget {
         ),
       ),
     );
-  }
+  }));
+}
 }

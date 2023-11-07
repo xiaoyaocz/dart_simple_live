@@ -77,6 +77,14 @@ class AppSettingsController extends GetxController {
     pipHideDanmu.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPIPHideDanmu, true);
 
+    styleColor.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kStyleColor, 0xff3498db);
+
+    isDynamic.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kIsDynamic, false);
+
+
+
     initSiteSort();
     initHomeSort();
     super.onInit();
@@ -320,4 +328,19 @@ class AppSettingsController extends GetxController {
     pipHideDanmu.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kPIPHideDanmu, e);
   }
+
+
+  var styleColor = 0xff3498db.obs;
+  void setStyleColor(int e){
+    styleColor.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kStyleColor, e);
+  }
+
+  var isDynamic = false.obs;
+  void setIsDynamic(bool e){
+    isDynamic.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kIsDynamic, e);
+  }
+
+
 }

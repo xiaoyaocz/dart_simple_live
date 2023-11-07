@@ -30,6 +30,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:path/path.dart' as p;
+import 'package:dynamic_color/dynamic_color.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -153,100 +154,118 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: "Simple Live",
-      theme: AppStyle.lightTheme,
+    bool isDynamicColor = Get.find<AppSettingsController>().isDynamic.value;
+    Color styleColor =
+        Color(Get.find<AppSettingsController>().styleColor.value);
+    return DynamicColorBuilder(
+        builder: ((ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+      ColorScheme? lightColorScheme;
+      ColorScheme? darkColorScheme;
+      if (lightDynamic != null && darkDynamic != null && isDynamicColor) {
+        lightColorScheme = lightDynamic;
+        darkColorScheme = darkDynamic;
+      } else {
+        lightColorScheme = ColorScheme.fromSeed(
+          seedColor: styleColor,
+          brightness: Brightness.light,
+        );
+        darkColorScheme = ColorScheme.fromSeed(
+            seedColor: styleColor, brightness: Brightness.dark);
+      }
+      return GetMaterialApp(
+        title: "Simple Live",
+        theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
+        darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
+        themeMode:
+            ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
+        initialRoute: RoutePath.kIndex,
+        getPages: AppPages.routes,
+        //国际化
+        locale: const Locale("zh", "CN"),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale("zh", "CN")],
+        logWriterCallback: (text, {bool? isError}) {
+          Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
+        },
+        //debugShowCheckedModeBanner: false,
+        navigatorObservers: [FlutterSmartDialog.observer],
 
-      darkTheme: AppStyle.darkTheme,
-      themeMode:
-          ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
-      initialRoute: RoutePath.kIndex,
-      getPages: AppPages.routes,
-      //国际化
-      locale: const Locale("zh", "CN"),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale("zh", "CN")],
-      logWriterCallback: (text, {bool? isError}) {
-        Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
-      },
-      //debugShowCheckedModeBanner: false,
-      navigatorObservers: [FlutterSmartDialog.observer],
-
-      builder: FlutterSmartDialog.init(
-        loadingBuilder: ((msg) => const AppLoaddingWidget()),
-        //字体大小不跟随系统变化
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
-          child: Stack(
-            children: [
-              //侧键返回
-              RawGestureDetector(
-                excludeFromSemantics: true,
-                gestures: <Type, GestureRecognizerFactory>{
-                  FourthButtonTapGestureRecognizer:
-                      GestureRecognizerFactoryWithHandlers<
-                          FourthButtonTapGestureRecognizer>(
-                    () => FourthButtonTapGestureRecognizer(),
-                    (FourthButtonTapGestureRecognizer instance) {
-                      instance.onTapDown = (TapDownDetails details) async {
-                        //如果处于全屏状态，退出全屏
+        builder: FlutterSmartDialog.init(
+          loadingBuilder: ((msg) => const AppLoaddingWidget()),
+          //字体大小不跟随系统变化
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+            child: Stack(
+              children: [
+                //侧键返回
+                RawGestureDetector(
+                  excludeFromSemantics: true,
+                  gestures: <Type, GestureRecognizerFactory>{
+                    FourthButtonTapGestureRecognizer:
+                        GestureRecognizerFactoryWithHandlers<
+                            FourthButtonTapGestureRecognizer>(
+                      () => FourthButtonTapGestureRecognizer(),
+                      (FourthButtonTapGestureRecognizer instance) {
+                        instance.onTapDown = (TapDownDetails details) async {
+                          //如果处于全屏状态，退出全屏
+                          if (!Platform.isAndroid && !Platform.isIOS) {
+                            if (await windowManager.isFullScreen()) {
+                              await windowManager.setFullScreen(false);
+                              return;
+                            }
+                          }
+                          Get.back();
+                        };
+                      },
+                    ),
+                  },
+                  child: RawKeyboardListener(
+                    focusNode: FocusNode(),
+                    onKey: (RawKeyEvent event) async {
+                      if (event.logicalKey == LogicalKeyboardKey.escape) {
+                        // ESC退出全屏
+                        // 如果处于全屏状态，退出全屏
                         if (!Platform.isAndroid && !Platform.isIOS) {
                           if (await windowManager.isFullScreen()) {
                             await windowManager.setFullScreen(false);
                             return;
                           }
                         }
-                        Get.back();
-                      };
-                    },
-                  ),
-                },
-                child: RawKeyboardListener(
-                  focusNode: FocusNode(),
-                  onKey: (RawKeyEvent event) async {
-                    if (event.logicalKey == LogicalKeyboardKey.escape) {
-                      // ESC退出全屏
-                      // 如果处于全屏状态，退出全屏
-                      if (!Platform.isAndroid && !Platform.isIOS) {
-                        if (await windowManager.isFullScreen()) {
-                          await windowManager.setFullScreen(false);
-                          return;
-                        }
                       }
-                    }
-                  },
-                  child: child!,
+                    },
+                    child: child!,
+                  ),
                 ),
-              ),
 
-              //查看DEBUG日志按钮
-              //只在Debug、Profile模式显示
-              Visibility(
-                visible: !kReleaseMode,
-                child: Positioned(
-                  right: 12,
-                  bottom: 100 + context.mediaQueryViewPadding.bottom,
-                  child: Opacity(
-                    opacity: 0.4,
-                    child: ElevatedButton(
-                      child: const Text("DEBUG LOG"),
-                      onPressed: () {
-                        Get.bottomSheet(
-                          const DebugLogPage(),
-                        );
-                      },
+                //查看DEBUG日志按钮
+                //只在Debug、Profile模式显示
+                Visibility(
+                  visible: !kReleaseMode,
+                  child: Positioned(
+                    right: 12,
+                    bottom: 100 + context.mediaQueryViewPadding.bottom,
+                    child: Opacity(
+                      opacity: 0.4,
+                      child: ElevatedButton(
+                        child: const Text("DEBUG LOG"),
+                        onPressed: () {
+                          Get.bottomSheet(
+                            const DebugLogPage(),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }));
   }
 }

@@ -140,13 +140,8 @@ class LiveRoomController extends PlayerController {
           exit(0);
         });
         autoExitTimer?.cancel();
-        var delay = await Utils.showAlertDialog(
-            "定时关闭已到时,是否延迟关闭?",
-            title: "延迟关闭",
-            confirm: "延迟",
-            cancel: "关闭",
-            selectable: true
-        );
+        var delay = await Utils.showAlertDialog("定时关闭已到时,是否延迟关闭?",
+            title: "延迟关闭", confirm: "延迟", cancel: "关闭", selectable: true);
         if (delay) {
           timer.cancel();
           delayAutoExit.value = true;
@@ -163,7 +158,7 @@ class LiveRoomController extends PlayerController {
   // 弹窗逻辑
 
   void refreshRoom() {
-    messages.clear();
+    //messages.clear();
     superChats.clear();
     liveDanmaku.stop();
 

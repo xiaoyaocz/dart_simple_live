@@ -391,10 +391,9 @@ mixin PlayerGestureControlMixin
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
 
     verticalDragging = true;
-
+    showGestureTip.value = true;
     _currentVolume = await PerfectVolumeControl.volume;
     _currentBrightness = await screenBrightness.current;
-    showGestureTip.value = true;
   }
 
   /// 竖向手势更新

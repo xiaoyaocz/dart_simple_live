@@ -188,4 +188,12 @@ class AppStyle {
   /// 底部导航条的高度
   static double get bottomBarHeight =>
       MediaQuery.of(Get.context!).padding.bottom;
+
+  static Divider get divider => Divider(
+        height: 1,
+        thickness: 1,
+        indent: 16,
+        endIndent: 16,
+        color: Colors.grey.withOpacity(.1),
+      );
 }

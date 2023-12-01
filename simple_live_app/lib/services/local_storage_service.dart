@@ -50,6 +50,12 @@ class LocalStorageService extends GetxService {
   /// 弹幕-屏蔽顶部
   static const String kDanmuHideTop = "DanmuHideTop";
 
+  /// 弹幕-顶部边距
+  static const String kDanmuTopMargin = "DanmuTopMargin";
+
+  /// 弹幕-底部边距
+  static const String kDanmuBottomMargin = "DanmuBottomMargin";
+
   /// 弹幕开启
   static const String kDanmuEnable = "DanmuEnable";
 

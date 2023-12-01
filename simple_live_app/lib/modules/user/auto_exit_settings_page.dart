@@ -45,16 +45,11 @@ class AutoExitSettingsPage extends GetView<AppSettingsController> {
                   ),
                   initialEntryMode: TimePickerEntryMode.inputOnly,
                   builder: (_, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        useMaterial3: false,
+                    return MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        alwaysUse24HourFormat: true,
                       ),
-                      child: MediaQuery(
-                        data: MediaQuery.of(context).copyWith(
-                          alwaysUse24HourFormat: true,
-                        ),
-                        child: child!,
-                      ),
+                      child: child!,
                     );
                   },
                 );

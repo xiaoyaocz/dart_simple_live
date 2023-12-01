@@ -87,72 +87,79 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isDynamicColor = Get.find<AppSettingsController>().isDynamic.value;
-    Color styleColor = Color(Get.find<AppSettingsController>().styleColor.value);
+    Color styleColor =
+        Color(Get.find<AppSettingsController>().styleColor.value);
     return DynamicColorBuilder(
-        builder: ((ColorScheme?lightDynamic,ColorScheme?darkDynamic) {
-        ColorScheme? lightColorScheme;
-        ColorScheme? darkColorScheme;
-        if(lightDynamic!=null&&darkDynamic!=null&&isDynamicColor) {
-          lightColorScheme = lightDynamic;
-          darkColorScheme = darkDynamic;
-        }else{
-          lightColorScheme = ColorScheme.fromSeed(seedColor: styleColor,brightness: Brightness.light,);
-          darkColorScheme = ColorScheme.fromSeed(seedColor: styleColor,brightness: Brightness.dark);
-        }
-    return GetMaterialApp(
-      title: "Simple Live",
-      theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
-      darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
-      themeMode:
-          ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
-      initialRoute: RoutePath.kIndex,
-      getPages: AppPages.routes,
-      //国际化
-      locale: const Locale("zh", "CN"),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale("zh", "CN")],
-      logWriterCallback: (text, {bool? isError}) {
-        Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
-      },
-      //debugShowCheckedModeBanner: false,
-      navigatorObservers: [FlutterSmartDialog.observer],
-      builder: FlutterSmartDialog.init(
-        loadingBuilder: ((msg) => const AppLoaddingWidget()),
-        //字体大小不跟随系统变化
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
-          child: Stack(
-            children: [
-              child!,
-              //查看DEBUG日志按钮
-              //只在Debug、Profile模式显示
-              Visibility(
-                visible: !kReleaseMode,
-                child: Positioned(
-                  right: 12,
-                  bottom: 100 + context.mediaQueryViewPadding.bottom,
-                  child: Opacity(
-                    opacity: 0.4,
-                    child: ElevatedButton(
-                      child: const Text("DEBUG LOG"),
-                      onPressed: () {
-                        Get.bottomSheet(
-                          const DebugLogPage(),
-                        );
-                      },
+        builder: ((ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+      ColorScheme? lightColorScheme;
+      ColorScheme? darkColorScheme;
+      if (lightDynamic != null && darkDynamic != null && isDynamicColor) {
+        lightColorScheme = lightDynamic;
+        darkColorScheme = darkDynamic;
+      } else {
+        lightColorScheme = ColorScheme.fromSeed(
+          seedColor: styleColor,
+          brightness: Brightness.light,
+        );
+        darkColorScheme = ColorScheme.fromSeed(
+            seedColor: styleColor, brightness: Brightness.dark);
+      }
+      return GetMaterialApp(
+        title: "Simple Live",
+        theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
+        darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
+        themeMode:
+            ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
+        initialRoute: RoutePath.kIndex,
+        getPages: AppPages.routes,
+        //国际化
+        locale: const Locale("zh", "CN"),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale("zh", "CN")],
+        logWriterCallback: (text, {bool? isError}) {
+          Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
+        },
+        //debugShowCheckedModeBanner: false,
+        navigatorObservers: [FlutterSmartDialog.observer],
+        builder: FlutterSmartDialog.init(
+          loadingBuilder: ((msg) => const AppLoaddingWidget()),
+          //字体大小不跟随系统变化
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.0),
+            ),
+            child: Stack(
+              children: [
+                child!,
+                //查看DEBUG日志按钮
+                //只在Debug、Profile模式显示
+                Visibility(
+                  visible: !kReleaseMode,
+                  child: Positioned(
+                    right: 12,
+                    bottom: 100 + context.mediaQueryViewPadding.bottom,
+                    child: Opacity(
+                      opacity: 0.4,
+                      child: ElevatedButton(
+                        child: const Text("DEBUG LOG"),
+                        onPressed: () {
+                          Get.bottomSheet(
+                            const DebugLogPage(),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }));
-}
+      );
+    }));
+  }
 }

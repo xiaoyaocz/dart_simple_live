@@ -26,10 +26,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     final page = Obx(
       () {
         if (controller.fullScreenState.value) {
-          return WillPopScope(
-            onWillPop: () async {
+          return PopScope(
+            canPop: false,
+            onPopInvoked: (e) {
               controller.exitFull();
-              return false;
             },
             child: Scaffold(
               body: buildMediaPlayer(),

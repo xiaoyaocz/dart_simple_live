@@ -57,7 +57,6 @@ class AppStyle {
 
   static ThemeData darkTheme = ThemeData.dark().copyWith(
     colorScheme: AppColors.darkColorScheme,
-    useMaterial3: true,
     appBarTheme: AppBarTheme(
       //elevation: 0,
 

@@ -875,16 +875,11 @@ class LiveRoomController extends PlayerController {
                   ),
                   initialEntryMode: TimePickerEntryMode.inputOnly,
                   builder: (_, child) {
-                    return Theme(
-                      data: Get.theme.copyWith(
-                        useMaterial3: false,
+                    return MediaQuery(
+                      data: Get.mediaQuery.copyWith(
+                        alwaysUse24HourFormat: true,
                       ),
-                      child: MediaQuery(
-                        data: Get.mediaQuery.copyWith(
-                          alwaysUse24HourFormat: true,
-                        ),
-                        child: child!,
-                      ),
+                      child: child!,
                     );
                   },
                 );

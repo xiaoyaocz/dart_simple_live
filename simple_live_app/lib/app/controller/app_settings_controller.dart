@@ -34,6 +34,11 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuEnable, true);
     danmuStrokeWidth.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
+    danmuTopMargin.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuTopMargin, 0.0);
+    danmuBottomMargin.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuBottomMargin, 0.0);
+
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
     chatTextSize.value = LocalStorageService.instance
@@ -78,8 +83,6 @@ class AppSettingsController extends GetxController {
 
     isDynamic.value = LocalStorageService.instance
         .getValue(LocalStorageService.kIsDynamic, false);
-
-
 
     initSiteSort();
     initHomeSort();
@@ -316,18 +319,29 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kPIPHideDanmu, e);
   }
 
-
   var styleColor = 0xff3498db.obs;
-  void setStyleColor(int e){
+  void setStyleColor(int e) {
     styleColor.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kStyleColor, e);
   }
 
   var isDynamic = false.obs;
-  void setIsDynamic(bool e){
+  void setIsDynamic(bool e) {
     isDynamic.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kIsDynamic, e);
   }
 
+  var danmuTopMargin = 0.0.obs;
+  void setDanmuTopMargin(double e) {
+    danmuTopMargin.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuTopMargin, e);
+  }
 
+  var danmuBottomMargin = 0.0.obs;
+  void setDanmuBottomMargin(double e) {
+    danmuBottomMargin.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuBottomMargin, e);
+  }
 }

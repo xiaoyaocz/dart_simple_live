@@ -1,0 +1,97 @@
+name: app-build-action-dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'dev'
+
+jobs:
+  build-mac-ios-android:
+    runs-on: macos-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      #签出代码
+      - uses: actions/checkout@v3
+        with:
+          ref: master
+
+      #APK签名设置
+      - name: Download Android keystore
+        id: android_keystore
+        uses: timheuer/base64-to-file@v1.2
+        with:
+          fileName: keystore.jks
+          encodedString: ${{ secrets.KEYSTORE_BASE64 }}
+      - name: Create key.properties
+        run: |
+          echo "storeFile=${{ steps.android_keystore.outputs.filePath }}" > simple_live_app/android/key.properties
+          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
+
+      #设置JAVA环境
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: "12.x"
+          cache: 'gradle'
+
+      #设置Flutter
+      - name: Flutter action
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.13.9'
+          cache: true 
+
+      #更新Flutter的packages
+      - name: Restore packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      #打包APK
+      - name: Build APK
+        run: |
+          cd simple_live_app
+          flutter build apk --release --split-per-abi
+
+      #上传Artifacts
+      - name: Upload APK to Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release.apk
+          path: |
+            simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
+
+      #打包iOS
+      - name: Build IPA
+        run: |
+          cd simple_live_app
+          flutter build ios --release --no-codesign
+
+      #创建未签名ipa
+      - name: Create IPA
+        run: |
+          cd simple_live_app
+          mkdir build/ios/iphoneos/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/Runner.app
+          cd build/ios/iphoneos/
+          zip -q -r ios_no_sign.ipa Payload
+          cd ../../..
+
+      #上传IPA至Artifacts
+      - name: Upload IPA to Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios_no_sign.ipa
+          path: |
+            simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
+
+      #完成
+      - run: echo "🍏 This job's status is ${{ job.status }}."

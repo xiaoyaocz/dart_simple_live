@@ -66,6 +66,9 @@ class AppSettingsController extends GetxController {
     playerCompatMode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerCompatMode, false);
 
+    playerAutoPause.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerAutoPause, false);
+
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
 
@@ -279,6 +282,13 @@ class AppSettingsController extends GetxController {
     playerCompatMode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var playerAutoPause = false.obs;
+  void setPlayerAutoPause(bool e) {
+    playerAutoPause.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerAutoPause, e);
   }
 
   var autoFullScreen = false.obs;

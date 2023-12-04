@@ -29,7 +29,7 @@ class SettingsNumber extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       title: Text(
         title,
-        style: Get.textTheme.bodyMedium,
+        style: Get.textTheme.bodyLarge,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,

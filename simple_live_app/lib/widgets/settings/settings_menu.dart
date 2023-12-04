@@ -24,7 +24,7 @@ class SettingsMenu<T> extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       title: Text(
         title,
-        style: Theme.of(context).textTheme.bodyMedium,
+        style: Theme.of(context).textTheme.bodyLarge,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,

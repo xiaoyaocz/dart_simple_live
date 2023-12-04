@@ -7,22 +7,25 @@ class SettingsAction extends StatelessWidget {
   final String? subtitle;
   final Function()? onTap;
   final String? value;
+  final Widget? leading;
 
   const SettingsAction({
     required this.title,
     this.value,
     this.onTap,
     this.subtitle,
+    this.leading,
     Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      visualDensity: VisualDensity.compact,
+      // visualDensity: VisualDensity.compact,
+      leading: leading,
       title: Text(
         title,
-        style: Theme.of(context).textTheme.bodyMedium,
+        style: Theme.of(context).textTheme.bodyLarge,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,

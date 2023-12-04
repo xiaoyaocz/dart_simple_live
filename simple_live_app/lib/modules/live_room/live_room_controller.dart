@@ -18,6 +18,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
+import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
 import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
@@ -493,122 +494,17 @@ class LiveRoomController extends PlayerController {
   void showDanmuSettingsSheet() {
     Utils.showBottomSheet(
       title: "弹幕设置",
-      child: Obx(
-        () => ListView(
-          padding: AppStyle.edgeInsetsV12,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.disabled_visible),
-              title: Text(
-                "关键词屏蔽",
-                style: Get.textTheme.titleMedium,
-              ),
-              trailing: const Icon(
-                Icons.chevron_right,
-                color: Colors.grey,
-              ),
-              onTap: () {
-                Get.back();
-                showDanmuShield();
-              },
-            ),
-            AppStyle.vGap12,
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕区域: ${(AppSettingsController.instance.danmuArea.value * 100).toInt()}%",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuArea.value,
-              max: 1.0,
-              min: 0.1,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuArea(e);
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(area: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "不透明度: ${(AppSettingsController.instance.danmuOpacity.value * 100).toInt()}%",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuOpacity.value,
-              max: 1.0,
-              min: 0.1,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuOpacity(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(opacity: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕大小: ${(AppSettingsController.instance.danmuSize.value).toInt()}",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuSize.value,
-              min: 8,
-              max: 36,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuSize(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(fontSize: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕速度: ${(AppSettingsController.instance.danmuSpeed.value).toInt()} (越小越快)",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuSpeed.value,
-              min: 4,
-              max: 20,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuSpeed(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(duration: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕描边: ${(AppSettingsController.instance.danmuStrokeWidth.value).toInt()}",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuStrokeWidth.value,
-              min: 0,
-              max: 10,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuStrokeWidth(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(strokeWidth: e),
-                );
-              },
-            ),
-          ],
-        ),
+      child: ListView(
+        padding: AppStyle.edgeInsetsA12,
+        children: [
+          DanmuSettingsView(
+            danmakuController: danmakuController,
+            onTapDanmuShield: () {
+              Get.back();
+              showDanmuShield();
+            },
+          ),
+        ],
       ),
     );
   }

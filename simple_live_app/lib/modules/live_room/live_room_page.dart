@@ -15,6 +15,10 @@ import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
+import 'package:simple_live_app/widgets/settings/settings_action.dart';
+import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/settings/settings_number.dart';
+import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -535,71 +539,103 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildSettings() {
-    return Obx(
-      () => ListView(
-        padding: AppStyle.edgeInsetsA12,
-        children: [
-          Obx(
-            () => Visibility(
-              visible: controller.autoExitEnable.value,
-              child: ListTile(
-                leading: const Icon(Icons.timer_outlined),
-                title: Text("${controller.countdown.value}秒后自动关闭"),
+    return ListView(
+      padding: AppStyle.edgeInsetsA12,
+      children: [
+        Obx(
+          () => Visibility(
+            visible: controller.autoExitEnable.value,
+            child: ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              visualDensity: VisualDensity.compact,
+              title: Text("${parseDuration(controller.countdown.value)}后自动关闭"),
+            ),
+          ),
+        ),
+        Padding(
+          padding: AppStyle.edgeInsetsA12,
+          child: Text(
+            "聊天区",
+            style: Get.textTheme.titleSmall,
+          ),
+        ),
+        SettingsCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Obx(
+                () => SettingsNumber(
+                  title: "文字大小",
+                  value:
+                      AppSettingsController.instance.chatTextSize.value.toInt(),
+                  min: 8,
+                  max: 36,
+                  onChanged: (e) {
+                    AppSettingsController.instance
+                        .setChatTextSize(e.toDouble());
+                  },
+                ),
               ),
-            ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsNumber(
+                  title: "上下间隔",
+                  value:
+                      AppSettingsController.instance.chatTextGap.value.toInt(),
+                  min: 0,
+                  max: 12,
+                  onChanged: (e) {
+                    AppSettingsController.instance.setChatTextGap(e.toDouble());
+                  },
+                ),
+              ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsSwitch(
+                  title: "气泡样式",
+                  value: AppSettingsController.instance.chatBubbleStyle.value,
+                  onChanged: (e) {
+                    AppSettingsController.instance.setChatBubbleStyle(e);
+                  },
+                ),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.disabled_visible),
-            contentPadding: AppStyle.edgeInsetsL8,
-            title: Text(
-              "关键词屏蔽",
-              style: Get.textTheme.titleMedium,
-            ),
-            trailing: const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-            ),
-            onTap: () => controller.showDanmuShield(),
+        ),
+        Padding(
+          padding: AppStyle.edgeInsetsA12,
+          child: Text(
+            "更多设置",
+            style: Get.textTheme.titleSmall,
           ),
-          SwitchListTile(
-            value: AppSettingsController.instance.chatBubbleStyle.value,
-            title: const Text("聊天区气泡样式"),
-            onChanged: (e) {
-              AppSettingsController.instance.setChatBubbleStyle(e);
-            },
+        ),
+        SettingsCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SettingsAction(
+                title: "关键词屏蔽",
+                onTap: controller.showDanmuShield,
+              ),
+              AppStyle.divider,
+              SettingsAction(
+                title: "弹幕设置",
+                onTap: controller.showDanmuSettingsSheet,
+              ),
+              AppStyle.divider,
+              SettingsAction(
+                title: "定时关闭",
+                onTap: controller.showAutoExitSheet,
+              ),
+              AppStyle.divider,
+              SettingsAction(
+                title: "画面尺寸",
+                onTap: controller.showPlayerSettingsSheet,
+              ),
+            ],
           ),
-          Padding(
-            padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-            child: Text(
-              "聊天区文字大小: ${(AppSettingsController.instance.chatTextSize.value).toInt()}",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.chatTextSize.value,
-            min: 8,
-            max: 36,
-            onChanged: (e) {
-              AppSettingsController.instance.setChatTextSize(e);
-            },
-          ),
-          Padding(
-            padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-            child: Text(
-              "聊天区上下间隔: ${(AppSettingsController.instance.chatTextGap.value).toInt()}",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.chatTextGap.value,
-            min: 0,
-            max: 12,
-            onChanged: (e) {
-              AppSettingsController.instance.setChatTextGap(e);
-            },
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -741,5 +777,19 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         ),
       ),
     );
+  }
+
+  String parseDuration(int sec) {
+    // 转为时分秒
+    var h = sec ~/ 3600;
+    var m = (sec % 3600) ~/ 60;
+    var s = sec % 60;
+    if (h > 0) {
+      return "${h.toString().padLeft(2, '0')}小时${m.toString().padLeft(2, '0')}分钟${s.toString().padLeft(2, '0')}秒";
+    }
+    if (m > 0) {
+      return "${m.toString().padLeft(2, '0')}分钟${s.toString().padLeft(2, '0')}秒";
+    }
+    return "${s.toString().padLeft(2, '0')}秒";
   }
 }

@@ -804,7 +804,7 @@ class LiveRoomController extends PlayerController {
     } else if (site.id == Constant.kDouyin) {
       var args = detail.value?.danmakuData as DouyinDanmakuArgs;
       naviteUrl = "snssdk1128://webcast_room?room_id=${args.roomId}";
-      webUrl = "https://www.douyu.com/${args.webRid}";
+      webUrl = "https://live.douyin.com/${args.webRid}";
     } else if (site.id == Constant.kHuya) {
       var args = detail.value?.danmakuData as HuyaDanmakuArgs;
       naviteUrl =

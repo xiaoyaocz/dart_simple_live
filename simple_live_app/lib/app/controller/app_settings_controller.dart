@@ -84,6 +84,9 @@ class AppSettingsController extends GetxController {
     isDynamic.value = LocalStorageService.instance
         .getValue(LocalStorageService.kIsDynamic, false);
 
+    bilibiliLoginTip.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kBilibiliLoginTip, true);
+
     initSiteSort();
     initHomeSort();
     super.onInit();
@@ -343,5 +346,12 @@ class AppSettingsController extends GetxController {
     danmuBottomMargin.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kDanmuBottomMargin, e);
+  }
+
+  var bilibiliLoginTip = true.obs;
+  void setBiliBiliLoginTip(bool e) {
+    bilibiliLoginTip.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kBilibiliLoginTip, e);
   }
 }

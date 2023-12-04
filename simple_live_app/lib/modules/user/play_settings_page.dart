@@ -58,6 +58,19 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                 ),
                 AppStyle.divider,
                 Obx(
+                  () => Visibility(
+                    visible: Platform.isAndroid,
+                    child: SettingsSwitch(
+                      title: "进入后台自动暂停",
+                      value: controller.playerAutoPause.value,
+                      onChanged: (e) {
+                        controller.setPlayerAutoPause(e);
+                      },
+                    ),
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
                   () => SettingsMenu<int>(
                     title: "画面尺寸",
                     value: controller.scaleMode.value,

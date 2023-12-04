@@ -86,6 +86,9 @@ class LocalStorageService extends GetxService {
   /// 播放器兼容模式
   static const String kPlayerCompatMode = "PlayerCompatMode";
 
+  /// 播放器后台自动暂停
+  static const String kPlayerAutoPause = "PlayerAutoPause";
+
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
 

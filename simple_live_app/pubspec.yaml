@@ -50,6 +50,7 @@ dependencies:
   file_picker: ^5.3.3 #文件选择
   floating: ^2.0.1 #PIP画中画
   flutter_inappwebview: ^5.8.0 #WebView
+  connectivity_plus: ^5.0.2 #网络状态
   
   # 视频播放
   media_kit: ^1.1.10

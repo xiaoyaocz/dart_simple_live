@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -288,11 +289,11 @@ class LiveRoomController extends PlayerController {
         return;
       }
       qualites.value = playQualites;
-
-      if (AppSettingsController.instance.qualityLevel.value == 2) {
+      var qualityLevel = await getQualityLevel();
+      if (qualityLevel == 2) {
         //最高
         currentQuality = 0;
-      } else if (AppSettingsController.instance.qualityLevel.value == 0) {
+      } else if (qualityLevel == 0) {
         //最低
         currentQuality = playQualites.length - 1;
       } else {
@@ -306,6 +307,20 @@ class LiveRoomController extends PlayerController {
       Log.logPrint(e);
       SmartDialog.showToast("无法读取播放清晰度");
     }
+  }
+
+  Future<int> getQualityLevel() async {
+    var qualityLevel = AppSettingsController.instance.qualityLevel.value;
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult == ConnectivityResult.mobile) {
+        qualityLevel =
+            AppSettingsController.instance.qualityLevelCellular.value;
+      }
+    } catch (e) {
+      Log.logPrint(e);
+    }
+    return qualityLevel;
   }
 
   void getPlayUrl() async {

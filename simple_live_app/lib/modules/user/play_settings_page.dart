@@ -88,21 +88,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Obx(
-                  () => SettingsMenu<int>(
-                    title: "默认清晰度",
-                    value: controller.qualityLevel.value,
-                    valueMap: const {
-                      0: "最低",
-                      1: "中等",
-                      2: "最高",
-                    },
-                    onChanged: (e) {
-                      controller.setQualityLevel(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
                   () => SettingsSwitch(
                     title: "进入直播间自动全屏",
                     value: controller.autoFullScreen.value,
@@ -122,6 +107,48 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                         controller.setPIPHideDanmu(e);
                       },
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "清晰度",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsMenu<int>(
+                    title: "默认清晰度",
+                    value: controller.qualityLevel.value,
+                    valueMap: const {
+                      0: "最低",
+                      1: "中等",
+                      2: "最高",
+                    },
+                    onChanged: (e) {
+                      controller.setQualityLevel(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu<int>(
+                    title: "数据网络清晰度",
+                    value: controller.qualityLevelCellular.value,
+                    valueMap: const {
+                      0: "最低",
+                      1: "中等",
+                      2: "最高",
+                    },
+                    onChanged: (e) {
+                      controller.setQualityLevelCellular(e);
+                    },
                   ),
                 ),
               ],

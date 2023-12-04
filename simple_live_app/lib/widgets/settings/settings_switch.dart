@@ -19,13 +19,13 @@ class SettingsSwitch extends StatelessWidget {
     return SwitchListTile(
       title: Text(
         title,
-        style: Theme.of(context).textTheme.bodyMedium,
+        style: Theme.of(context).textTheme.bodyLarge,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,
       ),
       trackOutlineColor: const MaterialStatePropertyAll(Colors.transparent),
-      visualDensity: VisualDensity.compact,
+      //visualDensity: VisualDensity.compact,
       contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 8),
       subtitle: subtitle != null
           ? Text(

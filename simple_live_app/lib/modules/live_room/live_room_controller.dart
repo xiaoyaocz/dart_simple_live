@@ -27,7 +27,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-class LiveRoomController extends PlayerController {
+class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
@@ -95,8 +95,12 @@ class LiveRoomController extends PlayerController {
   /// - 当用户向上滚动聊天栏时，不再自动滚动
   var disableAutoScroll = false.obs;
 
+  /// 是否处于后台
+  var isBackground = false;
+
   @override
   void onInit() {
+    WidgetsBinding.instance.addObserver(this);
     if (followController.allList.isEmpty) {
       followController.refreshData();
     }
@@ -205,9 +209,10 @@ class LiveRoomController extends PlayerController {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => chatScrollToBottom(),
       );
-      if (!liveStatus.value) {
+      if (!liveStatus.value || isBackground) {
         return;
       }
+
       addDanmaku([
         DanmakuItem(
           msg.message,
@@ -864,7 +869,25 @@ class LiveRoomController extends PlayerController {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused) {
+      Log.d("进入后台");
+      //进入后台，关闭弹幕
+      danmakuController?.clear();
+      isBackground = true;
+    } else
+    //返回前台
+    if (state == AppLifecycleState.resumed) {
+      Log.d("返回前台");
+      isBackground = false;
+    }
+  }
+
+  @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
 

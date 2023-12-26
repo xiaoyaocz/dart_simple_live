@@ -148,6 +148,25 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                         label: const Text("关注"),
                       ),
               ),
+              Obx(
+                () => controller.specialFollowed.value
+                    ? TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 14),
+                        ),
+                        onPressed: controller.removeFollowUserSpecial,
+                        icon: const Icon(Remix.heart_fill),
+                        label: const Text("取消特别关注"),
+                      )
+                    : TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 14),
+                        ),
+                        onPressed: controller.followUserSpecial,
+                        icon: const Icon(Remix.heart_line),
+                        label: const Text("特别关注"),
+                      ),
+              ),
               const Expanded(child: Center()),
               TextButton.icon(
                 style: TextButton.styleFrom(

@@ -55,6 +55,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   var online = 0.obs;
   var followed = false.obs;
   var liveStatus = false.obs;
+  var specialFollowed = false.obs;
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
 
   /// 滚动控制
@@ -107,6 +108,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     initAutoExit();
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
+    specialFollowed.value =
+        DBService.instance.getFollowUser("${site.id}_$roomId")?.special ??
+            false;
     loadData();
 
     scrollController.addListener(scrollListener);
@@ -263,6 +267,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       getSuperChatMessage();
 
       addHistory();
+      updateFollowUser();
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status || detail.value!.isRecord;
       if (liveStatus.value) {
@@ -446,6 +451,33 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         .toList();
   }
 
+  Timer? updateTimer;
+
+  /// 更新自定义数据
+  void updateFollowUser() {
+    if (detail.value == null) {
+      return;
+    }
+    updateTimer?.cancel();
+
+    var id = "${site.id}_$roomId";
+    var user = DBService.instance.getFollowUser(id);
+    if (user == null) {
+      return;
+    }
+
+    user.userName = detail.value?.userName ?? user.userName;
+    user.face = detail.value?.userAvatar ?? user.face;
+    DBService.instance.addFollow(user);
+
+    updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      user.watchSecond += 10;
+      user.lastWatchTime = DateTime.now();
+      user.lastPlayTime = DateTime.now();
+      DBService.instance.addFollow(user);
+    });
+  }
+
   /// 添加历史记录
   void addHistory() {
     if (detail.value == null) {
@@ -466,6 +498,37 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
 
     DBService.instance.addOrUpdateHistory(history);
+  }
+
+  /// 特别关注
+  void followUserSpecial() {
+    if (detail.value == null) {
+      return;
+    }
+    var id = "${site.id}_$roomId";
+    if (!followed.value) {
+      followUser();
+    }
+    FollowUser? user = DBService.instance.getFollowUser(id);
+    if (user != null) {
+      user.special = true;
+      DBService.instance.addFollow(user);
+    }
+    specialFollowed.value = true;
+  }
+
+  /// 取消特别关注
+  void removeFollowUserSpecial() {
+    if (detail.value == null) {
+      return;
+    }
+    var id = "${site.id}_$roomId";
+    FollowUser? user = DBService.instance.getFollowUser(id);
+    if (user != null) {
+      user.special = false;
+      DBService.instance.addFollow(user);
+    }
+    specialFollowed.value = false;
   }
 
   /// 关注用户
@@ -890,6 +953,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
+    updateTimer?.cancel();
 
     liveDanmaku.stop();
     danmakuController = null;

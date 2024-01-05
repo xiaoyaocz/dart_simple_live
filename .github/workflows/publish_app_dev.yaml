@@ -44,7 +44,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.2'
+          flutter-version: '3.16.5'
           cache: true 
 
       #更新Flutter的packages

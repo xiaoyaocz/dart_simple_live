@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -23,10 +25,20 @@ class AppNavigator {
   static void toLiveRoomDetail(
       {required Site site, required String roomId}) async {
     if (site.id == Constant.kBiliBili &&
-        !BiliBiliAccountService.instance.logined.value) {
+        !BiliBiliAccountService.instance.logined.value &&
+        AppSettingsController.instance.bilibiliLoginTip.value) {
       var result = await Utils.showAlertDialog(
         "哔哩哔哩需要登录才能观看高清直播，是否前往登录？",
         title: "登录哔哩哔哩",
+        actions: [
+          TextButton(
+            onPressed: () {
+              AppSettingsController.instance.setBiliBiliLoginTip(false);
+              Get.back(result: false);
+            },
+            child: const Text("不再提示"),
+          ),
+        ],
       );
       if (result == true) {
         await toBiliBiliLogin();

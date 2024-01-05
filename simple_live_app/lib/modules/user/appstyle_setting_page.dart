@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class AppstyleSettingPage extends GetView<AppSettingsController> {
   const AppstyleSettingPage({Key? key}) : super(key: key);
@@ -11,154 +12,139 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("主题设置"),
+        title: const Text("外观设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsV12,
+        padding: AppStyle.edgeInsetsA12,
         children: [
-          ListTile(
-            leading: Icon(Get.isDarkMode ? Remix.moon_line : Remix.sun_line),
-            title: const Padding(
-              padding: AppStyle.edgeInsetsL8,
-              child: Text("显示主题"),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-            ),
-            contentPadding: AppStyle.edgeInsetsH24,
-            onTap: Get.find<AppSettingsController>().changeTheme,
-          ),
-          Obx(
-            () => RadioListTile(
-              value: true,
-              groupValue: controller.isDynamic.value,
-              onChanged: (e) {
-                controller.setIsDynamic(e ?? true);
-                Get.forceAppUpdate();
-              },
-              title: const Text("动态取色"),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
+            child: Text(
+              "显示主题",
+              style: Get.textTheme.titleSmall,
             ),
           ),
-          Obx(
-            () {
-              return RadioListTile(
-                value: false,
-                groupValue: controller.isDynamic.value,
-                onChanged: (e) {
-                  controller.setIsDynamic(e ?? false);
-                  Get.forceAppUpdate();
-                },
-                title: const Text("选定颜色"),
-              );
-            },
-          ),
-          Divider(
-            indent: 12,
-            endIndent: 12,
-            color: Colors.grey.withOpacity(.1),
-          ),
-          Obx(
-            () => AnimatedOpacity(
-              opacity: controller.isDynamic.value ? 0 : 1,
-              duration: 0.5.seconds,
-              child: const SizedBox(
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ColorBox(
-                          color: Color(0xffEF5350),
-                          name: '红色',
-                        ),
-                        ColorBox(
-                          color: Color(0xff3498db),
-                          name: '蓝色',
-                        ),
-                        ColorBox(
-                          color: Color(0xffF06292),
-                          name: '粉色',
-                        ),
-                        ColorBox(
-                          color: Color(0xff9575CD),
-                          name: '紫色',
-                        ),
-                      ],
+          SettingsCard(
+            child: Obx(
+              () => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<int>(
+                    title: const Text(
+                      "跟随系统",
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ColorBox(
-                          color: Color(0xff26C6DA),
-                          name: '青色',
-                        ),
-                        ColorBox(
-                          color: Color(0xff26A69A),
-                          name: '绿色',
-                        ),
-                        ColorBox(
-                          color: Color(0xffFFF176),
-                          name: '黄色',
-                        ),
-                        ColorBox(
-                          color: Color(0xffFF9800),
-                          name: '橙色',
-                        ),
-                      ],
-                    )
-                  ],
-                ),
+                    visualDensity: VisualDensity.compact,
+                    value: 0,
+                    contentPadding: AppStyle.edgeInsetsH12,
+                    groupValue: controller.themeMode.value,
+                    onChanged: (e) {
+                      controller.setTheme(e ?? 0);
+                    },
+                  ),
+                  RadioListTile<int>(
+                    title: const Text(
+                      "浅色模式",
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    value: 1,
+                    contentPadding: AppStyle.edgeInsetsH12,
+                    groupValue: controller.themeMode.value,
+                    onChanged: (e) {
+                      controller.setTheme(e ?? 1);
+                    },
+                  ),
+                  RadioListTile<int>(
+                    title: const Text(
+                      "深色模式",
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    value: 2,
+                    contentPadding: AppStyle.edgeInsetsH12,
+                    groupValue: controller.themeMode.value,
+                    onChanged: (e) {
+                      controller.setTheme(e ?? 2);
+                    },
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class ColorBox extends GetView<AppSettingsController> {
-  final Color color;
-  final String name;
-
-  const ColorBox({super.key, required this.color, required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        controller.setStyleColor(color.value);
-        Get.forceAppUpdate();
-      },
-      child: Column(
-        children: [
-          Obx(
-            () => Container(
-              width: 70.0,
-              height: 40.0,
-              margin: const EdgeInsets.only(
-                  left: 7.0, right: 7.0, top: 7.0, bottom: 2.0),
-              decoration: BoxDecoration(
-                  color: color, borderRadius: BorderRadius.circular(4.0)),
-              child: AnimatedOpacity(
-                opacity: controller.styleColor.value == color.value ? 1 : 0,
-                duration: 0.4.seconds,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4.0),
-                    border: Border.all(color: Colors.black, width: 1),
+          AppStyle.vGap12,
+          Padding(
+            padding: AppStyle.edgeInsetsA12,
+            child: Text(
+              "主题颜色",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Obx(
+              () => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SettingsSwitch(
+                    value: controller.isDynamic.value,
+                    title: "动态取色",
+                    onChanged: (e) {
+                      controller.setIsDynamic(e);
+                      Get.forceAppUpdate();
+                    },
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                  ),
-                ),
+                  if (!controller.isDynamic.value) AppStyle.divider,
+                  if (!controller.isDynamic.value)
+                    Padding(
+                      padding: AppStyle.edgeInsetsA12,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Color>[
+                          const Color(0xffEF5350),
+                          const Color(0xff3498db),
+                          const Color(0xffF06292),
+                          const Color(0xff9575CD),
+                          const Color(0xff26C6DA),
+                          const Color(0xff26A69A),
+                          const Color(0xffFFF176),
+                          const Color(0xffFF9800),
+                        ]
+                            .map(
+                              (e) => GestureDetector(
+                                onTap: () {
+                                  controller.setStyleColor(e.value);
+                                  Get.forceAppUpdate();
+                                },
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: e,
+                                    borderRadius: AppStyle.radius4,
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Obx(
+                                    () => Center(
+                                      child: Icon(
+                                        Icons.check,
+                                        color: controller.styleColor.value ==
+                                                e.value
+                                            ? Colors.white
+                                            : Colors.transparent,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-          Text(name)
         ],
       ),
     );

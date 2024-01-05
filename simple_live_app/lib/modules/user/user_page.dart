@@ -135,7 +135,7 @@ class UserPage extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Remix.play_circle_line),
-                  title: const Text("播放设置"),
+                  title: const Text("直播设置"),
                   trailing: const Icon(
                     Icons.chevron_right,
                     color: Colors.grey,

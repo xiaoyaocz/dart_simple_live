@@ -17,7 +17,8 @@ class HomePage extends GetView<HomeController> {
           controller: controller.tabController,
           labelPadding: AppStyle.edgeInsetsH20,
           isScrollable: true,
-          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorSize: TabBarIndicatorSize.label,
+          tabAlignment: TabAlignment.center,
           tabs: Sites.supportSites
               .map(
                 (e) => Tab(

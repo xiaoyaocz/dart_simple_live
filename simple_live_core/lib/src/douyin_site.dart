@@ -15,11 +15,17 @@ class DouyinSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => DouyinDanmaku();
 
+  static const String kDefaultUserAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0";
+
+  static const String kDefaultReferer = "https://live.douyin.com";
+
+  static const String kDefaultAuthority = "live.douyin.com";
+
   Map<String, dynamic> headers = {
-    "Authority": "live.douyin.com",
-    "Referer": "https://live.douyin.com",
-    "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+    "Authority": kDefaultAuthority,
+    "Referer": kDefaultReferer,
+    "User-Agent": kDefaultUserAgent,
   };
 
   Future<Map<String, dynamic>> getRequestHeaders() async {
@@ -48,12 +54,7 @@ class DouyinSite implements LiveSite {
     var result = await HttpClient.instance.getText(
       "https://live.douyin.com/hot_live",
       queryParameters: {},
-      header: {
-        "Authority": "live.douyin.com",
-        "Referer": "https://live.douyin.com",
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
-      },
+      header: await getRequestHeaders(),
     );
 
     var renderData =
@@ -198,7 +199,7 @@ class DouyinSite implements LiveSite {
         "browser_language": "zh-CN",
         "browser_platform": "Win32",
         "browser_name": "Edge",
-        "browser_version": "114.0.1823.51"
+        "browser_version": "120.0.0.0"
       },
       header: requestHeader,
     );
@@ -229,17 +230,27 @@ class DouyinSite implements LiveSite {
   }
 
   Future<Map> getRoomWebDetail(String webRid) async {
+    var headResp = await HttpClient.instance
+        .head("https://live.douyin.com/$webRid", header: headers);
+    var dyCookie = "";
+    headResp.headers["set-cookie"]?.forEach((element) {
+      var cookie = element.split(";")[0];
+      if (cookie.contains("ttwid")) {
+        dyCookie += "$cookie;";
+      }
+      if (cookie.contains("__ac_nonce")) {
+        dyCookie += "$cookie;";
+      }
+    });
+
     var result = await HttpClient.instance.getText(
       "https://live.douyin.com/$webRid",
       queryParameters: {},
       header: {
-        "Accept":
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Authority": "live.douyin.com",
-        "Referer": "https://live.douyin.com",
-        "Cookie": "__ac_nonce=${generateRandomString(21)}",
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "Authority": kDefaultAuthority,
+        "Referer": kDefaultReferer,
+        "Cookie": dyCookie,
+        "User-Agent": kDefaultUserAgent,
       },
     );
 
@@ -337,11 +348,10 @@ class DouyinSite implements LiveSite {
       header: {
         "Accept":
             "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Authority": "live.douyin.com",
-        "Referer": "https://www.douyin.com/",
+        "Authority": kDefaultAuthority,
+        "Referer": kDefaultReferer,
         "Cookie": "__ac_nonce=${generateRandomString(21)}",
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "User-Agent": kDefaultUserAgent,
       },
     );
     var items = <LiveRoomItem>[];
@@ -396,11 +406,7 @@ class DouyinSite implements LiveSite {
         "https://tk.nsapps.cn/",
         queryParameters: {},
         header: {"Content-Type": "application/json"},
-        data: {
-          "url": url,
-          "userAgent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51"
-        },
+        data: {"url": url, "userAgent": kDefaultUserAgent},
       );
       var requlestUrl = signResult["data"]["url"].toString();
       return requlestUrl;

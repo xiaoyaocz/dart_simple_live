@@ -1,7 +1,7 @@
 {
-    "version": "1.4.5",
-    "version_num": 10405,
-    "version_desc": "- 修复虎牙无法观看问题 #220\n- 修复手势提示不消失问题 #223\n- 刷新直播间不清空消息列表 #225\n- 增加动态取色/主题色选择（#213 @AprDeci）\n\n桌面平台：\n- 增加加载更多按钮 #228",
+    "version": "1.4.7",
+    "version_num": 10407,
+    "version_desc": "- 非横屏隐藏首页左侧分割线 #235\n- 优化设置页面的UI\n- 修复抖音Web链接跳转错误 #248\n- 增加不再提示登录选项 #219\n- 增加数据网络下清晰度设置 #237\n- 增加进入后台自动暂停选项 #240\n- 进入后台时不添加弹幕 #230\n- 修复抖音直播加载问题 #275",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

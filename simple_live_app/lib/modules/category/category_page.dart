@@ -16,6 +16,7 @@ class CategoryPage extends GetView<CategoryController> {
         title: TabBar(
           controller: controller.tabController,
           padding: EdgeInsets.zero,
+          tabAlignment: TabAlignment.center,
           tabs: Sites.supportSites
               .map(
                 (e) => Tab(
@@ -35,7 +36,7 @@ class CategoryPage extends GetView<CategoryController> {
               .toList(),
           labelPadding: AppStyle.edgeInsetsH20,
           isScrollable: true,
-          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorSize: TabBarIndicatorSize.label,
         ),
       ),
       body: TabBarView(

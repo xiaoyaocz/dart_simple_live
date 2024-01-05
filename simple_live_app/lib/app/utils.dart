@@ -68,6 +68,7 @@ class Utils {
           ),
         ),
         actions: [
+          ...?actions,
           TextButton(
             onPressed: (() => Get.back(result: false)),
             child: Text(cancel.isEmpty ? "取消" : cancel),
@@ -76,7 +77,6 @@ class Utils {
             onPressed: (() => Get.back(result: true)),
             child: Text(confirm.isEmpty ? "确定" : confirm),
           ),
-          ...?actions,
         ],
       ),
     );

@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.4.5+10405
+version: 1.4.7+10407
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -52,6 +52,7 @@ dependencies:
   window_manager: ^0.3.7 #窗口管理
   floating: ^2.0.1 #PIP画中画
   flutter_inappwebview: ^5.8.0 #WebView
+  connectivity_plus: ^5.0.2 #网络状态
   
   # 视频播放
   media_kit: ^1.1.10

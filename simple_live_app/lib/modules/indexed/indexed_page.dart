@@ -38,10 +38,12 @@ class IndexedPage extends GetView<IndexedController> {
                   () => Container(
                     decoration: BoxDecoration(
                       border: Border(
-                        left: BorderSide(
-                          color: Colors.grey.withOpacity(.2),
-                          width: 1,
-                        ),
+                        left: orientation == Orientation.landscape
+                            ? BorderSide(
+                                color: Colors.grey.withOpacity(.2),
+                                width: 1,
+                              )
+                            : BorderSide.none,
                       ),
                     ),
                     child: IndexedStack(

@@ -42,7 +42,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     },
                   ),
                 ),
-                AppStyle.divider,
+                if (Platform.isAndroid) AppStyle.divider,
                 Obx(
                   () => Visibility(
                     visible: Platform.isAndroid,
@@ -57,17 +57,12 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                   ),
                 ),
                 AppStyle.divider,
-                Obx(
-                  () => Visibility(
-                    visible: Platform.isAndroid,
-                    child: SettingsSwitch(
-                      title: "进入后台自动暂停",
-                      value: controller.playerAutoPause.value,
-                      onChanged: (e) {
-                        controller.setPlayerAutoPause(e);
-                      },
-                    ),
-                  ),
+                SettingsSwitch(
+                  title: "进入后台自动暂停",
+                  value: controller.playerAutoPause.value,
+                  onChanged: (e) {
+                    controller.setPlayerAutoPause(e);
+                  },
                 ),
                 AppStyle.divider,
                 Obx(

@@ -57,12 +57,14 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                   ),
                 ),
                 AppStyle.divider,
-                SettingsSwitch(
-                  title: "进入后台自动暂停",
-                  value: controller.playerAutoPause.value,
-                  onChanged: (e) {
-                    controller.setPlayerAutoPause(e);
-                  },
+                Obx(
+                  () => SettingsSwitch(
+                    title: "进入后台自动暂停",
+                    value: controller.playerAutoPause.value,
+                    onChanged: (e) {
+                      controller.setPlayerAutoPause(e);
+                    },
+                  ),
                 ),
                 AppStyle.divider,
                 Obx(

@@ -16,6 +16,7 @@ import 'package:perfect_volume_control/perfect_volume_control.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
+import 'package:simple_live_app/app/custom_throttle.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -375,6 +376,8 @@ mixin PlayerGestureControlMixin
   var _currentBrightness = 1.0;
   var verStartPosition = 0.0;
 
+  DelayedThrottle? throttle;
+
   /// 竖向手势开始
   void onVerticalDragStart(DragStartDetails details) async {
     if (lockControlsState.value && fullScreenState.value) {
@@ -389,6 +392,8 @@ mixin PlayerGestureControlMixin
 
     verStartPosition = dy;
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
+
+    throttle = DelayedThrottle(200);
 
     verticalDragging = true;
     showGestureTip.value = true;
@@ -415,30 +420,43 @@ mixin PlayerGestureControlMixin
     }
   }
 
+  int lastVolume = -1; // it's ok to be -1
+
   void setGestureVolume(double dy) {
     double value = 0.0;
+    double seek;
     if (dy > verStartPosition) {
       value = ((dy - verStartPosition) / (Get.height * 0.5));
 
-      var seek = _currentVolume - value;
+      seek = _currentVolume - value;
       if (seek < 0) {
         seek = 0;
       }
-      PerfectVolumeControl.setVolume(seek);
-      gestureTipText.value = "音量 ${(seek * 100).toInt()}%";
-      Log.logPrint(value);
     } else {
       value = ((dy - verStartPosition) / (Get.height * 0.5));
-      var seek = value.abs() + _currentVolume;
+      seek = value.abs() + _currentVolume;
       if (seek > 1) {
         seek = 1;
       }
-
-      PerfectVolumeControl.setVolume(seek);
-
-      gestureTipText.value = "音量 ${(seek * 100).toInt()}%";
-      Log.logPrint(value);
     }
+    int volume = _convertVolume((seek * 100).round());
+    if (volume == lastVolume) {
+      return;
+    }
+    lastVolume = volume;
+    // update UI outside throttle to make it more fluent
+    gestureTipText.value = "音量 $volume%";
+    throttle?.invoke(() async => await _realSetVolume(volume));
+  }
+
+  // 0 to 100, 5 step each
+  int _convertVolume(int volume) {
+    return (volume / 5).round() * 5;
+  }
+
+  Future<void> _realSetVolume(int volume) async {
+    Log.logPrint(volume);
+    return await PerfectVolumeControl.setVolume(volume / 100);
   }
 
   void setGestureBrightness(double dy) {
@@ -472,6 +490,7 @@ mixin PlayerGestureControlMixin
     if (lockControlsState.value && fullScreenState.value) {
       return;
     }
+    throttle = null;
     verticalDragging = false;
     leftVerticalDrag = false;
     showGestureTip.value = false;

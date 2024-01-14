@@ -128,6 +128,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       autoExitMinutes.value =
           AppSettingsController.instance.autoExitDuration.value;
       setAutoExit();
+    } else {
+      autoExitMinutes.value =
+          AppSettingsController.instance.roomAutoExitDuration.value;
     }
   }
 
@@ -805,6 +808,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
                 var duration =
                     Duration(hours: value.hour, minutes: value.minute);
                 autoExitMinutes.value = duration.inMinutes;
+                AppSettingsController.instance.setRoomAutoExitDuration(autoExitMinutes.value);
                 //setAutoExitDuration(duration.inMinutes);
                 setAutoExit();
               },

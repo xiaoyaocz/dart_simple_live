@@ -198,8 +198,20 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
       // 关键词屏蔽检查
       for (var keyword in AppSettingsController.instance.shieldList) {
-        if (msg.message.contains(keyword)) {
-          Log.d("关键词：$keyword\n消息内容：${msg.message}");
+        Pattern? pattern;
+        if (Utils.isRegexFormat(keyword)) {
+          String removedSlash = Utils.removeRegexFormat(keyword);
+          try {
+            pattern = RegExp(removedSlash);
+          } catch (e) {
+            // should avoid this during add keyword
+            Log.d("关键词：$keyword 正则格式错误");
+          }
+        } else {
+          pattern = keyword;
+        }
+        if (pattern != null && msg.message.contains(pattern)) {
+          Log.d("关键词：$keyword\n已屏蔽消息内容：${msg.message}");
           return;
         }
       }

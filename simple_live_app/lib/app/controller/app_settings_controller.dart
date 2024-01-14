@@ -63,6 +63,9 @@ class AppSettingsController extends GetxController {
     autoExitDuration.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitDuration, 60);
 
+    roomAutoExitDuration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kRoomAutoExitDuration, 60);
+
     playerCompatMode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerCompatMode, false);
 
@@ -275,6 +278,13 @@ class AppSettingsController extends GetxController {
     autoExitDuration.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kAutoExitDuration, e);
+  }
+
+  var roomAutoExitDuration = 60.obs;
+  void setRoomAutoExitDuration(int e) {
+    roomAutoExitDuration.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kRoomAutoExitDuration, e);
   }
 
   var playerCompatMode = false.obs;

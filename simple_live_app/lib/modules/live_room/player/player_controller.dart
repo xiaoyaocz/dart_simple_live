@@ -27,8 +27,9 @@ mixin PlayerMixin {
 
   /// 播放器实例
   late final player = Player(
-    configuration: const PlayerConfiguration(
+    configuration: PlayerConfiguration(
       title: "Simple Live Player",
+      bufferSize: AppSettingsController.instance.playerBufferSize.value * 1024,
     ),
   );
 
@@ -43,6 +44,7 @@ mixin PlayerMixin {
         : VideoControllerConfiguration(
             enableHardwareAcceleration:
                 AppSettingsController.instance.hardwareDecode.value,
+            androidAttachSurfaceAfterVideoParameters: false,
           ),
   );
 }

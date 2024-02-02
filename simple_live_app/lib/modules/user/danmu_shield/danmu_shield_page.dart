@@ -10,7 +10,7 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("弹幕关键词屏蔽"),
+        title: const Text("弹幕屏蔽"),
       ),
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
@@ -20,7 +20,7 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
             decoration: InputDecoration(
               contentPadding: AppStyle.edgeInsetsH12,
               border: const OutlineInputBorder(),
-              hintText: "请输入关键词",
+              hintText: "请输入关键词或正则表达式",
               suffixIcon: TextButton.icon(
                 onPressed: controller.add,
                 icon: const Icon(Icons.add),
@@ -30,6 +30,11 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
             onSubmitted: (e) {
               controller.add();
             },
+          ),
+          AppStyle.vGap4,
+          Text(
+            '以"/"开头和结尾将视作正则表达式, 如"/\\d+/"表示屏蔽所有数字',
+            style: Get.textTheme.bodySmall,
           ),
           AppStyle.vGap12,
           Obx(

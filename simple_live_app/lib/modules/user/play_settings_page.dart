@@ -42,7 +42,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     },
                   ),
                 ),
-                AppStyle.divider,
+                if (Platform.isAndroid) AppStyle.divider,
                 Obx(
                   () => Visibility(
                     visible: Platform.isAndroid,
@@ -58,15 +58,27 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                 ),
                 AppStyle.divider,
                 Obx(
-                  () => Visibility(
-                    visible: Platform.isAndroid,
-                    child: SettingsSwitch(
-                      title: "进入后台自动暂停",
-                      value: controller.playerAutoPause.value,
-                      onChanged: (e) {
-                        controller.setPlayerAutoPause(e);
-                      },
-                    ),
+                  () => SettingsNumber(
+                    title: "缓冲区大小",
+                    subtitle: "若播放卡顿可尝试调高此选项",
+                    value: controller.playerBufferSize.value,
+                    min: 32,
+                    max: 1024,
+                    step: 4,
+                    unit: "MB",
+                    onChanged: (e) {
+                      controller.setPlayerBufferSize(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    title: "进入后台自动暂停",
+                    value: controller.playerAutoPause.value,
+                    onChanged: (e) {
+                      controller.setPlayerAutoPause(e);
+                    },
                   ),
                 ),
                 AppStyle.divider,

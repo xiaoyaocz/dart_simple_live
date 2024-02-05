@@ -1,7 +1,7 @@
 {
     "version": "1.4.8",
     "version_num": 10408,
-    "version_desc": "- 修复抖音内容加载失败问题 #285\n- iOS放开后台播放设置\n- 修复音量拖动调节时卡顿问题 #92 (#294 @abcghy)\n- 弹幕支持使用正则屏蔽 #219 (#295 @abcghy)\n- 定时关闭建议记忆上次设定的时长 #278 (#296 @abcghy)",
+    "version_desc": "- 修复抖音内容加载失败问题 #285\n- iOS放开后台播放设置\n- 修复音量拖动调节时卡顿问题 #92 (#294 @abcghy)\n- 弹幕支持使用正则屏蔽 #283 (#295 @abcghy)\n- 定时关闭建议记忆上次设定的时长 #278 (#296 @abcghy)",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

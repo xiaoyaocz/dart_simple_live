@@ -518,4 +518,12 @@ class Utils {
     }
     return null;
   }
+
+  static bool isRegexFormat(String keyword) {
+    return keyword.startsWith('/') && keyword.endsWith('/') && keyword.length > 2;
+  }
+
+  static String removeRegexFormat(String keyword) {
+    return keyword.substring(1, keyword.length - 1);
+  }
 }

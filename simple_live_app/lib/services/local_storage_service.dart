@@ -83,11 +83,18 @@ class LocalStorageService extends GetxService {
   /// 定时关闭时间（分钟）
   static const String kAutoExitDuration = "AutoExitDuration";
 
+  /// 房间内定时关闭时间（分钟）
+  /// 需要一个不同的 key，因为用户在房间内设置的倒计时和全局的可能不同。
+  static const String kRoomAutoExitDuration = "RoomAutoExitDuration";
+
   /// 播放器兼容模式
   static const String kPlayerCompatMode = "PlayerCompatMode";
 
   /// 播放器后台自动暂停
   static const String kPlayerAutoPause = "PlayerAutoPause";
+
+  /// 播放器缓冲区大小
+  static const String kPlayerBufferSize = "PlayerBufferSize";
 
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";

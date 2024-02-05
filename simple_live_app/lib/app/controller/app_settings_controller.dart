@@ -63,6 +63,9 @@ class AppSettingsController extends GetxController {
     autoExitDuration.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitDuration, 60);
 
+    roomAutoExitDuration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kRoomAutoExitDuration, 60);
+
     playerCompatMode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerCompatMode, false);
 
@@ -91,6 +94,9 @@ class AppSettingsController extends GetxController {
 
     bilibiliLoginTip.value = LocalStorageService.instance
         .getValue(LocalStorageService.kBilibiliLoginTip, true);
+
+    playerBufferSize.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerBufferSize, 32);
 
     initSiteSort();
     initHomeSort();
@@ -277,11 +283,25 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kAutoExitDuration, e);
   }
 
+  var roomAutoExitDuration = 60.obs;
+  void setRoomAutoExitDuration(int e) {
+    roomAutoExitDuration.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kRoomAutoExitDuration, e);
+  }
+
   var playerCompatMode = false.obs;
   void setPlayerCompatMode(bool e) {
     playerCompatMode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var playerBufferSize = 32.obs;
+  void setPlayerBufferSize(int e) {
+    playerBufferSize.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerBufferSize, e);
   }
 
   var playerAutoPause = false.obs;

@@ -96,7 +96,7 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kBilibiliLoginTip, true);
 
     playerBufferSize.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kPlayerBufferSize, 128);
+        .getValue(LocalStorageService.kPlayerBufferSize, 32);
 
     initSiteSort();
     initHomeSort();
@@ -297,7 +297,7 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kPlayerCompatMode, e);
   }
 
-  var playerBufferSize = 128.obs;
+  var playerBufferSize = 32.obs;
   void setPlayerBufferSize(int e) {
     playerBufferSize.value = e;
     LocalStorageService.instance

@@ -380,6 +380,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         "user-agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
       };
+    } else if (site.id == Constant.kHuya) {
+      headers = {
+        "referer": "https://www.huya.com",
+        "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0"
+      };
     }
 
     player.open(
@@ -853,7 +859,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
                 var duration =
                     Duration(hours: value.hour, minutes: value.minute);
                 autoExitMinutes.value = duration.inMinutes;
-                AppSettingsController.instance.setRoomAutoExitDuration(autoExitMinutes.value);
+                AppSettingsController.instance
+                    .setRoomAutoExitDuration(autoExitMinutes.value);
                 //setAutoExitDuration(duration.inMinutes);
                 setAutoExit();
               },

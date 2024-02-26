@@ -497,7 +497,7 @@ class HuyaSite implements LiveSite {
       "uid": uid,
       "uuid": getUUid(),
       "t": query["t"]!,
-      "sv": "2110211124"
+      "sv": "2401310322"
     }).query;
   }
 

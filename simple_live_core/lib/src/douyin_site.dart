@@ -15,11 +15,17 @@ class DouyinSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => DouyinDanmaku();
 
+  static const String kDefaultUserAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0";
+
+  static const String kDefaultReferer = "https://live.douyin.com";
+
+  static const String kDefaultAuthority = "live.douyin.com";
+
   Map<String, dynamic> headers = {
-    "Authority": "live.douyin.com",
-    "Referer": "https://live.douyin.com",
-    "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+    "Authority": kDefaultAuthority,
+    "Referer": kDefaultReferer,
+    "User-Agent": kDefaultUserAgent,
   };
 
   Future<Map<String, dynamic>> getRequestHeaders() async {
@@ -46,18 +52,13 @@ class DouyinSite implements LiveSite {
   Future<List<LiveCategory>> getCategores() async {
     List<LiveCategory> categories = [];
     var result = await HttpClient.instance.getText(
-      "https://live.douyin.com/hot_live",
+      "https://live.douyin.com/",
       queryParameters: {},
-      header: {
-        "Authority": "live.douyin.com",
-        "Referer": "https://live.douyin.com",
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
-      },
+      header: await getRequestHeaders(),
     );
 
     var renderData =
-        RegExp(r'\{\\"pathname\\":\\"\/hot_live\\",\\"categoryData.*?\]\\n')
+        RegExp(r'\{\\"pathname\\":\\"\/\\",\\"categoryData.*?\]\\n')
                 .firstMatch(result)
                 ?.group(0) ??
             "";
@@ -198,7 +199,7 @@ class DouyinSite implements LiveSite {
         "browser_language": "zh-CN",
         "browser_platform": "Win32",
         "browser_name": "Edge",
-        "browser_version": "114.0.1823.51"
+        "browser_version": "120.0.0.0"
       },
       header: requestHeader,
     );
@@ -229,17 +230,27 @@ class DouyinSite implements LiveSite {
   }
 
   Future<Map> getRoomWebDetail(String webRid) async {
+    var headResp = await HttpClient.instance
+        .head("https://live.douyin.com/$webRid", header: headers);
+    var dyCookie = "";
+    headResp.headers["set-cookie"]?.forEach((element) {
+      var cookie = element.split(";")[0];
+      if (cookie.contains("ttwid")) {
+        dyCookie += "$cookie;";
+      }
+      if (cookie.contains("__ac_nonce")) {
+        dyCookie += "$cookie;";
+      }
+    });
+
     var result = await HttpClient.instance.getText(
       "https://live.douyin.com/$webRid",
       queryParameters: {},
       header: {
-        "Accept":
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Authority": "live.douyin.com",
-        "Referer": "https://live.douyin.com",
-        "Cookie": "__ac_nonce=${generateRandomString(21)}",
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "Authority": kDefaultAuthority,
+        "Referer": kDefaultReferer,
+        "Cookie": dyCookie,
+        "User-Agent": kDefaultUserAgent,
       },
     );
 
@@ -316,34 +327,49 @@ class DouyinSite implements LiveSite {
       "browser_language": "zh-CN",
       "browser_platform": "Win32",
       "browser_name": "Edge",
-      "browser_version": "114.0.1823.58",
+      "browser_version": "120.0.0.0",
       "browser_online": "true",
       "engine_name": "Blink",
-      "engine_version": "114.0.0.0",
+      "engine_version": "120.0.0.0",
       "os_name": "Windows",
       "os_version": "10",
       "cpu_core_num": "12",
       "device_memory": "8",
       "platform": "PC",
-      "downlink": "4.7",
+      "downlink": "10",
       "effective_type": "4g",
       "round_trip_time": "100",
-      "webid": "7247041636524377637",
+      "webid": "7273033021933946427",
     });
     var requlestUrl = await signUrl(uri.toString());
+
+    var headResp = await HttpClient.instance
+        .head('https://live.douyin.com', header: headers);
+    var dyCookie = "";
+    headResp.headers["set-cookie"]?.forEach((element) {
+      var cookie = element.split(";")[0];
+      if (cookie.contains("ttwid")) {
+        dyCookie += "$cookie;";
+      }
+      if (cookie.contains("__ac_nonce")) {
+        dyCookie += "$cookie;";
+      }
+    });
+
     var result = await HttpClient.instance.getJson(
       requlestUrl,
       queryParameters: {},
       header: {
-        "Accept":
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Authority": "live.douyin.com",
-        "Referer": "https://www.douyin.com/",
-        "Cookie": "__ac_nonce=${generateRandomString(21)}",
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "Accept": "*/*",
+        "Authority": 'www.douyin.com',
+        "Referer": requlestUrl,
+        "Cookie": dyCookie,
+        "User-Agent": kDefaultUserAgent,
       },
     );
+    if (result == 'blocked') {
+      throw Exception("抖音直播搜索被限制，请稍后再试");
+    }
     var items = <LiveRoomItem>[];
     for (var item in result["data"] ?? []) {
       var itemData = json.decode(item["lives"]["rawdata"].toString());
@@ -396,13 +422,10 @@ class DouyinSite implements LiveSite {
         "https://tk.nsapps.cn/",
         queryParameters: {},
         header: {"Content-Type": "application/json"},
-        data: {
-          "url": url,
-          "userAgent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51"
-        },
+        data: {"url": url, "userAgent": kDefaultUserAgent},
       );
-      var requlestUrl = signResult["data"]["url"].toString();
+      var requlestUrl =
+          '${signResult["data"]["url"]}&msToken=${Uri.encodeComponent(signResult["data"]["mstoken"])}';
       return requlestUrl;
     } catch (e) {
       CoreLog.error(e);

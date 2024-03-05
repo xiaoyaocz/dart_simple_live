@@ -5,17 +5,13 @@ class CoreError extends Error {
   /// 错误信息
   final String message;
 
-  /// 是否是Http请求错误
-  final bool isHttpError;
-
   CoreError(
     this.message, {
     this.statusCode = 0,
-    this.isHttpError = false,
   });
   @override
   String toString() {
-    if (isHttpError && message.isEmpty) {
+    if (statusCode != 0) {
       return statusCodeToString(statusCode);
     }
 

@@ -34,6 +34,11 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuEnable, true);
     danmuStrokeWidth.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
+    danmuTopMargin.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuTopMargin, 0.0);
+    danmuBottomMargin.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuBottomMargin, 0.0);
+
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
     chatTextSize.value = LocalStorageService.instance
@@ -42,8 +47,15 @@ class AppSettingsController extends GetxController {
     chatTextGap.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextGap, 4.0);
 
+    chatBubbleStyle.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kChatBubbleStyle,
+      false,
+    );
+
     qualityLevel.value = LocalStorageService.instance
         .getValue(LocalStorageService.kQualityLevel, 1);
+    qualityLevelCellular.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kQualityLevelCellular, 1);
 
     autoExitEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitEnable, false);
@@ -51,8 +63,14 @@ class AppSettingsController extends GetxController {
     autoExitDuration.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitDuration, 60);
 
+    roomAutoExitDuration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kRoomAutoExitDuration, 60);
+
     playerCompatMode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerCompatMode, false);
+
+    playerAutoPause.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerAutoPause, false);
 
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
@@ -64,6 +82,21 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kPlayerScaleMode,
       0,
     );
+
+    pipHideDanmu.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPIPHideDanmu, true);
+
+    styleColor.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kStyleColor, 0xff3498db);
+
+    isDynamic.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kIsDynamic, false);
+
+    bilibiliLoginTip.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kBilibiliLoginTip, true);
+
+    playerBufferSize.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerBufferSize, 32);
 
     initSiteSort();
     initHomeSort();
@@ -178,6 +211,13 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kChatTextGap, e);
   }
 
+  var chatBubbleStyle = false.obs;
+  void setChatBubbleStyle(bool e) {
+    chatBubbleStyle.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kChatBubbleStyle, e);
+  }
+
   var danmuSize = 16.0.obs;
   void setDanmuSize(double e) {
     danmuSize.value = e;
@@ -222,6 +262,13 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kQualityLevel, level);
   }
 
+  var qualityLevelCellular = 1.obs;
+  void setQualityLevelCellular(int level) {
+    qualityLevelCellular.value = level;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kQualityLevelCellular, level);
+  }
+
   var autoExitEnable = false.obs;
   void setAutoExitEnable(bool e) {
     autoExitEnable.value = e;
@@ -236,11 +283,32 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kAutoExitDuration, e);
   }
 
+  var roomAutoExitDuration = 60.obs;
+  void setRoomAutoExitDuration(int e) {
+    roomAutoExitDuration.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kRoomAutoExitDuration, e);
+  }
+
   var playerCompatMode = false.obs;
   void setPlayerCompatMode(bool e) {
     playerCompatMode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var playerBufferSize = 32.obs;
+  void setPlayerBufferSize(int e) {
+    playerBufferSize.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerBufferSize, e);
+  }
+
+  var playerAutoPause = false.obs;
+  void setPlayerAutoPause(bool e) {
+    playerAutoPause.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerAutoPause, e);
   }
 
   var autoFullScreen = false.obs;
@@ -285,5 +353,44 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kHomeSort,
       homeSort.join(","),
     );
+  }
+
+  var pipHideDanmu = true.obs;
+  void setPIPHideDanmu(bool e) {
+    pipHideDanmu.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kPIPHideDanmu, e);
+  }
+
+  var styleColor = 0xff3498db.obs;
+  void setStyleColor(int e) {
+    styleColor.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kStyleColor, e);
+  }
+
+  var isDynamic = false.obs;
+  void setIsDynamic(bool e) {
+    isDynamic.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kIsDynamic, e);
+  }
+
+  var danmuTopMargin = 0.0.obs;
+  void setDanmuTopMargin(double e) {
+    danmuTopMargin.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuTopMargin, e);
+  }
+
+  var danmuBottomMargin = 0.0.obs;
+  void setDanmuBottomMargin(double e) {
+    danmuBottomMargin.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuBottomMargin, e);
+  }
+
+  var bilibiliLoginTip = true.obs;
+  void setBiliBiliLoginTip(bool e) {
+    bilibiliLoginTip.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kBilibiliLoginTip, e);
   }
 }

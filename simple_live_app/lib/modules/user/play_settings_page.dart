@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/settings/settings_menu.dart';
+import 'package:simple_live_app/widgets/settings/settings_number.dart';
+import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class PlaySettingsPage extends GetView<AppSettingsController> {
   const PlaySettingsPage({Key? key}) : super(key: key);
@@ -12,201 +16,214 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("播放设置"),
+        title: const Text("直播间设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsV12,
+        padding: AppStyle.edgeInsetsA12,
         children: [
-          Obx(
-            () => SwitchListTile(
-              title: Text(
-                "进入直播间自动全屏",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              value: controller.autoFullScreen.value,
-              onChanged: (e) {
-                controller.setAutoFullScreen(e);
-              },
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
+            child: Text(
+              "播放器",
+              style: Get.textTheme.titleSmall,
             ),
           ),
-          Obx(
-            () => SwitchListTile(
-              title: Text(
-                "硬件解码",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              value: controller.hardwareDecode.value,
-              onChanged: (e) {
-                controller.setHardwareDecode(e);
-              },
-            ),
-          ),
-          Obx(
-            () => Visibility(
-              visible: Platform.isAndroid,
-              child: SwitchListTile(
-                title: Text(
-                  "兼容模式",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                subtitle: const Text("若播放卡顿可尝试打开此选项"),
-                value: controller.playerCompatMode.value,
-                onChanged: (e) {
-                  controller.setPlayerCompatMode(e);
-                },
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-                  child: Text(
-                    "默认清晰度设置",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 100,
-                height: 36,
-                child: Obx(
-                  () => DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      contentPadding: AppStyle.edgeInsetsH12,
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 2,
-                        child: Text(
-                          "最高",
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 1,
-                        child: Text(
-                          "中等",
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 0,
-                        child: Text(
-                          "最低",
-                        ),
-                      ),
-                    ],
-                    value: controller.qualityLevel.value,
+          SettingsCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    title: "硬件解码",
+                    value: controller.hardwareDecode.value,
+                    subtitle: "播放失败可尝试关闭此选项",
                     onChanged: (e) {
-                      controller.setQualityLevel(e ?? 1);
+                      controller.setHardwareDecode(e);
                     },
                   ),
                 ),
-              ),
-              AppStyle.hGap12,
-            ],
-          ),
-          AppStyle.vGap12,
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-                  child: Text(
-                    "画面尺寸",
-                    style: Theme.of(context).textTheme.titleMedium,
+                if (Platform.isAndroid) AppStyle.divider,
+                Obx(
+                  () => Visibility(
+                    visible: Platform.isAndroid,
+                    child: SettingsSwitch(
+                      title: "兼容模式",
+                      subtitle: "若播放卡顿可尝试打开此选项",
+                      value: controller.playerCompatMode.value,
+                      onChanged: (e) {
+                        controller.setPlayerCompatMode(e);
+                      },
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(
-                width: 100,
-                height: 36,
-                child: Obx(
-                  () => DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      contentPadding: AppStyle.edgeInsetsH12,
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 0,
-                        child: Text(
-                          "适应",
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 1,
-                        child: Text(
-                          "拉伸",
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 2,
-                        child: Text(
-                          "铺满",
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 3,
-                        child: Text(
-                          "16:9",
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 4,
-                        child: Text(
-                          "4:3",
-                        ),
-                      ),
-                    ],
+                // AppStyle.divider,
+                // Obx(
+                //   () => SettingsNumber(
+                //     title: "缓冲区大小",
+                //     subtitle: "若播放卡顿可尝试调高此选项",
+                //     value: controller.playerBufferSize.value,
+                //     min: 32,
+                //     max: 1024,
+                //     step: 4,
+                //     unit: "MB",
+                //     onChanged: (e) {
+                //       controller.setPlayerBufferSize(e);
+                //     },
+                //   ),
+                // ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    title: "进入后台自动暂停",
+                    value: controller.playerAutoPause.value,
+                    onChanged: (e) {
+                      controller.setPlayerAutoPause(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu<int>(
+                    title: "画面尺寸",
                     value: controller.scaleMode.value,
+                    valueMap: const {
+                      0: "适应",
+                      1: "拉伸",
+                      2: "铺满",
+                      3: "16:9",
+                      4: "4:3",
+                    },
                     onChanged: (e) {
-                      controller.setScaleMode(e ?? 0);
+                      controller.setScaleMode(e);
                     },
                   ),
                 ),
-              ),
-              AppStyle.hGap12,
-            ],
-          ),
-          AppStyle.vGap12,
-          Obx(
-            () => Padding(
-              padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-              child: Text(
-                "聊天区文字大小: ${(controller.chatTextSize.value).toInt()}",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-          ),
-          Obx(
-            () => Slider(
-              value: controller.chatTextSize.value,
-              min: 8,
-              max: 36,
-              onChanged: (e) {
-                controller.setChatTextSize(e);
-              },
+              ],
             ),
           ),
           Padding(
-            padding: AppStyle.edgeInsetsH12.copyWith(top: 12),
-            child: Obx(
-              () => Text(
-                "聊天区上下间隔: ${(controller.chatTextGap.value).toInt()}",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "直播间",
+              style: Get.textTheme.titleSmall,
             ),
           ),
-          Obx(
-            () => Slider(
-              value: controller.chatTextGap.value,
-              min: 0,
-              max: 12,
-              onChanged: (e) {
-                controller.setChatTextGap(e);
-              },
+          SettingsCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    title: "进入直播间自动全屏",
+                    value: controller.autoFullScreen.value,
+                    onChanged: (e) {
+                      controller.setAutoFullScreen(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => Visibility(
+                    visible: Platform.isAndroid,
+                    child: SettingsSwitch(
+                      title: "进入小窗隐藏弹幕",
+                      value: controller.pipHideDanmu.value,
+                      onChanged: (e) {
+                        controller.setPIPHideDanmu(e);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "清晰度",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsMenu<int>(
+                    title: "默认清晰度",
+                    value: controller.qualityLevel.value,
+                    valueMap: const {
+                      0: "最低",
+                      1: "中等",
+                      2: "最高",
+                    },
+                    onChanged: (e) {
+                      controller.setQualityLevel(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu<int>(
+                    title: "数据网络清晰度",
+                    value: controller.qualityLevelCellular.value,
+                    valueMap: const {
+                      0: "最低",
+                      1: "中等",
+                      2: "最高",
+                    },
+                    onChanged: (e) {
+                      controller.setQualityLevelCellular(e);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "聊天区",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Obx(
+                  () => SettingsNumber(
+                    title: "文字大小",
+                    value: controller.chatTextSize.value.toInt(),
+                    min: 8,
+                    max: 36,
+                    onChanged: (e) {
+                      controller.setChatTextSize(e.toDouble());
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsNumber(
+                    title: "上下间隔",
+                    value: controller.chatTextGap.value.toInt(),
+                    min: 0,
+                    max: 12,
+                    onChanged: (e) {
+                      controller.setChatTextGap(e.toDouble());
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    title: "气泡样式",
+                    value: controller.chatBubbleStyle.value,
+                    onChanged: (e) {
+                      controller.setChatBubbleStyle(e);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],

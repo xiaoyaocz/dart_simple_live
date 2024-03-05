@@ -45,7 +45,7 @@ class Log {
 
   static void e(String message, StackTrace stackTrace) {
     addDebugLog('$message\r\n\r\n$stackTrace', Colors.red);
-    logger.e("${DateTime.now().toString()}\n$message", null, stackTrace);
+    logger.e("${DateTime.now().toString()}\n$message", stackTrace: stackTrace);
   }
 
   static void w(String message) {

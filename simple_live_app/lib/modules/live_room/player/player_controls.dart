@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -5,8 +7,11 @@ import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -32,10 +37,11 @@ Widget buildFullControls(
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
+
   return Stack(
     children: [
       Container(),
-      buildDanmuView(controller),
+      buildDanmuView(videoState, controller),
 
       Center(
         child: // 中间
@@ -54,10 +60,12 @@ Widget buildFullControls(
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
+          onLongPress: () {
+            showFollowUser(controller);
+          },
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,
@@ -74,13 +82,14 @@ Widget buildFullControls(
           top: (controller.showControlsState.value &&
                   !controller.lockControlsState.value)
               ? 0
-              : -48,
+              : -(48 + padding.top),
           duration: const Duration(milliseconds: 200),
           child: Container(
-            height: 48,
+            height: 48 + padding.top,
             padding: EdgeInsets.only(
               left: padding.left + 12,
               right: padding.right + 12,
+              top: padding.top,
             ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -95,7 +104,7 @@ Widget buildFullControls(
             child: Row(
               children: [
                 IconButton(
-                  onPressed: Get.back,
+                  onPressed: controller.exitFull,
                   icon: const Icon(
                     Icons.arrow_back,
                     color: Colors.white,
@@ -124,6 +133,29 @@ Widget buildFullControls(
                 ),
                 IconButton(
                   onPressed: () {
+                    showFollowUser(controller);
+                  },
+                  icon: const Icon(
+                    Remix.play_list_2_line,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                Visibility(
+                  visible: Platform.isAndroid,
+                  child: IconButton(
+                    onPressed: () {
+                      controller.enablePIP();
+                    },
+                    icon: const Icon(
+                      Icons.picture_in_picture,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
                     showPlayerSettings(controller);
                   },
                   icon: const Icon(
@@ -145,7 +177,7 @@ Widget buildFullControls(
           bottom: (controller.showControlsState.value &&
                   !controller.lockControlsState.value)
               ? 0
-              : -80,
+              : -(80 + padding.bottom),
           duration: const Duration(milliseconds: 200),
           child: Container(
             decoration: const BoxDecoration(
@@ -325,10 +357,10 @@ Widget buildControls(
   return Stack(
     children: [
       Container(),
-      buildDanmuView(controller),
+      buildDanmuView(videoState, controller),
+      // 中间
       Center(
-        child: // 中间
-            StreamBuilder(
+        child: StreamBuilder(
           stream: videoState.widget.controller.player.stream.buffering,
           initialData: videoState.widget.controller.player.state.buffering,
           builder: (_, s) => Visibility(
@@ -346,7 +378,7 @@ Widget buildControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          onLongPress: controller.showDebugInfo,
+          //onLongPress: controller.showDebugInfo,
           child: Container(
             width: double.infinity,
             height: double.infinity,
@@ -480,7 +512,8 @@ Widget buildControls(
   );
 }
 
-Widget buildDanmuView(LiveRoomController controller) {
+Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
+  var padding = MediaQuery.of(videoState.context).padding;
   controller.danmakuView ??= DanmakuView(
     key: controller.globalDanmuKey,
     createdController: controller.initDanmakuController,
@@ -489,10 +522,21 @@ Widget buildDanmuView(LiveRoomController controller) {
     ),
   );
   return Positioned.fill(
+    top: padding.top,
+    bottom: padding.bottom,
     child: Obx(
       () => Offstage(
         offstage: !controller.showDanmakuState.value,
-        child: controller.danmakuView!,
+        child: Padding(
+          padding: controller.fullScreenState.value
+              ? EdgeInsets.only(
+                  top: AppSettingsController.instance.danmuTopMargin.value,
+                  bottom:
+                      AppSettingsController.instance.danmuBottomMargin.value,
+                )
+              : EdgeInsets.zero,
+          child: controller.danmakuView!,
+        ),
       ),
     ),
   );
@@ -590,102 +634,13 @@ void showDanmakuSettings(LiveRoomController controller) {
     title: "弹幕设置",
     width: 400,
     useSystem: true,
-    child: Obx(
-      () => ListView(
-        padding: AppStyle.edgeInsetsV12,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕区域: ${(AppSettingsController.instance.danmuArea.value * 100).toInt()}%",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.danmuArea.value,
-            max: 1.0,
-            min: 0.1,
-            onChanged: (e) {
-              AppSettingsController.instance.setDanmuArea(e);
-              controller.updateDanmuOption(
-                controller.danmakuController?.option.copyWith(area: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "不透明度: ${(AppSettingsController.instance.danmuOpacity.value * 100).toInt()}%",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.danmuOpacity.value,
-            max: 1.0,
-            min: 0.1,
-            onChanged: (e) {
-              AppSettingsController.instance.setDanmuOpacity(e);
-              controller.updateDanmuOption(
-                controller.danmakuController?.option.copyWith(opacity: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕大小: ${(AppSettingsController.instance.danmuSize.value).toInt()}",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.danmuSize.value,
-            min: 8,
-            max: 36,
-            onChanged: (e) {
-              AppSettingsController.instance.setDanmuSize(e);
-              controller.updateDanmuOption(
-                controller.danmakuController?.option.copyWith(fontSize: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕速度: ${(AppSettingsController.instance.danmuSpeed.value).toInt()} (越小越快)",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.danmuSpeed.value,
-            min: 4,
-            max: 20,
-            onChanged: (e) {
-              AppSettingsController.instance.setDanmuSpeed(e);
-              controller.updateDanmuOption(
-                controller.danmakuController?.option.copyWith(duration: e),
-              );
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              "弹幕描边: ${(AppSettingsController.instance.danmuStrokeWidth.value).toInt()}",
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          Slider(
-            value: AppSettingsController.instance.danmuStrokeWidth.value,
-            min: 0,
-            max: 10,
-            onChanged: (e) {
-              AppSettingsController.instance.setDanmuStrokeWidth(e);
-              controller.updateDanmuOption(
-                controller.danmakuController?.option.copyWith(strokeWidth: e),
-              );
-            },
-          ),
-        ],
-      ),
+    child: ListView(
+      padding: AppStyle.edgeInsetsA12,
+      children: [
+        DanmuSettingsView(
+          danmakuController: controller.danmakuController,
+        ),
+      ],
     ),
   );
 }
@@ -718,6 +673,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 0);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -728,6 +684,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 1);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -738,6 +695,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 2);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -748,6 +706,7 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 3);
+              controller.updateScaleMode();
             },
           ),
           RadioListTile(
@@ -758,9 +717,49 @@ void showPlayerSettings(LiveRoomController controller) {
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 4);
+              controller.updateScaleMode();
             },
           ),
         ],
+      ),
+    ),
+  );
+}
+
+void showFollowUser(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showFollowUserSheet();
+    return;
+  }
+  //只显示开播直播间
+  controller.followController.setFilterMode(1);
+  Utils.showRightDialog(
+    title: "关注列表",
+    width: 400,
+    useSystem: true,
+    child: Obx(
+      () => RefreshIndicator(
+        onRefresh: controller.followController.refreshData,
+        child: ListView.builder(
+          itemCount: controller.followController.list.length,
+          itemBuilder: (_, i) {
+            var item = controller.followController.list[i];
+            return Obx(
+              () => FollowUserItem(
+                item: item,
+                playing: controller.rxSite.value.id == item.siteId &&
+                    controller.rxRoomId.value == item.roomId,
+                onTap: () {
+                  Utils.hideRightDialog();
+                  controller.resetRoom(
+                    Sites.allSites[item.siteId]!,
+                    item.roomId,
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     ),
   );

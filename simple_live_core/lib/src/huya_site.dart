@@ -17,6 +17,9 @@ import 'package:simple_live_core/src/model/live_category_result.dart';
 import 'package:crypto/crypto.dart';
 
 class HuyaSite implements LiveSite {
+  final String kUserAgent =
+      "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
+
   @override
   String id = "huya";
 
@@ -206,11 +209,13 @@ class HuyaSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    var resultText = await HttpClient.instance
-        .getText("https://m.huya.com/$roomId", queryParameters: {}, header: {
-      "user-agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69",
-    });
+    var resultText = await HttpClient.instance.getText(
+      "https://m.huya.com/$roomId",
+      queryParameters: {},
+      header: {
+        "user-agent": kUserAgent,
+      },
+    );
     var text = RegExp(r"window\.HNF_GLOBAL_INIT.=.\{(.*?)\}.</script>",
             multiLine: false)
         .firstMatch(resultText)
@@ -258,7 +263,7 @@ class HuyaSite implements LiveSite {
     var subSid = int.tryParse(
         RegExp(r'lSubChannelId":([0-9]+)').firstMatch(resultText)?.group(1) ??
             "0");
-    var uid = await getAnonymousUid();
+
     return LiveRoomDetail(
         cover: jsonObj["roomInfo"]["tLiveInfo"]["sScreenshot"].toString(),
         online: jsonObj["roomInfo"]["tLiveInfo"]["lTotalCount"],
@@ -276,7 +281,7 @@ class HuyaSite implements LiveSite {
               "https:${utf8.decode(base64.decode(jsonObj["roomProfile"]["liveLineUrl"].toString()))}",
           lines: huyaLines,
           bitRates: huyaBiterates,
-          uid: uid,
+          uid: getUid(t: 13, e: 10),
         ),
         danmakuData: HuyaDanmakuArgs(
           ayyuid: jsonObj["roomInfo"]["tLiveInfo"]["lYyid"] ?? 0,
@@ -365,8 +370,7 @@ class HuyaSite implements LiveSite {
   Future<bool> getLiveStatus({required String roomId}) async {
     var resultText = await HttpClient.instance
         .getText("https://m.huya.com/$roomId", queryParameters: {}, header: {
-      "user-agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69",
+      "user-agent": kUserAgent,
     });
     var text = RegExp(r"window\.HNF_GLOBAL_INIT.=.\{(.*?)\}.</script>",
             multiLine: false)
@@ -388,8 +392,7 @@ class HuyaSite implements LiveSite {
         "data": {}
       },
       header: {
-        "user-agent":
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/91.0.4472.69",
+        "user-agent": kUserAgent,
       },
     );
     return result["data"]["uid"].toString();
@@ -400,6 +403,27 @@ class HuyaSite implements LiveSite {
     var randomValue = Random().nextInt(4294967295);
     var result = (currentTime % 10000000000 * 1000 + randomValue) % 4294967295;
     return result.toString();
+  }
+
+  String getUid({int? t, int? e}) {
+    var n = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        .split("");
+    var o = List.filled(36, '');
+    if (t != null) {
+      for (var i = 0; i < t; i++) {
+        o[i] = n[Random().nextInt(e ?? n.length)];
+      }
+    } else {
+      o[8] = o[13] = o[18] = o[23] = "-";
+      o[14] = "4";
+      for (var i = 0; i < 36; i++) {
+        if (o[i].isEmpty) {
+          var r = Random().nextInt(16);
+          o[i] = n[19 == i ? 3 & r | 8 : r];
+        }
+      }
+    }
+    return o.join("");
   }
 
   // String getRealUrl(String e) {
@@ -437,34 +461,44 @@ class HuyaSite implements LiveSite {
 
   String processAnticode(String anticode, String uid, String streamname) {
     // 来源：https://github.com/iceking2nd/real-url/blob/master/huya.py
+    // https://github.com/SeaHOH/ykdl/blob/master/ykdl/extractors/huya/live.py
     // 通过ChatGPT转换的Dart代码
-    var q = Uri.splitQueryString(anticode);
-    q["ver"] = "1";
-    q["sv"] = "2110211124";
-    q["seqid"] =
-        (int.parse(uid) + (DateTime.now().millisecondsSinceEpoch)).toString();
-    q["uid"] = uid;
-    q["uuid"] = getUUid();
+    var query = Uri.splitQueryString(anticode);
 
-    var ss = md5
-        .convert(utf8.encode("${q["seqid"]}|${q["ctype"]}|${q["t"]}"))
+    query["t"] = "100";
+    query["ctype"] = "huya_live";
+
+    final wsTime = (DateTime.now().millisecondsSinceEpoch ~/ 1000 + 21600)
+        .toRadixString(16);
+    final seqId =
+        (DateTime.now().millisecondsSinceEpoch + int.parse(uid)).toString();
+
+    final fm = utf8.decode(base64.decode(Uri.decodeComponent(query['fm']!)));
+    final wsSecretPrefix = fm.split('_').first;
+    final wsSecretHash = md5
+        .convert(utf8.encode('$seqId|${query["ctype"]}|${query["t"]}'))
+        .toString();
+    final wsSecret = md5
+        .convert(utf8.encode(
+            '${wsSecretPrefix}_${uid}_${streamname}_${wsSecretHash}_$wsTime'))
         .toString();
 
-    q["fm"] = utf8
-        .decode(base64.decode(q["fm"]!))
-        .replaceAll("\$0", q["uid"]!)
-        .replaceAll("\$1", streamname)
-        .replaceAll("\$2", ss)
-        .replaceAll("\$3", q["wsTime"]!);
-
-    q["wsSecret"] = md5.convert(utf8.encode(q["fm"]!)).toString();
-
-    q.remove("fm");
-    if (q.containsKey("txyp")) {
-      q.remove("txyp");
-    }
-
-    return Uri(queryParameters: q.map((x, y) => MapEntry(x, y))).query;
+    return Uri(queryParameters: {
+      "wsSecret": wsSecret,
+      "wsTime": wsTime,
+      "seqid": seqId,
+      "ctype": query["ctype"]!,
+      "ver": "1",
+      "fs": query["fs"]!,
+      "sphdcdn": query["sphdcdn"] ?? "",
+      "sphdDC": query["sphdDC"] ?? "",
+      "sphd": query["sphd"] ?? "",
+      "exsphd": query["exsphd"] ?? "",
+      "uid": uid,
+      "uuid": getUUid(),
+      "t": query["t"]!,
+      "sv": "2401310322"
+    }).query;
   }
 
   @override

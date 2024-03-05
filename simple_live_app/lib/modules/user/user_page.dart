@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -78,6 +77,22 @@ class UserPage extends StatelessWidget {
               color: Colors.grey.withOpacity(.1),
             ),
             ListTile(
+              leading: const Icon(Remix.account_circle_line),
+              title: const Text("账号管理"),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
+              ),
+              onTap: () {
+                Get.toNamed(RoutePath.kSettingsAccount);
+              },
+            ),
+            Divider(
+              indent: 12,
+              endIndent: 12,
+              color: Colors.grey.withOpacity(.1),
+            ),
+            ListTile(
               leading: const Icon(Remix.link),
               title: const Text("链接解析"),
               trailing: const Icon(
@@ -97,14 +112,15 @@ class UserPage extends StatelessWidget {
               context,
               children: [
                 ListTile(
-                  leading:
-                      Icon(Get.isDarkMode ? Remix.moon_line : Remix.sun_line),
-                  title: const Text("显示主题"),
+                  leading: const Icon(Remix.moon_line),
+                  title: const Text("外观设置"),
                   trailing: const Icon(
                     Icons.chevron_right,
                     color: Colors.grey,
                   ),
-                  onTap: Get.find<AppSettingsController>().changeTheme,
+                  onTap: () {
+                    Get.toNamed(RoutePath.kAppstyleSetting);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Remix.home_2_line),
@@ -119,7 +135,7 @@ class UserPage extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Remix.play_circle_line),
-                  title: const Text("播放设置"),
+                  title: const Text("直播设置"),
                   trailing: const Icon(
                     Icons.chevron_right,
                     color: Colors.grey,
@@ -186,9 +202,16 @@ class UserPage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Remix.upload_2_line),
                   title: const Text("检查更新"),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Ver ${Utils.packageInfo.version}"),
+                      AppStyle.hGap4,
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.grey,
+                      ),
+                    ],
                   ),
                   onTap: () {
                     Utils.checkUpdate(showMsg: true);

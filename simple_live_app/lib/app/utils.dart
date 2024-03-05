@@ -68,6 +68,7 @@ class Utils {
           ),
         ),
         actions: [
+          ...?actions,
           TextButton(
             onPressed: (() => Get.back(result: false)),
             child: Text(cancel.isEmpty ? "取消" : cancel),
@@ -76,7 +77,6 @@ class Utils {
             onPressed: (() => Get.back(result: true)),
             child: Text(confirm.isEmpty ? "确定" : confirm),
           ),
-          ...?actions,
         ],
       ),
     );
@@ -197,31 +197,22 @@ class Utils {
           topRight: Radius.circular(12),
         ),
       ),
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(Get.context!).cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
+      builder: (_) => Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.only(
+              left: 12,
+            ),
+            title: Text(title),
+            trailing: IconButton(
+              onPressed: Get.back,
+              icon: const Icon(Remix.close_line),
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: const EdgeInsets.only(
-                left: 12,
-              ),
-              title: Text(title),
-              trailing: IconButton(
-                onPressed: Get.back,
-                icon: const Icon(Remix.close_line),
-              ),
-            ),
-            Expanded(
-              child: child,
-            ),
-          ],
-        ),
+          Expanded(
+            child: child,
+          ),
+        ],
       ),
     );
   }
@@ -499,5 +490,40 @@ class Utils {
     }
 
     return Colors.white;
+  }
+
+  /// 复制内容到剪贴板
+  static void copyToClipboard(String text) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+      SmartDialog.showToast("已复制到剪贴板");
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("复制到剪贴板失败: $e");
+    }
+  }
+
+  /// 获取剪贴板内容
+  static Future<String?> getClipboard() async {
+    try {
+      var content = await Clipboard.getData(Clipboard.kTextPlain);
+      if (content == null) {
+        SmartDialog.showToast("无法读取剪贴板内容");
+        return null;
+      }
+      return content.text;
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("读取剪切板内容失败：$e");
+    }
+    return null;
+  }
+
+  static bool isRegexFormat(String keyword) {
+    return keyword.startsWith('/') && keyword.endsWith('/') && keyword.length > 2;
+  }
+
+  static String removeRegexFormat(String keyword) {
+    return keyword.substring(1, keyword.length - 1);
   }
 }

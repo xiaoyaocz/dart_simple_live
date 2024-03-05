@@ -1,7 +1,7 @@
 ---
 name: BUG报告
 about: Create a report to help us improve
-title: "[BUG]"
+title: "[BUG] 请填写简短易读的标题"
 labels: bug
 assignees: xiaoyaocz
 
@@ -9,7 +9,8 @@ assignees: xiaoyaocz
 
 **BUG内容**
 输入BUG详细内容
-反馈前请确认下是否存在相似的Issues！！！
+【请务必填写详细信息方便定位问题】
+【反馈前先查找下是否存在相似的Issues】
 
 **重现步骤**
 请在此输入重现步骤
@@ -22,5 +23,5 @@ assignees: xiaoyaocz
 
 **平台信息**
  - 设备: [e.g. iPhone6]
- - 系统版本: [e.g. iOS 15, Android 10.0]
+ - 系统版本: [e.g. Android 10.0]
  - APP版本: [e.g. 22]

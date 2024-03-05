@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:auto_orientation/auto_orientation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -15,16 +16,24 @@ import 'package:perfect_volume_control/perfect_volume_control.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
+import 'package:simple_live_app/app/custom_throttle.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 mixin PlayerMixin {
-  GlobalKey globalPlayerKey = GlobalKey();
+  GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
   /// 播放器实例
-  late final player = Player();
+  late final player = Player(
+    configuration: const PlayerConfiguration(
+      title: "Simple Live Player",
+      // bufferSize:
+      //     // media-kit #549
+      //     AppSettingsController.instance.playerBufferSize.value * 1024 * 1024,
+    ),
+  );
 
   /// 视频控制器
   late final videoController = VideoController(
@@ -37,10 +46,11 @@ mixin PlayerMixin {
         : VideoControllerConfiguration(
             enableHardwareAcceleration:
                 AppSettingsController.instance.hardwareDecode.value,
+            androidAttachSurfaceAfterVideoParameters: false,
           ),
   );
 }
-mixin PlayerStateMixin {
+mixin PlayerStateMixin on PlayerMixin {
   /// 是否显示弹幕
   RxBool showDanmakuState = false.obs;
 
@@ -80,7 +90,7 @@ mixin PlayerStateMixin {
   /// 是否为竖屏直播间
   var isVertical = false.obs;
 
-  DanmakuView? danmakuView;
+  Widget? danmakuView;
 
   var showQualites = false.obs;
   var showLines = false.obs;
@@ -116,6 +126,32 @@ mixin PlayerStateMixin {
         seconds: 5,
       ),
       hideControls,
+    );
+  }
+
+  void updateScaleMode() {
+    var boxFit = BoxFit.contain;
+    double? aspectRatio;
+    if (player.state.width != null && player.state.height != null) {
+      aspectRatio = player.state.width! / player.state.height!;
+    }
+
+    if (AppSettingsController.instance.scaleMode.value == 0) {
+      boxFit = BoxFit.contain;
+    } else if (AppSettingsController.instance.scaleMode.value == 1) {
+      boxFit = BoxFit.fill;
+    } else if (AppSettingsController.instance.scaleMode.value == 2) {
+      boxFit = BoxFit.cover;
+    } else if (AppSettingsController.instance.scaleMode.value == 3) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 16 / 9;
+    } else if (AppSettingsController.instance.scaleMode.value == 4) {
+      boxFit = BoxFit.contain;
+      aspectRatio = 4 / 3;
+    }
+    globalPlayerKey.currentState?.update(
+      aspectRatio: aspectRatio,
+      fit: boxFit,
     );
   }
 }
@@ -156,6 +192,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   final screenBrightness = ScreenBrightness();
 
+  final pip = Floating();
+  StreamSubscription<PiPStatus>? _pipSubscription;
+
   /// 初始化一些系统状态
   void initSystem() async {
     PerfectVolumeControl.hideUI = true;
@@ -174,6 +213,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 释放一些系统状态
   Future resetSystem() async {
+    _pipSubscription?.cancel();
+    pip.dispose();
     await SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
       overlays: SystemUiOverlay.values,
@@ -266,6 +307,49 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       SmartDialog.dismiss(status: SmartStatus.loading);
     }
   }
+
+  /// 开启小窗播放前弹幕状态
+  bool danmakuStateBeforePIP = false;
+
+  Future enablePIP() async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+    if (await pip.isPipAvailable == false) {
+      SmartDialog.showToast("设备不支持小窗播放");
+      return;
+    }
+    danmakuStateBeforePIP = showDanmakuState.value;
+    //关闭并清除弹幕
+    if (AppSettingsController.instance.pipHideDanmu.value &&
+        danmakuStateBeforePIP) {
+      showDanmakuState.value = false;
+    }
+    danmakuController?.clear();
+    //关闭控制器
+    showControlsState.value = false;
+
+    //监听事件
+    var width = player.state.width ?? 0;
+    var height = player.state.height ?? 0;
+    Rational ratio = const Rational.landscape();
+    if (height > width) {
+      ratio = const Rational.vertical();
+    } else {
+      ratio = const Rational.landscape();
+    }
+    await pip.enable(
+      aspectRatio: ratio,
+    );
+
+    _pipSubscription ??= pip.pipStatus$.listen((event) {
+      if (event == PiPStatus.disabled) {
+        danmakuController?.clear();
+        showDanmakuState.value = danmakuStateBeforePIP;
+      }
+      Log.w(event.toString());
+    });
+  }
 }
 mixin PlayerGestureControlMixin
     on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
@@ -296,19 +380,29 @@ mixin PlayerGestureControlMixin
   var _currentBrightness = 1.0;
   var verStartPosition = 0.0;
 
+  DelayedThrottle? throttle;
+
   /// 竖向手势开始
   void onVerticalDragStart(DragStartDetails details) async {
     if (lockControlsState.value && fullScreenState.value) {
       return;
     }
-    verStartPosition = details.globalPosition.dy;
+
+    final dy = details.globalPosition.dy;
+    // 开始位置必须是中间2/4的位置
+    if (dy < Get.height * 0.25 || dy > Get.height * 0.75) {
+      return;
+    }
+
+    verStartPosition = dy;
     leftVerticalDrag = details.globalPosition.dx < Get.width / 2;
 
-    verticalDragging = true;
+    throttle = DelayedThrottle(200);
 
+    verticalDragging = true;
+    showGestureTip.value = true;
     _currentVolume = await PerfectVolumeControl.volume;
     _currentBrightness = await screenBrightness.current;
-    showGestureTip.value = true;
   }
 
   /// 竖向手势更新
@@ -330,30 +424,43 @@ mixin PlayerGestureControlMixin
     }
   }
 
+  int lastVolume = -1; // it's ok to be -1
+
   void setGestureVolume(double dy) {
     double value = 0.0;
+    double seek;
     if (dy > verStartPosition) {
       value = ((dy - verStartPosition) / (Get.height * 0.5));
 
-      var seek = _currentVolume - value;
+      seek = _currentVolume - value;
       if (seek < 0) {
         seek = 0;
       }
-      PerfectVolumeControl.setVolume(seek);
-      gestureTipText.value = "音量 ${(seek * 100).toInt()}%";
-      Log.logPrint(value);
     } else {
       value = ((dy - verStartPosition) / (Get.height * 0.5));
-      var seek = value.abs() + _currentVolume;
+      seek = value.abs() + _currentVolume;
       if (seek > 1) {
         seek = 1;
       }
-
-      PerfectVolumeControl.setVolume(seek);
-
-      gestureTipText.value = "音量 ${(seek * 100).toInt()}%";
-      Log.logPrint(value);
     }
+    int volume = _convertVolume((seek * 100).round());
+    if (volume == lastVolume) {
+      return;
+    }
+    lastVolume = volume;
+    // update UI outside throttle to make it more fluent
+    gestureTipText.value = "音量 $volume%";
+    throttle?.invoke(() async => await _realSetVolume(volume));
+  }
+
+  // 0 to 100, 5 step each
+  int _convertVolume(int volume) {
+    return (volume / 5).round() * 5;
+  }
+
+  Future<void> _realSetVolume(int volume) async {
+    Log.logPrint(volume);
+    return await PerfectVolumeControl.setVolume(volume / 100);
   }
 
   void setGestureBrightness(double dy) {
@@ -387,6 +494,7 @@ mixin PlayerGestureControlMixin
     if (lockControlsState.value && fullScreenState.value) {
       return;
     }
+    throttle = null;
     verticalDragging = false;
     leftVerticalDrag = false;
     showGestureTip.value = false;
@@ -412,6 +520,7 @@ class PlayerController extends BaseController
   StreamSubscription? _widthSubscription;
   StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
+
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
       Log.d("播放器错误：$event");
@@ -447,6 +556,7 @@ class PlayerController extends BaseController
     _widthSubscription?.cancel();
     _heightSubscription?.cancel();
     _logSubscription?.cancel();
+    _pipSubscription?.cancel();
   }
 
   void mediaEnd() {}

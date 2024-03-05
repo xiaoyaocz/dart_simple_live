@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
@@ -17,31 +19,48 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
+import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
+import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-class LiveRoomController extends PlayerController {
-  final Site site;
-  final String roomId;
+class LiveRoomController extends PlayerController with WidgetsBindingObserver {
+  final Site pSite;
+  final String pRoomId;
   late LiveDanmaku liveDanmaku;
   LiveRoomController({
-    required this.site,
-    required this.roomId,
+    required this.pSite,
+    required this.pRoomId,
   }) {
+    rxSite = pSite.obs;
+    rxRoomId = pRoomId.obs;
     liveDanmaku = site.liveSite.getDanmaku();
     // 抖音应该默认是竖屏的
     if (site.id == "douyin") {
       isVertical.value = true;
     }
   }
+
+  late Rx<Site> rxSite;
+  Site get site => rxSite.value;
+  late Rx<String> rxRoomId;
+  String get roomId => rxRoomId.value;
+
+  FollowUserController followController = Get.put(FollowUserController());
+
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
   var online = 0.obs;
   var followed = false.obs;
   var liveStatus = false.obs;
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
+
+  /// 滚动控制
   final ScrollController scrollController = ScrollController();
+
+  /// 聊天信息
   RxList<LiveMessage> messages = RxList<LiveMessage>();
 
   /// 清晰度数据
@@ -66,17 +85,40 @@ class LiveRoomController extends PlayerController {
   /// 设置的自动关闭时间（分钟）
   var autoExitMinutes = 60.obs;
 
+  ///是否延迟自动关闭
+  var delayAutoExit = false.obs;
+
   /// 是否启用自动关闭
   var autoExitEnable = false.obs;
 
+  /// 是否禁用自动滚动聊天栏
+  /// - 当用户向上滚动聊天栏时，不再自动滚动
+  var disableAutoScroll = false.obs;
+
+  /// 是否处于后台
+  var isBackground = false;
+
   @override
   void onInit() {
+    WidgetsBinding.instance.addObserver(this);
+    if (followController.allList.isEmpty) {
+      followController.refreshData();
+    }
     initAutoExit();
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     loadData();
 
+    scrollController.addListener(scrollListener);
+
     super.onInit();
+  }
+
+  void scrollListener() {
+    if (scrollController.position.userScrollDirection ==
+        ScrollDirection.forward) {
+      disableAutoScroll.value = true;
+    }
   }
 
   /// 初始化自动关闭倒计时
@@ -86,6 +128,9 @@ class LiveRoomController extends PlayerController {
       autoExitMinutes.value =
           AppSettingsController.instance.autoExitDuration.value;
       setAutoExit();
+    } else {
+      autoExitMinutes.value =
+          AppSettingsController.instance.roomAutoExitDuration.value;
     }
   }
 
@@ -99,14 +144,30 @@ class LiveRoomController extends PlayerController {
     autoExitTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       countdown.value -= 1;
       if (countdown.value <= 0) {
-        timer.cancel();
-        await WakelockPlus.disable();
-        exit(0);
+        timer = Timer(const Duration(seconds: 10), () async {
+          await WakelockPlus.disable();
+          exit(0);
+        });
+        autoExitTimer?.cancel();
+        var delay = await Utils.showAlertDialog("定时关闭已到时,是否延迟关闭?",
+            title: "延迟关闭", confirm: "延迟", cancel: "关闭", selectable: true);
+        if (delay) {
+          timer.cancel();
+          delayAutoExit.value = true;
+          showAutoExitSheet();
+          setAutoExit();
+        } else {
+          delayAutoExit.value = false;
+          await WakelockPlus.disable();
+          exit(0);
+        }
       }
     });
   }
+  // 弹窗逻辑
 
   void refreshRoom() {
+    //messages.clear();
     superChats.clear();
     liveDanmaku.stop();
 
@@ -116,6 +177,10 @@ class LiveRoomController extends PlayerController {
   /// 聊天栏始终滚动到底部
   void chatScrollToBottom() {
     if (scrollController.hasClients) {
+      // 如果手动上拉过，就不自动滚动到底部
+      if (disableAutoScroll.value) {
+        return;
+      }
       scrollController.jumpTo(scrollController.position.maxScrollExtent);
     }
   }
@@ -130,14 +195,26 @@ class LiveRoomController extends PlayerController {
   /// 接收到WebSocket信息
   void onWSMessage(LiveMessage msg) {
     if (msg.type == LiveMessageType.chat) {
-      if (messages.length > 200) {
+      if (messages.length > 200 && !disableAutoScroll.value) {
         messages.removeAt(0);
       }
 
       // 关键词屏蔽检查
       for (var keyword in AppSettingsController.instance.shieldList) {
-        if (msg.message.contains(keyword)) {
-          Log.d("关键词：$keyword\n消息内容：${msg.message}");
+        Pattern? pattern;
+        if (Utils.isRegexFormat(keyword)) {
+          String removedSlash = Utils.removeRegexFormat(keyword);
+          try {
+            pattern = RegExp(removedSlash);
+          } catch (e) {
+            // should avoid this during add keyword
+            Log.d("关键词：$keyword 正则格式错误");
+          }
+        } else {
+          pattern = keyword;
+        }
+        if (pattern != null && msg.message.contains(pattern)) {
+          Log.d("关键词：$keyword\n已屏蔽消息内容：${msg.message}");
           return;
         }
       }
@@ -147,9 +224,10 @@ class LiveRoomController extends PlayerController {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => chatScrollToBottom(),
       );
-      if (!liveStatus.value) {
+      if (!liveStatus.value || isBackground) {
         return;
       }
+
       addDanmaku([
         DanmakuItem(
           msg.message,
@@ -231,11 +309,11 @@ class LiveRoomController extends PlayerController {
         return;
       }
       qualites.value = playQualites;
-
-      if (AppSettingsController.instance.qualityLevel.value == 2) {
+      var qualityLevel = await getQualityLevel();
+      if (qualityLevel == 2) {
         //最高
         currentQuality = 0;
-      } else if (AppSettingsController.instance.qualityLevel.value == 0) {
+      } else if (qualityLevel == 0) {
         //最低
         currentQuality = playQualites.length - 1;
       } else {
@@ -249,6 +327,20 @@ class LiveRoomController extends PlayerController {
       Log.logPrint(e);
       SmartDialog.showToast("无法读取播放清晰度");
     }
+  }
+
+  Future<int> getQualityLevel() async {
+    var qualityLevel = AppSettingsController.instance.qualityLevel.value;
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult == ConnectivityResult.mobile) {
+        qualityLevel =
+            AppSettingsController.instance.qualityLevelCellular.value;
+      }
+    } catch (e) {
+      Log.logPrint(e);
+    }
+    return qualityLevel;
   }
 
   void getPlayUrl() async {
@@ -281,11 +373,17 @@ class LiveRoomController extends PlayerController {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
     Map<String, String> headers = {};
-    if (site.id == "bilibili") {
+    if (site.id == Constant.kBiliBili) {
       headers = {
         "referer": "https://live.bilibili.com",
         "user-agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+      };
+    } else if (site.id == Constant.kHuya) {
+      headers = {
+        "referer": "https://www.huya.com",
+        "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0"
       };
     }
 
@@ -437,106 +535,17 @@ class LiveRoomController extends PlayerController {
   void showDanmuSettingsSheet() {
     Utils.showBottomSheet(
       title: "弹幕设置",
-      child: Obx(
-        () => ListView(
-          padding: AppStyle.edgeInsetsV12,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕区域: ${(AppSettingsController.instance.danmuArea.value * 100).toInt()}%",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuArea.value,
-              max: 1.0,
-              min: 0.1,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuArea(e);
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(area: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "不透明度: ${(AppSettingsController.instance.danmuOpacity.value * 100).toInt()}%",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuOpacity.value,
-              max: 1.0,
-              min: 0.1,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuOpacity(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(opacity: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕大小: ${(AppSettingsController.instance.danmuSize.value).toInt()}",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuSize.value,
-              min: 8,
-              max: 36,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuSize(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(fontSize: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕速度: ${(AppSettingsController.instance.danmuSpeed.value).toInt()} (越小越快)",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuSpeed.value,
-              min: 4,
-              max: 20,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuSpeed(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(duration: e),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "弹幕描边: ${(AppSettingsController.instance.danmuStrokeWidth.value).toInt()}",
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-            Slider(
-              value: AppSettingsController.instance.danmuStrokeWidth.value,
-              min: 0,
-              max: 10,
-              onChanged: (e) {
-                AppSettingsController.instance.setDanmuStrokeWidth(e);
-
-                updateDanmuOption(
-                  danmakuController?.option.copyWith(strokeWidth: e),
-                );
-              },
-            ),
-          ],
-        ),
+      child: ListView(
+        padding: AppStyle.edgeInsetsA12,
+        children: [
+          DanmuSettingsView(
+            danmakuController: danmakuController,
+            onTapDanmuShield: () {
+              Get.back();
+              showDanmuShield();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -602,6 +611,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 0);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -611,6 +621,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 1);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -620,6 +631,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 2);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -629,6 +641,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 3);
+                updateScaleMode();
               },
             ),
             RadioListTile(
@@ -638,6 +651,7 @@ class LiveRoomController extends PlayerController {
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
                 AppSettingsController.instance.setScaleMode(e ?? 4);
+                updateScaleMode();
               },
             ),
           ],
@@ -646,8 +660,119 @@ class LiveRoomController extends PlayerController {
     );
   }
 
+  void showDanmuShield() {
+    TextEditingController keywordController = TextEditingController();
+
+    void addKeyword() {
+      if (keywordController.text.isEmpty) {
+        SmartDialog.showToast("请输入关键词");
+        return;
+      }
+
+      AppSettingsController.instance
+          .addShieldList(keywordController.text.trim());
+      keywordController.text = "";
+    }
+
+    Utils.showBottomSheet(
+      title: "关键词屏蔽",
+      child: ListView(
+        padding: AppStyle.edgeInsetsA12,
+        children: [
+          TextField(
+            controller: keywordController,
+            decoration: InputDecoration(
+              contentPadding: AppStyle.edgeInsetsH12,
+              border: const OutlineInputBorder(),
+              hintText: "请输入关键词",
+              suffixIcon: TextButton.icon(
+                onPressed: addKeyword,
+                icon: const Icon(Icons.add),
+                label: const Text("添加"),
+              ),
+            ),
+            onSubmitted: (e) {
+              addKeyword();
+            },
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Text(
+              "已添加${AppSettingsController.instance.shieldList.length}个关键词（点击移除）",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Wrap(
+              runSpacing: 12,
+              spacing: 12,
+              children: AppSettingsController.instance.shieldList
+                  .map(
+                    (item) => InkWell(
+                      borderRadius: AppStyle.radius24,
+                      onTap: () {
+                        AppSettingsController.instance.removeShieldList(item);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: AppStyle.radius24,
+                        ),
+                        padding: AppStyle.edgeInsetsH12.copyWith(
+                          top: 4,
+                          bottom: 4,
+                        ),
+                        child: Text(
+                          item,
+                          style: Get.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showFollowUserSheet() {
+    followController.setFilterMode(1);
+    Utils.showBottomSheet(
+      title: "关注列表",
+      child: Obx(
+        () => RefreshIndicator(
+          onRefresh: followController.refreshData,
+          child: ListView.builder(
+            itemCount: followController.list.length,
+            itemBuilder: (_, i) {
+              var item = followController.list[i];
+              return Obx(
+                () => FollowUserItem(
+                  item: item,
+                  playing: rxSite.value.id == item.siteId &&
+                      rxRoomId.value == item.roomId,
+                  onTap: () {
+                    Get.back();
+                    resetRoom(
+                      Sites.allSites[item.siteId]!,
+                      item.roomId,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   void showAutoExitSheet() {
-    if (AppSettingsController.instance.autoExitEnable.value) {
+    if (AppSettingsController.instance.autoExitEnable.value &&
+        !delayAutoExit.value) {
       SmartDialog.showToast("已设置了全局定时关闭");
       return;
     }
@@ -687,16 +812,11 @@ class LiveRoomController extends PlayerController {
                   ),
                   initialEntryMode: TimePickerEntryMode.inputOnly,
                   builder: (_, child) {
-                    return Theme(
-                      data: Get.theme.copyWith(
-                        useMaterial3: false,
+                    return MediaQuery(
+                      data: Get.mediaQuery.copyWith(
+                        alwaysUse24HourFormat: true,
                       ),
-                      child: MediaQuery(
-                        data: Get.mediaQuery.copyWith(
-                          alwaysUse24HourFormat: true,
-                        ),
-                        child: child!,
-                      ),
+                      child: child!,
                     );
                   },
                 );
@@ -706,6 +826,8 @@ class LiveRoomController extends PlayerController {
                 var duration =
                     Duration(hours: value.hour, minutes: value.minute);
                 autoExitMinutes.value = duration.inMinutes;
+                AppSettingsController.instance
+                    .setRoomAutoExitDuration(autoExitMinutes.value);
                 //setAutoExitDuration(duration.inMinutes);
                 setAutoExit();
               },
@@ -719,19 +841,19 @@ class LiveRoomController extends PlayerController {
   void openNaviteAPP() async {
     var naviteUrl = "";
     var webUrl = "";
-    if (site.id == "bilibili") {
+    if (site.id == Constant.kBiliBili) {
       naviteUrl = "bilibili://live/${detail.value?.roomId}";
       webUrl = "https://live.bilibili.com/${detail.value?.roomId}";
-    } else if (site.id == "douyin") {
+    } else if (site.id == Constant.kDouyin) {
       var args = detail.value?.danmakuData as DouyinDanmakuArgs;
       naviteUrl = "snssdk1128://webcast_room?room_id=${args.roomId}";
-      webUrl = "https://www.douyu.com/${args.webRid}";
-    } else if (site.id == "huya") {
+      webUrl = "https://live.douyin.com/${args.webRid}";
+    } else if (site.id == Constant.kHuya) {
       var args = detail.value?.danmakuData as HuyaDanmakuArgs;
       naviteUrl =
           "yykiwi://homepage/index.html?banneraction=https%3A%2F%2Fdiy-front.cdn.huya.com%2Fzt%2Ffrontpage%2Fcc%2Fupdate.html%3Fhyaction%3Dlive%26channelid%3D${args.subSid}%26subid%3D${args.subSid}%26liveuid%3D${args.subSid}%26screentype%3D1%26sourcetype%3D0%26fromapp%3Dhuya_wap%252Fclick%252Fopen_app_guide%26&fromapp=huya_wap/click/open_app_guide";
       webUrl = "https://www.huya.com/${detail.value?.roomId}";
-    } else if (site.id == "douyu") {
+    } else if (site.id == Constant.kDouyu) {
       naviteUrl =
           "douyulink://?type=90001&schemeUrl=douyuapp%3A%2F%2Froom%3FliveType%3D0%26rid%3D${detail.value?.roomId}";
       webUrl = "https://www.douyu.com/${detail.value?.roomId}";
@@ -745,8 +867,51 @@ class LiveRoomController extends PlayerController {
     }
   }
 
+  void resetRoom(Site site, String roomId) async {
+    if (this.site == site && this.roomId == roomId) {
+      return;
+    }
+
+    rxSite.value = site;
+    rxRoomId.value = roomId;
+
+    // 清除全部消息
+    liveDanmaku.stop();
+    messages.clear();
+    superChats.clear();
+    danmakuController?.clear();
+
+    // 重新设置LiveDanmaku
+    liveDanmaku = site.liveSite.getDanmaku();
+
+    // 停止播放
+    await player.stop();
+
+    // 刷新信息
+    loadData();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused) {
+      Log.d("进入后台");
+      //进入后台，关闭弹幕
+      danmakuController?.clear();
+      isBackground = true;
+    } else
+    //返回前台
+    if (state == AppLifecycleState.resumed) {
+      Log.d("返回前台");
+      isBackground = false;
+    }
+  }
+
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
 
     liveDanmaku.stop();

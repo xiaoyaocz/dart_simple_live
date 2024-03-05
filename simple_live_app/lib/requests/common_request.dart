@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:simple_live_app/models/version_model.dart';
+import 'package:simple_live_app/requests/http_client.dart';
 
 /// 通用的请求
 class CommonRequest {
@@ -15,35 +15,29 @@ class CommonRequest {
 
   /// 检查更新
   Future<VersionModel> checkUpdateGitMirror() async {
-    var result = await Dio().get(
+    var result = await HttpClient.instance.getJson(
       "https://raw.gitmirror.com/xiaoyaocz/dart_simple_live/master/assets/app_version.json",
       queryParameters: {
         "ts": DateTime.now().millisecondsSinceEpoch,
       },
-      options: Options(
-        responseType: ResponseType.json,
-      ),
     );
-    if (result.data is Map) {
-      return VersionModel.fromJson(result.data);
+    if (result is Map) {
+      return VersionModel.fromJson(result as Map<String, dynamic>);
     }
-    return VersionModel.fromJson(json.decode(result.data));
+    return VersionModel.fromJson(json.decode(result));
   }
 
   /// 检查更新
   Future<VersionModel> checkUpdateJsDelivr() async {
-    var result = await Dio().get(
+    var result = await HttpClient.instance.getJson(
       "https://cdn.jsdelivr.net/gh/xiaoyaocz/dart_simple_live@master/assets/app_version.json",
       queryParameters: {
         "ts": DateTime.now().millisecondsSinceEpoch,
       },
-      options: Options(
-        responseType: ResponseType.json,
-      ),
     );
-    if (result.data is Map) {
-      return VersionModel.fromJson(result.data);
+    if (result is Map) {
+      return VersionModel.fromJson(result as Map<String, dynamic>);
     }
-    return VersionModel.fromJson(json.decode(result.data));
+    return VersionModel.fromJson(json.decode(result));
   }
 }

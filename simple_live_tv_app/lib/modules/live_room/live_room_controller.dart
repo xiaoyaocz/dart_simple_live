@@ -17,6 +17,7 @@ import 'package:simple_live_tv_app/models/db/follow_user.dart';
 import 'package:simple_live_tv_app/models/db/history.dart';
 import 'package:simple_live_tv_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_tv_app/services/db_service.dart';
+import 'package:simple_live_tv_app/services/follow_user_service.dart';
 
 class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final Site pSite;
@@ -341,6 +342,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
+    SmartDialog.showToast("已关注");
   }
 
   /// 取消关注用户
@@ -348,14 +350,15 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (detail.value == null) {
       return;
     }
-    if (!await Utils.showAlertDialog("确定要取消关注该用户吗？", title: "取消关注")) {
-      return;
-    }
+    // if (!await Utils.showAlertDialog("确定要取消关注该用户吗？", title: "取消关注")) {
+    //   return;
+    // }
 
     var id = "${site.id}_$roomId";
     DBService.instance.deleteFollow(id);
     followed.value = false;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
+    SmartDialog.showToast("已取消关注");
   }
 
   void resetRoom(Site site, String roomId) async {
@@ -379,6 +382,52 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     // 刷新信息
     loadData();
+  }
+
+  void nextChannel() {
+    //读取正在直播的频道
+    var liveChannels = FollowUserService.instance.livingList;
+    if (liveChannels.isEmpty) {
+      SmartDialog.showToast("没有正在直播的频道");
+      return;
+    }
+    var index = liveChannels
+        .indexWhere((element) => element.id == "${site.id}_$roomId");
+    // if (index == -1) {
+    //   //当前频道不在列表中
+
+    //   return;
+    // }
+    index += 1;
+    if (index >= liveChannels.length) {
+      index = 0;
+    }
+    var nextChannel = liveChannels[index];
+
+    resetRoom(Sites.allSites[nextChannel.siteId]!, nextChannel.roomId);
+  }
+
+  void prevChannel() {
+    //读取正在直播的频道
+    var liveChannels = FollowUserService.instance.livingList;
+    if (liveChannels.isEmpty) {
+      SmartDialog.showToast("没有正在直播的频道");
+      return;
+    }
+    var index = liveChannels
+        .indexWhere((element) => element.id == "${site.id}_$roomId");
+    // if (index == -1) {
+    //   //当前频道不在列表中
+
+    //   return;
+    // }
+    index -= 1;
+    if (index < 0) {
+      index = liveChannels.length - 1;
+    }
+    var nextChannel = liveChannels[index];
+
+    resetRoom(Sites.allSites[nextChannel.siteId]!, nextChannel.roomId);
   }
 
   @override

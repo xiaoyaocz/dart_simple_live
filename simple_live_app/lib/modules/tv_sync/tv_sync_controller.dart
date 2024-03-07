@@ -97,7 +97,7 @@ class TVSyncController extends BaseController {
             title: const Text("同步哔哩哔哩账号"),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              syncBlockedWord(client);
+              syncBiliAccount(client);
             },
           ),
         ],

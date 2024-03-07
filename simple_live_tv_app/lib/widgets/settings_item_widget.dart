@@ -50,6 +50,9 @@ class SettingsItemWidget extends StatelessWidget {
         }
         return KeyEventResult.handled;
       },
+      onTap: () {
+        showSettingsDialog();
+      },
       child: Obx(
         () => Padding(
           padding: AppStyle.edgeInsetsA24,
@@ -92,6 +95,35 @@ class SettingsItemWidget extends StatelessWidget {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void showSettingsDialog() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Get.theme.cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: Text(title, style: AppStyle.titleStyleWhite),
+        scrollable: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: items.keys.map((e) {
+            return ListTile(
+              title: Text(items[e] ?? '', style: AppStyle.textStyleWhite),
+              contentPadding: AppStyle.edgeInsetsH20,
+              autofocus: e == value,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppStyle.radius16,
+              ),
+              focusColor: Colors.white54,
+              onTap: () {
+                onChanged(e);
+                Get.back();
+              },
+            );
+          }).toList(),
         ),
       ),
     );

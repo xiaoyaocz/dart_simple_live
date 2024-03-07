@@ -60,13 +60,14 @@ Widget buildControls(
           top: (controller.showControlsState.value &&
                   !controller.lockControlsState.value)
               ? 0
-              : -100.w,
+              : -200.w,
           duration: const Duration(milliseconds: 200),
           child: Container(
-            height: 100.w,
             padding: EdgeInsets.only(
               left: 32.w,
               right: 32.w,
+              top: 24.w,
+              bottom: 24.w,
             ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -79,16 +80,29 @@ Widget buildControls(
               ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    "${controller.detail.value?.title} - ${controller.detail.value?.userName}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppStyle.titleStyleWhite,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        controller.detail.value?.title ?? '正在读取直播信息...',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppStyle.textStyleWhite,
+                      ),
+                      Text(
+                        "${controller.detail.value?.userName} · ${controller.followed.value ? "已关注" : "未关注"}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppStyle.textStyleWhite.copyWith(
+                          fontSize: 24.w,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 Obx(
                   () => Text(
                     controller.datetime.value,
@@ -142,6 +156,22 @@ Widget buildControls(
                       () => Text("线路：${controller.currentLineInfo.value}",
                           style: AppStyle.textStyleWhite),
                     ),
+                    //弹幕开关
+                    AppStyle.hGap32,
+                    Obx(
+                      () => Text(
+                        "弹幕: ${controller.showDanmakuState.value ? "开" : "关"}",
+                        style: AppStyle.textStyleWhite,
+                      ),
+                    ),
+                    //分辨率
+                    AppStyle.hGap32,
+                    Obx(
+                      () => Text(
+                        "分辨率: ${controller.width.value}x${controller.height.value}",
+                        style: AppStyle.textStyleWhite,
+                      ),
+                    ),
                   ],
                 ),
                 AppStyle.vGap12,
@@ -156,7 +186,7 @@ Widget buildControls(
                     AppStyle.hGap16,
                     Text(
                       "设置",
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                     ),
                     AppStyle.hGap32,
                     Icon(
@@ -167,7 +197,7 @@ Widget buildControls(
                     AppStyle.hGap16,
                     Text(
                       "上一频道",
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                     ),
                     AppStyle.hGap32,
                     Icon(
@@ -178,7 +208,7 @@ Widget buildControls(
                     AppStyle.hGap16,
                     Text(
                       "下一频道",
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                     ),
                     AppStyle.hGap32,
                     Icon(
@@ -189,7 +219,7 @@ Widget buildControls(
                     AppStyle.hGap16,
                     Text(
                       "关注列表",
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                     ),
                     AppStyle.hGap32,
                     Icon(
@@ -200,7 +230,7 @@ Widget buildControls(
                     AppStyle.hGap16,
                     Text(
                       "添加/取消关注",
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                     ),
                   ],
                 ),
@@ -323,13 +353,28 @@ void showPlayerSettings(LiveRoomController controller) {
   var lineFoucsNode = AppFocusNode();
   var scaleFoucsNode = AppFocusNode();
   var danmakuFoucsNode = AppFocusNode();
+  var danmakuSizeFoucsNode = AppFocusNode();
+  var danmakuSpeedFoucsNode = AppFocusNode();
+  var danmakuAreaFoucsNode = AppFocusNode();
+  var danmakuOpacityFoucsNode = AppFocusNode();
+  var danmakuStorkeFoucsNode = AppFocusNode();
   Utils.showRightDialog(
     width: 800.w,
     useSystem: true,
     child: ListView(
       padding: AppStyle.edgeInsetsA48,
       children: [
-        AppStyle.vGap12,
+        Padding(
+          padding: AppStyle.edgeInsetsH20,
+          child: Text(
+            "清晰度与线路",
+            style: AppStyle.textStyleWhite.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        AppStyle.vGap24,
+
         // 清晰度切换
         Obx(
           () => SettingsItemWidget(
@@ -377,23 +422,20 @@ void showPlayerSettings(LiveRoomController controller) {
             },
           ),
         ),
-        AppStyle.vGap32,
-        Obx(
-          () => SettingsItemWidget(
-            foucsNode: danmakuFoucsNode,
-            autofocus: danmakuFoucsNode.isFoucsed.value,
-            title: "弹幕开关",
-            items: const {
-              0: "关",
-              1: "开",
-            },
-            value: controller.showDanmakuState.value ? 1 : 0,
-            onChanged: (e) {
-              controller.showDanmakuState.value = e == 1;
-            },
+        Divider(
+          color: Colors.grey.withOpacity(.2),
+          height: 36.w,
+        ),
+        Padding(
+          padding: AppStyle.edgeInsetsH20,
+          child: Text(
+            "播放器",
+            style: AppStyle.textStyleWhite.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        AppStyle.vGap32,
+        AppStyle.vGap24,
         Obx(
           () => SettingsItemWidget(
             foucsNode: scaleFoucsNode,
@@ -413,67 +455,181 @@ void showPlayerSettings(LiveRoomController controller) {
             },
           ),
         ),
-        // RadioListTile(
-        //   value: 0,
-        //   contentPadding: AppStyle.edgeInsetsH4,
-        //   title: const Text("适应"),
-        //   visualDensity: VisualDensity.compact,
-        //   groupValue: AppSettingsController.instance.scaleMode.value,
-        //   onChanged: (e) {
-        //     AppSettingsController.instance.setScaleMode(e ?? 0);
-        //     controller.updateScaleMode();
-        //   },
-        // ),
-        // RadioListTile(
-        //   value: 1,
-        //   contentPadding: AppStyle.edgeInsetsH4,
-        //   title: const Text("拉伸"),
-        //   visualDensity: VisualDensity.compact,
-        //   groupValue: AppSettingsController.instance.scaleMode.value,
-        //   onChanged: (e) {
-        //     AppSettingsController.instance.setScaleMode(e ?? 1);
-        //     controller.updateScaleMode();
-        //   },
-        // ),
-        // RadioListTile(
-        //   value: 2,
-        //   contentPadding: AppStyle.edgeInsetsH4,
-        //   title: const Text("铺满"),
-        //   visualDensity: VisualDensity.compact,
-        //   groupValue: AppSettingsController.instance.scaleMode.value,
-        //   onChanged: (e) {
-        //     AppSettingsController.instance.setScaleMode(e ?? 2);
-        //     controller.updateScaleMode();
-        //   },
-        // ),
-        // RadioListTile(
-        //   value: 3,
-        //   contentPadding: AppStyle.edgeInsetsH4,
-        //   title: const Text("16:9"),
-        //   visualDensity: VisualDensity.compact,
-        //   groupValue: AppSettingsController.instance.scaleMode.value,
-        //   onChanged: (e) {
-        //     AppSettingsController.instance.setScaleMode(e ?? 3);
-        //     controller.updateScaleMode();
-        //   },
-        // ),
-        // RadioListTile(
-        //   value: 4,
-        //   contentPadding: AppStyle.edgeInsetsH4,
-        //   title: const Text("4:3"),
-        //   visualDensity: VisualDensity.compact,
-        //   groupValue: AppSettingsController.instance.scaleMode.value,
-        //   onChanged: (e) {
-        //     AppSettingsController.instance.setScaleMode(e ?? 4);
-        //     controller.updateScaleMode();
-        //   },
-        // ),
+        Divider(
+          color: Colors.grey.withOpacity(.2),
+          height: 36.w,
+        ),
+        Padding(
+          padding: AppStyle.edgeInsetsH20,
+          child: Text(
+            "弹幕",
+            style: AppStyle.textStyleWhite.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: danmakuFoucsNode,
+            autofocus: danmakuFoucsNode.isFoucsed.value,
+            title: "弹幕开关",
+            items: const {
+              0: "关",
+              1: "开",
+            },
+            value: controller.showDanmakuState.value ? 1 : 0,
+            onChanged: (e) {
+              controller.showDanmakuState.value = e == 1;
+              AppSettingsController.instance.setDanmuEnable(e == 1);
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: danmakuSizeFoucsNode,
+            autofocus: danmakuSizeFoucsNode.isFoucsed.value,
+            title: "弹幕大小",
+            items: {
+              24.0: "24",
+              32.0: "32",
+              40.0: "40",
+              48.0: "48",
+              56.0: "56",
+              64.0: "64",
+              72.0: "72",
+            },
+            value: AppSettingsController.instance.danmuSize.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuSize(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(
+                  fontSize: (e as double).w,
+                ),
+              );
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: danmakuSpeedFoucsNode,
+            autofocus: danmakuSpeedFoucsNode.isFoucsed.value,
+            title: "弹幕速度",
+            items: {
+              18.0: "很慢",
+              14.0: "较慢",
+              12.0: "慢",
+              10.0: "正常",
+              8.0: "快",
+              6.0: "较快",
+              4.0: "很快",
+            },
+            value: AppSettingsController.instance.danmuSpeed.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuSpeed(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(
+                  duration: e as double,
+                ),
+              );
+            },
+          ),
+        ),
+
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: danmakuAreaFoucsNode,
+            autofocus: danmakuAreaFoucsNode.isFoucsed.value,
+            title: "显示区域",
+            items: {
+              0.25: "1/4",
+              0.5: "1/2",
+              0.75: "3/4",
+              1.0: "全屏",
+            },
+            value: AppSettingsController.instance.danmuArea.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuArea(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(
+                  area: e as double,
+                ),
+              );
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: danmakuOpacityFoucsNode,
+            autofocus: danmakuOpacityFoucsNode.isFoucsed.value,
+            title: "不透明度",
+            items: {
+              0.1: "10%",
+              0.2: "20%",
+              0.3: "30%",
+              0.4: "40%",
+              0.5: "50%",
+              0.6: "60%",
+              0.7: "70%",
+              0.8: "80%",
+              0.9: "90%",
+              1.0: "100%",
+            },
+            value: AppSettingsController.instance.danmuOpacity.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuOpacity(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(
+                  opacity: e as double,
+                ),
+              );
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: danmakuStorkeFoucsNode,
+            autofocus: danmakuStorkeFoucsNode.isFoucsed.value,
+            title: "描边宽度",
+            items: {
+              2.0: "2",
+              4.0: "4",
+              6.0: "6",
+              8.0: "8",
+              10.0: "10",
+              12.0: "12",
+              14.0: "14",
+              16.0: "16",
+            },
+            value: AppSettingsController.instance.danmuStrokeWidth.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setDanmuStrokeWidth(e);
+              controller.updateDanmuOption(
+                controller.danmakuController?.option.copyWith(
+                  strokeWidth: (e as double).w,
+                ),
+              );
+            },
+          ),
+        ),
       ],
     ),
   );
 }
 
 void showFollowUser(LiveRoomController controller) {
+  var currentIndex = 0;
+  if (controller.followed.value) {
+    currentIndex = FollowUserService.instance.livingList.indexWhere((e) =>
+        e.id ==
+        "${controller.rxSite.value.id}_${controller.detail.value?.roomId}");
+  }
+
   Utils.showRightDialog(
     width: 800.w,
     useSystem: true,
@@ -491,7 +647,7 @@ void showFollowUser(LiveRoomController controller) {
             siteId: item.siteId,
             liveStatus: item.liveStatus.value,
             roomId: item.roomId,
-            autofocus: i == 0,
+            autofocus: i == currentIndex,
             onTap: () {
               controller.resetRoom(site, item.roomId);
               Get.back();

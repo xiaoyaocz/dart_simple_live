@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:simple_live_tv_app/app/controller/base_controller.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
@@ -77,9 +78,6 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 自动隐藏提示计时器
   Timer? hideSeekTipTimer;
 
-  /// 是否为竖屏直播间
-  var isVertical = false.obs;
-
   Widget? danmakuView;
 
   var showQualites = false.obs;
@@ -153,11 +151,11 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
     danmakuController = e;
     danmakuController?.updateOption(
       DanmakuOption(
-        fontSize: AppSettingsController.instance.danmuSize.value,
+        fontSize: AppSettingsController.instance.danmuSize.value.w,
         area: AppSettingsController.instance.danmuArea.value,
         duration: AppSettingsController.instance.danmuSpeed.value,
         opacity: AppSettingsController.instance.danmuOpacity.value,
-        strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
+        strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value.w,
       ),
     );
   }
@@ -209,6 +207,9 @@ class PlayerController extends BaseController
     super.onInit();
   }
 
+  var width = 0.obs;
+  var height = 0.obs;
+
   StreamSubscription<String>? _errorSubscription;
   StreamSubscription? _completedSubscription;
   StreamSubscription? _widthSubscription;
@@ -236,14 +237,16 @@ class PlayerController extends BaseController
     _widthSubscription = player.stream.width.listen((event) {
       Log.w(
           'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
-      isVertical.value =
-          (player.state.height ?? 9) > (player.state.width ?? 16);
+      width.value = event ?? 0;
+      // isVertical.value =
+      //     (player.state.height ?? 9) > (player.state.width ?? 16);
     });
     _heightSubscription = player.stream.height.listen((event) {
       Log.w(
           'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
-      isVertical.value =
-          (player.state.height ?? 9) > (player.state.width ?? 16);
+      height.value = event ?? 0;
+      // isVertical.value =
+      //     (player.state.height ?? 9) > (player.state.width ?? 16);
     });
   }
 

@@ -4,7 +4,6 @@ import 'package:simple_live_tv_app/widgets/status/app_empty_widget.dart';
 import 'package:simple_live_tv_app/widgets/status/app_error_widget.dart';
 import 'package:simple_live_tv_app/widgets/status/app_loadding_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:flutter_easyrefresh/easy_refresh.dart';
 import 'package:get/get.dart';
 
 class PageGridView extends StatelessWidget {
@@ -34,28 +33,14 @@ class PageGridView extends StatelessWidget {
     return Obx(
       () => Stack(
         children: [
-          EasyRefresh(
-            header: MaterialHeader(
-              completeDuration: const Duration(milliseconds: 400),
-            ),
-            footer: MaterialFooter(
-              completeDuration: const Duration(milliseconds: 400),
-              overScroll: true,
-            ),
-            bottomBouncing: false,
-            scrollController: pageController.scrollController,
-            controller: pageController.easyRefreshController,
-            firstRefresh: firstRefresh,
-            onLoad: pageController.loadData,
-            onRefresh: pageController.refreshData,
-            child: MasonryGridView.count(
-              padding: padding,
-              itemCount: pageController.list.length,
-              itemBuilder: itemBuilder,
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: crossAxisSpacing,
-              mainAxisSpacing: mainAxisSpacing,
-            ),
+          MasonryGridView.count(
+            padding: padding,
+            controller: pageController.scrollController,
+            itemCount: pageController.list.length,
+            itemBuilder: itemBuilder,
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: crossAxisSpacing,
+            mainAxisSpacing: mainAxisSpacing,
           ),
           Offstage(
             offstage: !pageController.pageEmpty.value,

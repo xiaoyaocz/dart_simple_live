@@ -150,19 +150,19 @@ class AppStyle {
 
   static TextStyle get titleStyleWhite => TextStyle(
         color: Colors.white,
-        fontSize: 36.w,
+        fontSize: 40.w,
       );
   static TextStyle get titleStyleBlack => TextStyle(
         color: colorBlack33,
-        fontSize: 36.w,
+        fontSize: 40.w,
       );
   static TextStyle get textStyleWhite => TextStyle(
         color: Colors.white,
-        fontSize: 28.w,
+        fontSize: 32.w,
       );
   static TextStyle get textStyleBlack => TextStyle(
         color: colorBlack33,
-        fontSize: 28.w,
+        fontSize: 32.w,
       );
   static TextStyle get subTextStyleWhite => TextStyle(
         color: Colors.white54,

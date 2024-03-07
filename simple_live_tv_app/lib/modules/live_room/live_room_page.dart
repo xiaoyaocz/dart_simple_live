@@ -59,6 +59,29 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       showFollowUser(controller);
       return;
     }
+
+    // 点击右键关注/取消关注
+    if (key.logicalKey == LogicalKeyboardKey.arrowRight) {
+      if (controller.followed.value) {
+        controller.removeFollowUser();
+      } else {
+        controller.followUser();
+      }
+
+      return;
+    }
+
+    // 点击上键切换上一个直播
+    if (key.logicalKey == LogicalKeyboardKey.arrowUp) {
+      controller.prevChannel();
+      return;
+    }
+
+    // 点击下键切换下一个直播
+    if (key.logicalKey == LogicalKeyboardKey.arrowDown) {
+      controller.nextChannel();
+      return;
+    }
   }
 
   Widget buildMediaPlayer() {

@@ -48,9 +48,9 @@ class HomePage extends GetView<HomeController> {
               AppStyle.hGap48,
             ],
           ),
-          AppStyle.vGap32,
           Expanded(
             child: ListView(
+              padding: AppStyle.edgeInsetsV32,
               children: [
                 Padding(
                   padding: AppStyle.edgeInsetsH48,
@@ -77,12 +77,21 @@ class HomePage extends GetView<HomeController> {
                       AppStyle.hGap48,
                       Expanded(
                         child: HomeBigButton(
+                          autofocus: true,
                           focusNode: AppFocusNode(),
-                          text: "我的关注",
-                          iconData: Icons.favorite_border,
-                          onTap: controller.toFollow,
+                          text: "搜索直播",
+                          iconData: Remix.search_2_line,
                         ),
                       ),
+                      // AppStyle.hGap40,
+                      // Expanded(
+                      //   child: HomeBigButton(
+                      //     focusNode: AppFocusNode(),
+                      //     text: "我的关注",
+                      //     iconData: Icons.favorite_border,
+                      //     onTap: controller.toFollow,
+                      //   ),
+                      // ),
                       AppStyle.hGap48,
                       Expanded(
                         child: HomeBigButton(

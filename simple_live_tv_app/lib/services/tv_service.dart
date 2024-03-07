@@ -109,6 +109,7 @@ class TVService extends GetxService {
 
       var ip = await networkInfo.getWifiIP();
       ipAddress.value = ip ?? "";
+
       Log.d('Serving at http://$ip:${server.port}');
     } catch (e) {
       httpErrorMsg.value = e.toString();

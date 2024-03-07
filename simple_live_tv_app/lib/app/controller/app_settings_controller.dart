@@ -1,4 +1,3 @@
-
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
 
 import 'package:get/get.dart';
@@ -17,17 +16,17 @@ class AppSettingsController extends GetxController {
     firstRun = LocalStorageService.instance
         .getValue(LocalStorageService.kFirstRun, true);
     danmuSize.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kDanmuSize, 16.0);
+        .getValue(LocalStorageService.kDanmuSize, 40.0);
     danmuOpacity.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuOpacity, 1.0);
     danmuArea.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kDanmuArea, 0.8);
+        .getValue(LocalStorageService.kDanmuArea, 0.25);
     danmuSpeed.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuSpeed, 10.0);
     danmuEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuEnable, true);
     danmuStrokeWidth.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
+        .getValue(LocalStorageService.kDanmuStrokeWidth, 4.0);
     danmuTopMargin.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuTopMargin, 0.0);
     danmuBottomMargin.value = LocalStorageService.instance
@@ -125,7 +124,7 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kChatBubbleStyle, e);
   }
 
-  var danmuSize = 16.0.obs;
+  var danmuSize = 40.0.obs;
   void setDanmuSize(double e) {
     danmuSize.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuSize, e);
@@ -137,7 +136,7 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuSpeed, e);
   }
 
-  var danmuArea = 0.8.obs;
+  var danmuArea = 0.25.obs;
   void setDanmuArea(double e) {
     danmuArea.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuArea, e);
@@ -155,7 +154,7 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuEnable, e);
   }
 
-  var danmuStrokeWidth = 2.0.obs;
+  var danmuStrokeWidth = 4.0.obs;
   void setDanmuStrokeWidth(double e) {
     danmuStrokeWidth.value = e;
     LocalStorageService.instance

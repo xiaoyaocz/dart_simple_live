@@ -103,12 +103,12 @@ class AnchorCard extends StatelessWidget {
                 top: 0,
                 child: Container(
                   padding:
-                      AppStyle.edgeInsetsH16.copyWith(top: 8.w, bottom: 8.w),
+                      AppStyle.edgeInsetsH16.copyWith(top: 4.w, bottom: 4.w),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(16.w),
-                      bottomLeft: Radius.circular(16.w),
+                      topRight: Radius.circular(12.w),
+                      bottomLeft: Radius.circular(12.w),
                     ),
                   ),
                   child: Text(

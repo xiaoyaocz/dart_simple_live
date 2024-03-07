@@ -21,22 +21,22 @@ class HighlightWidget extends StatelessWidget {
   final bool autofocus;
   final BorderRadius? borderRadius;
   final double order;
-  const HighlightWidget(
-      {required this.focusNode,
-      required this.child,
-      this.onUpKey,
-      this.onDownKey,
-      this.onLeftKey,
-      this.onRightKey,
-      this.onFocusChange,
-      this.onTap,
-      this.autofocus = false,
-      this.borderRadius,
-      this.order = 0.0,
-      this.color = Colors.transparent,
-      this.foucsedColor = Colors.white,
-      Key? key})
-      : super(key: key);
+  const HighlightWidget({
+    required this.focusNode,
+    required this.child,
+    this.onUpKey,
+    this.onDownKey,
+    this.onLeftKey,
+    this.onRightKey,
+    this.onFocusChange,
+    this.onTap,
+    this.autofocus = false,
+    this.borderRadius,
+    this.order = 0.0,
+    this.color = Colors.transparent,
+    this.foucsedColor = Colors.white,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +46,8 @@ class HighlightWidget extends StatelessWidget {
         focusNode: focusNode,
         autofocus: autofocus,
         onFocusChange: onFocusChange,
-        onKey: (node, e) {
-          if (e is RawKeyDownEvent) {
+        onKeyEvent: (node, e) {
+          if (e is KeyDownEvent) {
             if (e.logicalKey == LogicalKeyboardKey.arrowRight) {
               return onRightKey?.call() ?? KeyEventResult.ignored;
             }
@@ -60,28 +60,33 @@ class HighlightWidget extends StatelessWidget {
             if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
               return onDownKey?.call() ?? KeyEventResult.ignored;
             }
-            if (e.logicalKey == LogicalKeyboardKey.enter) {
+            if (e.logicalKey == LogicalKeyboardKey.enter ||
+                e.logicalKey == LogicalKeyboardKey.select ||
+                e.logicalKey == LogicalKeyboardKey.space) {
               return onTap?.call() ?? KeyEventResult.ignored;
             }
           }
 
           return KeyEventResult.ignored;
         },
-        child: Obx(
-          () => AnimatedScale(
-            scale: focusNode.isFoucsed.value ? 1.1 : 1,
-            duration: const Duration(milliseconds: 200),
-            child: GestureDetector(
-              onTap: onTap,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: borderRadius,
-                  boxShadow: focusNode.isFoucsed.value
-                      ? AppStyle.highlightShadow
-                      : null,
-                  color: focusNode.isFoucsed.value ? foucsedColor : color,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Obx(
+            () => AnimatedScale(
+              scale: focusNode.isFoucsed.value ? 1.1 : 1,
+              duration: const Duration(milliseconds: 200),
+              child: GestureDetector(
+                onTap: onTap,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadius,
+                    boxShadow: focusNode.isFoucsed.value
+                        ? AppStyle.highlightShadow
+                        : null,
+                    color: focusNode.isFoucsed.value ? foucsedColor : color,
+                  ),
+                  child: child,
                 ),
-                child: child,
               ),
             ),
           ),

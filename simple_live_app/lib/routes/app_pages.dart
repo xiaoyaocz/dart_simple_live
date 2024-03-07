@@ -10,6 +10,8 @@ import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
+import 'package:simple_live_app/modules/tv_sync/tv_sync_controller.dart';
+import 'package:simple_live_app/modules/tv_sync/tv_sync_page.dart';
 import 'package:simple_live_app/modules/user/account/account_controller.dart';
 import 'package:simple_live_app/modules/user/account/account_page.dart';
 import 'package:simple_live_app/modules/user/account/bilibili/qr_login_controller.dart';
@@ -98,8 +100,7 @@ class AppPages {
     //外观设置
     GetPage(
         name: RoutePath.kAppstyleSetting,
-        page: () => const AppstyleSettingPage()
-    ),
+        page: () => const AppstyleSettingPage()),
     //播放设置
     GetPage(
       name: RoutePath.kSettingsPlay,
@@ -156,6 +157,14 @@ class AppPages {
       page: () => const BiliBiliQRLoginPage(),
       bindings: [
         BindingsBuilder.put(() => BiliBiliQRLoginController()),
+      ],
+    ),
+    // TV端数据同步
+    GetPage(
+      name: RoutePath.kTVSync,
+      page: () => const TVSyncPage(),
+      bindings: [
+        BindingsBuilder.put(() => TVSyncController()),
       ],
     ),
   ];

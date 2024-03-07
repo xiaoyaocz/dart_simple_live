@@ -1,4 +1,4 @@
-package com.example.simple_live_tv_app
+package com.xycz.simple_live_tv
 
 import io.flutter.embedding.android.FlutterActivity
 

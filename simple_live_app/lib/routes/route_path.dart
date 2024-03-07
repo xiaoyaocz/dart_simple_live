@@ -50,4 +50,7 @@ class RoutePath {
 
   /// BiliBili 二维码登录
   static const kBiliBiliQRLogin = "/settings/account/bilibili/qr_login";
+
+  /// TV端数据同步
+  static const kTVSync = "/tv/sync";
 }

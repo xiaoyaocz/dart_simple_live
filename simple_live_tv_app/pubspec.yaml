@@ -25,20 +25,30 @@ dependencies:
 
   #Widget
   flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
-  flutter_easyrefresh: ^2.2.2 #下拉刷新、上拉加载
-  extended_image: ^8.1.1 #拓展Image,支持缓存
-  flutter_smart_dialog: ^4.9.4 #各种弹窗 Toast/Dialog/Popup
+  flutter_easyrefresh: 2.2.2 #下拉刷新、上拉加载
+  extended_image: ^8.2.0 #拓展Image,支持缓存
+  flutter_smart_dialog: ^4.9.6 #各种弹窗 Toast/Dialog/Popup
   marquee: ^2.2.3 #跑马灯
-  lottie: ^2.6.0 #Lottie动画
+  lottie: ^3.1.0 #Lottie动画
+  qr_flutter: ^4.1.0 #二维码
+  ns_danmaku: #弹幕
+    git: 
+        url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
+        ref: master
 
   #系统交互
-  package_info_plus: ^4.1.0 #包信息
-  url_launcher: ^6.1.14 #打开链接
+  package_info_plus: ^5.0.1 #包信息
+  url_launcher: ^6.2.5 #打开链接
+  network_info_plus: ^4.1.0+1
+  shelf: ^1.4.1 
+  shelf_router: ^1.1.4 
+  udp: ^5.0.3 #UDP
+  device_info_plus: ^9.1.2 #设备信息
 
   # 视频播放
-  media_kit: ^1.1.7
-  media_kit_video: ^1.1.8
-  media_kit_libs_video: ^1.0.1
+  media_kit: ^1.1.10+1
+  media_kit_video: ^1.2.4
+  media_kit_libs_video: ^1.0.4
 
 dev_dependencies:
   flutter_test:

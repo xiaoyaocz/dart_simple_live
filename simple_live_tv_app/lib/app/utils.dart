@@ -1,3 +1,5 @@
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -138,5 +140,51 @@ class Utils {
       ),
     );
     return result;
+  }
+
+  static bool isRegexFormat(String keyword) {
+    return keyword.startsWith('/') &&
+        keyword.endsWith('/') &&
+        keyword.length > 2;
+  }
+
+  static String removeRegexFormat(String keyword) {
+    return keyword.substring(1, keyword.length - 1);
+  }
+
+  static void showRightDialog({
+    Function()? onDismiss,
+    required Widget child,
+    double width = 320,
+    bool useSystem = false,
+  }) {
+    SmartDialog.show(
+      alignment: Alignment.topRight,
+      animationBuilder: (controller, child, animationParam) {
+        //从右到左
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(controller.view),
+          child: child,
+        );
+      },
+      useSystem: useSystem,
+      maskColor: Colors.transparent,
+      animationTime: const Duration(milliseconds: 200),
+      builder: (context) => Container(
+        width: width + MediaQuery.of(context).padding.right,
+        padding: EdgeInsets.only(right: MediaQuery.of(context).padding.right),
+        decoration: BoxDecoration(
+          color: Get.theme.cardColor,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  static void hideRightDialog() {
+    SmartDialog.dismiss(status: SmartStatus.allCustom);
   }
 }

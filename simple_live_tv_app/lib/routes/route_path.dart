@@ -1,5 +1,8 @@
 /// 路由路径
 class RoutePath {
+  /// 用户协议
+  static const kAgreement = "/agreement";
+
   /// 首页
   static const kHome = "/home";
 

@@ -60,7 +60,7 @@ class TVService extends GetxService {
 
   /// 发送自己的信息
   void sendUDP() async {
-    var ip = await networkInfo.getWifiIP();
+    var ip = await getLocalIP();
 
     var name = "SimpleLiveTV";
     if (Platform.isAndroid) {
@@ -74,7 +74,7 @@ class TVService extends GetxService {
     var data = {
       "type": "tv",
       "name": name,
-      "ip": ip ?? '',
+      "ip": ip,
     };
 
     await udp!.send(
@@ -84,6 +84,27 @@ class TVService extends GetxService {
       ),
     );
     Log.i("send udp info: $data");
+  }
+
+  Future<String> getLocalIP() async {
+    var ip = await networkInfo.getWifiIP();
+    if (ip == null || ip.isEmpty) {
+      var interfaces = await NetworkInterface.list();
+      var ipList = <String>[];
+      for (var interface in interfaces) {
+        for (var addr in interface.addresses) {
+          if (addr.type.name == 'IPv4' &&
+              !addr.address.startsWith('127') &&
+              !addr.isMulticast &&
+              !addr.isLoopback) {
+            ipList.add(addr.address);
+            break;
+          }
+        }
+      }
+      ip = ipList.join(';');
+    }
+    return ip;
   }
 
   void initServer() async {
@@ -107,8 +128,8 @@ class TVService extends GetxService {
 
       httpRunning.value = true;
 
-      var ip = await networkInfo.getWifiIP();
-      ipAddress.value = ip ?? "";
+      var ip = await getLocalIP();
+      ipAddress.value = ip;
 
       Log.d('Serving at http://$ip:${server.port}');
     } catch (e) {

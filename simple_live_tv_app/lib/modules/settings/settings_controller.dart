@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/controller/base_controller.dart';
@@ -55,5 +56,10 @@ class SettingsController extends BaseController
     } else {
       AppNavigator.toBiliBiliLogin();
     }
+  }
+
+  void checkUpdate() {
+    SmartDialog.showToast("检查更新中...");
+    Utils.checkUpdate(showMsg: true);
   }
 }

@@ -300,8 +300,7 @@ class HomePage extends GetView<HomeController> {
         shape: RoundedRectangleBorder(
           borderRadius: AppStyle.radius16,
         ),
-        contentPadding:
-            AppStyle.edgeInsetsA48.copyWith(left: 64.w, right: 64.w),
+        contentPadding: AppStyle.edgeInsetsA48,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -336,32 +335,35 @@ class HomePage extends GetView<HomeController> {
               ],
             ),
             AppStyle.vGap48,
-            TextField(
-              controller: textController,
-              style: AppStyle.textStyleWhite,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (e) {
-                Get.back();
-                if (e.isEmpty) {
-                  return;
-                }
-                if (mode.value == 0) {
-                  controller.toSearchRoom(textController.text);
-                } else {
-                  controller.toSearchAnchor(textController.text);
-                }
-              },
-              decoration: InputDecoration(
-                hintText: mode.value == 0 ? "请输入关键字" : "请输入主播昵称",
-                hintStyle: AppStyle.textStyleWhite,
-                border: OutlineInputBorder(
-                  borderRadius: AppStyle.radius16,
-                  borderSide: BorderSide(width: 4.w),
+            SizedBox(
+              width: 700.w,
+              child: TextField(
+                controller: textController,
+                style: AppStyle.textStyleWhite,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (e) {
+                  Get.back();
+                  if (e.isEmpty) {
+                    return;
+                  }
+                  if (mode.value == 0) {
+                    controller.toSearchRoom(textController.text);
+                  } else {
+                    controller.toSearchAnchor(textController.text);
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: mode.value == 0 ? "点击输入关键字搜索" : "点击主播昵称搜索",
+                  hintStyle: AppStyle.textStyleWhite,
+                  border: OutlineInputBorder(
+                    borderRadius: AppStyle.radius16,
+                    borderSide: BorderSide(width: 4.w),
+                  ),
+                  filled: true,
+                  isDense: true,
+                  fillColor: Get.theme.primaryColor,
+                  contentPadding: AppStyle.edgeInsetsA32,
                 ),
-                filled: true,
-                isDense: true,
-                fillColor: Get.theme.primaryColor,
-                contentPadding: AppStyle.edgeInsetsA48,
               ),
             ),
           ],

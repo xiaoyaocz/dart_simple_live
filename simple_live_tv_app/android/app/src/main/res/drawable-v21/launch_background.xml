@@ -9,4 +9,14 @@
             android:gravity="center"
             android:src="@mipmap/launch_image" />
     </item> -->
+     <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:startColor="#141e30"
+                android:centerColor="#243b55"
+                android:endColor="#141e30"
+                android:angle="135" />
+        </shape>
+    </item>
 </layer-list>

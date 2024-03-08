@@ -3,6 +3,7 @@
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/modules/account/bilibili/qr_login_controller.dart';
 import 'package:simple_live_tv_app/modules/account/bilibili/qr_login_page.dart';
+import 'package:simple_live_tv_app/modules/agreement/agreement_page.dart';
 import 'package:simple_live_tv_app/modules/category/category_controller.dart';
 import 'package:simple_live_tv_app/modules/category/category_page.dart';
 import 'package:simple_live_tv_app/modules/category/detail/category_detail_controller.dart';
@@ -30,6 +31,10 @@ import 'route_path.dart';
 class AppPages {
   AppPages._();
   static final routes = [
+    GetPage(
+      name: RoutePath.kAgreement,
+      page: () => const AgreementPage(),
+    ),
     // 首页
     GetPage(
       name: RoutePath.kHome,

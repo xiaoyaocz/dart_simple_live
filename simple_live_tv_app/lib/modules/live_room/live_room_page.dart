@@ -49,7 +49,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
     // 点击Menu打开/关闭设置
     if (key.logicalKey == LogicalKeyboardKey.keyM ||
-        key.logicalKey == LogicalKeyboardKey.contextMenu) {
+        key.logicalKey == LogicalKeyboardKey.contextMenu ||
+        key.logicalKey == LogicalKeyboardKey.arrowRight) {
       showPlayerSettings(controller);
       return;
     }
@@ -60,16 +61,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       return;
     }
 
-    // 点击右键关注/取消关注
-    if (key.logicalKey == LogicalKeyboardKey.arrowRight) {
-      if (controller.followed.value) {
-        controller.removeFollowUser();
-      } else {
-        controller.followUser();
-      }
+    // // 点击右键关注/取消关注
+    // if (key.logicalKey == LogicalKeyboardKey.arrowRight) {
+    //   if (controller.followed.value) {
+    //     controller.removeFollowUser();
+    //   } else {
+    //     controller.followUser();
+    //   }
 
-      return;
-    }
+    //   return;
+    // }
 
     // 点击上键切换上一个直播
     if (key.logicalKey == LogicalKeyboardKey.arrowUp) {

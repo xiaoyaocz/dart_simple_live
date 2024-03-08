@@ -11,8 +11,8 @@ class BaseController extends GetxController {
   /// 加载中，更新页面
   var pageLoadding = false.obs;
 
-  /// 加载中,不会更新页面
-  var loadding = false;
+  /// 加载中
+  var loadding = false.obs;
 
   /// 空白页面
   var pageEmpty = false.obs;
@@ -74,8 +74,8 @@ class BasePageController<T> extends BaseController {
 
   Future loadData() async {
     try {
-      if (loadding) return;
-      loadding = true;
+      if (loadding.value) return;
+      loadding.value = true;
       pageError.value = false;
       pageEmpty.value = false;
       notLogin.value = false;
@@ -102,7 +102,7 @@ class BasePageController<T> extends BaseController {
     } catch (e) {
       handleError(e, showPageError: currentPage == 1);
     } finally {
-      loadding = false;
+      loadding.value = false;
       pageLoadding.value = false;
     }
   }

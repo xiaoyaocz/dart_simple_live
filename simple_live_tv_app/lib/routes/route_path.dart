@@ -6,8 +6,11 @@ class RoutePath {
   /// 数据同步
   static const kSync = "/sync";
 
-  /// 搜索
-  static const kSearch = "/search";
+  /// 搜索房间
+  static const kSearchRoom = "/search/room";
+
+  /// 搜索主播
+  static const kSearchAnchor = "/search/anchor";
 
   /// 关注
   static const kFollow = "/follow";
@@ -20,4 +23,16 @@ class RoutePath {
 
   /// 哔哩哔哩登录
   static const kBiliBiliQRLogin = "/bilibili/qr_login";
+
+  /// 设置
+  static const kSettings = "/settings";
+
+  /// 热门直播
+  static const kHotLive = "/hot_live";
+
+  /// 分类
+  static const kCategory = "/category";
+
+  /// 分类详情
+  static const kCategoryDetail = "/category/detail";
 }

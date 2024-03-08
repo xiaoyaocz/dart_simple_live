@@ -16,6 +16,7 @@ class AnchorCard extends StatelessWidget {
   final int liveStatus;
   final bool autofocus;
   final Function()? onTap;
+  final AppFocusNode? focusNode;
   const AnchorCard({
     required this.face,
     required this.siteId,
@@ -23,6 +24,7 @@ class AnchorCard extends StatelessWidget {
     required this.liveStatus,
     required this.roomId,
     this.autofocus = false,
+    this.focusNode,
     this.onTap,
     super.key,
   });
@@ -30,7 +32,7 @@ class AnchorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var site = Sites.allSites[siteId]!;
-    var focusNode = AppFocusNode();
+    var focusNode = this.focusNode ?? AppFocusNode();
     return Obx(
       () => HighlightWidget(
         onTap: onTap ??

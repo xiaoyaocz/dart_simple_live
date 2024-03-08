@@ -47,19 +47,47 @@ class Utils {
   }) async {
     var result = await Get.dialog(
       AlertDialog(
-        title: Text(title),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppStyle.radius16,
+        ),
+        titlePadding: AppStyle.edgeInsetsA24.copyWith(left: 48.w, right: 48.w),
+        contentPadding:
+            AppStyle.edgeInsetsA24.copyWith(left: 48.w, right: 48.w),
+        insetPadding: AppStyle.edgeInsetsA16,
+        actionsPadding: AppStyle.edgeInsetsA16,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Get.theme.cardColor,
+        title: Text(
+          title,
+          style: AppStyle.titleStyleWhite,
+        ),
         content: Padding(
           padding: AppStyle.edgeInsetsV12,
-          child: selectable ? SelectableText(content) : Text(content),
+          child: selectable
+              ? SelectableText(
+                  content,
+                  style: AppStyle.textStyleWhite,
+                )
+              : Text(
+                  content,
+                  style: AppStyle.textStyleWhite,
+                ),
         ),
         actions: [
           TextButton(
             onPressed: (() => Get.back(result: false)),
-            child: Text(cancel.isEmpty ? "取消" : cancel),
+            child: Text(
+              cancel.isEmpty ? "取消" : cancel,
+              style: AppStyle.textStyleWhite,
+            ),
           ),
           TextButton(
+            autofocus: true,
             onPressed: (() => Get.back(result: true)),
-            child: Text(confirm.isEmpty ? "确定" : confirm),
+            child: Text(
+              confirm.isEmpty ? "确定" : confirm,
+              style: AppStyle.textStyleWhite,
+            ),
           ),
           ...?actions,
         ],

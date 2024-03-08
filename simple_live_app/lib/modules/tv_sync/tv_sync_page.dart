@@ -69,12 +69,11 @@ class TVSyncPage extends GetView<TVSyncController> {
             contentPadding: AppStyle.edgeInsetsH12,
             trailing: IconButton(
               visualDensity: VisualDensity.compact,
-              onPressed: () {},
+              onPressed: () {
+                TVService.instance.refreshClients();
+              },
               icon: const Icon(Icons.refresh),
             ),
-            onTap: () {
-              TVService.instance.refreshClients();
-            },
           ),
           SettingsCard(
             child: Obx(

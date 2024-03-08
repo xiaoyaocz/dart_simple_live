@@ -7,16 +7,20 @@ import 'package:simple_live_tv_app/widgets/highlight_widget.dart';
 
 class HighlightButton extends StatelessWidget {
   final String text;
-  final IconData iconData;
+  final IconData? iconData;
+  final Widget? icon;
   final AppFocusNode focusNode;
   final Function()? onTap;
   final bool autofocus;
+  final bool selected;
   const HighlightButton({
-    required this.iconData,
+    this.iconData,
     required this.text,
+    this.icon,
     this.onTap,
     required this.focusNode,
     this.autofocus = false,
+    this.selected = false,
     super.key,
   });
   @override
@@ -28,6 +32,7 @@ class HighlightButton extends StatelessWidget {
         color: Colors.white10,
         onTap: onTap,
         autofocus: autofocus,
+        selected: selected,
         child: Container(
           height: 64.w,
           //width: 64.w,
@@ -39,18 +44,14 @@ class HighlightButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                iconData,
-                size: 40.w,
-                color: focusNode.isFoucsed.value ? Colors.black : Colors.white,
-              ),
-              AppStyle.hGap12,
+              buildIcon(),
               Text(
                 text,
                 style: TextStyle(
                   fontSize: 28.w,
-                  color:
-                      focusNode.isFoucsed.value ? Colors.black : Colors.white,
+                  color: (focusNode.isFoucsed.value || selected)
+                      ? Colors.black
+                      : Colors.white,
                 ),
               ),
             ],
@@ -58,5 +59,22 @@ class HighlightButton extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget buildIcon() {
+    if (icon != null || iconData != null) {
+      return Padding(
+        padding: AppStyle.edgeInsetsR12,
+        child: icon ??
+            Icon(
+              iconData,
+              size: 40.w,
+              color: (focusNode.isFoucsed.value || selected)
+                  ? Colors.black
+                  : Colors.white,
+            ),
+      );
+    }
+    return const SizedBox();
   }
 }

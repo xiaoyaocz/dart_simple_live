@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
@@ -179,17 +178,6 @@ Widget buildControls(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.menu,
-                      color: Colors.white,
-                      size: 40.w,
-                    ),
-                    AppStyle.hGap16,
-                    Text(
-                      "设置",
-                      style: AppStyle.textStyleWhite,
-                    ),
-                    AppStyle.hGap32,
-                    Icon(
                       Icons.arrow_circle_up_rounded,
                       color: Colors.white,
                       size: 40.w,
@@ -228,8 +216,14 @@ Widget buildControls(
                       size: 40.w,
                     ),
                     AppStyle.hGap16,
+                    Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                      size: 44.w,
+                    ),
+                    AppStyle.hGap16,
                     Text(
-                      "添加/取消关注",
+                      "设置",
                       style: AppStyle.textStyleWhite,
                     ),
                   ],
@@ -349,7 +343,8 @@ Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
 // }
 
 void showPlayerSettings(LiveRoomController controller) {
-  var qualityFoucsNode = AppFocusNode()..isFoucsed.value = true;
+  var followFocusNode = AppFocusNode()..isFoucsed.value = true;
+  var qualityFoucsNode = AppFocusNode();
   var lineFoucsNode = AppFocusNode();
   var scaleFoucsNode = AppFocusNode();
   var danmakuFoucsNode = AppFocusNode();
@@ -364,6 +359,31 @@ void showPlayerSettings(LiveRoomController controller) {
     child: ListView(
       padding: AppStyle.edgeInsetsA48,
       children: [
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: followFocusNode,
+            autofocus: followFocusNode.isFoucsed.value,
+            title: "关注用户",
+            items: const {
+              false: "否",
+              true: "是",
+            },
+            value: controller.followed.value,
+            onChanged: (e) {
+              if (e) {
+                controller.followUser();
+              } else {
+                controller.removeFollowUser();
+              }
+            },
+          ),
+        ),
+
+        Divider(
+          color: Colors.grey.withOpacity(.2),
+          height: 36.w,
+        ),
+        AppStyle.vGap24,
         Padding(
           padding: AppStyle.edgeInsetsH20,
           child: Text(
@@ -628,6 +648,9 @@ void showFollowUser(LiveRoomController controller) {
     currentIndex = FollowUserService.instance.livingList.indexWhere((e) =>
         e.id ==
         "${controller.rxSite.value.id}_${controller.detail.value?.roomId}");
+    if (currentIndex == -1) {
+      currentIndex = 0;
+    }
   }
 
   Utils.showRightDialog(

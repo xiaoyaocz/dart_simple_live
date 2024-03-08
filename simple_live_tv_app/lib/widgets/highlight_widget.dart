@@ -21,6 +21,7 @@ class HighlightWidget extends StatelessWidget {
   final bool autofocus;
   final BorderRadius? borderRadius;
   final double order;
+  final bool selected;
   const HighlightWidget({
     required this.focusNode,
     required this.child,
@@ -31,6 +32,7 @@ class HighlightWidget extends StatelessWidget {
     this.onFocusChange,
     this.onTap,
     this.autofocus = false,
+    this.selected = false,
     this.borderRadius,
     this.order = 0.0,
     this.color = Colors.transparent,
@@ -83,7 +85,9 @@ class HighlightWidget extends StatelessWidget {
                     boxShadow: focusNode.isFoucsed.value
                         ? AppStyle.highlightShadow
                         : null,
-                    color: focusNode.isFoucsed.value ? foucsedColor : color,
+                    color: (focusNode.isFoucsed.value || selected)
+                        ? foucsedColor
+                        : color,
                   ),
                   child: child,
                 ),

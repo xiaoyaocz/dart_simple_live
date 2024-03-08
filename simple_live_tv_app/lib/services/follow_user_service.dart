@@ -13,11 +13,7 @@ class FollowUserService extends BasePageController<FollowUser> {
   static FollowUserService get instance => Get.find<FollowUserService>();
   StreamSubscription<dynamic>? subscription;
 
-  RxList<FollowUser> allList = RxList<FollowUser>();
   RxList<FollowUser> livingList = RxList<FollowUser>();
-
-  /// 0:全部 1:直播中 2:未直播
-  var filterMode = 0.obs;
 
   @override
   void onInit() {
@@ -25,44 +21,40 @@ class FollowUserService extends BasePageController<FollowUser> {
       refreshData();
     });
 
-    if (allList.isEmpty) {
+    if (list.isEmpty) {
       refreshData();
     }
     super.onInit();
   }
 
+  var updatedCount = 0;
+  var updating = false.obs;
   @override
   Future<List<FollowUser>> getData(int page, int pageSize) {
     if (page > 1) {
       return Future.value([]);
     }
-    var list = DBService.instance.getFollowList();
-    for (var item in list) {
+
+    var followList = DBService.instance.getFollowList();
+
+    updatedCount = 0;
+    updating.value = true;
+    for (var item in followList) {
       updateLiveStatus(item);
     }
-    allList.assignAll(list);
-    return Future.value(list);
-  }
-
-  void filterData() {
-    if (filterMode.value == 0) {
-      list.assignAll(allList);
-      list.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
-    } else if (filterMode.value == 1) {
-      list.assignAll(allList.where((x) => x.liveStatus.value == 2));
-    } else if (filterMode.value == 2) {
-      list.assignAll(allList.where((x) => x.liveStatus.value == 1));
+    if (followList.isEmpty) {
+      updating.value = false;
     }
-    allList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    return Future.value(followList);
   }
 
-  void setFilterMode(int mode) {
-    filterMode.value = mode;
-    filterData();
+  void sortList() {
+    list.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    updateLivingList();
   }
 
   void updateLivingList() {
-    livingList.assignAll(allList.where((x) => x.liveStatus.value == 2));
+    livingList.assignAll(list.where((x) => x.liveStatus.value == 2));
   }
 
   void updateLiveStatus(FollowUser item) async {
@@ -70,22 +62,31 @@ class FollowUserService extends BasePageController<FollowUser> {
       var site = Sites.allSites[item.siteId]!;
       item.liveStatus.value =
           (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
-
-      filterData();
-      updateLivingList();
+      updatedCount++;
+      if (updatedCount == list.length) {
+        sortList();
+        updating.value = false;
+      }
+      //sortList();
+      //updateLivingList();
     } catch (e) {
       Log.logPrint(e);
     }
   }
 
-  void removeItem(FollowUser item) async {
+  void removeItem(FollowUser item, {bool refresh = true}) async {
     var result =
         await Utils.showAlertDialog("确定要取消关注${item.userName}吗?", title: "取消关注");
     if (!result) {
       return;
     }
     await DBService.instance.followBox.delete(item.id);
-    refreshData();
+    if (refresh) {
+      refreshData();
+    } else {
+      list.remove(item);
+      livingList.remove(item);
+    }
   }
 
   @override

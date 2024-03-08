@@ -31,4 +31,28 @@ class HomeController extends BaseController {
   void toFollow() {
     Get.toNamed(RoutePath.kFollow);
   }
+
+  void toSettings() {
+    Get.toNamed(RoutePath.kSettings);
+  }
+
+  void toHistory() {
+    Get.toNamed(RoutePath.kHistory);
+  }
+
+  void toHotLive() {
+    Get.toNamed(RoutePath.kHotLive);
+  }
+
+  void toSearchRoom(String keyword) {
+    Get.toNamed(RoutePath.kSearchRoom, arguments: keyword);
+  }
+
+  void toSearchAnchor(String keyword) {
+    Get.toNamed(RoutePath.kSearchAnchor, arguments: keyword);
+  }
+
+  void toCategory() {
+    Get.toNamed(RoutePath.kCategory);
+  }
 }

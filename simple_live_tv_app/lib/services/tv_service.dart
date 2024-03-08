@@ -65,7 +65,7 @@ class TVService extends GetxService {
     var name = "SimpleLiveTV";
     if (Platform.isAndroid) {
       var info = await deviceInfo.androidInfo;
-      name = info.device;
+      name = info.model;
     } else if (Platform.isWindows) {
       var info = await deviceInfo.windowsInfo;
       name = info.userName;
@@ -226,6 +226,7 @@ class TVService extends GetxService {
       var jsonBody = json.decode(body);
       var cookie = jsonBody['cookie'];
       BiliBiliAccountService.instance.setCookie(cookie);
+      BiliBiliAccountService.instance.loadUserInfo();
       SmartDialog.showToast('已同步哔哩哔哩账号');
       return toJsonResponse({
         'status': true,

@@ -56,8 +56,7 @@ class SyncPage extends GetView<SyncController> {
                         Get.back();
                       },
                       child: QrImageView(
-                        data:
-                            'http://${TVService.instance.ipAddress.value}:${TVService.httpPort}/',
+                        data: TVService.instance.ipAddress.value,
                         version: QrVersions.auto,
                         backgroundColor: Colors.white,
                         padding: AppStyle.edgeInsetsA24,
@@ -71,8 +70,8 @@ class SyncPage extends GetView<SyncController> {
                   () => Visibility(
                     visible: TVService.instance.httpRunning.value,
                     child: Text(
-                      '服务已启动：${TVService.instance.ipAddress.value}:${TVService.httpPort}',
-                      style: AppStyle.titleStyleWhite,
+                      '服务已启动：${TVService.instance.ipAddress.value.split(';').map((e) => '$e:${TVService.httpPort}').join('；')}',
+                      style: AppStyle.textStyleWhite,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -82,7 +81,7 @@ class SyncPage extends GetView<SyncController> {
                     visible: !TVService.instance.httpRunning.value,
                     child: Text(
                       'HTTP服务未启动：${TVService.instance.httpErrorMsg}，请尝试重启应用',
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -93,7 +92,7 @@ class SyncPage extends GetView<SyncController> {
                     visible: TVService.instance.httpRunning.value,
                     child: Text(
                       "请使用Simple Live App扫描上方二维码\n建立连接后可在APP端选择需要同步至TV端的数据",
-                      style: AppStyle.titleStyleWhite,
+                      style: AppStyle.textStyleWhite,
                       textAlign: TextAlign.center,
                     ),
                   ),

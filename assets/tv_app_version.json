@@ -1,0 +1,7 @@
+{
+    "version": "1.0.1",
+    "version_num": 10001,
+    "version_desc": "- 修复虎牙播放中断问题 #317",
+    "prerelease":false,
+    "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
+}

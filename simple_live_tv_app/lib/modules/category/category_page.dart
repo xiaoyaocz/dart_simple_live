@@ -117,8 +117,8 @@ class CategoryPage extends GetView<CategoryController> {
                           padding: AppStyle.edgeInsetsV8,
                           physics: const NeverScrollableScrollPhysics(),
                           crossAxisCount: 8,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 36.w,
+                          mainAxisSpacing: 36.w,
                           children: item.showAll.value
                               ? (item.childrenExt
                                   .map(

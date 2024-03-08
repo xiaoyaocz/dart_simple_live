@@ -93,7 +93,9 @@ class MyApp extends StatelessWidget {
         return GetMaterialApp(
           title: 'Simple Live TV',
           theme: AppStyle.lightTheme,
-          initialRoute: RoutePath.kHome,
+          initialRoute: AppSettingsController.instance.firstRun
+              ? RoutePath.kAgreement
+              : RoutePath.kHome,
           getPages: AppPages.routes,
           debugShowCheckedModeBanner: false,
           builder: FlutterSmartDialog.init(

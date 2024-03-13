@@ -71,6 +71,7 @@ class SyncController extends BaseController {
     var addressList = (result as String).split(";");
     if (addressList.length >= 2) {
       //弹窗选择
+      showPickerAddress(addressList);
     } else {
       addressController.text = result;
       //connect();

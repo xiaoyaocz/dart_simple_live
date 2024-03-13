@@ -204,27 +204,12 @@ class Utils {
       useSystem: useSystem,
       maskColor: Colors.transparent,
       animationTime: const Duration(milliseconds: 200),
-      builder: (context) => KeyboardListener(
-        focusNode: FocusNode(),
-        //autofocus: true,
-        onKeyEvent: (e) {
-          if (e is KeyDownEvent) {
-            return;
-          }
-          if (e.logicalKey == LogicalKeyboardKey.escape ||
-              e.logicalKey == LogicalKeyboardKey.goBack ||
-              e.logicalKey == LogicalKeyboardKey.backspace) {
-            hideRightDialog();
-          }
-        },
-        child: Container(
-          width: width + MediaQuery.of(context).padding.right,
-          padding: EdgeInsets.only(right: MediaQuery.of(context).padding.right),
-          decoration: BoxDecoration(
-            color: Get.theme.cardColor,
-          ),
-          child: child,
+      builder: (context) => Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: Get.theme.cardColor,
         ),
+        child: child,
       ),
     );
   }

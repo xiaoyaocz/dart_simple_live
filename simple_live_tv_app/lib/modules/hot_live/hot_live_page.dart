@@ -118,6 +118,7 @@ class HotLivePage extends GetView<HotliveController> {
                     title: item.title,
                     focusNode: item.focusNode,
                     roomId: item.roomId,
+                    online: item.online,
                     onTap: () {
                       AppNavigator.toLiveRoomDetail(
                         site: controller.site,

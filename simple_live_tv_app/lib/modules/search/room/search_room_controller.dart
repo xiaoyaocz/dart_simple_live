@@ -41,6 +41,7 @@ class SearchRoomController extends BasePageController<LiveRoomItemExt> {
               title: e.title,
               cover: e.cover,
               userName: e.userName,
+              online: e.online,
             ))
         .toList();
   }

@@ -61,7 +61,7 @@ class SyncService extends GetxService {
         return;
       }
       //处理Hello的广播
-      if (data["type"] == "Hello SimpleLive") {
+      if (data["type"] == "hello") {
         //如果http服务已经启动，就回复自己的信息
         if (httpRunning.value) {
           sendInfo();
@@ -156,24 +156,33 @@ class SyncService extends GetxService {
   /// - 如果是wifi，直接获取wifi的IP
   /// - 如果是有线，获取所有的IP，找到全部的IP
   Future<String> getLocalIP() async {
-    var ip = await networkInfo.getWifiIP();
-    if (ip == null || ip.isEmpty) {
-      var interfaces = await NetworkInterface.list();
-      var ipList = <String>[];
-      for (var interface in interfaces) {
-        for (var addr in interface.addresses) {
-          if (addr.type.name == 'IPv4' &&
-              !addr.address.startsWith('127') &&
-              !addr.isMulticast &&
-              !addr.isLoopback) {
-            ipList.add(addr.address);
-            break;
+    String? ip = "";
+    try {
+      ip = await networkInfo.getWifiIP();
+    } catch (e) {
+      Log.logPrint(e);
+    }
+    try {
+      if (ip == null || ip.isEmpty) {
+        var interfaces = await NetworkInterface.list();
+        var ipList = <String>[];
+        for (var interface in interfaces) {
+          for (var addr in interface.addresses) {
+            if (addr.type.name == 'IPv4' &&
+                !addr.address.startsWith('127') &&
+                !addr.isMulticast &&
+                !addr.isLoopback) {
+              ipList.add(addr.address);
+              break;
+            }
           }
         }
+        ip = ipList.join(';');
       }
-      ip = ipList.join(';');
+    } catch (e) {
+      Log.logPrint(e);
     }
-    return ip;
+    return ip ?? "";
   }
 
   /// 初始化HTTP服务

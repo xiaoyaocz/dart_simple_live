@@ -121,6 +121,7 @@ class SearchRoomPage extends GetView<SearchRoomController> {
                         title: item.title,
                         focusNode: item.focusNode,
                         roomId: item.roomId,
+                        online: item.online,
                         onTap: () {
                           AppNavigator.toLiveRoomDetail(
                             site: controller.site,

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
+import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/widgets/highlight_widget.dart';
 import 'package:simple_live_tv_app/widgets/net_image.dart';
 import 'package:marquee/marquee.dart';
@@ -12,6 +13,7 @@ class LiveRoomCard extends StatelessWidget {
   final String title;
   final String anchor;
   final String roomId;
+  final int online;
   final bool autofocus;
   final AppFocusNode focusNode;
   final Function()? onTap;
@@ -21,6 +23,7 @@ class LiveRoomCard extends StatelessWidget {
     required this.anchor,
     required this.roomId,
     required this.focusNode,
+    required this.online,
     this.autofocus = false,
     this.onTap,
     super.key,
@@ -42,12 +45,59 @@ class LiveRoomCard extends StatelessWidget {
                 topLeft: Radius.circular(16.w),
                 topRight: Radius.circular(16.w),
               ),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: NetImage(
-                  cover,
-                  cacheWidth: 400,
-                ),
+              child: Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: NetImage(
+                      cover,
+                      cacheWidth: 400,
+                    ),
+                  ),
+                  Positioned(
+                    right: 8.w,
+                    top: 8.w,
+                    child: Container(
+                      padding:
+                          AppStyle.edgeInsetsH8.copyWith(top: 4.w, bottom: 4.w),
+                      decoration: BoxDecoration(
+                        color: focusNode.isFoucsed.value
+                            ? Colors.white
+                            : Colors.black54,
+                        borderRadius: AppStyle.radius8,
+                      ),
+                      child: Text.rich(
+                        TextSpan(
+                          text: "",
+                          children: [
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Padding(
+                                padding: AppStyle.edgeInsetsR8,
+                                child: Icon(
+                                  Icons.whatshot,
+                                  color: focusNode.isFoucsed.value
+                                      ? Colors.orange
+                                      : Colors.white,
+                                  size: 20.w,
+                                ),
+                              ),
+                            ),
+                            TextSpan(
+                              text: Utils.onlineToString(online),
+                            ),
+                          ],
+                        ),
+                        style: TextStyle(
+                          fontSize: 20.w,
+                          color: focusNode.isFoucsed.value
+                              ? Colors.black
+                              : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               // child: Container(
               //   height: 200.w,

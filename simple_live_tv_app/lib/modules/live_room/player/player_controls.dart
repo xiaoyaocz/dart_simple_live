@@ -12,6 +12,7 @@ import 'package:simple_live_tv_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
 import 'package:simple_live_tv_app/widgets/card/anchor_card.dart';
 import 'package:simple_live_tv_app/widgets/settings_item_widget.dart';
+import 'package:simple_live_tv_app/widgets/status/app_empty_widget.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -656,28 +657,40 @@ void showFollowUser(LiveRoomController controller) {
   Utils.showRightDialog(
     width: 800.w,
     useSystem: true,
-    child: Obx(
-      () => ListView.separated(
-        itemCount: FollowUserService.instance.livingList.length,
-        separatorBuilder: (context, index) => AppStyle.vGap32,
-        padding: AppStyle.edgeInsetsA40.copyWith(left: 48.w, right: 48.w),
-        itemBuilder: (_, i) {
-          var item = FollowUserService.instance.livingList[i];
-          var site = Sites.allSites[item.siteId]!;
-          return AnchorCard(
-            face: item.face,
-            name: item.userName,
-            siteId: item.siteId,
-            liveStatus: item.liveStatus.value,
-            roomId: item.roomId,
-            autofocus: i == currentIndex,
-            onTap: () {
-              controller.resetRoom(site, item.roomId);
-              Get.back();
+    child: Stack(
+      children: [
+        Obx(
+          () => ListView.separated(
+            itemCount: FollowUserService.instance.livingList.length,
+            separatorBuilder: (context, index) => AppStyle.vGap32,
+            padding: AppStyle.edgeInsetsA40.copyWith(left: 48.w, right: 48.w),
+            itemBuilder: (_, i) {
+              var item = FollowUserService.instance.livingList[i];
+              var site = Sites.allSites[item.siteId]!;
+              return AnchorCard(
+                face: item.face,
+                name: item.userName,
+                siteId: item.siteId,
+                liveStatus: item.liveStatus.value,
+                roomId: item.roomId,
+                autofocus: i == currentIndex,
+                onTap: () {
+                  controller.resetRoom(site, item.roomId);
+                  Get.back();
+                },
+              );
             },
-          );
-        },
-      ),
+          ),
+        ),
+        Obx(
+          () => Visibility(
+            visible: FollowUserService.instance.list.isEmpty,
+            child: const AppEmptyWidget(
+              text: "关注列表为空，快去关注一些主播吧",
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

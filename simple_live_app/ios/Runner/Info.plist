@@ -62,5 +62,9 @@
 	<string>保存图片至相册</string>
 	<key>UISupportsDocumentBrowser</key>
 	<true/>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>用于扫描二维码</string>
 </dict>
 </plist>

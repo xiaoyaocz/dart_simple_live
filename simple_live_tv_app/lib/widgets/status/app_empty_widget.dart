@@ -7,7 +7,12 @@ import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 
 class AppEmptyWidget extends StatelessWidget {
   final Function()? onRefresh;
-  const AppEmptyWidget({this.onRefresh, Key? key}) : super(key: key);
+  final String? text;
+  const AppEmptyWidget({
+    this.onRefresh,
+    this.text,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +34,7 @@ class AppEmptyWidget extends StatelessWidget {
               ),
               AppStyle.vGap24,
               Text(
-                "这里什么都没有",
+                text ?? "这里什么都没有",
                 textAlign: TextAlign.center,
                 style: AppStyle.textStyleWhite,
               ),

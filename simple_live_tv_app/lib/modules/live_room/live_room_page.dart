@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
@@ -13,14 +16,17 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: controller.focusNode,
-      autofocus: true,
-      onKeyEvent: onKeyEvent,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Obx(
-          () => buildMediaPlayer(),
+    return PopScope(
+      canPop: false,
+      child: KeyboardListener(
+        focusNode: controller.focusNode,
+        autofocus: true,
+        onKeyEvent: onKeyEvent,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Obx(
+            () => buildMediaPlayer(),
+          ),
         ),
       ),
     );
@@ -31,8 +37,23 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       return;
     }
     Log.logPrint(key);
-    if (key.logicalKey == LogicalKeyboardKey.escape) {
-      Get.back();
+
+    if (key.logicalKey == LogicalKeyboardKey.escape ||
+        key.logicalKey == LogicalKeyboardKey.backspace ||
+        key.logicalKey == LogicalKeyboardKey.goBack) {
+      //双击返回键退出
+      if (controller.doubleClickExit) {
+        Get.back();
+        return;
+      }
+      controller.doubleClickExit = true;
+      SmartDialog.showToast("再按一次退出播放器");
+      controller.doubleClickTimer = Timer(const Duration(seconds: 2), () {
+        controller.doubleClickExit = false;
+        controller.doubleClickTimer!.cancel();
+      });
+
+      // Get.back();
       return;
     }
     // 点击OK、Enter、Select键时显示/隐藏控制器

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:get/get.dart';
@@ -133,13 +134,13 @@ class HomePage extends GetView<HomeController> {
                         height: 64.w,
                         child: Center(
                           child: Icon(
-                            Icons.live_tv,
+                            Icons.favorite_border,
                             color: Colors.white,
-                            size: 40.w,
+                            size: 56.w,
                           ),
                         ),
                       ),
-                      AppStyle.hGap16,
+                      AppStyle.hGap24,
                       Expanded(
                         child: Text(
                           "我的关注",
@@ -254,48 +255,80 @@ class HomePage extends GetView<HomeController> {
     Utils.showRightDialog(
       useSystem: true,
       width: 700.w,
-      child: Stack(
+      child: Column(
         children: [
-          Obx(
-            () => ListView.separated(
-              itemCount: FollowUserService.instance.list.length,
-              separatorBuilder: (_, __) => AppStyle.vGap24,
-              padding: AppStyle.edgeInsetsA40,
-              itemBuilder: (_, i) {
-                var item = FollowUserService.instance.list[i];
-                var foucsNode = AppFocusNode();
-                return HighlightListTile(
-                  autofocus: i == 0,
-                  leading: NetImage(
-                    item.face,
-                    width: 64.w,
-                    height: 64.w,
-                    borderRadius: 64.w,
+          AppStyle.vGap24,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AppStyle.hGap48,
+              HighlightButton(
+                focusNode: AppFocusNode(),
+                iconData: Icons.arrow_back,
+                text: "返回",
+                onTap: () {
+                  Utils.hideRightDialog();
+                },
+              ),
+              AppStyle.hGap32,
+              Text(
+                "关注管理",
+                style: AppStyle.titleStyleWhite.copyWith(
+                  fontSize: 36.w,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              AppStyle.hGap24,
+              const Spacer(),
+            ],
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                Obx(
+                  () => ListView.separated(
+                    itemCount: FollowUserService.instance.list.length,
+                    separatorBuilder: (_, __) => AppStyle.vGap24,
+                    padding: AppStyle.edgeInsetsA40,
+                    itemBuilder: (_, i) {
+                      var item = FollowUserService.instance.list[i];
+                      var foucsNode = AppFocusNode();
+                      return HighlightListTile(
+                        autofocus: i == 0,
+                        leading: NetImage(
+                          item.face,
+                          width: 64.w,
+                          height: 64.w,
+                          borderRadius: 64.w,
+                        ),
+                        title: item.userName,
+                        focusNode: foucsNode,
+                        trailing: Obx(
+                          () => Icon(
+                            Icons.delete_outline_outlined,
+                            size: 40.w,
+                            color: foucsNode.isFoucsed.value
+                                ? Colors.black
+                                : Colors.white,
+                          ),
+                        ),
+                        onTap: () {
+                          FollowUserService.instance
+                              .removeItem(item, refresh: false);
+                        },
+                      );
+                    },
                   ),
-                  title: item.userName,
-                  focusNode: foucsNode,
-                  trailing: Obx(
-                    () => Icon(
-                      Icons.delete_outline_outlined,
-                      size: 40.w,
-                      color: foucsNode.isFoucsed.value
-                          ? Colors.black
-                          : Colors.white,
+                ),
+                Obx(
+                  () => Visibility(
+                    visible: FollowUserService.instance.list.isEmpty,
+                    child: const AppEmptyWidget(
+                      text: "关注列表为空，快去关注一些主播吧",
                     ),
                   ),
-                  onTap: () {
-                    FollowUserService.instance.removeItem(item, refresh: false);
-                  },
-                );
-              },
-            ),
-          ),
-          Obx(
-            () => Visibility(
-              visible: FollowUserService.instance.list.isEmpty,
-              child: const AppEmptyWidget(
-                text: "关注列表为空，快去关注一些主播吧",
-              ),
+                ),
+              ],
             ),
           ),
         ],

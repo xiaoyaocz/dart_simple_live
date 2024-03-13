@@ -465,7 +465,7 @@ class HuyaSite implements LiveSite {
     // 通过ChatGPT转换的Dart代码
     var query = Uri.splitQueryString(anticode);
 
-    query["t"] = "100";
+    query["t"] = "102";
     query["ctype"] = "huya_live";
 
     final wsTime = (DateTime.now().millisecondsSinceEpoch ~/ 1000 + 21600)

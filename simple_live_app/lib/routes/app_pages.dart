@@ -8,8 +8,14 @@ import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
+import 'package:simple_live_app/modules/sync/device/sync_device_controller.dart';
+import 'package:simple_live_app/modules/sync/device/sync_device_page.dart';
+import 'package:simple_live_app/modules/sync/scan_qr/sync_scan_qr_controller.dart';
+import 'package:simple_live_app/modules/sync/scan_qr/sync_scan_qr_page.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
 import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
+import 'package:simple_live_app/modules/sync/sync_controller.dart';
+import 'package:simple_live_app/modules/sync/sync_page.dart';
 import 'package:simple_live_app/modules/user/account/account_controller.dart';
 import 'package:simple_live_app/modules/user/account/account_page.dart';
 import 'package:simple_live_app/modules/user/account/bilibili/qr_login_controller.dart';
@@ -98,8 +104,7 @@ class AppPages {
     //外观设置
     GetPage(
         name: RoutePath.kAppstyleSetting,
-        page: () => const AppstyleSettingPage()
-    ),
+        page: () => const AppstyleSettingPage()),
     //播放设置
     GetPage(
       name: RoutePath.kSettingsPlay,
@@ -156,6 +161,35 @@ class AppPages {
       page: () => const BiliBiliQRLoginPage(),
       bindings: [
         BindingsBuilder.put(() => BiliBiliQRLoginController()),
+      ],
+    ),
+    // 数据同步
+    GetPage(
+      name: RoutePath.kSync,
+      page: () => const SyncPage(),
+      bindings: [
+        BindingsBuilder.put(() => SyncController()),
+      ],
+    ),
+    //扫码
+    GetPage(
+      name: RoutePath.kSyncScan,
+      page: () => const SyncScanQRPage(),
+      bindings: [
+        BindingsBuilder.put(() => SyncScanQRControlelr()),
+      ],
+    ),
+    //同步设备
+    GetPage(
+      name: RoutePath.kSyncDevice,
+      page: () => const SyncDevicePage(),
+      bindings: [
+        BindingsBuilder.put(
+          () => SyncDeviceController(
+            client: Get.arguments['client'],
+            info: Get.arguments['info'],
+          ),
+        ),
       ],
     ),
   ];

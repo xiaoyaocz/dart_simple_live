@@ -18,6 +18,22 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          //双击返回键退出
+          if (controller.doubleClickExit) {
+            controller.doubleClickTimer?.cancel();
+            Get.back();
+            return;
+          }
+          controller.doubleClickExit = true;
+          SmartDialog.showToast("再按一次退出播放器");
+          controller.doubleClickTimer = Timer(const Duration(seconds: 2), () {
+            controller.doubleClickExit = false;
+            controller.doubleClickTimer!.cancel();
+          });
+        }
+      },
       child: KeyboardListener(
         focusNode: controller.focusNode,
         autofocus: true,
@@ -38,24 +54,12 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     }
     Log.logPrint(key);
 
-    if (key.logicalKey == LogicalKeyboardKey.escape ||
-        key.logicalKey == LogicalKeyboardKey.backspace ||
-        key.logicalKey == LogicalKeyboardKey.goBack) {
-      //双击返回键退出
-      if (controller.doubleClickExit) {
-        Get.back();
-        return;
-      }
-      controller.doubleClickExit = true;
-      SmartDialog.showToast("再按一次退出播放器");
-      controller.doubleClickTimer = Timer(const Duration(seconds: 2), () {
-        controller.doubleClickExit = false;
-        controller.doubleClickTimer!.cancel();
-      });
-
-      // Get.back();
-      return;
-    }
+    // if (key.logicalKey == LogicalKeyboardKey.escape ||
+    //     key.logicalKey == LogicalKeyboardKey.backspace ||
+    //     key.logicalKey == LogicalKeyboardKey.goBack) {
+    //   // Get.back();
+    //   return;
+    // }
     // 点击OK、Enter、Select键时显示/隐藏控制器
     if (key.logicalKey == LogicalKeyboardKey.select ||
         key.logicalKey == LogicalKeyboardKey.enter ||

@@ -71,6 +71,7 @@ class SyncController extends BaseController {
     var addressList = (result as String).split(";");
     if (addressList.length >= 2) {
       //弹窗选择
+      showPickerAddress(addressList);
     } else {
       addressController.text = result;
       //connect();
@@ -113,7 +114,7 @@ class SyncController extends BaseController {
                 version: QrVersions.auto,
                 backgroundColor: Colors.white,
                 padding: AppStyle.edgeInsetsA12,
-                size: 240,
+                size: 200,
               ),
             ),
           ),

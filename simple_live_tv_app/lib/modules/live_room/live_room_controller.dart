@@ -68,6 +68,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     });
   }
 
+  /// 双击退出Flag
+  bool doubleClickExit = false;
+
+  /// 双击退出Timer
+  Timer? doubleClickTimer;
+
   @override
   void onInit() {
     initTimer();

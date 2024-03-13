@@ -466,7 +466,7 @@ class HuyaSite implements LiveSite {
     var query = Uri.splitQueryString(anticode);
 
     query["t"] = "102";
-    query["ctype"] = "huya_live";
+    query["ctype"] = "tars_mp";
 
     final wsTime = (DateTime.now().millisecondsSinceEpoch ~/ 1000 + 21600)
         .toRadixString(16);

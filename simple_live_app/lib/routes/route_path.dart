@@ -50,4 +50,13 @@ class RoutePath {
 
   /// BiliBili 二维码登录
   static const kBiliBiliQRLogin = "/settings/account/bilibili/qr_login";
+
+  /// 数据同步
+  static const kSync = "/sync";
+
+  /// 扫描
+  static const kSyncScan = "/sync/scan";
+
+  /// 同步设备
+  static const kSyncDevice = "/sync/device";
 }

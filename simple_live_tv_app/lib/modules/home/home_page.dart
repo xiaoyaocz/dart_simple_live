@@ -15,6 +15,7 @@ import 'package:simple_live_tv_app/widgets/button/highlight_list_tile.dart';
 import 'package:simple_live_tv_app/widgets/card/anchor_card.dart';
 import 'package:simple_live_tv_app/widgets/button/home_big_button.dart';
 import 'package:simple_live_tv_app/widgets/net_image.dart';
+import 'package:simple_live_tv_app/widgets/status/app_empty_widget.dart';
 
 class HomePage extends GetView<HomeController> {
   const HomePage({super.key});
@@ -198,12 +199,14 @@ class HomePage extends GetView<HomeController> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemBuilder: (_, i) {
                       var item = FollowUserService.instance.list[i];
-                      return AnchorCard(
-                        face: item.face,
-                        name: item.userName,
-                        siteId: item.siteId,
-                        liveStatus: item.liveStatus.value,
-                        roomId: item.roomId,
+                      return Obx(
+                        () => AnchorCard(
+                          face: item.face,
+                          name: item.userName,
+                          siteId: item.siteId,
+                          liveStatus: item.liveStatus.value,
+                          roomId: item.roomId,
+                        ),
                       );
                     },
                   ),
@@ -251,38 +254,51 @@ class HomePage extends GetView<HomeController> {
     Utils.showRightDialog(
       useSystem: true,
       width: 700.w,
-      child: Obx(
-        () => ListView.separated(
-          itemCount: FollowUserService.instance.list.length,
-          separatorBuilder: (_, __) => AppStyle.vGap24,
-          padding: AppStyle.edgeInsetsA40,
-          itemBuilder: (_, i) {
-            var item = FollowUserService.instance.list[i];
-            var foucsNode = AppFocusNode();
-            return HighlightListTile(
-              autofocus: i == 0,
-              leading: NetImage(
-                item.face,
-                width: 64.w,
-                height: 64.w,
-                borderRadius: 64.w,
-              ),
-              title: item.userName,
-              focusNode: foucsNode,
-              trailing: Obx(
-                () => Icon(
-                  Icons.delete_outline_outlined,
-                  size: 40.w,
-                  color:
-                      foucsNode.isFoucsed.value ? Colors.black : Colors.white,
-                ),
-              ),
-              onTap: () {
-                FollowUserService.instance.removeItem(item, refresh: false);
+      child: Stack(
+        children: [
+          Obx(
+            () => ListView.separated(
+              itemCount: FollowUserService.instance.list.length,
+              separatorBuilder: (_, __) => AppStyle.vGap24,
+              padding: AppStyle.edgeInsetsA40,
+              itemBuilder: (_, i) {
+                var item = FollowUserService.instance.list[i];
+                var foucsNode = AppFocusNode();
+                return HighlightListTile(
+                  autofocus: i == 0,
+                  leading: NetImage(
+                    item.face,
+                    width: 64.w,
+                    height: 64.w,
+                    borderRadius: 64.w,
+                  ),
+                  title: item.userName,
+                  focusNode: foucsNode,
+                  trailing: Obx(
+                    () => Icon(
+                      Icons.delete_outline_outlined,
+                      size: 40.w,
+                      color: foucsNode.isFoucsed.value
+                          ? Colors.black
+                          : Colors.white,
+                    ),
+                  ),
+                  onTap: () {
+                    FollowUserService.instance.removeItem(item, refresh: false);
+                  },
+                );
               },
-            );
-          },
-        ),
+            ),
+          ),
+          Obx(
+            () => Visibility(
+              visible: FollowUserService.instance.list.isEmpty,
+              child: const AppEmptyWidget(
+                text: "关注列表为空，快去关注一些主播吧",
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

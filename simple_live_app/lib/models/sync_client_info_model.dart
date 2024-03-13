@@ -7,25 +7,27 @@ T? asT<T>(dynamic value) {
   return null;
 }
 
-class TVClientInfoModel {
-  TVClientInfoModel({
+class SyncClientInfoModel {
+  SyncClientInfoModel({
     required this.name,
     required this.version,
-    required this.ip,
+    required this.address,
     required this.port,
+    required this.type,
   });
 
-  factory TVClientInfoModel.fromJson(Map<String, dynamic> json) =>
-      TVClientInfoModel(
+  factory SyncClientInfoModel.fromJson(Map<String, dynamic> json) =>
+      SyncClientInfoModel(
+        type: asT<String>(json['type'])!,
         name: asT<String>(json['name'])!,
         version: asT<String>(json['version'])!,
-        ip: asT<String>(json['ip'])!,
+        address: asT<String>(json['address'])!,
         port: asT<int>(json['port'])!,
       );
-
+  String type;
   String name;
   String version;
-  String ip;
+  String address;
   int port;
 
   @override
@@ -36,7 +38,8 @@ class TVClientInfoModel {
   Map<String, dynamic> toJson() => <String, dynamic>{
         'name': name,
         'version': version,
-        'ip': ip,
+        'address': address,
         'port': port,
+        'type': type,
       };
 }

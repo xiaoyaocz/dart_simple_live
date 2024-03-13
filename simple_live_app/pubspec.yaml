@@ -22,6 +22,7 @@ dependencies:
   qr_flutter: ^4.1.0 #二维码生成
   dynamic_color: ^1.6.8 #动态颜色
   udp: ^5.0.3 #UDP
+  uuid: ^4.3.3 #UUID
 
   #Widget
   flutter_staggered_grid_view: ^0.6.2 #瀑布流/GridView
@@ -52,7 +53,13 @@ dependencies:
   floating: ^2.0.1 #PIP画中画
   flutter_inappwebview: ^5.8.0 #WebView
   connectivity_plus: ^5.0.2 #网络状态
+  qr_code_scanner: ^1.0.1 #二维码扫描
   
+  # 网络相关
+  shelf: ^1.4.1 
+  shelf_router: ^1.1.4
+  network_info_plus: 3.0.5
+
   # 视频播放
   media_kit: ^1.1.10
   media_kit_video: ^1.2.4

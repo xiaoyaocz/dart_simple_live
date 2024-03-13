@@ -93,14 +93,14 @@ class UserPage extends StatelessWidget {
               color: Colors.grey.withOpacity(.1),
             ),
             ListTile(
-              leading: const Icon(Remix.tv_2_line),
-              title: const Text("TV端同步"),
+              leading: const Icon(Icons.devices),
+              title: const Text("数据同步"),
               trailing: const Icon(
                 Icons.chevron_right,
                 color: Colors.grey,
               ),
               onTap: () {
-                Get.toNamed(RoutePath.kTVSync);
+                Get.toNamed(RoutePath.kSync);
               },
             ),
             Divider(

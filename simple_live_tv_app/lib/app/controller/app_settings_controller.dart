@@ -235,6 +235,11 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.shieldBox.delete(e);
   }
 
+  Future clearShieldList() async {
+    shieldList.clear();
+    await LocalStorageService.instance.shieldBox.clear();
+  }
+
   void setScaleMode(int value) {
     scaleMode.value = value;
     LocalStorageService.instance.setValue(

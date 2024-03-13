@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
 import 'package:simple_live_tv_app/modules/sync/sync_controller.dart';
-import 'package:simple_live_tv_app/services/tv_service.dart';
+import 'package:simple_live_tv_app/services/sync_service.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 
@@ -50,13 +50,13 @@ class SyncPage extends GetView<SyncController> {
               children: [
                 Obx(
                   () => Visibility(
-                    visible: TVService.instance.httpRunning.value,
+                    visible: SyncService.instance.httpRunning.value,
                     child: GestureDetector(
                       onTap: () {
                         Get.back();
                       },
                       child: QrImageView(
-                        data: TVService.instance.ipAddress.value,
+                        data: SyncService.instance.ipAddress.value,
                         version: QrVersions.auto,
                         backgroundColor: Colors.white,
                         padding: AppStyle.edgeInsetsA24,
@@ -68,9 +68,9 @@ class SyncPage extends GetView<SyncController> {
                 AppStyle.vGap24,
                 Obx(
                   () => Visibility(
-                    visible: TVService.instance.httpRunning.value,
+                    visible: SyncService.instance.httpRunning.value,
                     child: Text(
-                      '服务已启动：${TVService.instance.ipAddress.value.split(';').map((e) => '$e:${TVService.httpPort}').join('；')}',
+                      '服务已启动：${SyncService.instance.ipAddress.value.split(';').map((e) => '$e:${SyncService.httpPort}').join('；')}',
                       style: AppStyle.textStyleWhite,
                       textAlign: TextAlign.center,
                     ),
@@ -78,9 +78,9 @@ class SyncPage extends GetView<SyncController> {
                 ),
                 Obx(
                   () => Visibility(
-                    visible: !TVService.instance.httpRunning.value,
+                    visible: !SyncService.instance.httpRunning.value,
                     child: Text(
-                      'HTTP服务未启动：${TVService.instance.httpErrorMsg}，请尝试重启应用',
+                      'HTTP服务未启动：${SyncService.instance.httpErrorMsg}，请尝试重启应用',
                       style: AppStyle.textStyleWhite,
                       textAlign: TextAlign.center,
                     ),
@@ -89,7 +89,7 @@ class SyncPage extends GetView<SyncController> {
                 AppStyle.vGap12,
                 Obx(
                   () => Visibility(
-                    visible: TVService.instance.httpRunning.value,
+                    visible: SyncService.instance.httpRunning.value,
                     child: Text(
                       "请使用Simple Live App扫描上方二维码\n建立连接后可在APP端选择需要同步至TV端的数据",
                       style: AppStyle.textStyleWhite,

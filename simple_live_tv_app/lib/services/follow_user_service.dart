@@ -30,9 +30,9 @@ class FollowUserService extends BasePageController<FollowUser> {
   var updatedCount = 0;
   var updating = false.obs;
   @override
-  Future<List<FollowUser>> getData(int page, int pageSize) {
+  Future<List<FollowUser>> getData(int page, int pageSize) async {
     if (page > 1) {
-      return Future.value([]);
+      return [];
     }
 
     var followList = DBService.instance.getFollowList();
@@ -45,7 +45,7 @@ class FollowUserService extends BasePageController<FollowUser> {
     if (followList.isEmpty) {
       updating.value = false;
     }
-    return Future.value(followList);
+    return followList;
   }
 
   void sortList() {
@@ -62,15 +62,16 @@ class FollowUserService extends BasePageController<FollowUser> {
       var site = Sites.allSites[item.siteId]!;
       item.liveStatus.value =
           (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
-      updatedCount++;
-      if (updatedCount == list.length) {
-        sortList();
-        updating.value = false;
-      }
       //sortList();
       //updateLivingList();
     } catch (e) {
       Log.logPrint(e);
+    } finally {
+      updatedCount++;
+      if (updatedCount >= list.length) {
+        sortList();
+        updating.value = false;
+      }
     }
   }
 

@@ -21,7 +21,7 @@ import 'package:simple_live_tv_app/services/bilibili_account_service.dart';
 import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
-import 'package:simple_live_tv_app/services/tv_service.dart';
+import 'package:simple_live_tv_app/services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,7 +75,7 @@ Future initServices() async {
 
   Get.put(BiliBiliAccountService());
 
-  Get.put(TVService());
+  Get.put(SyncService());
 
   Get.put(FollowUserService());
 }

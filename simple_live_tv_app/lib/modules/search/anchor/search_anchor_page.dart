@@ -11,6 +11,7 @@ import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 import 'package:simple_live_tv_app/widgets/card/anchor_card.dart';
 import 'package:simple_live_tv_app/widgets/status/app_empty_widget.dart';
+import 'package:simple_live_tv_app/widgets/status/app_error_widget.dart';
 
 class SearchAnchorPage extends GetView<SearchAnchorController> {
   const SearchAnchorPage({super.key});
@@ -133,12 +134,22 @@ class SearchAnchorPage extends GetView<SearchAnchorController> {
                   ),
                   Obx(
                     () => Visibility(
-                      visible:
-                          controller.list.isEmpty && !controller.loadding.value,
+                      visible: controller.list.isEmpty &&
+                          !controller.loadding.value &&
+                          !controller.pageError.value,
                       child: AppEmptyWidget(
                         onRefresh: () {
                           controller.refreshData();
                         },
+                      ),
+                    ),
+                  ),
+                  Obx(
+                    () => Visibility(
+                      visible: controller.pageError.value &&
+                          !controller.loadding.value,
+                      child: AppErrorWidget(
+                        errorMsg: controller.errorMsg.value,
                       ),
                     ),
                   ),

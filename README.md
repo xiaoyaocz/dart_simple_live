@@ -31,13 +31,12 @@
 - [x] Windows `BETA`
 - [x] MacOS `BETA`
 - [x] Linux `BETA`
-- [ ] Android TV `TODO`
+- [x] Android TV `BETA` [说明](https://github.com/xiaoyaocz/dart_simple_live/issues/338)
 
 请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
 
 Windows可前往应用商店下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)
 
-Android TV代码在[tv分支](https://github.com/xiaoyaocz/dart_simple_live/tree/tv)，
 桌面代码在[desktop分支](https://github.com/xiaoyaocz/dart_simple_live/tree/desktop)
 
 ## 项目结构

@@ -13,6 +13,13 @@ class DBService extends GetxService {
     followBox = await Hive.openBox("FollowUser");
   }
 
+  FollowUser? getFollowUser(String id) {
+    if (followBox.containsKey(id)) {
+      return followBox.get(id);
+    }
+    return null;
+  }
+
   bool getFollowExist(String id) {
     return followBox.containsKey(id);
   }

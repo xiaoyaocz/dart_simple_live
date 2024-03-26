@@ -66,7 +66,19 @@ class FollowUserController extends BasePageController<FollowUser> {
     } else if (filterMode.value == 2) {
       list.assignAll(allList.where((x) => x.liveStatus.value == 1));
     }
-    allList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+
+    allList.sort((a, b) {
+      if (b.liveStatus.value != a.liveStatus.value) {
+        return b.liveStatus.value.compareTo(a.liveStatus.value);
+      }
+      if (a.special == b.special) {
+        return b.lastWatchTime.compareTo(a.lastWatchTime);
+      }
+      if (b.special) {
+        return 1;
+      }
+      return -1;
+    });
   }
 
   void setFilterMode(int mode) {
@@ -79,6 +91,11 @@ class FollowUserController extends BasePageController<FollowUser> {
       var site = Sites.allSites[item.siteId]!;
       item.liveStatus.value =
           (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
+
+      if (item.liveStatus.value == 2) {
+        item.lastPlayTime = DateTime.now();
+        DBService.instance.addFollow(item);
+      }
 
       filterData();
     } catch (e) {
@@ -260,6 +277,10 @@ class FollowUserController extends BasePageController<FollowUser> {
             "userName": item.userName,
             "face": item.face,
             "addTime": item.addTime.toString(),
+            "special": item.special,
+            "lastWatchTime": item.lastWatchTime.toString(),
+            "lastPlayTime": item.lastPlayTime.toString(),
+            "watchSecond": item.watchSecond,
           },
         )
         .toList();

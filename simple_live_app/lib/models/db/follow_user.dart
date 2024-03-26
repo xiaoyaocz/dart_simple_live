@@ -12,6 +12,10 @@ class FollowUser {
     required this.userName,
     required this.face,
     required this.addTime,
+    required this.special,
+    required this.lastWatchTime,
+    required this.lastPlayTime,
+    required this.watchSecond,
   });
 
   ///id=siteId_roomId
@@ -33,6 +37,18 @@ class FollowUser {
   @HiveField(5)
   DateTime addTime;
 
+  @HiveField(6)
+  bool special;
+
+  @HiveField(7)
+  DateTime lastWatchTime;
+
+  @HiveField(8)
+  DateTime lastPlayTime;
+
+  @HiveField(9)
+  int watchSecond;
+
   /// 直播状态
   /// 0=未知(加载中) 1=未开播 2=直播中
   Rx<int> liveStatus = 0.obs;
@@ -44,6 +60,14 @@ class FollowUser {
         userName: json['userName'],
         face: json['face'],
         addTime: DateTime.parse(json['addTime']),
+        special: json.containsKey('special') ? json['special'] : false,
+        lastWatchTime: json.containsKey('lastWatchTime')
+            ? DateTime.parse(json['lastWatchTime'])
+            : DateTime(2000),
+        lastPlayTime: json.containsKey('lastPlayTime')
+            ? DateTime.parse(json['lastPlayTime'])
+            : DateTime(2000),
+        watchSecond: json['watchSecond'] ?? 0,
       );
 
   Map<String, dynamic> toJson() => {

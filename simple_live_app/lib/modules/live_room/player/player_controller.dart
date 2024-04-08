@@ -168,6 +168,8 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
         duration: AppSettingsController.instance.danmuSpeed.value,
         opacity: AppSettingsController.instance.danmuOpacity.value,
         strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
+        fontWeight: FontWeight
+            .values[AppSettingsController.instance.danmuFontWeight.value],
       ),
     );
   }

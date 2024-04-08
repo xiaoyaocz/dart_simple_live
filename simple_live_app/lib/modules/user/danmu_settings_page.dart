@@ -135,6 +135,36 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
               AppStyle.divider,
               Obx(
                 () => SettingsNumber(
+                  title: "字体粗细",
+                  value: controller.danmuFontWeight.value,
+                  min: 0,
+                  max: 8,
+                  step: 1,
+                  displayValue: [
+                    "极细",
+                    "很细",
+                    "细",
+                    "正常",
+                    "小粗",
+                    "偏粗",
+                    "粗",
+                    "很粗",
+                    "极粗"
+                  ][controller.danmuFontWeight.value]
+                      .toString(),
+                  onChanged: (e) {
+                    controller.setDanmuFontWeight(e);
+                    updateDanmuOption(
+                      danmakuController?.option.copyWith(
+                        fontWeight: FontWeight.values[e],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsNumber(
                   title: "滚动速度",
                   subtitle: "弹幕持续时间(秒)，越小速度越快",
                   value: controller.danmuSpeed.toInt(),

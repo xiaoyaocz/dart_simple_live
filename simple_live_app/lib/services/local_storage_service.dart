@@ -59,6 +59,9 @@ class LocalStorageService extends GetxService {
   /// 弹幕开启
   static const String kDanmuEnable = "DanmuEnable";
 
+  /// 弹幕字重
+  static const String kDanmuFontWeight = "DanmuFontWeight";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 

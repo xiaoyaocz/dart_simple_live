@@ -34,7 +34,8 @@ dependencies:
   ns_danmaku: #弹幕
     git: 
         url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
-        ref: master
+        tag: v0.0.6
+
 
   #系统交互
   package_info_plus: ^4.0.2 #包信息

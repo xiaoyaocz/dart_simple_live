@@ -17,7 +17,7 @@ class SearchListView extends StatelessWidget {
       Get.find<SearchListController>(tag: tag);
   @override
   Widget build(BuildContext context) {
-    var roomRowCount = MediaQuery.of(context).size.width ~/ 180;
+    var roomRowCount = MediaQuery.of(context).size.width ~/ 200;
     if (roomRowCount < 2) roomRowCount = 2;
 
     var userRowCount = MediaQuery.of(context).size.width ~/ 500;

@@ -1,0 +1,20 @@
+display_name: Simple-Live
+package_name: simple-live
+maintainer:
+  name: xiaoyaocz
+  email: xiaoyaocz@52uwp.com
+priority: optional
+section: x11
+installed_size: 24400
+essential: false
+icon: assets/logo.png
+
+keywords:
+  - Simple Live
+
+generic_name: Simple-Live
+
+categories:
+  - Media
+
+startup_notify: true

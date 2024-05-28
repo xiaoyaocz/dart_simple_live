@@ -13,7 +13,7 @@ class HomeListView extends StatelessWidget {
   HomeListController get controller => Get.find<HomeListController>(tag: tag);
   @override
   Widget build(BuildContext context) {
-    var c = MediaQuery.of(context).size.width ~/ 180;
+    var c = MediaQuery.of(context).size.width ~/ 200;
     if (c < 2) {
       c = 2;
     }

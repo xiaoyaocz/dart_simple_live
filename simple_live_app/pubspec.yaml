@@ -21,6 +21,7 @@ dependencies:
   intl: ^0.19.0 #国际化
   qr_flutter: ^4.1.0 #二维码生成
   dynamic_color: ^1.6.8 #动态颜色
+  path: any
   udp: ^5.0.3 #UDP
   uuid: ^4.3.3 #UUID
 
@@ -47,10 +48,11 @@ dependencies:
   permission_handler: ^10.3.0 #权限处理
   image_gallery_saver: ^2.0.2 #图片保存到相册
   perfect_volume_control: ^1.0.5 #音量控制
-  screen_brightness: ^0.2.2 #亮度控制
+  screen_brightness: ^0.2.2+1 #亮度控制
   auto_orientation: ^2.3.1 #屏幕方向
   wakelock_plus: ^1.1.1 #屏幕常亮
   file_picker: ^5.3.3 #文件选择
+  window_manager: ^0.3.7 #窗口管理
   floating: ^2.0.1 #PIP画中画
   flutter_inappwebview: ^5.8.0 #WebView
   connectivity_plus: ^5.0.2 #网络状态
@@ -78,8 +80,17 @@ dev_dependencies:
   flutter_lints: ^2.0.0
   build_runner: ^2.3.3
   hive_generator: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
   flutter_test: 
     sdk: flutter
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  min_sdk_android: 21
+  macos:
+    generate: true
 
 flutter: 
   uses-material-design: true

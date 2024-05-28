@@ -1,6 +1,7 @@
 import 'dart:io';
-
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
@@ -12,6 +13,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
+import 'package:window_manager/window_manager.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -37,7 +39,7 @@ Widget buildFullControls(
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
-
+  GlobalKey volumeButtonkey = GlobalKey();
   return Stack(
     children: [
       Container(),
@@ -66,10 +68,25 @@ Widget buildFullControls(
           onVerticalDragStart: controller.onVerticalDragStart,
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.transparent,
+          child: MouseRegion(
+            onHover: (PointerHoverEvent event) {
+              controller.onHover(event, videoState.context);
+            },
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.transparent,
+              child: Visibility(
+                //拖拽区域
+                visible: controller.smallWindowState.value,
+                child: DragToMoveArea(
+                    child: Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: Colors.transparent,
+                )),
+              ),
+            ),
           ),
         ),
       ),
@@ -104,7 +121,13 @@ Widget buildFullControls(
             child: Row(
               children: [
                 IconButton(
-                  onPressed: controller.exitFull,
+                  onPressed: () {
+                    if (controller.smallWindowState.value) {
+                      controller.exitSmallWindow();
+                    } else {
+                      controller.exitFull();
+                    }
+                  },
                   icon: const Icon(
                     Icons.arrow_back,
                     color: Colors.white,
@@ -241,6 +264,21 @@ Widget buildFullControls(
                   ),
                 ),
                 const Expanded(child: Center()),
+                Visibility(
+                  visible: !Platform.isAndroid && !Platform.isIOS,
+                  child: IconButton(
+                    key: volumeButtonkey,
+                    onPressed: () {
+                      controller
+                          .showVolumeSlider(volumeButtonkey.currentContext!);
+                    },
+                    icon: const Icon(
+                      Icons.volume_down,
+                      size: 24,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
                 TextButton(
                   onPressed: () {
                     showQualitesInfo(controller);
@@ -263,7 +301,11 @@ Widget buildFullControls(
                 ),
                 IconButton(
                   onPressed: () {
-                    controller.exitFull();
+                    if (controller.smallWindowState.value) {
+                      controller.exitSmallWindow();
+                    } else {
+                      controller.exitFull();
+                    }
                   },
                   icon: const Icon(
                     Remix.fullscreen_exit_fill,
@@ -354,6 +396,7 @@ Widget buildControls(
   VideoState videoState,
   LiveRoomController controller,
 ) {
+  GlobalKey volumeButtonkey = GlobalKey();
   return Stack(
     children: [
       Container(),
@@ -379,10 +422,13 @@ Widget buildControls(
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
           //onLongPress: controller.showDebugInfo,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.transparent,
+          child: MouseRegion(
+            onEnter: controller.onEnter,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.transparent,
+            ),
           ),
         ),
       ),
@@ -449,6 +495,22 @@ Widget buildControls(
                   ),
                 ),
                 const Expanded(child: Center()),
+                Visibility(
+                  visible: !Platform.isAndroid && !Platform.isIOS,
+                  child: IconButton(
+                    key: volumeButtonkey,
+                    onPressed: () {
+                      controller.showVolumeSlider(
+                        volumeButtonkey.currentContext!,
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.volume_down,
+                      size: 24,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
                 Offstage(
                   offstage: isPortrait,
                   child: TextButton(
@@ -473,6 +535,19 @@ Widget buildControls(
                     child: Text(
                       controller.currentLineInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
+                ),
+                Visibility(
+                  visible: !Platform.isAndroid && !Platform.isIOS,
+                  child: IconButton(
+                    onPressed: () {
+                      controller.enterSmallWindow();
+                    },
+                    icon: const Icon(
+                      Icons.picture_in_picture,
+                      color: Colors.white,
+                      size: 24,
                     ),
                   ),
                 ),

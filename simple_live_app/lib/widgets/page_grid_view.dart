@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/widgets/status/app_empty_widget.dart';
@@ -53,6 +55,26 @@ class PageGridView extends StatelessWidget {
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: crossAxisSpacing,
               mainAxisSpacing: mainAxisSpacing,
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: // 加载更多按钮
+                Visibility(
+              visible: (Platform.isWindows ||
+                      Platform.isLinux ||
+                      Platform.isMacOS) &&
+                  pageController.canLoadMore.value &&
+                  !pageController.pageLoadding.value &&
+                  !pageController.pageEmpty.value,
+              child: Center(
+                child: TextButton(
+                  onPressed: pageController.loadData,
+                  child: const Text("加载更多"),
+                ),
+              ),
             ),
           ),
           Offstage(

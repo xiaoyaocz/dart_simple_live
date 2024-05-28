@@ -300,6 +300,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void getPlayQualites() async {
     qualites.clear();
     currentQuality = -1;
+
     try {
       var playQualites =
           await site.liveSite.getPlayQualites(detail: detail.value!);
@@ -547,6 +548,38 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           ),
         ],
       ),
+    );
+  }
+
+  void showVolumeSlider(BuildContext targetContext) {
+    SmartDialog.showAttach(
+      targetContext: targetContext,
+      alignment: Alignment.topCenter,
+      displayTime: const Duration(seconds: 3),
+      maskColor: const Color(0x00000000),
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: AppStyle.radius12,
+            color: Theme.of(context).cardColor,
+          ),
+          padding: AppStyle.edgeInsetsA4,
+          child: Obx(
+            () => SizedBox(
+              width: 200,
+              child: Slider(
+                min: 0,
+                max: 100,
+                value: AppSettingsController.instance.playerVolume.value,
+                onChanged: (newValue) {
+                  player.setVolume(newValue);
+                  AppSettingsController.instance.setPlayerVolume(newValue);
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -38,7 +38,6 @@ void main() async {
   await migrateData();
   await initWindow();
   MediaKit.ensureInitialized();
-  await migrateData();
   await Hive.initFlutter(
     (!Platform.isAndroid && !Platform.isIOS)
         ? (await getApplicationSupportDirectory()).path
@@ -157,9 +156,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isDynamicColor = Get.find<AppSettingsController>().isDynamic.value;
-    Color styleColor =
-        Color(Get.find<AppSettingsController>().styleColor.value);
+    bool isDynamicColor = AppSettingsController.instance.isDynamic.value;
+    Color styleColor = Color(AppSettingsController.instance.styleColor.value);
     return DynamicColorBuilder(
         builder: ((ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
       ColorScheme? lightColorScheme;
@@ -226,10 +224,11 @@ class MyApp extends StatelessWidget {
                       },
                     ),
                   },
-                  child: RawKeyboardListener(
+                  child: KeyboardListener(
                     focusNode: FocusNode(),
-                    onKey: (RawKeyEvent event) async {
-                      if (event.logicalKey == LogicalKeyboardKey.escape) {
+                    onKeyEvent: (KeyEvent event) async {
+                      if (event is KeyDownEvent &&
+                          event.logicalKey == LogicalKeyboardKey.escape) {
                         // ESC退出全屏
                         // 如果处于全屏状态，退出全屏
                         if (!Platform.isAndroid && !Platform.isIOS) {

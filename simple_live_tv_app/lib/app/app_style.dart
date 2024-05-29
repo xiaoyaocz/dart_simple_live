@@ -22,10 +22,10 @@ class AppStyle {
     ),
     scaffoldBackgroundColor: const Color(0xfffafafa),
     radioTheme: RadioThemeData(
-      fillColor: MaterialStateProperty.all(AppColors.lightColorScheme.primary),
+      fillColor: WidgetStateProperty.all(AppColors.lightColorScheme.primary),
     ),
     checkboxTheme: CheckboxThemeData(
-      fillColor: MaterialStateProperty.all(AppColors.lightColorScheme.primary),
+      fillColor: WidgetStateProperty.all(AppColors.lightColorScheme.primary),
     ),
     fontFamily: Platform.isWindows ? 'Microsoft YaHei' : null,
   );

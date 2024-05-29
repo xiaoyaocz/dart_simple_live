@@ -501,11 +501,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
-      resolved-ref: "419a35a776f9784f07999c8f1f75eb26fd9fe90a"
+      ref: HEAD
+      resolved-ref: "90af96e03c421742994216aa1c275ba587d809da"
       url: "https://github.com/xiaoyaocz/flutter_ns_danmaku.git"
     source: git
-    version: "0.0.5"
+    version: "0.0.8"
   package_info_plus:
     dependency: "direct main"
     description:

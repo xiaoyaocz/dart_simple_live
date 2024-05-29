@@ -55,7 +55,18 @@ class HuyaSite implements LiveSite {
 
     List<LiveSubCategory> subs = [];
     for (var item in result["data"]) {
-      var gid = (asT<double?>(item["gid"])?.toInt() ?? 0).toString();
+      var gid = "";
+
+      if (item["gid"] is Map) {
+        gid = item["gid"]["value"].toString().split(",").first;
+      } else if (item["gid"] is double) {
+        gid = item["gid"].toInt().toString();
+      } else if (item["gid"] is int) {
+        gid = item["gid"].toString();
+      } else {
+        gid = item["gid"].toString();
+      }
+
       var subCategory = LiveSubCategory(
         id: gid,
         name: item["gameFullName"].toString(),

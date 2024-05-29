@@ -52,6 +52,9 @@ dependencies:
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
 
+dependency_overrides: 
+  fading_edge_scrollview: ^4.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

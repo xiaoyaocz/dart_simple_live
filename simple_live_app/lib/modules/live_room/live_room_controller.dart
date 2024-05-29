@@ -334,7 +334,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     var qualityLevel = AppSettingsController.instance.qualityLevel.value;
     try {
       var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult == ConnectivityResult.mobile) {
+      if (connectivityResult.first == ConnectivityResult.mobile) {
         qualityLevel =
             AppSettingsController.instance.qualityLevelCellular.value;
       }

@@ -19,7 +19,6 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
             android:banner="@mipmap/ic_banner"
-            android:icon="@mipmap/ic_banner"
             android:screenOrientation="landscape">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user

@@ -33,7 +33,12 @@ Widget buildControls(
     children: [
       Container(),
       buildDanmuView(videoState, controller),
-
+      // 点击播放器打开设置
+      Positioned.fill(
+        child: GestureDetector(
+          onTap: () => showPlayerSettings(controller),
+        ),
+      ),
       Center(
         child: // 中间
             StreamBuilder(

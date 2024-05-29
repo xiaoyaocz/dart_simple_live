@@ -71,7 +71,7 @@ jobs:
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: app-release.apk
+          name: android
           path: |
             simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
@@ -97,7 +97,7 @@ jobs:
       - name: Upload IPA to Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ios_no_sign.ipa
+          name: ios
           path: |
             simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
       
@@ -111,7 +111,7 @@ jobs:
       - name: Upload MacOS to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mac.dmg
+          name: mac
           path: |
             simple_live_app/build/dist/*/*.dmg
             simple_live_app/build/dist/*/*.zip
@@ -186,7 +186,7 @@ jobs:
       - name: Upload Linux APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux.deb
+          name: linux
           path: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
@@ -251,7 +251,7 @@ jobs:
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows.zip
+          name: windows
           path: |
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip

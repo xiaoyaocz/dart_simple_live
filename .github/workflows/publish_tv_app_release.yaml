@@ -59,7 +59,7 @@ jobs:
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: app-release.apk
+          name: android_tv
           path: |
             simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk

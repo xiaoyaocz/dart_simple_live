@@ -232,11 +232,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     );
 
     await setPortraitOrientation();
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isWindows) {
-      // 亮度重置,桌面平台可能会报错
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+      // 亮度重置,桌面平台可能会报错,暂时不处理桌面平台的亮度
       try {
         await screenBrightness.resetScreenBrightness();
       } catch (e) {
@@ -500,10 +497,7 @@ mixin PlayerGestureControlMixin
     if (Platform.isAndroid || Platform.isIOS) {
       _currentVolume = await PerfectVolumeControl.volume;
     }
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isWindows) {
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       _currentBrightness = await screenBrightness.current;
     }
   }

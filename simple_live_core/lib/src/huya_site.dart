@@ -391,11 +391,18 @@ class HuyaSite implements LiveSite {
         .getText("https://m.huya.com/$roomId", queryParameters: {}, header: {
       "user-agent": kUserAgent,
     });
-    var text = RegExp(r"window\.HNF_GLOBAL_INIT.=.\{(.*?)\}.</script>",
+    var text = RegExp(
+            r"window\.HNF_GLOBAL_INIT.=.\{[\s\S]*?\}[\s\S]*?</script>",
             multiLine: false)
         .firstMatch(resultText)
-        ?.group(1);
-    var jsonObj = json.decode("{$text}");
+        ?.group(0);
+    var jsonText = text!
+        .replaceAll(RegExp(r"window\.HNF_GLOBAL_INIT.=."), '')
+        .replaceAll("</script>", "")
+        .replaceAllMapped(RegExp(r'function.*?\(.*?\).\{[\s\S]*?\}'), (match) {
+      return '""';
+    });
+    var jsonObj = json.decode(jsonText);
     return jsonObj["roomInfo"]["eLiveStatus"] == 2;
   }
 

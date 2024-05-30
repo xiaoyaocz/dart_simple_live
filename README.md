@@ -34,16 +34,17 @@
 - [x] Android TV `BETA` [说明](https://github.com/xiaoyaocz/dart_simple_live/issues/338)
 
 请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
+如果想体验最新功能，可前往[Actions](https://github.com/xiaoyaocz/dart_simple_live/actions)下载自动打包的开发版本
 
-Windows可前往应用商店下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)
+Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)，体验会更好
 
-桌面代码在[desktop分支](https://github.com/xiaoyaocz/dart_simple_live/tree/desktop)
 
 ## 项目结构
 
 - `simple_live_core` 项目核心库，实现获取各个网站的信息及弹幕。
 - `simple_live_console` 基于simple_live_core的控制台程序。
 - `simple_live_app` 基于核心库实现的Flutter APP客户端。
+- `simple_live_tv_app` 基于核心库实现的Flutter Android TV客户端。
 
 ## 参考及引用
 

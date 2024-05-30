@@ -120,6 +120,9 @@ class LocalStorageService extends GetxService {
   /// 提示哔哩哔哩登录
   static const String kBilibiliLoginTip = "BilibiliLoginTip";
 
+  /// 日志记录
+  static const String kLogEnable = "LogEnable";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

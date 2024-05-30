@@ -19,6 +19,7 @@ class Utils {
   static late PackageInfo packageInfo;
   static DateFormat dateFormat = DateFormat("MM-dd HH:mm");
   static DateFormat dateFormatWithYear = DateFormat("yyyy-MM-dd HH:mm");
+  static DateFormat timeFormat = DateFormat("HH:mm:ss");
 
   /// 处理时间
   static String parseTime(DateTime? dt) {
@@ -520,10 +521,25 @@ class Utils {
   }
 
   static bool isRegexFormat(String keyword) {
-    return keyword.startsWith('/') && keyword.endsWith('/') && keyword.length > 2;
+    return keyword.startsWith('/') &&
+        keyword.endsWith('/') &&
+        keyword.length > 2;
   }
 
   static String removeRegexFormat(String keyword) {
     return keyword.substring(1, keyword.length - 1);
+  }
+
+  static String parseFileSize(int size) {
+    if (size < 1024) {
+      return "$size B";
+    }
+    if (size < 1024 * 1024) {
+      return "${(size / 1024).toStringAsFixed(2)} KB";
+    }
+    if (size < 1024 * 1024 * 1024) {
+      return "${(size / 1024 / 1024).toStringAsFixed(2)} MB";
+    }
+    return "${(size / 1024 / 1024 / 1024).toStringAsFixed(2)} GB";
   }
 }

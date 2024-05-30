@@ -1,4 +1,5 @@
 import 'package:simple_live_app/app/constant.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
@@ -103,6 +104,12 @@ class AppSettingsController extends GetxController {
 
     playerBufferSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerBufferSize, 32);
+
+    logEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kLogEnable, false);
+    if (logEnable.value) {
+      Log.initWriter();
+    }
 
     initSiteSort();
     initHomeSort();
@@ -419,5 +426,11 @@ class AppSettingsController extends GetxController {
     bilibiliLoginTip.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kBilibiliLoginTip, e);
+  }
+
+  var logEnable = false.obs;
+  void setLogEnable(bool e) {
+    logEnable.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kLogEnable, e);
   }
 }

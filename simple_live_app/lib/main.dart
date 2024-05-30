@@ -113,8 +113,30 @@ Future initWindow() async {
 }
 
 Future initServices() async {
+  Hive.registerAdapter(FollowUserAdapter());
+  Hive.registerAdapter(HistoryAdapter());
+
+  //包信息
+  Utils.packageInfo = await PackageInfo.fromPlatform();
+  //本地存储
+  Log.d("Init LocalStorage Service");
+  await Get.put(LocalStorageService()).init();
+  await Get.put(DBService()).init();
+  //初始化设置控制器
+  Get.put(AppSettingsController());
+
+  Get.put(BiliBiliAccountService());
+
+  Get.put(SyncService());
+
+  initCoreLog();
+}
+
+void initCoreLog() {
   //日志信息
-  CoreLog.enableLog = !kReleaseMode;
+  CoreLog.enableLog =
+      !kReleaseMode || AppSettingsController.instance.logEnable.value;
+  CoreLog.requestLogType = RequestLogType.short;
   CoreLog.onPrintLog = (level, msg) {
     switch (level) {
       case Level.debug:
@@ -133,22 +155,6 @@ Future initServices() async {
         Log.logPrint(msg);
     }
   };
-
-  Hive.registerAdapter(FollowUserAdapter());
-  Hive.registerAdapter(HistoryAdapter());
-
-  //包信息
-  Utils.packageInfo = await PackageInfo.fromPlatform();
-  //本地存储
-  Log.d("Init LocalStorage Service");
-  await Get.put(LocalStorageService()).init();
-  await Get.put(DBService()).init();
-  //初始化设置控制器
-  Get.put(AppSettingsController());
-
-  Get.put(BiliBiliAccountService());
-
-  Get.put(SyncService());
 }
 
 class MyApp extends StatelessWidget {
@@ -191,6 +197,7 @@ class MyApp extends StatelessWidget {
         supportedLocales: const [Locale("zh", "CN")],
         logWriterCallback: (text, {bool? isError}) {
           Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
+          Log.writeLog(text, (isError ?? false) ? Level.error : Level.info);
         },
         //debugShowCheckedModeBanner: false,
         navigatorObservers: [FlutterSmartDialog.observer],

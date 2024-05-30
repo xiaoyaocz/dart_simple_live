@@ -625,6 +625,11 @@ class PlayerController extends BaseController
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
       Log.d("播放器错误：$event");
+      // 跳过无音频输出的错误
+      // Could not open/initialize audio device -> no sound.
+      if (event.contains('no sound.')) {
+        return;
+      }
       //SmartDialog.showToast(event);
       mediaError(event);
     });

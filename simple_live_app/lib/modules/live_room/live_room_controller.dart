@@ -294,6 +294,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
                 addTime: DateTime.now(),
               ),
             );
+          } else {
+            followed.value =
+                DBService.instance.getFollowExist("${site.id}_$roomId");
           }
         }
       }

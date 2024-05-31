@@ -1,7 +1,7 @@
 name: simple_live_tv_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 1.0.6+10006
+version: 1.0.7+10007
 
 environment:
   sdk: '>=3.1.2 <4.0.0'
@@ -28,7 +28,7 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
   flutter_easyrefresh: 2.2.2 #下拉刷新、上拉加载
   extended_image: ^8.2.0 #拓展Image,支持缓存
-  flutter_smart_dialog: ^4.9.6 #各种弹窗 Toast/Dialog/Popup
+  flutter_smart_dialog: 4.9.6 #各种弹窗 Toast/Dialog/Popup
   marquee: ^2.2.3 #跑马灯
   lottie: ^3.1.0 #Lottie动画
   qr_flutter: ^4.1.0 #二维码

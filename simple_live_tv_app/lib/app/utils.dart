@@ -213,6 +213,29 @@ class Utils {
     );
   }
 
+  static void showSystemRightDialog({
+    Function()? onDismiss,
+    required Widget child,
+    double width = 320,
+  }) {
+    Get.dialog(
+      Dialog(
+        insetPadding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Container(
+            width: width,
+            decoration: BoxDecoration(
+              color: Get.theme.cardColor,
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   static void hideRightDialog() {
     SmartDialog.dismiss(status: SmartStatus.allCustom);
   }

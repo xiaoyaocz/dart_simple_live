@@ -52,7 +52,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
           ),
           SettingsCard(
             child: SizedBox(
-              height: 200,
+              height: 300,
               child: Obx(
                 () => ListView.separated(
                   itemCount: controller.logFiles.length,

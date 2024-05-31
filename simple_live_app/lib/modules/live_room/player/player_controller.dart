@@ -28,8 +28,11 @@ mixin PlayerMixin {
 
   /// 播放器实例
   late final player = Player(
-    configuration: const PlayerConfiguration(
+    configuration: PlayerConfiguration(
       title: "Simple Live Player",
+      logLevel: AppSettingsController.instance.logEnable.value
+          ? MPVLogLevel.info
+          : MPVLogLevel.error,
       // bufferSize:
       //     // media-kit #549
       //     AppSettingsController.instance.playerBufferSize.value * 1024 * 1024,
@@ -643,13 +646,13 @@ class PlayerController extends BaseController
       Log.d("播放器日志：$event");
     });
     _widthSubscription = player.stream.width.listen((event) {
-      Log.w(
+      Log.d(
           'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
     _heightSubscription = player.stream.height.listen((event) {
-      Log.w(
+      Log.d(
           'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);

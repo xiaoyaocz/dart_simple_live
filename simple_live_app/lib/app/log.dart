@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -117,6 +118,7 @@ class LogFileWriter {
     }
     var logFile = File("${logDir.path}/$fileName");
     fileWriter = logFile.openWrite(mode: FileMode.append);
+    writeSystemInfo();
   }
 
   void write(String content) {
@@ -126,6 +128,29 @@ class LogFileWriter {
 
   Future close() async {
     await fileWriter?.close();
+  }
+
+  void writeSystemInfo() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    write("System Info:");
+    write("Current Time: ${DateTime.now()}");
+    write("Platform: ${Platform.operatingSystem}");
+    write("Version: ${Platform.operatingSystemVersion}");
+    write("Local: ${Platform.localeName}");
+    write(
+        "App Version: ${Utils.packageInfo.version}+${Utils.packageInfo.buildNumber}");
+    if (Platform.isAndroid) {
+      write((await deviceInfo.androidInfo).data.toString());
+    } else if (Platform.isIOS) {
+      write((await deviceInfo.iosInfo).data.toString());
+    } else if (Platform.isLinux) {
+      write((await deviceInfo.linuxInfo).data.toString());
+    } else if (Platform.isMacOS) {
+      write((await deviceInfo.macOsInfo).data.toString());
+    } else if (Platform.isWindows) {
+      write((await deviceInfo.windowsInfo).data.toString());
+    }
+    write("End System Info");
   }
 }
 

@@ -275,6 +275,29 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
       addSysMsg("正在读取直播间信息");
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
+
+      if (site.id == Constant.kDouyin) {
+        // 如果是抖音，且收藏的是Rid，需要转换roomID
+        if (detail.value!.roomId != roomId) {
+          var oldId = roomId;
+          rxRoomId.value = detail.value!.roomId;
+          if (followed.value) {
+            // 更新关注列表
+            DBService.instance.deleteFollow("${site.id}_$oldId");
+            DBService.instance.addFollow(
+              FollowUser(
+                id: "${site.id}_$roomId",
+                roomId: roomId,
+                siteId: site.id,
+                userName: detail.value!.userName,
+                face: detail.value!.userAvatar,
+                addTime: DateTime.now(),
+              ),
+            );
+          }
+        }
+      }
+
       getSuperChatMessage();
 
       addHistory();

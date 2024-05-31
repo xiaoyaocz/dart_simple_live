@@ -27,6 +27,7 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                   minLines: 3,
                   maxLines: 3,
                   controller: controller.roomJumpToController,
+                  textInputAction: TextInputAction.go,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
@@ -65,6 +66,7 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                   minLines: 3,
                   maxLines: 3,
                   controller: controller.getUrlController,
+                  textInputAction: TextInputAction.go,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",

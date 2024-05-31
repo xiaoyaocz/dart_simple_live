@@ -39,13 +39,14 @@ dependencies:
         tag: v0.0.8
 
   #系统交互
-  package_info_plus: ^5.0.1 #包信息
+  package_info_plus: ^8.0.0 #包信息
   url_launcher: ^6.2.5 #打开链接
   network_info_plus: ^4.1.0+1
   shelf: ^1.4.1 
   shelf_router: ^1.1.4 
   udp: ^5.0.3 #UDP
   device_info_plus: ^9.1.2 #设备信息
+  wakelock_plus: ^1.2.5 #屏幕常亮，media_kit中自带，但似乎不生效
   
   # 视频播放
   media_kit: ^1.1.10+1
@@ -54,6 +55,7 @@ dependencies:
 
 dependency_overrides: 
   fading_edge_scrollview: ^4.1.1
+  wakelock_plus: ^1.2.5
 
 dev_dependencies:
   flutter_test:

@@ -251,8 +251,8 @@ class HomePage extends GetView<HomeController> {
   }
 
   void showManageDialog() {
-    Utils.showRightDialog(
-      useSystem: true,
+    Utils.showSystemRightDialog(
+      //useSystem: true,
       width: 700.w,
       child: Column(
         children: [
@@ -266,7 +266,8 @@ class HomePage extends GetView<HomeController> {
                 iconData: Icons.arrow_back,
                 text: "返回",
                 onTap: () {
-                  Utils.hideRightDialog();
+                  //Utils.hideRightDialog();
+                  Get.back();
                 },
               ),
               AppStyle.hGap32,

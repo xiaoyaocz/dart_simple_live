@@ -155,13 +155,19 @@ class CategoryPage extends GetView<CategoryController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          NetImage(
-            item.pic ?? "",
-            width: 64.w,
-            height: 64.w,
-            borderRadius: 16.w,
-            cacheWidth: 100,
-          ),
+          (item.pic != null && item.pic!.isNotEmpty)
+              ? NetImage(
+                  item.pic ?? "",
+                  width: 64.w,
+                  height: 64.w,
+                  borderRadius: 16.w,
+                  cacheWidth: 100,
+                )
+              : Image.asset(
+                  "assets/images/${controller.site.id}.png",
+                  width: 64.w,
+                  height: 64.w,
+                ),
           AppStyle.vGap12,
           Text(
             item.name,

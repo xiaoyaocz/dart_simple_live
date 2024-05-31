@@ -42,6 +42,7 @@ void main() async {
 Future initServices() async {
   //日志信息
   CoreLog.enableLog = !kReleaseMode;
+  CoreLog.requestLogType = RequestLogType.short;
   CoreLog.onPrintLog = (level, msg) {
     switch (level) {
       case Level.debug:

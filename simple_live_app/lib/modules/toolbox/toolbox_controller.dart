@@ -133,6 +133,16 @@ class ToolBoxController extends GetxController {
 
       return [id, Sites.allSites[Constant.kDouyin]!];
     }
+    if (url.contains("webcast.amemv.com")) {
+      var regExp = RegExp(r"reflow/(\d+)");
+      id = regExp.firstMatch(url)?.group(1) ?? "";
+      return [id, Sites.allSites[Constant.kDouyin]!];
+    }
+    if (url.contains("v.douyin.com")) {
+      var location = await getLocation(url);
+      return await parse(location);
+    }
+
     return [];
   }
 

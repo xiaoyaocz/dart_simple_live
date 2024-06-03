@@ -7,7 +7,9 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/user/other/other_settings_controller.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/settings/settings_menu.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 class OtherSettingsPage extends GetView<OtherSettingsController> {
   const OtherSettingsPage({super.key});
@@ -21,6 +23,87 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
+          Padding(
+            padding: AppStyle.edgeInsetsH12,
+            child: Text(
+              "播放器高级设置",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
+            child: Text.rich(
+              TextSpan(
+                text: "请勿随意修改以下设置，除非你知道自己在做什么。\n在修改以下设置前，你应该先查阅",
+                children: [
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: () {
+                        launchUrlString(
+                            "https://mpv.io/manual/stable/#video-output-drivers");
+                      },
+                      child: const Text(
+                        "MPV的文档",
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    value:
+                        AppSettingsController.instance.customPlayerOutput.value,
+                    title: "自定义输出驱动与硬件加速",
+                    onChanged: (e) {
+                      AppSettingsController.instance.setCustomPlayerOutput(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu(
+                    title: "视频输出驱动(--vo)",
+                    value:
+                        AppSettingsController.instance.videoOutputDriver.value,
+                    valueMap: controller.videoOutputDrivers,
+                    onChanged: (e) {
+                      AppSettingsController.instance.setVideoOutputDriver(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu(
+                    title: "硬件解码器(--hwdec)",
+                    value: AppSettingsController
+                        .instance.videoHardwareDecoder.value,
+                    valueMap: controller.hardwareDecoder,
+                    onChanged: (e) {
+                      AppSettingsController.instance.setVideoHardwareDecoder(e);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "日志记录",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
           SettingsCard(
             child: Column(
               children: [

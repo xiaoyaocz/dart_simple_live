@@ -13,6 +13,51 @@ import 'package:path/path.dart' as p;
 class OtherSettingsController extends BaseController {
   RxList<LogFileModel> logFiles = <LogFileModel>[].obs;
 
+  var videoOutputDrivers = {
+    "gpu": "gpu",
+    "gpu-next": "gpu-next",
+    "xv": "xv (X11 only)",
+    "x11": "x11 (X11 only)",
+    "vdpau": "vdpau (X11 only)",
+    "direct3d": "direct3d (Windows only)",
+    "sdl": "sdl",
+    "dmabuf-wayland": "dmabuf-wayland",
+    "vaapi": "vaapi",
+    "null": "null",
+    "libmpv": "libmpv",
+    "mediacodec_embed": "mediacodec_embed (Android only)",
+  };
+
+  var hardwareDecoder = {
+    "no": "no",
+    "auto": "auto",
+    "auto-safe": "auto-safe",
+    "yes": "yes",
+    "auto-copy": "auto-copy",
+    "d3d11va": "d3d11va",
+    "d3d11va-copy": "d3d11va-copy",
+    "videotoolbox": "videotoolbox",
+    "videotoolbox-copy": "videotoolbox-copy",
+    "vaapi": "vaapi",
+    "vaapi-copy": "vaapi-copy",
+    "nvdec": "nvdec",
+    "nvdec-copy": "nvdec-copy",
+    "drm": "drm",
+    "drm-copy": "drm-copy",
+    "vulkan": "vulkan",
+    "vulkan-copy": "vulkan-copy",
+    "dxva2": "dxva2",
+    "dxva2-copy": "dxva2-copy",
+    "vdpau": "vdpau",
+    "vdpau-copy": "vdpau-copy",
+    "mediacodec": "mediacodec",
+    "mediacodec-copy": "mediacodec-copy",
+    "cuda": "cuda",
+    "cuda-copy": "cuda-copy",
+    "crystalhd": "crystalhd",
+    "rkmpp": "rkmpp"
+  };
+
   @override
   void onInit() {
     loadLogFiles();

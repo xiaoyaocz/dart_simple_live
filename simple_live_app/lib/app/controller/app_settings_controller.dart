@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -110,6 +112,19 @@ class AppSettingsController extends GetxController {
     if (logEnable.value) {
       Log.initWriter();
     }
+
+    customPlayerOutput.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kCustomPlayerOutput, false);
+
+    videoOutputDriver.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVideoOutputDriver,
+      Platform.isAndroid ? "gpu" : "libmpv",
+    );
+
+    videoHardwareDecoder.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVideoHardwareDecoder,
+      Platform.isAndroid ? "auto-safe" : "auto",
+    );
 
     initSiteSort();
     initHomeSort();
@@ -432,5 +447,26 @@ class AppSettingsController extends GetxController {
   void setLogEnable(bool e) {
     logEnable.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kLogEnable, e);
+  }
+
+  var customPlayerOutput = false.obs;
+  void setCustomPlayerOutput(bool e) {
+    customPlayerOutput.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kCustomPlayerOutput, e);
+  }
+
+  var videoOutputDriver = "".obs;
+  void setVideoOutputDriver(String e) {
+    videoOutputDriver.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoOutputDriver, e);
+  }
+
+  var videoHardwareDecoder = "".obs;
+  void setVideoHardwareDecoder(String e) {
+    videoHardwareDecoder.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoHardwareDecoder, e);
   }
 }

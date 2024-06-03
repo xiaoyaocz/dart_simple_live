@@ -157,6 +157,14 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 icon: const Icon(Remix.share_line),
                 label: const Text("分享"),
               ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(fontSize: 14),
+                ),
+                onPressed: controller.copyUrl,
+                icon: const Icon(Remix.file_copy_line),
+                label: const Text("复制链接"),
+              ),
             ],
           ),
         ),
@@ -759,11 +767,20 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
             ListTile(
               leading: const Icon(Icons.share_sharp),
-              title: const Text("分享链接"),
+              title: const Text("分享直播间"),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Get.back();
                 controller.share();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text("复制链接"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                controller.copyUrl();
               },
             ),
             ListTile(

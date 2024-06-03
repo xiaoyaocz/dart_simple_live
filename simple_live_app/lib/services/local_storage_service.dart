@@ -59,6 +59,9 @@ class LocalStorageService extends GetxService {
   /// 弹幕开启
   static const String kDanmuEnable = "DanmuEnable";
 
+  /// 弹幕字重
+  static const String kDanmuFontWeight = "DanmuFontWeight";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 
@@ -99,6 +102,9 @@ class LocalStorageService extends GetxService {
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
 
+  /// 播放器音量
+  static const String kPlayerVolume = "PlayerVolume";
+
   /// 小窗隐藏弹幕
   static const String kPIPHideDanmu = "PIPHideDanmu";
 
@@ -113,6 +119,18 @@ class LocalStorageService extends GetxService {
 
   /// 提示哔哩哔哩登录
   static const String kBilibiliLoginTip = "BilibiliLoginTip";
+
+  /// 日志记录
+  static const String kLogEnable = "LogEnable";
+
+  /// 开启自定义播放器视频输出
+  static const String kCustomPlayerOutput = "CustomPlayerOutput";
+
+  /// 视频输出驱动
+  static const String kVideoOutputDriver = "VideoOutputDriver";
+
+  /// 视频硬件解码器
+  static const String kVideoHardwareDecoder = "VideoHardwareDecoder";
 
   late Box settingsBox;
   late Box<String> shieldBox;

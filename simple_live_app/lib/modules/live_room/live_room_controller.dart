@@ -98,6 +98,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   /// 是否处于后台
   var isBackground = false;
 
+  /// 直播间加载失败
+  var loadError = false.obs;
+  Error? error;
+
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
@@ -272,9 +276,35 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void loadData() async {
     try {
       SmartDialog.showLoading(msg: "");
-
+      loadError.value = false;
       addSysMsg("正在读取直播间信息");
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
+
+      if (site.id == Constant.kDouyin) {
+        // 如果是抖音，且收藏的是Rid，需要转换roomID
+        if (detail.value!.roomId != roomId) {
+          var oldId = roomId;
+          rxRoomId.value = detail.value!.roomId;
+          if (followed.value) {
+            // 更新关注列表
+            DBService.instance.deleteFollow("${site.id}_$oldId");
+            DBService.instance.addFollow(
+              FollowUser(
+                id: "${site.id}_$roomId",
+                roomId: roomId,
+                siteId: site.id,
+                userName: detail.value!.userName,
+                face: detail.value!.userAvatar,
+                addTime: DateTime.now(),
+              ),
+            );
+          } else {
+            followed.value =
+                DBService.instance.getFollowExist("${site.id}_$roomId");
+          }
+        }
+      }
+
       getSuperChatMessage();
 
       addHistory();
@@ -290,7 +320,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
     } catch (e) {
-      SmartDialog.showToast(e.toString());
+      Log.logPrint(e);
+      //SmartDialog.showToast(e.toString());
+      loadError.value = true;
+      error = e as Error;
     } finally {
       SmartDialog.dismiss(status: SmartStatus.loading);
     }
@@ -300,6 +333,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void getPlayQualites() async {
     qualites.clear();
     currentQuality = -1;
+
     try {
       var playQualites =
           await site.liveSite.getPlayQualites(detail: detail.value!);
@@ -333,7 +367,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     var qualityLevel = AppSettingsController.instance.qualityLevel.value;
     try {
       var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult == ConnectivityResult.mobile) {
+      if (connectivityResult.first == ConnectivityResult.mobile) {
         qualityLevel =
             AppSettingsController.instance.qualityLevelCellular.value;
       }
@@ -531,6 +565,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     Share.share(detail.value!.url);
   }
 
+  void copyUrl() {
+    if (detail.value == null) {
+      return;
+    }
+    Utils.copyToClipboard(detail.value!.url);
+    SmartDialog.showToast("已复制直播间链接");
+  }
+
   /// 底部打开播放器设置
   void showDanmuSettingsSheet() {
     Utils.showBottomSheet(
@@ -547,6 +589,38 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           ),
         ],
       ),
+    );
+  }
+
+  void showVolumeSlider(BuildContext targetContext) {
+    SmartDialog.showAttach(
+      targetContext: targetContext,
+      alignment: Alignment.topCenter,
+      displayTime: const Duration(seconds: 3),
+      maskColor: const Color(0x00000000),
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: AppStyle.radius12,
+            color: Theme.of(context).cardColor,
+          ),
+          padding: AppStyle.edgeInsetsA4,
+          child: Obx(
+            () => SizedBox(
+              width: 200,
+              child: Slider(
+                min: 0,
+                max: 100,
+                value: AppSettingsController.instance.playerVolume.value,
+                onChanged: (newValue) {
+                  player.setVolume(newValue);
+                  AppSettingsController.instance.setPlayerVolume(newValue);
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -889,6 +963,16 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     // 刷新信息
     loadData();
+  }
+
+  void copyErrorDetail() {
+    Utils.copyToClipboard('''直播平台：${rxSite.value.name}
+房间号：${rxRoomId.value}
+错误信息：
+${error?.toString()}
+----------------
+${error?.stackTrace}''');
+    SmartDialog.showToast("已复制错误信息");
   }
 
   @override

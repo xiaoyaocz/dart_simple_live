@@ -27,6 +27,7 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                   minLines: 3,
                   maxLines: 3,
                   controller: controller.roomJumpToController,
+                  textInputAction: TextInputAction.go,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
@@ -65,6 +66,7 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                   minLines: 3,
                   maxLines: 3,
                   controller: controller.getUrlController,
+                  textInputAction: TextInputAction.go,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
@@ -90,6 +92,22 @@ class ToolBoxPage extends GetView<ToolBoxController> {
                 ),
               ],
             ),
+          ),
+          const Padding(
+            padding: AppStyle.edgeInsetsV12,
+            child: SelectableText('''支持以下类型的链接解析：
+哔哩哔哩：
+https://live.bilibili.com/xxxxx
+https://b23.tv/xxxxx
+虎牙直播：
+https://www.huya.com/xxxxx
+斗鱼直播：
+https://www.douyu.com/xxxxx
+抖音直播：
+https://v.douyin.com/xxxxx
+https://live.douyin.com/xxxxx
+https://webcast.amemv.com/webcast/reflow/xxxxx
+''', style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),

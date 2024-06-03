@@ -24,6 +24,9 @@ class RoutePath {
   /// 弹幕关键词屏蔽
   static const kSettingsDanmuShield = "/settings/danmu/shield";
 
+  /// 其他设置
+  static const kSettingsOther = "/settings/other";
+
   /// 赞助
   static const kSponsor = "/sponsor";
 

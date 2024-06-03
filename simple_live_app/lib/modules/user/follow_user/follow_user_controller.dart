@@ -44,14 +44,21 @@ class FollowUserController extends BasePageController<FollowUser> {
     super.onInit();
   }
 
+  var updatedCount = 0;
+  var updating = false.obs;
   @override
   Future<List<FollowUser>> getData(int page, int pageSize) {
     if (page > 1) {
       return Future.value([]);
     }
     var list = DBService.instance.getFollowList();
+    updatedCount = 0;
+    updating.value = true;
     for (var item in list) {
       updateLiveStatus(item);
+    }
+    if (list.isEmpty) {
+      updating.value = false;
     }
     allList.assignAll(list);
     return Future.value(list);
@@ -79,10 +86,14 @@ class FollowUserController extends BasePageController<FollowUser> {
       var site = Sites.allSites[item.siteId]!;
       item.liveStatus.value =
           (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
-
-      filterData();
     } catch (e) {
       Log.logPrint(e);
+    } finally {
+      updatedCount++;
+      if (updatedCount >= list.length) {
+        filterData();
+        updating.value = false;
+      }
     }
   }
 

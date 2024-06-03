@@ -1,0 +1,7 @@
+display_name: Simple Live
+publisher_display_name: xiaoyaocz
+identity_name: com.xycz.simplelive
+logo_path: assets/logo_400.png
+capabilities: internetClient
+languages: zh-cn
+install_certificate: "false"

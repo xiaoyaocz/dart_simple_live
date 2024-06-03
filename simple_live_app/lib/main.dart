@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,10 +11,12 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
@@ -25,12 +28,21 @@ import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:window_manager/window_manager.dart';
+
+import 'package:path/path.dart' as p;
 import 'package:dynamic_color/dynamic_color.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await migrateData();
+  await initWindow();
   MediaKit.ensureInitialized();
-  await Hive.initFlutter();
+  await Hive.initFlutter(
+    (!Platform.isAndroid && !Platform.isIOS)
+        ? (await getApplicationSupportDirectory()).path
+        : null,
+  );
   //初始化服务
   await initServices();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -41,13 +53,90 @@ void main() async {
     systemNavigationBarColor: Colors.transparent,
   );
   SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
-
   runApp(const MyApp());
 }
 
+/// 将Hive数据迁移到Application Support
+Future migrateData() async {
+  if (Platform.isAndroid || Platform.isIOS) {
+    return;
+  }
+  var hiveFileList = [
+    "followuser",
+    //旧版本写错成hostiry了
+    "hostiry",
+    "localstorage",
+    "danmushield",
+  ];
+  try {
+    var newDir = await getApplicationSupportDirectory();
+    var hiveFile = File(p.join(newDir.path, "followuser.hive"));
+    if (await hiveFile.exists()) {
+      return;
+    }
+
+    var oldDir = await getApplicationDocumentsDirectory();
+    for (var element in hiveFileList) {
+      var oldFile = File(p.join(oldDir.path, "$element.hive"));
+      if (await oldFile.exists()) {
+        var fileName = "$element.hive";
+        if (element == "hostiry") {
+          fileName = "history.hive";
+        }
+        await oldFile.copy(p.join(newDir.path, fileName));
+        await oldFile.delete();
+      }
+      var lockFile = File(p.join(oldDir.path, "$element.lock"));
+      if (await lockFile.exists()) {
+        await lockFile.delete();
+      }
+    }
+  } catch (e) {
+    Log.logPrint(e);
+  }
+}
+
+Future initWindow() async {
+  if (!(Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+    return;
+  }
+  await windowManager.ensureInitialized();
+  WindowOptions windowOptions = const WindowOptions(
+    minimumSize: Size(280, 280),
+    center: true,
+    title: "Simple Live",
+  );
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
+}
+
 Future initServices() async {
+  Hive.registerAdapter(FollowUserAdapter());
+  Hive.registerAdapter(HistoryAdapter());
+
+  //包信息
+  Utils.packageInfo = await PackageInfo.fromPlatform();
+  //本地存储
+  Log.d("Init LocalStorage Service");
+  await Get.put(LocalStorageService()).init();
+  await Get.put(DBService()).init();
+  //初始化设置控制器
+  Get.put(AppSettingsController());
+
+  Get.put(BiliBiliAccountService());
+
+  Get.put(SyncService());
+
+  initCoreLog();
+}
+
+void initCoreLog() {
   //日志信息
-  CoreLog.enableLog = !kReleaseMode;
+  CoreLog.enableLog =
+      !kReleaseMode || AppSettingsController.instance.logEnable.value;
+  CoreLog.requestLogType = RequestLogType.short;
   CoreLog.onPrintLog = (level, msg) {
     switch (level) {
       case Level.debug:
@@ -66,22 +155,6 @@ Future initServices() async {
         Log.logPrint(msg);
     }
   };
-
-  Hive.registerAdapter(FollowUserAdapter());
-  Hive.registerAdapter(HistoryAdapter());
-
-  //包信息
-  Utils.packageInfo = await PackageInfo.fromPlatform();
-  //本地存储
-  Log.d("Init LocalStorage Service");
-  await Get.put(LocalStorageService()).init();
-  await Get.put(DBService()).init();
-  //初始化设置控制器
-  Get.put(AppSettingsController());
-
-  Get.put(BiliBiliAccountService());
-
-  Get.put(SyncService());
 }
 
 class MyApp extends StatelessWidget {
@@ -89,9 +162,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isDynamicColor = Get.find<AppSettingsController>().isDynamic.value;
-    Color styleColor =
-        Color(Get.find<AppSettingsController>().styleColor.value);
+    bool isDynamicColor = AppSettingsController.instance.isDynamic.value;
+    Color styleColor = Color(AppSettingsController.instance.styleColor.value);
     return DynamicColorBuilder(
         builder: ((ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
       ColorScheme? lightColorScheme;
@@ -125,6 +197,7 @@ class MyApp extends StatelessWidget {
         supportedLocales: const [Locale("zh", "CN")],
         logWriterCallback: (text, {bool? isError}) {
           Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
+          Log.writeLog(text, (isError ?? false) ? Level.error : Level.info);
         },
         //debugShowCheckedModeBanner: false,
         navigatorObservers: [FlutterSmartDialog.observer],
@@ -132,12 +205,51 @@ class MyApp extends StatelessWidget {
           loadingBuilder: ((msg) => const AppLoaddingWidget()),
           //字体大小不跟随系统变化
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: const TextScaler.linear(1.0),
-            ),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.0)),
             child: Stack(
               children: [
-                child!,
+                //侧键返回
+                RawGestureDetector(
+                  excludeFromSemantics: true,
+                  gestures: <Type, GestureRecognizerFactory>{
+                    FourthButtonTapGestureRecognizer:
+                        GestureRecognizerFactoryWithHandlers<
+                            FourthButtonTapGestureRecognizer>(
+                      () => FourthButtonTapGestureRecognizer(),
+                      (FourthButtonTapGestureRecognizer instance) {
+                        instance.onTapDown = (TapDownDetails details) async {
+                          //如果处于全屏状态，退出全屏
+                          if (!Platform.isAndroid && !Platform.isIOS) {
+                            if (await windowManager.isFullScreen()) {
+                              await windowManager.setFullScreen(false);
+                              return;
+                            }
+                          }
+                          Get.back();
+                        };
+                      },
+                    ),
+                  },
+                  child: KeyboardListener(
+                    focusNode: FocusNode(),
+                    onKeyEvent: (KeyEvent event) async {
+                      if (event is KeyDownEvent &&
+                          event.logicalKey == LogicalKeyboardKey.escape) {
+                        // ESC退出全屏
+                        // 如果处于全屏状态，退出全屏
+                        if (!Platform.isAndroid && !Platform.isIOS) {
+                          if (await windowManager.isFullScreen()) {
+                            await windowManager.setFullScreen(false);
+                            return;
+                          }
+                        }
+                      }
+                    },
+                    child: child!,
+                  ),
+                ),
+
                 //查看DEBUG日志按钮
                 //只在Debug、Profile模式显示
                 Visibility(

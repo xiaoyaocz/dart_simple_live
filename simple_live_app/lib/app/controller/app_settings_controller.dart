@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:simple_live_app/app/constant.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
@@ -38,6 +41,8 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuTopMargin, 0.0);
     danmuBottomMargin.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuBottomMargin, 0.0);
+    danmuFontWeight.value = LocalStorageService.instance.getValue(
+        LocalStorageService.kDanmuFontWeight, FontWeight.normal.index);
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
@@ -83,6 +88,10 @@ class AppSettingsController extends GetxController {
       0,
     );
 
+    playerVolume.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kPlayerVolume,
+      100.0,
+    );
     pipHideDanmu.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPIPHideDanmu, true);
 
@@ -97,6 +106,25 @@ class AppSettingsController extends GetxController {
 
     playerBufferSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerBufferSize, 32);
+
+    logEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kLogEnable, false);
+    if (logEnable.value) {
+      Log.initWriter();
+    }
+
+    customPlayerOutput.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kCustomPlayerOutput, false);
+
+    videoOutputDriver.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVideoOutputDriver,
+      Platform.isAndroid ? "gpu" : "libmpv",
+    );
+
+    videoHardwareDecoder.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVideoHardwareDecoder,
+      Platform.isAndroid ? "auto-safe" : "auto",
+    );
 
     initSiteSort();
     initHomeSort();
@@ -255,6 +283,13 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kDanmuStrokeWidth, e);
   }
 
+  var danmuFontWeight = FontWeight.normal.index.obs;
+  void setDanmuFontWeight(int e) {
+    danmuFontWeight.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuFontWeight, e);
+  }
+
   var qualityLevel = 1.obs;
   void setQualityLevel(int level) {
     qualityLevel.value = level;
@@ -360,6 +395,15 @@ class AppSettingsController extends GetxController {
     );
   }
 
+  Rx<double> playerVolume = 100.0.obs;
+  void setPlayerVolume(double value) {
+    playerVolume.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kPlayerVolume,
+      value,
+    );
+  }
+
   var pipHideDanmu = true.obs;
   void setPIPHideDanmu(bool e) {
     pipHideDanmu.value = e;
@@ -397,5 +441,32 @@ class AppSettingsController extends GetxController {
     bilibiliLoginTip.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kBilibiliLoginTip, e);
+  }
+
+  var logEnable = false.obs;
+  void setLogEnable(bool e) {
+    logEnable.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kLogEnable, e);
+  }
+
+  var customPlayerOutput = false.obs;
+  void setCustomPlayerOutput(bool e) {
+    customPlayerOutput.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kCustomPlayerOutput, e);
+  }
+
+  var videoOutputDriver = "".obs;
+  void setVideoOutputDriver(String e) {
+    videoOutputDriver.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoOutputDriver, e);
+  }
+
+  var videoHardwareDecoder = "".obs;
+  void setVideoHardwareDecoder(String e) {
+    videoHardwareDecoder.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoHardwareDecoder, e);
   }
 }

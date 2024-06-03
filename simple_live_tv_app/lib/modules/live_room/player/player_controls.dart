@@ -33,7 +33,12 @@ Widget buildControls(
     children: [
       Container(),
       buildDanmuView(videoState, controller),
-
+      // 点击播放器打开设置
+      Positioned.fill(
+        child: GestureDetector(
+          onTap: () => showPlayerSettings(controller),
+        ),
+      ),
       Center(
         child: // 中间
             StreamBuilder(
@@ -345,6 +350,9 @@ Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
 // }
 
 void showPlayerSettings(LiveRoomController controller) {
+  // 移除焦点
+  controller.focusNode.unfocus();
+
   var followFocusNode = AppFocusNode()..isFoucsed.value = true;
   var qualityFoucsNode = AppFocusNode();
   var lineFoucsNode = AppFocusNode();
@@ -355,9 +363,8 @@ void showPlayerSettings(LiveRoomController controller) {
   var danmakuAreaFoucsNode = AppFocusNode();
   var danmakuOpacityFoucsNode = AppFocusNode();
   var danmakuStorkeFoucsNode = AppFocusNode();
-  Utils.showRightDialog(
+  Utils.showSystemRightDialog(
     width: 800.w,
-    useSystem: true,
     child: Column(
       children: [
         AppStyle.vGap24,
@@ -370,7 +377,8 @@ void showPlayerSettings(LiveRoomController controller) {
               iconData: Icons.arrow_back,
               text: "返回",
               onTap: () {
-                Utils.hideRightDialog();
+                //Utils.hideRightDialog();
+                Get.back();
               },
             ),
             AppStyle.hGap32,
@@ -686,9 +694,8 @@ void showFollowUser(LiveRoomController controller) {
     }
   }
 
-  Utils.showRightDialog(
+  Utils.showSystemRightDialog(
     width: 800.w,
-    useSystem: true,
     child: Column(
       children: [
         AppStyle.vGap24,
@@ -701,7 +708,8 @@ void showFollowUser(LiveRoomController controller) {
               iconData: Icons.arrow_back,
               text: "返回",
               onTap: () {
-                Utils.hideRightDialog();
+                // Utils.hideRightDialog();
+                Get.back();
               },
             ),
             AppStyle.hGap32,

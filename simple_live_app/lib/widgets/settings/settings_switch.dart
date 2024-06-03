@@ -24,7 +24,7 @@ class SettingsSwitch extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,
       ),
-      trackOutlineColor: const MaterialStatePropertyAll(Colors.transparent),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       //visualDensity: VisualDensity.compact,
       contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 8),
       subtitle: subtitle != null

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:get/get.dart';
@@ -252,8 +251,8 @@ class HomePage extends GetView<HomeController> {
   }
 
   void showManageDialog() {
-    Utils.showRightDialog(
-      useSystem: true,
+    Utils.showSystemRightDialog(
+      //useSystem: true,
       width: 700.w,
       child: Column(
         children: [
@@ -267,7 +266,8 @@ class HomePage extends GetView<HomeController> {
                 iconData: Icons.arrow_back,
                 text: "返回",
                 onTap: () {
-                  Utils.hideRightDialog();
+                  //Utils.hideRightDialog();
+                  Get.back();
                 },
               ),
               AppStyle.hGap32,

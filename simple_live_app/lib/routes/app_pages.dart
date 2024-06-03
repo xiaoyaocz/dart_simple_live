@@ -33,6 +33,8 @@ import 'package:simple_live_app/modules/user/history/history_controller.dart';
 import 'package:simple_live_app/modules/user/history/history_page.dart';
 import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_controller.dart';
 import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_page.dart';
+import 'package:simple_live_app/modules/user/other/other_settings_controller.dart';
+import 'package:simple_live_app/modules/user/other/other_settings_page.dart';
 import 'package:simple_live_app/modules/user/play_settings_page.dart';
 
 import '../modules/indexed/indexed_page.dart';
@@ -190,6 +192,14 @@ class AppPages {
             info: Get.arguments['info'],
           ),
         ),
+      ],
+    ),
+    //其他设置
+    GetPage(
+      name: RoutePath.kSettingsOther,
+      page: () => const OtherSettingsPage(),
+      bindings: [
+        BindingsBuilder.put(() => OtherSettingsController()),
       ],
     ),
   ];

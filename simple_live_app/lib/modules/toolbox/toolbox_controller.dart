@@ -17,13 +17,20 @@ class ToolBoxController extends GetxController {
       SmartDialog.showToast("链接不能为空");
       return;
     }
+    // 隐藏键盘
+    FocusManager.instance.primaryFocus?.unfocus();
+
     var parseResult = await parse(e);
     if (parseResult.isEmpty && parseResult.first == "") {
       SmartDialog.showToast("无法解析此链接");
       return;
     }
-    Site site = parseResult[1];
-    AppNavigator.toLiveRoomDetail(site: site, roomId: parseResult.first);
+
+    // 延迟200ms跳转，等待键盘隐藏
+    Future.delayed(const Duration(milliseconds: 200), () {
+      Site site = parseResult[1];
+      AppNavigator.toLiveRoomDetail(site: site, roomId: parseResult.first);
+    });
   }
 
   void getPlayUrl(String e) async {
@@ -133,6 +140,18 @@ class ToolBoxController extends GetxController {
 
       return [id, Sites.allSites[Constant.kDouyin]!];
     }
+    if (url.contains("webcast.amemv.com")) {
+      var regExp = RegExp(r"reflow/(\d+)");
+      id = regExp.firstMatch(url)?.group(1) ?? "";
+      return [id, Sites.allSites[Constant.kDouyin]!];
+    }
+    if (url.contains("v.douyin.com")) {
+      var regExp = RegExp(r"http.?://v.douyin.com/[\d\w]+/");
+      var u = regExp.firstMatch(url)?.group(0) ?? "";
+      var location = await getLocation(u);
+      return await parse(location);
+    }
+
     return [];
   }
 

@@ -5,6 +5,15 @@ assignees: xiaoyaocz
 labels:
   - "bug"
 body:
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 非重复的Issue
+      description: 先去Issues列表中查找下是否存在相似的Issue，如果有了就不要重复发了
+      options:
+        - label: 已确认没有相似的Issue
+          required: true
+
   - type: textarea
     id: description
     validations:
@@ -51,6 +60,8 @@ body:
  
   - type: dropdown
     id: release-type
+    validations:
+      required: true
     attributes:
       label: 使用版本
       description: 使用的是什么版本，从哪里下载的
@@ -73,12 +84,13 @@ body:
         - Linux
         - Android
         - iOS
+        - Android TV
 
   - type: input
     id: os-version
     attributes:
-      label: 操作信息
-      description: 请填写你的操作信息版本
+      label: 操作系统信息
+      description: 请填写你的操作系统信息版本
       placeholder: ex. Windows 10 21H1 / MIUI 15 Android 12
     validations:
       required: true
@@ -89,6 +101,8 @@ body:
       label: 设备信息
       description: 请填写你的设备信息
       placeholder: ex. PC / iPhone 12 Pro Max
+    validations:
+      required: true
 
   - type: textarea
     id: remark

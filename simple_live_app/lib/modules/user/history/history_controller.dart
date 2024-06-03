@@ -22,10 +22,6 @@ class HistoryController extends BasePageController<History> {
   }
 
   void removeItem(History item) async {
-    var result = await Utils.showAlertDialog("确定要删除此记录吗?", title: "删除记录");
-    if (!result) {
-      return;
-    }
     await DBService.instance.historyBox.delete(item.id);
     refreshData();
   }

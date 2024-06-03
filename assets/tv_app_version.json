@@ -1,7 +1,7 @@
 {
-    "version": "1.0.3",
-    "version_num": 10003,
-    "version_desc": "- 修复虎牙播放中断问题\n- 优化使用体验",
-    "prerelease":false,
+    "version": "1.0.8",
+    "version_num": 10008,
+    "version_desc": "- 修复虎牙播放问题\n- TV增加Banner图标\n- 优化使用体验",
+    "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

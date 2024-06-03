@@ -98,6 +98,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   /// 是否处于后台
   var isBackground = false;
 
+  /// 直播间加载失败
+  var loadError = false.obs;
+  Error? error;
+
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
@@ -272,7 +276,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void loadData() async {
     try {
       SmartDialog.showLoading(msg: "");
-
+      loadError.value = false;
       addSysMsg("正在读取直播间信息");
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
 
@@ -316,7 +320,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
     } catch (e) {
-      SmartDialog.showToast(e.toString());
+      Log.logPrint(e);
+      //SmartDialog.showToast(e.toString());
+      loadError.value = true;
+      error = e as Error;
     } finally {
       SmartDialog.dismiss(status: SmartStatus.loading);
     }
@@ -956,6 +963,16 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     // 刷新信息
     loadData();
+  }
+
+  void copyErrorDetail() {
+    Utils.copyToClipboard('''直播平台：${rxSite.value.name}
+房间号：${rxRoomId.value}
+错误信息：
+${error?.toString()}
+----------------
+${error?.stackTrace}''');
+    SmartDialog.showToast("已复制错误信息");
   }
 
   @override

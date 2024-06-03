@@ -14,7 +14,7 @@ class FollowUserPage extends GetView<FollowUserController> {
 
   @override
   Widget build(BuildContext context) {
-    controller.filterMode.value=0;
+    controller.filterMode.value = 0;
     var count = MediaQuery.of(context).size.width ~/ 500;
     if (count < 1) count = 1;
     return Scaffold(
@@ -88,34 +88,61 @@ class FollowUserPage extends GetView<FollowUserController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: AppStyle.edgeInsetsA12.copyWith(top: 8, bottom: 8),
-            child: Obx(
-              () => Wrap(
-                spacing: 12,
-                children: [
-                  FilterButton(
-                    text: "全部",
-                    selected: controller.filterMode.value == 0,
-                    onTap: () {
-                      controller.setFilterMode(0);
-                    },
+            padding: AppStyle.edgeInsetsL8,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Obx(
+                    () => Wrap(
+                      spacing: 12,
+                      children: [
+                        FilterButton(
+                          text: "全部",
+                          selected: controller.filterMode.value == 0,
+                          onTap: () {
+                            controller.setFilterMode(0);
+                          },
+                        ),
+                        FilterButton(
+                          text: "直播中",
+                          selected: controller.filterMode.value == 1,
+                          onTap: () {
+                            controller.setFilterMode(1);
+                          },
+                        ),
+                        FilterButton(
+                          text: "未开播",
+                          selected: controller.filterMode.value == 2,
+                          onTap: () {
+                            controller.setFilterMode(2);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  FilterButton(
-                    text: "直播中",
-                    selected: controller.filterMode.value == 1,
-                    onTap: () {
-                      controller.setFilterMode(1);
-                    },
-                  ),
-                  FilterButton(
-                    text: "未开播",
-                    selected: controller.filterMode.value == 2,
-                    onTap: () {
-                      controller.setFilterMode(2);
-                    },
-                  ),
-                ],
-              ),
+                ),
+                Obx(
+                  () => controller.updating.value
+                      ? TextButton.icon(
+                          onPressed: null,
+                          icon: const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          label: const Text("更新状态中"),
+                        )
+                      : TextButton.icon(
+                          onPressed: () {
+                            controller.refreshData();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text("刷新"),
+                        ),
+                ),
+              ],
             ),
           ),
           Expanded(

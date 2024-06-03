@@ -151,6 +151,7 @@ class FollowUserPage extends GetView<FollowUserController> {
               crossAxisCount: count,
               pageController: controller,
               //firstRefresh: true,
+              showPCRefreshButton: false,
               itemBuilder: (_, i) {
                 var item = controller.list[i];
                 var site = Sites.allSites[item.siteId]!;

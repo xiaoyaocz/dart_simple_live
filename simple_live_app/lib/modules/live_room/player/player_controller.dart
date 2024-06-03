@@ -289,14 +289,16 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       smallWindowState.value = true;
       windowManager.setTitleBarStyle(TitleBarStyle.hidden);
       // 获取视频窗口大小
-      var width = player.state.width ?? 0;
-      var height = player.state.height ?? 0;
+      var width = player.state.width ?? 16;
+      var height = player.state.height ?? 9;
 
       // 横屏还是竖屏
       if (height > width) {
-        windowManager.setSize(const Size(400, 711));
+        var aspectRatio = width / height;
+        windowManager.setSize(Size(400, 400 / aspectRatio));
       } else {
-        windowManager.setSize(const Size(500, 280));
+        var aspectRatio = height / width;
+        windowManager.setSize(Size(280 / aspectRatio, 280));
       }
 
       windowManager.setAlwaysOnTop(true);
@@ -781,6 +783,9 @@ class PlayerController extends BaseController
   @override
   void onClose() async {
     Log.w("播放器关闭");
+    if (smallWindowState.value) {
+      exitSmallWindow();
+    }
     disposeStream();
     disposeDanmakuController();
     await resetSystem();

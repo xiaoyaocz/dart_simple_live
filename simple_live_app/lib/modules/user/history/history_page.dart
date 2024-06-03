@@ -34,46 +34,70 @@ class HistoryPage extends GetView<HistoryController> {
         itemBuilder: (_, i) {
           var item = controller.list[i];
           var site = Sites.allSites[item.siteId]!;
-          return ListTile(
-            leading: NetImage(
-              item.face,
-              width: 48,
-              height: 48,
-              borderRadius: 24,
+          return Dismissible(
+            key: ValueKey(item.id),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              color: Colors.red,
+              padding: AppStyle.edgeInsetsA12,
+              alignment: Alignment.centerRight,
+              child: const Icon(
+                Icons.delete,
+                color: Colors.white,
+              ),
             ),
-            title: Text(item.userName),
-            subtitle: Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        site.logo,
-                        width: 20,
-                      ),
-                      AppStyle.hGap4,
-                      Text(
-                        site.name,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  Utils.parseTime(item.updateTime),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            onTap: () {
-              AppNavigator.toLiveRoomDetail(site: site, roomId: item.roomId);
+            confirmDismiss: (direction) async {
+              return await Utils.showAlertDialog("确定要删除此记录吗?", title: "删除记录");
             },
-            onLongPress: () {
+            onDismissed: (_) {
               controller.removeItem(item);
             },
+            child: ListTile(
+              leading: NetImage(
+                item.face,
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+              ),
+              title: Text(item.userName),
+              subtitle: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Image.asset(
+                          site.logo,
+                          width: 20,
+                        ),
+                        AppStyle.hGap4,
+                        Text(
+                          site.name,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    Utils.parseTime(item.updateTime),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              onTap: () {
+                AppNavigator.toLiveRoomDetail(site: site, roomId: item.roomId);
+              },
+              onLongPress: () async {
+                var result =
+                    await Utils.showAlertDialog("确定要删除此记录吗?", title: "删除记录");
+                if (!result) {
+                  return;
+                }
+                controller.removeItem(item);
+              },
+            ),
           );
         },
       ),

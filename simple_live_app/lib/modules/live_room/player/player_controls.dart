@@ -63,6 +63,9 @@ Widget buildFullControls(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
           onLongPress: () {
+            if (controller.lockControlsState.value) {
+              return;
+            }
             showFollowUser(controller);
           },
           onVerticalDragStart: controller.onVerticalDragStart,

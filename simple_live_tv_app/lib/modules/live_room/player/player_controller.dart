@@ -11,6 +11,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_tv_app/app/log.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 mixin PlayerMixin {
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
@@ -181,8 +182,16 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 初始化一些系统状态
   void initSystem() async {
+    // 屏幕常亮
+    WakelockPlus.enable();
+
     // 开始隐藏计时
     resetHideControlsTimer();
+  }
+
+  /// 释放一些系统状态
+  Future resetSystem() async {
+    await WakelockPlus.disable();
   }
 
   /// 是否是IOS16以下
@@ -267,7 +276,7 @@ class PlayerController extends BaseController
     Log.w("播放器关闭");
     disposeStream();
     disposeDanmakuController();
-
+    await resetSystem();
     await player.dispose();
     super.onClose();
   }

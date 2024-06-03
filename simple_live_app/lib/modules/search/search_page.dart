@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/modules/search/douyin/douyin_search_view.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_list_view.dart';
 
@@ -88,12 +90,15 @@ class SearchPage extends GetView<AppSearchController> {
         ),
       ),
       body: TabBarView(
+        physics: const NeverScrollableScrollPhysics(),
         controller: controller.tabController,
         children: Sites.supportSites
             .map(
-              (e) => SearchListView(
-                e.id,
-              ),
+              (e) => e.id == Constant.kDouyin
+                  ? const DouyinSearchView()
+                  : SearchListView(
+                      e.id,
+                    ),
             )
             .toList(),
       ),

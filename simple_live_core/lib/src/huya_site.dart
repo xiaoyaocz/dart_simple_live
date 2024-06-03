@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:simple_live_core/src/common/convert_helper.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/huya_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
@@ -55,7 +54,18 @@ class HuyaSite implements LiveSite {
 
     List<LiveSubCategory> subs = [];
     for (var item in result["data"]) {
-      var gid = (asT<double?>(item["gid"])?.toInt() ?? 0).toString();
+      var gid = "";
+
+      if (item["gid"] is Map) {
+        gid = item["gid"]["value"].toString().split(",").first;
+      } else if (item["gid"] is double) {
+        gid = item["gid"].toInt().toString();
+      } else if (item["gid"] is int) {
+        gid = item["gid"].toString();
+      } else {
+        gid = item["gid"].toString();
+      }
+
       var subCategory = LiveSubCategory(
         id: gid,
         name: item["gameFullName"].toString(),
@@ -216,11 +226,20 @@ class HuyaSite implements LiveSite {
         "user-agent": kUserAgent,
       },
     );
-    var text = RegExp(r"window\.HNF_GLOBAL_INIT.=.\{(.*?)\}.</script>",
+    var text = RegExp(
+            r"window\.HNF_GLOBAL_INIT.=.\{[\s\S]*?\}[\s\S]*?</script>",
             multiLine: false)
         .firstMatch(resultText)
-        ?.group(1);
-    var jsonObj = json.decode("{$text}");
+        ?.group(0);
+    var jsonText = text!
+        .replaceAll(RegExp(r"window\.HNF_GLOBAL_INIT.=."), '')
+        .replaceAll("</script>", "")
+        .replaceAllMapped(RegExp(r'function.*?\(.*?\).\{[\s\S]*?\}'), (match) {
+      return '""';
+    });
+
+    var jsonObj = json.decode(jsonText);
+
     var title =
         jsonObj["roomInfo"]["tLiveInfo"]["sIntroduction"]?.toString() ?? "";
     if (title.isEmpty) {
@@ -372,11 +391,18 @@ class HuyaSite implements LiveSite {
         .getText("https://m.huya.com/$roomId", queryParameters: {}, header: {
       "user-agent": kUserAgent,
     });
-    var text = RegExp(r"window\.HNF_GLOBAL_INIT.=.\{(.*?)\}.</script>",
+    var text = RegExp(
+            r"window\.HNF_GLOBAL_INIT.=.\{[\s\S]*?\}[\s\S]*?</script>",
             multiLine: false)
         .firstMatch(resultText)
-        ?.group(1);
-    var jsonObj = json.decode("{$text}");
+        ?.group(0);
+    var jsonText = text!
+        .replaceAll(RegExp(r"window\.HNF_GLOBAL_INIT.=."), '')
+        .replaceAll("</script>", "")
+        .replaceAllMapped(RegExp(r'function.*?\(.*?\).\{[\s\S]*?\}'), (match) {
+      return '""';
+    });
+    var jsonObj = json.decode(jsonText);
     return jsonObj["roomInfo"]["eLiveStatus"] == 2;
   }
 

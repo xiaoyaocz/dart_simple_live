@@ -10,6 +10,7 @@ class SettingsNumber extends StatelessWidget {
   final int step;
   final int min;
   final int max;
+  final String? displayValue;
   final Function(int)? onChanged;
   const SettingsNumber(
       {required this.title,
@@ -20,6 +21,7 @@ class SettingsNumber extends StatelessWidget {
       this.step = 1,
       this.min = 0,
       this.unit = '',
+      this.displayValue,
       Key? key})
       : super(key: key);
 
@@ -68,7 +70,7 @@ class SettingsNumber extends StatelessWidget {
               ),
             ),
             Text(
-              "$value$unit",
+              displayValue ?? "$value$unit",
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme

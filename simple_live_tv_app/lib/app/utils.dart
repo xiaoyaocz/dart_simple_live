@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:intl/intl.dart';
@@ -210,6 +209,29 @@ class Utils {
           color: Get.theme.cardColor,
         ),
         child: child,
+      ),
+    );
+  }
+
+  static void showSystemRightDialog({
+    Function()? onDismiss,
+    required Widget child,
+    double width = 320,
+  }) {
+    Get.dialog(
+      Dialog(
+        insetPadding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Container(
+            width: width,
+            decoration: BoxDecoration(
+              color: Get.theme.cardColor,
+            ),
+            child: child,
+          ),
+        ),
       ),
     );
   }

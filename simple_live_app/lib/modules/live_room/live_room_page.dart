@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -29,6 +30,60 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget build(BuildContext context) {
     final page = Obx(
       () {
+        if (controller.loadError.value) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("直播间加载失败"),
+            ),
+            body: Padding(
+              padding: AppStyle.edgeInsetsA12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  LottieBuilder.asset(
+                    'assets/lotties/error.json',
+                    height: 140,
+                    repeat: false,
+                  ),
+                  const Text(
+                    "直播间加载失败",
+                    textAlign: TextAlign.center,
+                  ),
+                  AppStyle.vGap4,
+                  Text(
+                    controller.error?.toString() ?? "未知错误",
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  AppStyle.vGap4,
+                  Text(
+                    "${controller.rxSite.value.id} - ${controller.rxRoomId.value}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: controller.copyErrorDetail,
+                        icon: const Icon(Remix.file_copy_line),
+                        label: const Text("复制信息"),
+                      ),
+                      TextButton.icon(
+                        onPressed: controller.refreshRoom,
+                        icon: const Icon(Remix.refresh_line),
+                        label: const Text("刷新"),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        }
         if (controller.fullScreenState.value) {
           return PopScope(
             canPop: false,

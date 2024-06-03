@@ -283,7 +283,17 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       fullScreenState.value = true;
       smallWindowState.value = true;
       windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-      windowManager.setSize(const Size(876, 493));
+      // 获取视频窗口大小
+      var width = player.state.width ?? 0;
+      var height = player.state.height ?? 0;
+
+      // 横屏还是竖屏
+      if (height > width) {
+        windowManager.setSize(const Size(400, 711));
+      } else {
+        windowManager.setSize(const Size(500, 280));
+      }
+
       windowManager.setAlwaysOnTop(true);
     }
   }

@@ -282,11 +282,19 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     //danmakuController?.clear();
   }
 
+  Size? _lastWindowSize;
+  Offset? _lastWindowPosition;
+
   ///小窗模式()
-  void enterSmallWindow() {
+  void enterSmallWindow() async {
     if (!(Platform.isAndroid || Platform.isIOS)) {
       fullScreenState.value = true;
       smallWindowState.value = true;
+
+      // 读取窗口大小
+      _lastWindowSize = await windowManager.getSize();
+      _lastWindowPosition = await windowManager.getPosition();
+
       windowManager.setTitleBarStyle(TitleBarStyle.hidden);
       // 获取视频窗口大小
       var width = player.state.width ?? 16;
@@ -311,9 +319,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       fullScreenState.value = false;
       smallWindowState.value = false;
       windowManager.setTitleBarStyle(TitleBarStyle.normal);
-      windowManager.setSize(const Size(1280, 720));
+      windowManager.setSize(_lastWindowSize!);
+      windowManager.setPosition(_lastWindowPosition!);
       windowManager.setAlwaysOnTop(false);
-      windowManager.setAlignment(Alignment.center);
+      //windowManager.setAlignment(Alignment.center);
     }
   }
 

@@ -193,6 +193,17 @@ class UserPage extends StatelessWidget {
                     Get.toNamed(RoutePath.kSettingsOther);
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Remix.apps_line),
+                  title: const Text("测试"),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                  ),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kTest);
+                  },
+                ),
               ],
             ),
             Divider(

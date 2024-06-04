@@ -57,6 +57,7 @@ dependencies:
   flutter_inappwebview: ^5.8.0 #WebView
   connectivity_plus: ^6.0.3 #网络状态
   qr_code_scanner: ^1.0.1 #二维码扫描
+  sensors_plus: ^5.0.1 #传感器
   
   # 网络相关
   shelf: ^1.4.1 

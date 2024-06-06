@@ -20,13 +20,13 @@ void main() async {
   };
   //var categores = await site.getCategores();
   //print(categores.length);
-  var detail = await site.getRoomDetail(roomId: "7375009979071236915");
-  // var playQualites = await site.getPlayQualites(detail: detail);
-  // var playUrls =
-  //     await site.getPlayUrls(detail: detail, quality: playQualites.first);
-  // for (var element in playUrls) {
-  //   print(element);
-  // }
+  var detail = await site.getRoomDetail(roomId: "7376294819431238409");
+  var playQualites = await site.getPlayQualites(detail: detail);
+  var playUrls =
+      await site.getPlayUrls(detail: detail, quality: playQualites.first);
+  for (var element in playUrls) {
+    print(element);
+  }
   //print(detail);
 
   danmaku.start(detail.danmakuData);

@@ -281,7 +281,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
 
       if (site.id == Constant.kDouyin) {
-        // 如果是抖音，且收藏的是Rid，需要转换roomID
+        // 1.6.0之前收藏的WebRid
+        // 1.6.0收藏的RoomID
+        // 1.6.0之后改回WebRid
         if (detail.value!.roomId != roomId) {
           var oldId = roomId;
           rxRoomId.value = detail.value!.roomId;

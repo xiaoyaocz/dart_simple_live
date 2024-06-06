@@ -493,16 +493,28 @@ class DouyinSite implements LiveSite {
     } else {
       var qualityData = json.decode(detail.data["live_core_sdk_data"]
           ["pull_data"]["stream_data"])["data"];
+
       for (var quality in qulityList) {
+        List<String> urls = [];
+        var flvUrl =
+            qualityData[quality["sdk_key"]]?["main"]?["flv"]?.toString();
+
+        if (flvUrl != null && flvUrl.isNotEmpty) {
+          urls.add(flvUrl);
+        }
+        var hlsUrl =
+            qualityData[quality["sdk_key"]]?["main"]?["hls"]?.toString();
+        if (hlsUrl != null && hlsUrl.isNotEmpty) {
+          urls.add(hlsUrl);
+        }
         var qualityItem = LivePlayQuality(
           quality: quality["name"],
           sort: quality["level"],
-          data: <String>[
-            qualityData[quality["sdk_key"]]["main"]["flv"].toString(),
-            qualityData[quality["sdk_key"]]["main"]["hls"].toString(),
-          ],
+          data: urls,
         );
-        qualities.add(qualityItem);
+        if (urls.isNotEmpty) {
+          qualities.add(qualityItem);
+        }
       }
     }
     // var qualityData = json.decode(

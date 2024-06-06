@@ -20,7 +20,7 @@ void main() async {
   };
   //var categores = await site.getCategores();
   //print(categores.length);
-  var detail = await site.getRoomDetail(roomId: "7376294819431238409");
+  var detail = await site.getRoomDetail(roomId: "320875656639");
   var playQualites = await site.getPlayQualites(detail: detail);
   var playUrls =
       await site.getPlayUrls(detail: detail, quality: playQualites.first);

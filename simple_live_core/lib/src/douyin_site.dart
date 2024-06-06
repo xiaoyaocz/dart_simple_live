@@ -462,9 +462,11 @@ class DouyinSite implements LiveSite {
 
     var qulityList =
         detail.data["live_core_sdk_data"]["pull_data"]["options"]["qualities"];
+    var streamData = detail.data["live_core_sdk_data"]["pull_data"]
+            ["stream_data"]
+        .toString();
 
-    if (detail.data["live_core_sdk_data"]["pull_data"]["stream_data"]
-        is String) {
+    if (!streamData.startsWith('{')) {
       var flvList =
           (detail.data["flv_pull_url"] as Map).values.cast<String>().toList();
       var hlsList = (detail.data["hls_pull_url_map"] as Map)
@@ -487,12 +489,12 @@ class DouyinSite implements LiveSite {
           sort: level,
           data: urls,
         );
-
-        qualities.add(qualityItem);
+        if (urls.isNotEmpty) {
+          qualities.add(qualityItem);
+        }
       }
     } else {
-      var qualityData = json.decode(detail.data["live_core_sdk_data"]
-          ["pull_data"]["stream_data"])["data"];
+      var qualityData = json.decode(streamData)["data"];
 
       for (var quality in qulityList) {
         List<String> urls = [];

@@ -699,24 +699,10 @@ class PlayerController extends BaseController
   void mediaError(String error) {}
 
   void showDebugInfo() {
-    if (lockControlsState.value && fullScreenState.value) {
-      return;
-    }
     Utils.showBottomSheet(
       title: "播放信息",
       child: ListView(
         children: [
-          ListTile(
-            title: const Text("Media"),
-            subtitle: Text(player.state.playlist.toString()),
-            onTap: () {
-              Clipboard.setData(
-                ClipboardData(
-                  text: "Media\n${player.state.playlist}",
-                ),
-              );
-            },
-          ),
           ListTile(
             title: const Text("Resolution"),
             subtitle: Text('${player.state.width}x${player.state.height}'),
@@ -752,6 +738,17 @@ class PlayerController extends BaseController
             },
           ),
           ListTile(
+            title: const Text("Media"),
+            subtitle: Text(player.state.playlist.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "Media\n${player.state.playlist}",
+                ),
+              );
+            },
+          ),
+          ListTile(
             title: const Text("AudioTrack"),
             subtitle: Text(player.state.track.audio.toString()),
             onTap: () {
@@ -780,6 +777,17 @@ class PlayerController extends BaseController
               Clipboard.setData(
                 ClipboardData(
                   text: "AudioBitrate\n${player.state.audioBitrate}",
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("Volume"),
+            subtitle: Text(player.state.volume.toString()),
+            onTap: () {
+              Clipboard.setData(
+                ClipboardData(
+                  text: "Volume\n${player.state.volume}",
                 ),
               );
             },

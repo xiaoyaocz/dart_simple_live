@@ -847,6 +847,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 controller.openNaviteAPP();
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.info_outline_rounded),
+              title: const Text("播放信息"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                controller.showDebugInfo();
+              },
+            ),
           ],
         ),
       ),

@@ -62,4 +62,7 @@ class RoutePath {
 
   /// 同步设备
   static const kSyncDevice = "/sync/device";
+
+  /// 测试页面
+  static const kTest = "/test";
 }

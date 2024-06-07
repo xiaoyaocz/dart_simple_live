@@ -105,6 +105,17 @@ class DouyuSite implements LiveSite {
     for (var item in result["data"]["cdnsWithName"]) {
       cdns.add(item["cdn"].toString());
     }
+
+    // 如果cdn以scdn开头，将其放到最后
+    cdns.sort((a, b) {
+      if (a.startsWith("scdn") && !b.startsWith("scdn")) {
+        return 1;
+      } else if (!a.startsWith("scdn") && b.startsWith("scdn")) {
+        return -1;
+      }
+      return 0;
+    });
+
     for (var item in result["data"]["multirates"]) {
       qualities.add(LivePlayQuality(
         quality: item["name"].toString(),

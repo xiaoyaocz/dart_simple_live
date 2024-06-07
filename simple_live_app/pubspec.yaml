@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.6.1+10601
+version: 1.6.2+10602
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -57,11 +57,6 @@ dependencies:
   flutter_inappwebview: ^5.8.0 #WebView
   connectivity_plus: ^6.0.3 #网络状态
   qr_code_scanner: ^1.0.1 #二维码扫描
-  sensors_plus: ^5.0.1 #传感器
-  motion_sensors:
-    git: 
-        url: https://github.com/zesage/motion_sensors.git
-        ref: master
   
   # 网络相关
   shelf: ^1.4.1 

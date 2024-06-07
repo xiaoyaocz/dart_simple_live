@@ -1,7 +1,7 @@
 {
-    "version": "1.0.9",
-    "version_num": 10009,
-    "version_desc": "- 修复抖音无法读取原画\n- 优化直播状态读取",
+    "version": "1.1.0",
+    "version_num": 10100,
+    "version_desc": "- 修复抖音无法读取原画\n- 优化直播状态读取\n-斗鱼默认不使用PCDN链接",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

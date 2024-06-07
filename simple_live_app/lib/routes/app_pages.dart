@@ -36,7 +36,6 @@ import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_p
 import 'package:simple_live_app/modules/user/other/other_settings_controller.dart';
 import 'package:simple_live_app/modules/user/other/other_settings_page.dart';
 import 'package:simple_live_app/modules/user/play_settings_page.dart';
-import 'package:simple_live_app/modules/user/test_page.dart';
 
 import '../modules/indexed/indexed_page.dart';
 import 'route_path.dart';
@@ -201,15 +200,6 @@ class AppPages {
       page: () => const OtherSettingsPage(),
       bindings: [
         BindingsBuilder.put(() => OtherSettingsController()),
-      ],
-    ),
-
-    //测试页面
-    GetPage(
-      name: RoutePath.kTest,
-      page: () => const TestPage(),
-      bindings: [
-        BindingsBuilder.put(() => TestController()),
       ],
     ),
   ];

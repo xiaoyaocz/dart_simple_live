@@ -1,7 +1,7 @@
 name: simple_live_tv_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 1.1.0+10100
+version: 1.1.1+10101
 
 environment:
   sdk: '>=3.1.2 <4.0.0'
@@ -36,7 +36,7 @@ dependencies:
   ns_danmaku: #弹幕
     git: 
         url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
-        tag: v0.0.8
+        tag: v0.0.9
 
   #系统交互
   package_info_plus: ^8.0.0 #包信息

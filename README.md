@@ -79,4 +79,4 @@ Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1
 
 如果觉得此项目有用，可以考虑赞助我喝杯咖啡❤
 
-[爱发电](https://afdian.net/a/xiaoyaocz)
+[爱发电](https://afdian.com/a/xiaoyaocz)

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:simple_live_core/src/common/http_client.dart' as http;
+
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
 
@@ -74,24 +76,27 @@ class DouyinDanmaku implements LiveDanmaku {
       "browser_platform": "Win32",
       "browser_name": "Mozilla",
       "browser_version":
-          "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+          DouyinSite.kDefaultUserAgent.replaceAll("Mozilla/", ""),
       "browser_online": "true",
       "tz_name": "Asia/Shanghai",
       "identity": "audience",
       "room_id": danmakuArgs.roomId,
       "heartbeatDuration": "0",
-      "signature": "00000000"
+      //"signature": "00000000"
     });
-    var url = uri.toString();
+
+    var sign = await getSignature(danmakuArgs.roomId, danmakuArgs.userId);
+
+    var url = "$uri&signature=$sign";
     var backupUrl = url.replaceAll("webcast3-ws-web-lq", "webcast5-ws-web-lf");
     print(url);
     webScoketUtils = WebScoketUtils(
       url: url,
       backupUrl: backupUrl,
       headers: {
-        "User-Agnet":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "User-Agnet": DouyinSite.kDefaultUserAgent,
         "Cookie": danmakuArgs.cookie,
+        "Origin": "https://live.douyin.com"
       },
       heartBeatTime: heartbeatTime,
       onMessage: (e) {
@@ -191,5 +196,25 @@ class DouyinDanmaku implements LiveDanmaku {
     onMessage = null;
     onClose = null;
     webScoketUtils?.close();
+  }
+
+  /// 获取Websocket签名
+  /// - [roomId] 房间ID, 例如：7382735338101328680
+  /// - [uniqueId] 用户唯一ID, 例如：7273033021933946427
+  ///
+  /// 服务端代码：https://github.com/lovelyyoshino/douyin_python，请自行部署后使用
+  Future<String> getSignature(String roomId, String uniqueId) async {
+    try {
+      var signResult = await http.HttpClient.instance.postJson(
+        "https://dy.nsapps.cn/signature",
+        queryParameters: {},
+        header: {"Content-Type": "application/json"},
+        data: {"roomId": roomId, "uniqueId": uniqueId},
+      );
+      return signResult["data"]["signature"];
+    } catch (e) {
+      CoreLog.error(e);
+      return "";
+    }
   }
 }

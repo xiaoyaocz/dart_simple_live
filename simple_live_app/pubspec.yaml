@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.6.3+10603
+version: 1.6.5+10605
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -35,7 +35,7 @@ dependencies:
   ns_danmaku: #弹幕
     git: 
         url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
-        tag: v0.0.8
+        tag: v0.0.9
 
 
   #系统交互

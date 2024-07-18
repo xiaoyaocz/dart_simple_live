@@ -125,7 +125,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: item["room"]["id_str"].toString(),
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -159,7 +159,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: item["room"]["id_str"].toString(),
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -351,8 +351,12 @@ class DouyinSite implements LiveSite {
   /// - [webRid] 直播间RID
   // ignore: unused_element
   Future<String> _getUserUniqueId(String webRid) async {
-    var webInfo = await _getRoomDataByHtml(webRid);
-    return webInfo["userStore"]["odin"]["user_unique_id"].toString();
+    try {
+      var webInfo = await _getRoomDataByHtml(webRid);
+      return webInfo["userStore"]["odin"]["user_unique_id"].toString();
+    } catch (e) {
+      return generateRandomNumber(12).toString();
+    }
   }
 
   /// 进入直播间前需要先获取cookie
@@ -558,10 +562,10 @@ class DouyinSite implements LiveSite {
       "browser_language": "zh-CN",
       "browser_platform": "Win32",
       "browser_name": "Edge",
-      "browser_version": "120.0.0.0",
+      "browser_version": "125.0.0.0",
       "browser_online": "true",
       "engine_name": "Blink",
-      "engine_version": "120.0.0.0",
+      "engine_version": "125.0.0.0",
       "os_name": "Windows",
       "os_version": "10",
       "cpu_core_num": "12",
@@ -570,10 +574,10 @@ class DouyinSite implements LiveSite {
       "downlink": "10",
       "effective_type": "4g",
       "round_trip_time": "100",
-      "webid": "7273033021933946427",
+      "webid": "7382872326016435738",
     });
-    var requlestUrl = await signUrl(uri.toString());
-
+    //var requlestUrl = await getAbogusUrl(uri.toString());
+    var requlestUrl = uri.toString();
     var headResp = await HttpClient.instance
         .head('https://live.douyin.com', header: headers);
     var dyCookie = "";
@@ -591,14 +595,24 @@ class DouyinSite implements LiveSite {
       requlestUrl,
       queryParameters: {},
       header: {
-        "Accept": "*/*",
         "Authority": 'www.douyin.com',
-        "Referer": requlestUrl,
-        "Cookie": dyCookie,
-        "User-Agent": kDefaultUserAgent,
+        'accept': 'application/json, text/plain, */*',
+        'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'cookie': dyCookie,
+        'priority': 'u=1, i',
+        'referer':
+            'https://www.douyin.com/search/${Uri.encodeComponent(keyword)}?type=live',
+        'sec-ch-ua':
+            '"Microsoft Edge";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': kDefaultUserAgent,
       },
     );
-    if (result == 'blocked') {
+    if (result == "" || result == 'blocked') {
       throw Exception("抖音直播搜索被限制，请稍后再试");
     }
     var items = <LiveRoomItem>[];
@@ -657,19 +671,20 @@ class DouyinSite implements LiveSite {
         Random().nextInt(1000000000);
   }
 
-  Future<String> signUrl(String url) async {
+  /// 读取A-Bogus签名后的URL
+  /// - [url] 原始URL
+  /// - 返回签名后的URL
+  ///
+  /// 服务端代码：https://github.com/dengmin/a-bogus，请自行部署后使用
+  Future<String> getAbogusUrl(String url) async {
     try {
-      // 发起一个签名请求
-      // 服务端代码：https://github.com/5ime/Tiktok_Signature
       var signResult = await HttpClient.instance.postJson(
-        "https://tk.nsapps.cn/",
+        "https://dy.nsapps.cn/abogus",
         queryParameters: {},
         header: {"Content-Type": "application/json"},
         data: {"url": url, "userAgent": kDefaultUserAgent},
       );
-      var requlestUrl =
-          '${signResult["data"]["url"]}&msToken=${Uri.encodeComponent(signResult["data"]["mstoken"])}';
-      return requlestUrl;
+      return signResult["data"]["url"];
     } catch (e) {
       CoreLog.error(e);
       return url;

@@ -96,6 +96,7 @@ class DouyinDanmaku implements LiveDanmaku {
       headers: {
         "User-Agnet": DouyinSite.kDefaultUserAgent,
         "Cookie": danmakuArgs.cookie,
+        "Origin": "https://live.douyin.com"
       },
       heartBeatTime: heartbeatTime,
       onMessage: (e) {

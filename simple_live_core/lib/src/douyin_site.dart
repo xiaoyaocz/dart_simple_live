@@ -125,7 +125,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: item["room"]["id_str"].toString(),
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -159,7 +159,7 @@ class DouyinSite implements LiveSite {
     var items = <LiveRoomItem>[];
     for (var item in result["data"]["data"]) {
       var roomItem = LiveRoomItem(
-        roomId: item["room"]["id_str"].toString(),
+        roomId: item["web_rid"],
         title: item["room"]["title"].toString(),
         cover: item["room"]["cover"]["url_list"][0].toString(),
         userName: item["room"]["owner"]["nickname"].toString(),
@@ -351,8 +351,12 @@ class DouyinSite implements LiveSite {
   /// - [webRid] 直播间RID
   // ignore: unused_element
   Future<String> _getUserUniqueId(String webRid) async {
-    var webInfo = await _getRoomDataByHtml(webRid);
-    return webInfo["userStore"]["odin"]["user_unique_id"].toString();
+    try {
+      var webInfo = await _getRoomDataByHtml(webRid);
+      return webInfo["userStore"]["odin"]["user_unique_id"].toString();
+    } catch (e) {
+      return generateRandomNumber(12).toString();
+    }
   }
 
   /// 进入直播间前需要先获取cookie

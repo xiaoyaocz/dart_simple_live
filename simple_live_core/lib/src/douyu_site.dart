@@ -38,7 +38,7 @@ class DouyuSite implements LiveSite {
       List<LiveSubCategory> subCategories = [];
       subCateList.where((x) => x["cate1Id"] == cate1Id).forEach((element) {
         subCategories.add(LiveSubCategory(
-          pic: element["smallIcon"],
+          pic: element["icon"],
           id: element["cate2Id"].toString(),
           parentId: cate1Id.toString(),
           name: element["cate2Name"].toString(),

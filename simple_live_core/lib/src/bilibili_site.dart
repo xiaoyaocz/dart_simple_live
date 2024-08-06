@@ -25,6 +25,23 @@ class BiliBiliSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => BiliBiliDanmaku();
 
+  static const String kDefaultUserAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0";
+  static const String kDefaultReferer = "https://live.bilibili.com/";
+
+  Map<String, String> getHeader() {
+    return cookie.isEmpty
+        ? {
+            "user-agent": kDefaultUserAgent,
+            "referer": kDefaultReferer,
+          }
+        : {
+            "cookie": cookie,
+            "user-agent": kDefaultUserAgent,
+            "referer": kDefaultReferer,
+          };
+  }
+
   @override
   Future<List<LiveCategory>> getCategores() async {
     List<LiveCategory> categories = [];
@@ -34,11 +51,7 @@ class BiliBiliSite implements LiveSite {
         "need_entrance": 1,
         "parent_id": 0,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     for (var item in result["data"]) {
       List<LiveSubCategory> subs = [];
@@ -73,11 +86,7 @@ class BiliBiliSite implements LiveSite {
         "sort_type": "",
         "page": page
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
 
     var hasMore = result["data"]["has_more"] == 1;
@@ -108,11 +117,7 @@ class BiliBiliSite implements LiveSite {
         "codec": "0,1",
         "platform": "web",
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     var qualitiesMap = <int, String>{};
     for (var item in result["data"]["playurl_info"]["playurl"]["g_qn_desc"]) {
@@ -146,11 +151,7 @@ class BiliBiliSite implements LiveSite {
         "platform": "web",
         "qn": quality.data,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     var streamList = result["data"]["playurl_info"]["playurl"]["stream"];
     for (var streamItem in streamList) {
@@ -189,11 +190,7 @@ class BiliBiliSite implements LiveSite {
         "page_size": 30,
         "page": page
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
 
     var hasMore = (result["data"]["list"] as List).isNotEmpty;
@@ -218,11 +215,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "room_id": roomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     var realRoomId = result["data"]["room_info"]["room_id"].toString();
     var roomDanmakuResult = await HttpClient.instance.getJson(
@@ -230,11 +223,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "id": realRoomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     List<String> serverHosts = (roomDanmakuResult["data"]["host_list"] as List)
         .map<String>((e) => e["host"].toString())
@@ -281,7 +270,11 @@ class BiliBiliSite implements LiveSite {
         "single_column": 0,
         "page": page
       },
-      header: {"cookie": cookie.isEmpty ? "buvid3=infoc;" : cookie},
+      header: {
+        "cookie": cookie.isEmpty ? 'buvid3=infoc;' : cookie,
+        "user-agent": kDefaultUserAgent,
+        "referer": kDefaultReferer,
+      },
     );
 
     var items = <LiveRoomItem>[];
@@ -316,7 +309,11 @@ class BiliBiliSite implements LiveSite {
         "single_column": 0,
         "page": page
       },
-      header: {"cookie": cookie.isEmpty ? "buvid3=infoc;" : cookie},
+      header: {
+        "cookie": cookie.isEmpty ? 'buvid3=infoc;' : cookie,
+        "user-agent": kDefaultUserAgent,
+        "referer": kDefaultReferer,
+      },
     );
 
     var items = <LiveAnchorItem>[];
@@ -342,11 +339,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "room_id": roomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     return (asT<int?>(result["data"]["live_status"]) ?? 0) == 1;
   }
@@ -359,11 +352,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "room_id": roomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     List<LiveSuperChatMessage> ls = [];
     for (var item in result["data"]?["list"] ?? []) {
@@ -395,11 +384,7 @@ class BiliBiliSite implements LiveSite {
       var result = await HttpClient.instance.getJson(
         "https://api.bilibili.com/x/frontend/finger/spi",
         queryParameters: {},
-        header: cookie.isEmpty
-            ? null
-            : {
-                "cookie": cookie,
-              },
+        header: getHeader(),
       );
       return result["data"]["b_3"].toString();
     } catch (e) {

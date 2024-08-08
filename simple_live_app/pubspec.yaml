@@ -64,15 +64,49 @@ dependencies:
   network_info_plus: 3.0.5
 
   # 视频播放
-  media_kit: ^1.1.10+1
-  media_kit_video: ^1.2.4
-  media_kit_libs_video: ^1.0.4
+  media_kit:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./media_kit
+  media_kit_video:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./media_kit_video
+  media_kit_libs_video:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./libs/universal/media_kit_libs_video
 
   flutter: 
     sdk: flutter
   flutter_localizations: 
     sdk: flutter
 
+
+dependency_overrides: 
+  media_kit:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./media_kit
+  media_kit_video:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./media_kit_video
+  media_kit_libs_video:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./libs/universal/media_kit_libs_video
+  media_kit_native_event_loop:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: main
+      path: ./media_kit_native_event_loop
 
 dev_dependencies: 
   flutter_lints: ^2.0.0

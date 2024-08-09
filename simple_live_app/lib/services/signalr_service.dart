@@ -21,17 +21,24 @@ class SignalRService {
   Stream<SignalRConnectionState> get stateStream =>
       _stateStreamController.stream;
 
-  final _onFavoriteStreamController = StreamController<String>.broadcast();
-  Stream<String> get onFavoriteStream => _onFavoriteStreamController.stream;
+  final _onFavoriteStreamController =
+      StreamController<(bool, String)>.broadcast();
+  Stream<(bool, String)> get onFavoriteStream =>
+      _onFavoriteStreamController.stream;
 
-  final _onHistoryStreamController = StreamController<String>.broadcast();
-  Stream<String> get onHistoryStream => _onHistoryStreamController.stream;
+  final _onHistoryStreamController =
+      StreamController<(bool, String)>.broadcast();
+  Stream<(bool, String)> get onHistoryStream =>
+      _onHistoryStreamController.stream;
 
-  final _onShieldWordStreamController = StreamController<String>.broadcast();
-  Stream<String> get onShieldWordStream => _onShieldWordStreamController.stream;
+  final _onShieldWordStreamController =
+      StreamController<(bool, String)>.broadcast();
+  Stream<(bool, String)> get onShieldWordStream =>
+      _onShieldWordStreamController.stream;
 
-  final _onBiliAccountStreamController = StreamController<String>.broadcast();
-  Stream<String> get onBiliAccountStream =>
+  final _onBiliAccountStreamController =
+      StreamController<(bool, String)>.broadcast();
+  Stream<(bool, String)> get onBiliAccountStream =>
       _onBiliAccountStreamController.stream;
 
   final _onRoomDestroyedStreamController = StreamController<String>.broadcast();
@@ -63,16 +70,16 @@ class SignalRService {
 
   void _listen() {
     hubConnection?.on("onFavoriteReceived", (args) {
-      _onFavoriteStreamController.add(args![0].toString());
+      _onFavoriteStreamController.add((args![0] as bool, args[1] as String));
     });
     hubConnection?.on("onHistoryReceived", (args) {
-      _onHistoryStreamController.add(args![0].toString());
+      _onHistoryStreamController.add((args![0] as bool, args[1] as String));
     });
     hubConnection?.on("onShieldWordReceived", (args) {
-      _onShieldWordStreamController.add(args![0].toString());
+      _onShieldWordStreamController.add((args![0] as bool, args[1] as String));
     });
     hubConnection?.on("onBiliAccountReceived", (args) {
-      _onBiliAccountStreamController.add(args![0].toString());
+      _onBiliAccountStreamController.add((args![0] as bool, args[1] as String));
     });
     hubConnection?.on("onRoomDestroyed", (args) {
       _onRoomDestroyedStreamController.add(args![0].toString());
@@ -110,6 +117,20 @@ class SignalRService {
     String version = Utils.packageInfo.version;
     var resp = await hubConnection
         ?.invoke("JoinRoom", args: [roomId, app, platform, version]);
+    return Resp.fromObject(resp);
+  }
+
+  Future<Resp> sendContent({
+    required String roomName,
+    required String action,
+    required bool overlay,
+    required String content,
+  }) async {
+    if (state != SignalRConnectionState.connected) {
+      throw Exception("not connected");
+    }
+    var resp =
+        await hubConnection?.invoke(action, args: [roomName, overlay, content]);
     return Resp.fromObject(resp);
   }
 

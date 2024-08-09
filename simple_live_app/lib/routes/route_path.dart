@@ -55,13 +55,19 @@ class RoutePath {
   static const kBiliBiliQRLogin = "/settings/account/bilibili/qr_login";
 
   /// 数据同步
-  static const kSync = "/sync";
+  static const kLocalSync = "/local_sync";
 
   /// 扫描
   static const kSyncScan = "/sync/scan";
 
   /// 同步设备
-  static const kSyncDevice = "/sync/device";
+  static const kLocalSyncDevice = "/sync/device";
+
+  /// 远程同步
+  static const kRemoteSync = "/remote_sync";
+
+  /// 远程同步-房间
+  static const kRemoteSyncRoom = "/remote_sync/room";
 
   /// 测试页面
   static const kTest = "/test";

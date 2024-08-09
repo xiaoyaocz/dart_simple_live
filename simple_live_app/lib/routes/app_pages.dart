@@ -6,6 +6,9 @@ import 'package:simple_live_app/modules/categoty_detail/category_detail_page.dar
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
+import 'package:simple_live_app/modules/remote_sync/remote_sync_page.dart';
+import 'package:simple_live_app/modules/remote_sync/room/remote_sync_room_controller.dart';
+import 'package:simple_live_app/modules/remote_sync/room/remote_sync_room_page.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/sync/device/sync_device_controller.dart';
@@ -165,13 +168,18 @@ class AppPages {
         BindingsBuilder.put(() => BiliBiliQRLoginController()),
       ],
     ),
-    // 数据同步
+    // 本地同步
     GetPage(
-      name: RoutePath.kSync,
+      name: RoutePath.kLocalSync,
       page: () => const SyncPage(),
       bindings: [
         BindingsBuilder.put(() => SyncController()),
       ],
+    ),
+    // 远程同步
+    GetPage(
+      name: RoutePath.kRemoteSync,
+      page: () => const RemoteSyncPage(),
     ),
     //扫码
     GetPage(
@@ -183,7 +191,7 @@ class AppPages {
     ),
     //同步设备
     GetPage(
-      name: RoutePath.kSyncDevice,
+      name: RoutePath.kLocalSyncDevice,
       page: () => const SyncDevicePage(),
       bindings: [
         BindingsBuilder.put(
@@ -191,6 +199,16 @@ class AppPages {
             client: Get.arguments['client'],
             info: Get.arguments['info'],
           ),
+        ),
+      ],
+    ),
+    //远程同步-房间
+    GetPage(
+      name: RoutePath.kRemoteSyncRoom,
+      page: () => const RemoteSyncRoomPage(),
+      bindings: [
+        BindingsBuilder.put(
+          () => RemoteSyncRoomController(Get.arguments ?? ""),
         ),
       ],
     ),

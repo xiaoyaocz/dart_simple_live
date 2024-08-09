@@ -15,7 +15,7 @@ class SyncPage extends GetView<SyncController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('多端数据同步'),
+        title: const Text('局域网数据同步'),
         actions: [
           TextButton.icon(
             onPressed: controller.showInfo,

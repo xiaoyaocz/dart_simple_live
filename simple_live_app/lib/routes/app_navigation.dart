@@ -68,7 +68,7 @@ class AppNavigator {
   static Future toSyncDevice(
       SyncClinet client, SyncClientInfoModel info) async {
     await Get.toNamed(
-      RoutePath.kSyncDevice,
+      RoutePath.kLocalSyncDevice,
       arguments: {
         "client": client,
         "info": info,

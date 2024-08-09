@@ -6,6 +6,7 @@ import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/services/signalr_service.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class UserPage extends StatelessWidget {
@@ -101,7 +102,7 @@ class UserPage extends StatelessWidget {
                 color: Colors.grey,
               ),
               onTap: () {
-                Get.toNamed(RoutePath.kSync);
+                Get.toNamed(RoutePath.kRemoteSync);
               },
             ),
             Divider(
@@ -202,8 +203,12 @@ class UserPage extends StatelessWidget {
                       Icons.chevron_right,
                       color: Colors.grey,
                     ),
-                    onTap: () {
-                      Get.toNamed(RoutePath.kTest);
+                    onTap: () async {
+                      SignalRService signalRService = SignalRService();
+                      await signalRService.connect();
+                      //Get.toNamed(RoutePath.kTest);
+                      var room = await signalRService.createRoom();
+                      print(room);
                     },
                   ),
               ],

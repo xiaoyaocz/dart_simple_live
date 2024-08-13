@@ -11,12 +11,19 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/requests/sync_client_request.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 
 import 'package:simple_live_app/services/sync_service.dart';
+
+import 'package:simple_live_app/modules/sync/remote_sync/sync_data_controller.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/sync_device_controller_my.dart';
+
 
 class LocalSyncController extends BaseController {
   final String? address;
   LocalSyncController(this.address);
+  final SyncDataController syncDataController = SyncDataController();
+
 
   @override
   void onInit() {
@@ -29,6 +36,58 @@ class LocalSyncController extends BaseController {
     if (address != null && address!.isNotEmpty) {
       addressController.text = address!;
       connect();
+    }
+  }
+
+  void syncData() async {
+    syncDataController.syncAll();
+  }
+
+  void getSyncData() async {
+    var userName = AppSettingsController.instance.userName.value;
+    var syncUrl = AppSettingsController.instance.syncUrl.value;
+    var address = SyncService.instance.ipAddress.value.split(";")[0];
+    if (address.isEmpty) {
+      SmartDialog.showToast("请输入地址");
+      return;
+    }
+    if (address.startsWith('http')) {
+      var uri = Uri.tryParse(address);
+      if (uri != null) {
+        address = uri.host;
+      }
+    } else if (address.contains(':')) {
+      var parts = address.split(":");
+      address = parts.first;
+    }
+
+    var client = SyncClinet(
+      id: 'manual',
+      address: address,
+      port: SyncService.httpPort,
+      name: "手动输入",
+      type: Platform.operatingSystem,
+    );
+    var info = await request.getClientInfo(client);
+    //获取远程数据
+    Map<String, dynamic> jsonMap = await syncDataController.request.getAllData(userName,syncUrl);
+    //同步数据
+    var controller = SyncDeviceControllerMy(client: client, info: info);
+    var userData = jsonMap['userData'] ?? "";
+    var shieldListData = jsonMap['shieldListData'] ?? "";
+    var historesData = jsonMap['historesData'] ?? "";
+    var bilibiliData = jsonMap['bilibiliData'] ?? "";
+    if(""!=userData){
+      controller.syncFollow(dataStr: userData,isOverlay: false);
+    }
+    if(""!=shieldListData){
+      controller.syncBlockedWord(dataStr: shieldListData,isOverlay: false);
+    }
+    if(""!=historesData){
+      controller.syncHistory(dataStr: historesData,isOverlay: false);
+    }
+    if(""!=bilibiliData){
+      controller.syncBiliAccount(dataStr: bilibiliData,isOverlay: false);
     }
   }
 

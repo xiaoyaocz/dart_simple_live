@@ -32,6 +32,26 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                TextField(
+                  controller: TextEditingController(text: controller.userName.value),
+                  decoration: InputDecoration(
+                    labelText: "同步用户名",
+                    hintText: "请输入用户名",
+                  ),
+                  onChanged: (value) {
+                    controller.setUserName(value);
+                  },
+                ),
+                TextField(
+                  controller: TextEditingController(text: controller.syncUrl.value),
+                  decoration: InputDecoration(
+                    labelText: "同步服务地址",
+                    hintText: "请输入同步服务地址",
+                  ),
+                  onChanged: (value) {
+                    controller.setSyncUrl(value);
+                  },
+                ),
                 Obx(
                   () => SettingsSwitch(
                     title: "硬件解码",

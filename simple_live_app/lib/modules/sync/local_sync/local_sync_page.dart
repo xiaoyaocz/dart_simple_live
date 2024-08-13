@@ -61,6 +61,18 @@ class LocalSyncPage extends GetView<LocalSyncController> {
                     },
                     child: const Text("连接"),
                   ),
+                  ElevatedButton(
+                    onPressed: () {
+                      controller.syncData();
+                    },
+                    child: const Text("同步"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      controller.getSyncData();
+                    },
+                    child: const Text("拉取"),
+                  ),
                 ],
               ),
             ),

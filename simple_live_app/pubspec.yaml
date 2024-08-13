@@ -10,7 +10,7 @@ dependencies:
     path: ../simple_live_core
   # 图标
   cupertino_icons: ^1.0.2
-  remixicon: ^1.0.0 #Remix图标
+  remixicon: ^1.2.0 #Remix图标
 
   # 框架、工具
   get: ^4.6.6 #状态管理、路由管理、国际化

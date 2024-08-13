@@ -1,6 +1,6 @@
 {
-    "version": "1.1.8",
-    "version_num": 10108,
+    "version": "1.1.9",
+    "version_num": 10109,
     "version_desc": "- 修复斗鱼分类无法加载\n- 修复哔哩哔哩直播加载失败\n- 支持定时自动更新关注列表",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"

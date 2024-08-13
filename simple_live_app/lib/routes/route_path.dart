@@ -57,14 +57,14 @@ class RoutePath {
   /// 数据同步
   static const kLocalSync = "/local_sync";
 
+  /// 数据同步
+  static const kSync = "/sync";
+
   /// 扫描
   static const kSyncScan = "/sync/scan";
 
   /// 同步设备
   static const kLocalSyncDevice = "/sync/device";
-
-  /// 远程同步
-  static const kRemoteSync = "/remote_sync";
 
   /// 远程同步-房间
   static const kRemoteSyncRoom = "/remote_sync/room";

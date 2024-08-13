@@ -15,14 +15,24 @@ import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 
 class SyncController extends BaseController {
+  final String? address;
+  SyncController(this.address);
+
   @override
   void onInit() {
     SyncService.instance.refreshClients();
+    Future.delayed(Duration.zero, initConnect);
     super.onInit();
   }
 
-  TextEditingController addressController = TextEditingController();
+  void initConnect() {
+    if (address != null && address!.isNotEmpty) {
+      addressController.text = address!;
+      connect();
+    }
+  }
 
+  TextEditingController addressController = TextEditingController();
   SyncClientRequest request = SyncClientRequest();
 
   void connect() async {

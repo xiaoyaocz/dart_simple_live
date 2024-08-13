@@ -36,7 +36,7 @@ class RemoteSyncRoomController extends BaseController {
   RxList<RoomUser> roomUsers = <RoomUser>[].obs;
 
   Timer? _timer;
-  var countDown = 300.obs;
+  var countDown = 600.obs;
 
   @override
   void onInit() {
@@ -74,7 +74,7 @@ class RemoteSyncRoomController extends BaseController {
 
   void _startTimer() {
     // 倒计时5分钟，自动关闭页面
-    countDown.value = 300;
+    countDown.value = 600;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       countDown--;
       if (countDown <= 0) {

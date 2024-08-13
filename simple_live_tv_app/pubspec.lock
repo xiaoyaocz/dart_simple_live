@@ -369,6 +369,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.4.0"
+  logging:
+    dependency: transitive
+    description:
+      name: logging
+      sha256: "623a88c9594aa774443aa3eb2d41807a48486b5613e67599fb4c41c0ad47c340"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.2.0"
   lottie:
     dependency: "direct main"
     description:
@@ -404,10 +412,11 @@ packages:
   media_kit:
     dependency: "direct main"
     description:
-      name: media_kit
-      sha256: "3289062540e3b8b9746e5c50d95bd78a9289826b7227e253dff806d002b9e67a"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
+      path: media_kit
+      ref: main
+      resolved-ref: "50c510d018cc5286eb6730f3ea165290f19dc5f6"
+      url: "https://github.com/media-kit/media-kit.git"
+    source: git
     version: "1.1.10+1"
   media_kit_libs_android_video:
     dependency: transitive
@@ -444,10 +453,11 @@ packages:
   media_kit_libs_video:
     dependency: "direct main"
     description:
-      name: media_kit_libs_video
-      sha256: "3688e0c31482074578652bf038ce6301a5d21e1eda6b54fc3117ffeb4bdba067"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
+      path: "libs/universal/media_kit_libs_video"
+      ref: main
+      resolved-ref: "50c510d018cc5286eb6730f3ea165290f19dc5f6"
+      url: "https://github.com/media-kit/media-kit.git"
+    source: git
     version: "1.0.4"
   media_kit_libs_windows_video:
     dependency: transitive
@@ -458,21 +468,31 @@ packages:
     source: hosted
     version: "1.0.9"
   media_kit_native_event_loop:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: media_kit_native_event_loop
-      sha256: a605cf185499d14d58935b8784955a92a4bf0ff4e19a23de3d17a9106303930e
-      url: "https://pub.flutter-io.cn"
-    source: hosted
+      path: media_kit_native_event_loop
+      ref: main
+      resolved-ref: "50c510d018cc5286eb6730f3ea165290f19dc5f6"
+      url: "https://github.com/media-kit/media-kit.git"
+    source: git
     version: "1.0.8"
   media_kit_video:
     dependency: "direct main"
     description:
-      name: media_kit_video
-      sha256: c048d11a19e379aebbe810647636e3fc6d18374637e2ae12def4ff8a4b99a882
+      path: media_kit_video
+      ref: main
+      resolved-ref: "50c510d018cc5286eb6730f3ea165290f19dc5f6"
+      url: "https://github.com/media-kit/media-kit.git"
+    source: git
+    version: "1.2.4"
+  message_pack_dart:
+    dependency: transitive
+    description:
+      name: message_pack_dart
+      sha256: "71b9f0ff60e5896e60b337960bb535380d7dba3297b457ac763ccae807385b59"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.2.4"
+    version: "2.0.1"
   meta:
     dependency: transitive
     description:
@@ -610,6 +630,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.8"
+  pool:
+    dependency: transitive
+    description:
+      name: pool
+      sha256: "20fe868b6314b322ea036ba325e6fc0711a22948856475e2c2b6306e8ab39c2a"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.5.1"
   protobuf:
     dependency: transitive
     description:
@@ -714,6 +742,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.1.4"
+  signalr_netcore:
+    dependency: "direct main"
+    description:
+      name: signalr_netcore
+      sha256: c41052a7b3dfa9c5f3fa292d6fc0f44556dff988c385bf09c5dcf64257eb0c2d
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.3.9"
   simple_live_core:
     dependency: "direct main"
     description:
@@ -742,6 +778,22 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "7.0.0"
+  sse:
+    dependency: transitive
+    description:
+      name: sse
+      sha256: "111a05843ea9035042975744fe61d5e8b95bc4d38656dbafc5532da77a0bb89a"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "4.1.6"
+  sse_channel:
+    dependency: transitive
+    description:
+      name: sse_channel
+      sha256: "9aad5d4eef63faf6ecdefb636c0f857bd6f74146d2196087dcf4b17ab5b49b1b"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.1.1"
   stack_trace:
     dependency: transitive
     description:
@@ -798,6 +850,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.7.0"
+  tuple:
+    dependency: transitive
+    description:
+      name: tuple
+      sha256: a97ce2013f240b2f3807bcbaf218765b6f301c3eff91092bcfa23a039e7dd151
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.0.2"
   typed_data:
     dependency: transitive
     description:

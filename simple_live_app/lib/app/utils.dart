@@ -184,12 +184,12 @@ class Utils {
     SmartDialog.dismiss(status: SmartStatus.allCustom);
   }
 
-  static void showBottomSheet({
+  static Future showBottomSheet({
     required String title,
     required Widget child,
     double maxWidth = 600,
-  }) {
-    showModalBottomSheet(
+  }) async {
+    var result = await showModalBottomSheet(
       context: Get.context!,
       constraints: BoxConstraints(
         maxWidth: maxWidth,
@@ -218,6 +218,7 @@ class Utils {
         ],
       ),
     );
+    return result;
   }
 
   /// 文本编辑的弹窗

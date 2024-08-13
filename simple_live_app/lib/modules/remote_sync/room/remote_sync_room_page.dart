@@ -117,6 +117,7 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
           SettingsCard(
             child: Obx(
               () => ListTile(
+                contentPadding: AppStyle.edgeInsetsL12,
                 title: SelectableText(
                   controller.currentRoomId.value,
                   style: Theme.of(context).textTheme.titleLarge,
@@ -143,6 +144,7 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
                         controller.showQRInfo();
                       },
                     ),
+                    AppStyle.hGap4,
                   ],
                 ),
               ),
@@ -151,7 +153,7 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 12),
             child: Text(
-              "同步操作",
+              "同步数据至其他设备",
               style: Get.textTheme.titleSmall,
             ),
           ),
@@ -207,9 +209,11 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
           SettingsCard(
             child: Obx(
               () => ListView.separated(
+                padding: EdgeInsets.zero,
                 itemCount: controller.roomUsers.length,
                 shrinkWrap: true,
                 separatorBuilder: (context, index) => AppStyle.divider,
+                physics: const NeverScrollableScrollPhysics(),
                 itemBuilder: (BuildContext context, int index) {
                   var user = controller.roomUsers[index];
                   return ListTile(
@@ -221,7 +225,33 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
                         child: buildIcon(user.platform),
                       ),
                     ),
-                    title: Text(user.shortId),
+                    title: Text.rich(
+                      TextSpan(
+                        text: user.shortId,
+                        style: const TextStyle(fontSize: 16),
+                        children: user.isCreator!
+                            ? [
+                                WidgetSpan(
+                                  child: Container(
+                                    margin: AppStyle.edgeInsetsL4,
+                                    padding: AppStyle.edgeInsetsH4,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.blue),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      "创建者",
+                                      style: TextStyle(
+                                        color: Colors.blue,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
                     subtitle: Text("${user.app} - v${user.version}"),
                     trailing: Visibility(
                       visible: controller.signalR.hubConnection?.connectionId ==

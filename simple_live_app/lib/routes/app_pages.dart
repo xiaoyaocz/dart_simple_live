@@ -173,7 +173,11 @@ class AppPages {
       name: RoutePath.kLocalSync,
       page: () => const SyncPage(),
       bindings: [
-        BindingsBuilder.put(() => SyncController()),
+        BindingsBuilder.put(
+          () => SyncController(
+            Get.arguments ?? "",
+          ),
+        ),
       ],
     ),
     // 远程同步

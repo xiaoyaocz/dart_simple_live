@@ -26,7 +26,9 @@ class RemoteSyncPage extends StatelessWidget {
                 }
                 if (result.length == 5) {
                   Get.toNamed(RoutePath.kRemoteSyncRoom, arguments: result);
-                } else {}
+                } else {
+                  Get.toNamed(RoutePath.kLocalSync, arguments: result);
+                }
               },
               icon: const Icon(Remix.qr_scan_line),
               label: const Text("扫一扫"),

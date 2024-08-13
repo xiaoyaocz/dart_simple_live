@@ -87,6 +87,7 @@ class SyncPage extends GetView<SyncController> {
             child: Obx(
               () => ListView.separated(
                 shrinkWrap: true,
+                padding: EdgeInsets.zero,
                 physics: const NeverScrollableScrollPhysics(),
                 separatorBuilder: (BuildContext context, int index) =>
                     AppStyle.divider,

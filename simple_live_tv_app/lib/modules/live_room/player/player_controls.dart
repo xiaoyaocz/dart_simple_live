@@ -707,6 +707,8 @@ void showFollowUser(LiveRoomController controller) {
               focusNode: AppFocusNode(),
               iconData: Icons.arrow_back,
               text: "返回",
+              autofocus: currentIndex == 0 &&
+                  FollowUserService.instance.livingList.isEmpty,
               onTap: () {
                 // Utils.hideRightDialog();
                 Get.back();

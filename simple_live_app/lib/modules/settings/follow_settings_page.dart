@@ -29,6 +29,7 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
                     title: "自动更新关注直播状态",
                     onChanged: (e) {
                       controller.setAutoUpdateFollowEnable(e);
+                      FollowService.instance.initTimer();
                     },
                   ),
                 ),

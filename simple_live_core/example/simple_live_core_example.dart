@@ -23,7 +23,7 @@ void main() async {
 
   //var categores = await site.getCategores();
   //print(categores.length);
-  var detail = await site.getRoomDetail(roomId: '22908869');
+  var detail = await site.getRoomDetail(roomId: '7734200');
   // var playQualites = await site.getPlayQualites(detail: detail);
   // print(playQualites);
   // var playUrls =

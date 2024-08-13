@@ -1,7 +1,7 @@
 {
-    "version": "1.1.2",
-    "version_num": 10102,
-    "version_desc": "- 修复抖音弹幕连接失败问题 #458\n- 修复弹幕不消失问题 #454\n- 恢复抖音直播间搜索",
+    "version": "1.1.8",
+    "version_num": 10108,
+    "version_desc": "- 修复斗鱼分类无法加载\n- 修复哔哩哔哩直播加载失败\n- 支持定时自动更新关注列表",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/bilibili_danmaku.dart';
@@ -25,6 +28,23 @@ class BiliBiliSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => BiliBiliDanmaku();
 
+  static const String kDefaultUserAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0";
+  static const String kDefaultReferer = "https://live.bilibili.com/";
+
+  Map<String, String> getHeader() {
+    return cookie.isEmpty
+        ? {
+            "user-agent": kDefaultUserAgent,
+            "referer": kDefaultReferer,
+          }
+        : {
+            "cookie": cookie,
+            "user-agent": kDefaultUserAgent,
+            "referer": kDefaultReferer,
+          };
+  }
+
   @override
   Future<List<LiveCategory>> getCategores() async {
     List<LiveCategory> categories = [];
@@ -34,11 +54,7 @@ class BiliBiliSite implements LiveSite {
         "need_entrance": 1,
         "parent_id": 0,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     for (var item in result["data"]) {
       List<LiveSubCategory> subs = [];
@@ -73,11 +89,7 @@ class BiliBiliSite implements LiveSite {
         "sort_type": "",
         "page": page
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
 
     var hasMore = result["data"]["has_more"] == 1;
@@ -108,11 +120,7 @@ class BiliBiliSite implements LiveSite {
         "codec": "0,1",
         "platform": "web",
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     var qualitiesMap = <int, String>{};
     for (var item in result["data"]["playurl_info"]["playurl"]["g_qn_desc"]) {
@@ -146,11 +154,7 @@ class BiliBiliSite implements LiveSite {
         "platform": "web",
         "qn": quality.data,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     var streamList = result["data"]["playurl_info"]["playurl"]["stream"];
     for (var streamItem in streamList) {
@@ -189,11 +193,7 @@ class BiliBiliSite implements LiveSite {
         "page_size": 30,
         "page": page
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
 
     var hasMore = (result["data"]["list"] as List).isNotEmpty;
@@ -213,28 +213,14 @@ class BiliBiliSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom",
-      queryParameters: {
-        "room_id": roomId,
-      },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
-    );
-    var realRoomId = result["data"]["room_info"]["room_id"].toString();
+    var roomInfo = await getRoomInfo(roomId: roomId);
+    var realRoomId = roomInfo["room_info"]["room_id"].toString();
     var roomDanmakuResult = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo",
       queryParameters: {
         "id": realRoomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     List<String> serverHosts = (roomDanmakuResult["data"]["host_list"] as List)
         .map<String>((e) => e["host"].toString())
@@ -243,15 +229,14 @@ class BiliBiliSite implements LiveSite {
     var buvid = await getBuvid();
     return LiveRoomDetail(
       roomId: realRoomId,
-      title: result["data"]["room_info"]["title"].toString(),
-      cover: result["data"]["room_info"]["cover"].toString(),
-      userName: result["data"]["anchor_info"]["base_info"]["uname"].toString(),
-      userAvatar:
-          "${result["data"]["anchor_info"]["base_info"]["face"]}@100w.jpg",
-      online: asT<int?>(result["data"]["room_info"]["online"]) ?? 0,
-      status: (asT<int?>(result["data"]["room_info"]["live_status"]) ?? 0) == 1,
+      title: roomInfo["room_info"]["title"].toString(),
+      cover: roomInfo["room_info"]["cover"].toString(),
+      userName: roomInfo["anchor_info"]["base_info"]["uname"].toString(),
+      userAvatar: "${roomInfo["anchor_info"]["base_info"]["face"]}@100w.jpg",
+      online: asT<int?>(roomInfo["room_info"]["online"]) ?? 0,
+      status: (asT<int?>(roomInfo["room_info"]["live_status"]) ?? 0) == 1,
       url: "https://live.bilibili.com/$roomId",
-      introduction: result["data"]["room_info"]["description"].toString(),
+      introduction: roomInfo["room_info"]["description"].toString(),
       notice: "",
       danmakuData: BiliBiliDanmakuArgs(
         roomId: int.tryParse(realRoomId) ?? 0,
@@ -264,6 +249,18 @@ class BiliBiliSite implements LiveSite {
         cookie: cookie,
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> getRoomInfo({required String roomId}) async {
+    var url =
+        "https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=$roomId";
+    var queryParams = await getWbiSign(url);
+    var result = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom",
+      queryParameters: queryParams,
+      header: getHeader(),
+    );
+    return result["data"];
   }
 
   @override
@@ -281,7 +278,11 @@ class BiliBiliSite implements LiveSite {
         "single_column": 0,
         "page": page
       },
-      header: {"cookie": cookie.isEmpty ? "buvid3=infoc;" : cookie},
+      header: {
+        "cookie": cookie.isEmpty ? 'buvid3=infoc;' : cookie,
+        "user-agent": kDefaultUserAgent,
+        "referer": kDefaultReferer,
+      },
     );
 
     var items = <LiveRoomItem>[];
@@ -316,7 +317,11 @@ class BiliBiliSite implements LiveSite {
         "single_column": 0,
         "page": page
       },
-      header: {"cookie": cookie.isEmpty ? "buvid3=infoc;" : cookie},
+      header: {
+        "cookie": cookie.isEmpty ? 'buvid3=infoc;' : cookie,
+        "user-agent": kDefaultUserAgent,
+        "referer": kDefaultReferer,
+      },
     );
 
     var items = <LiveAnchorItem>[];
@@ -342,11 +347,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "room_id": roomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     return (asT<int?>(result["data"]["live_status"]) ?? 0) == 1;
   }
@@ -359,11 +360,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "room_id": roomId,
       },
-      header: cookie.isEmpty
-          ? null
-          : {
-              "cookie": cookie,
-            },
+      header: getHeader(),
     );
     List<LiveSuperChatMessage> ls = [];
     for (var item in result["data"]?["list"] ?? []) {
@@ -395,15 +392,137 @@ class BiliBiliSite implements LiveSite {
       var result = await HttpClient.instance.getJson(
         "https://api.bilibili.com/x/frontend/finger/spi",
         queryParameters: {},
-        header: cookie.isEmpty
-            ? null
-            : {
-                "cookie": cookie,
-              },
+        header: getHeader(),
       );
       return result["data"]["b_3"].toString();
     } catch (e) {
       return "";
     }
+  }
+
+  static String kImgKey = '';
+  static String kSubKey = '';
+  static const List<int> mixinKeyEncTab = [
+    46,
+    47,
+    18,
+    2,
+    53,
+    8,
+    23,
+    32,
+    15,
+    50,
+    10,
+    31,
+    58,
+    3,
+    45,
+    35,
+    27,
+    43,
+    5,
+    49,
+    33,
+    9,
+    42,
+    19,
+    29,
+    28,
+    14,
+    39,
+    12,
+    38,
+    41,
+    13,
+    37,
+    48,
+    7,
+    16,
+    24,
+    55,
+    40,
+    61,
+    26,
+    17,
+    0,
+    1,
+    60,
+    51,
+    30,
+    4,
+    22,
+    25,
+    54,
+    21,
+    56,
+    59,
+    6,
+    63,
+    57,
+    62,
+    11,
+    36,
+    20,
+    34,
+    44,
+    52
+  ];
+  Future<(String, String)> getWbiKeys() async {
+    if (kImgKey.isNotEmpty && kSubKey.isNotEmpty) {
+      return (kImgKey, kSubKey);
+    }
+    // 获取最新的 img_key 和 sub_key
+    var resp = await HttpClient.instance.getJson(
+      'https://api.bilibili.com/x/web-interface/nav',
+      header: getHeader(),
+    );
+
+    var imgUrl = resp["data"]["wbi_img"]["img_url"].toString();
+    var subUrl = resp["data"]["wbi_img"]["sub_url"].toString();
+    var imgKey = imgUrl.substring(imgUrl.lastIndexOf('/') + 1).split('.').first;
+    var subKey = subUrl.substring(subUrl.lastIndexOf('/') + 1).split('.').first;
+
+    kImgKey = imgKey;
+    kSubKey = subKey;
+
+    return (imgKey, subKey);
+  }
+
+  String getMixinKey(String origin) {
+    // 对 imgKey 和 subKey 进行字符顺序打乱编码
+    return mixinKeyEncTab.fold("", (s, i) => s + origin[i]).substring(0, 32);
+  }
+
+  Future<Map<String, String>> getWbiSign(String url) async {
+    var (imgKey, subKey) = await getWbiKeys();
+
+    // 为请求参数进行 wbi 签名
+    var mixinKey = getMixinKey(imgKey + subKey);
+    var currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    var queryParams = Map<String, String>.from(Uri.parse(url).queryParameters);
+
+    queryParams["wts"] = currentTime.toString(); // 添加 wts 字段
+
+    //按照 key 重排参数
+    Map<String, String> map = {};
+    var sortedKeys = queryParams.keys.toList()..sort();
+    for (var key in sortedKeys) {
+      var value = queryParams[key]!;
+      // 过滤 value 中的 "!'()*" 字符
+      map[key] = value
+          .toString()
+          .split('')
+          .where((c) => "!'()*".contains(c) == false)
+          .join('');
+    }
+
+    var query = map.keys
+        .map((key) => "$key=${Uri.encodeQueryComponent(map[key]!)}")
+        .join("&");
+    var wbiSign = md5.convert(utf8.encode("$query$mixinKey")).toString();
+    queryParams["w_rid"] = wbiSign;
+    return queryParams;
   }
 }

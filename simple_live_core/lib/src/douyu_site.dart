@@ -28,39 +28,34 @@ class DouyuSite implements LiveSite {
 
   @override
   Future<List<LiveCategory>> getCategores() async {
-    List<LiveCategory> categories = [
-      LiveCategory(id: "PCgame", name: "网游竞技", children: []),
-      LiveCategory(id: "djry", name: "单机热游", children: []),
-      LiveCategory(id: "syxx", name: "手游休闲", children: []),
-      LiveCategory(id: "yl", name: "娱乐天地", children: []),
-      LiveCategory(id: "yz", name: "颜值", children: []),
-      LiveCategory(id: "kjwh", name: "科技文化", children: []),
-      LiveCategory(id: "yp", name: "语言互动", children: []),
-    ];
-
-    for (var item in categories) {
-      var items = await getSubCategories(item.id);
-      item.children.addAll(items);
+    List<LiveCategory> categories = [];
+    var result =
+        await HttpClient.instance.getJson("https://m.douyu.com/api/cate/list");
+    var subCateList = result["data"]["cate2Info"] as List;
+    for (var item in result["data"]["cate1Info"]) {
+      var cate1Id = item["cate1Id"];
+      var cate1Name = item["cate1Name"];
+      List<LiveSubCategory> subCategories = [];
+      subCateList.where((x) => x["cate1Id"] == cate1Id).forEach((element) {
+        subCategories.add(LiveSubCategory(
+          pic: element["icon"],
+          id: element["cate2Id"].toString(),
+          parentId: cate1Id.toString(),
+          name: element["cate2Name"].toString(),
+        ));
+      });
+      categories.add(
+        LiveCategory(
+          id: cate1Id.toString(),
+          name: cate1Name.toString(),
+          children: subCategories,
+        ),
+      );
     }
+    // 根据ID排序
+    categories.sort((a, b) => int.parse(a.id).compareTo(int.parse(b.id)));
+
     return categories;
-  }
-
-  Future<List<LiveSubCategory>> getSubCategories(String id) async {
-    var result = await HttpClient.instance.getJson(
-        "https://www.douyu.com/japi/weblist/api/getC2List",
-        queryParameters: {"shortName": id, "offset": 0, "limit": 200});
-
-    List<LiveSubCategory> subs = [];
-    for (var item in result["data"]["list"]) {
-      subs.add(LiveSubCategory(
-        pic: item["squareIconUrlW"].toString(),
-        id: item["cid2"].toString(),
-        parentId: id,
-        name: item["cname2"].toString(),
-      ));
-    }
-
-    return subs;
   }
 
   @override

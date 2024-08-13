@@ -91,6 +91,15 @@ class AppSettingsController extends GetxController {
     playerBufferSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerBufferSize, 32);
 
+    autoUpdateFollowEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoUpdateFollowEnable, true);
+
+    autoUpdateFollowDuration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoUpdateFollowEnable, 10);
+
+    updateFollowThreadCount.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
+
     super.onInit();
   }
 
@@ -303,5 +312,26 @@ class AppSettingsController extends GetxController {
     bilibiliLoginTip.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kBilibiliLoginTip, e);
+  }
+
+  var autoUpdateFollowEnable = false.obs;
+  void setAutoUpdateFollowEnable(bool e) {
+    autoUpdateFollowEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoUpdateFollowEnable, e);
+  }
+
+  var autoUpdateFollowDuration = 10.obs;
+  void setAutoUpdateFollowDuration(int e) {
+    autoUpdateFollowDuration.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoUpdateFollowEnable, e);
+  }
+
+  var updateFollowThreadCount = 4.obs;
+  void setUpdateFollowThreadCount(int e) {
+    updateFollowThreadCount.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kUpdateFollowThreadCount, e);
   }
 }

@@ -11,7 +11,9 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
-import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
+import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
+import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -812,35 +814,49 @@ void showFollowUser(LiveRoomController controller) {
     controller.showFollowUserSheet();
     return;
   }
-  //只显示开播直播间
-  controller.followController.setFilterMode(1);
+
   Utils.showRightDialog(
     title: "关注列表",
     width: 400,
     useSystem: true,
     child: Obx(
-      () => RefreshIndicator(
-        onRefresh: controller.followController.refreshData,
-        child: ListView.builder(
-          itemCount: controller.followController.list.length,
-          itemBuilder: (_, i) {
-            var item = controller.followController.list[i];
-            return Obx(
-              () => FollowUserItem(
-                item: item,
-                playing: controller.rxSite.value.id == item.siteId &&
-                    controller.rxRoomId.value == item.roomId,
-                onTap: () {
-                  Utils.hideRightDialog();
-                  controller.resetRoom(
-                    Sites.allSites[item.siteId]!,
-                    item.roomId,
-                  );
-                },
+      () => Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: FollowService.instance.loadData,
+            child: ListView.builder(
+              itemCount: FollowService.instance.liveList.length,
+              itemBuilder: (_, i) {
+                var item = FollowService.instance.liveList[i];
+                return Obx(
+                  () => FollowUserItem(
+                    item: item,
+                    playing: controller.rxSite.value.id == item.siteId &&
+                        controller.rxRoomId.value == item.roomId,
+                    onTap: () {
+                      Utils.hideRightDialog();
+                      controller.resetRoom(
+                        Sites.allSites[item.siteId]!,
+                        item.roomId,
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Obx(
+                () => DesktopRefreshButton(
+                  refreshing: FollowService.instance.updating.value,
+                  onPressed: FollowService.instance.loadData,
+                ),
               ),
-            );
-          },
-        ),
+            ),
+        ],
       ),
     ),
   );

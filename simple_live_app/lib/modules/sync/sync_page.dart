@@ -1,117 +1,115 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/modules/sync/sync_controller.dart';
-import 'package:simple_live_app/services/sync_service.dart';
+import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 
-class SyncPage extends GetView<SyncController> {
+class SyncPage extends StatelessWidget {
   const SyncPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('多端数据同步'),
+        title: const Text("数据同步"),
         actions: [
-          TextButton.icon(
-            onPressed: controller.showInfo,
-            icon: const Icon(Icons.qr_code),
-            label: const Text("信息"),
+          Visibility(
+            visible: GetPlatform.isAndroid || GetPlatform.isIOS,
+            child: TextButton.icon(
+              onPressed: () async {
+                var result = await Get.toNamed(RoutePath.kSyncScan);
+                if (result == null || result.isEmpty) {
+                  return;
+                }
+                if (result.length == 5) {
+                  Get.toNamed(RoutePath.kRemoteSyncRoom, arguments: result);
+                } else {
+                  Get.toNamed(RoutePath.kLocalSync, arguments: result);
+                }
+              },
+              icon: const Icon(Remix.qr_scan_line),
+              label: const Text("扫一扫"),
+            ),
           ),
         ],
       ),
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
-          SettingsCard(
-            child: Padding(
-              padding: AppStyle.edgeInsetsA12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controller.addressController,
-                    onSubmitted: (e) {
-                      controller.connect();
-                    },
-                    decoration: InputDecoration(
-                      labelText: '客户端地址',
-                      hintText: '请输入地址或扫码自动填写',
-                      contentPadding: AppStyle.edgeInsetsH12,
-                      border: const OutlineInputBorder(),
-                      suffixIcon: Visibility(
-                        visible: Platform.isAndroid || Platform.isIOS,
-                        child: TextButton.icon(
-                          onPressed: controller.toScanQr,
-                          icon: const Icon(Remix.qr_scan_line),
-                          label: const Text("扫一扫"),
-                        ),
-                      ),
-                    ),
-                  ),
-                  AppStyle.vGap12,
-                  ElevatedButton(
-                    onPressed: () {
-                      controller.connect();
-                    },
-                    child: const Text("连接"),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AppStyle.vGap12,
-          ListTile(
-            title: Obx(
-              () => Text(
-                "已发现设备(${SyncService.instance.scanClients.length})",
-                style: Get.textTheme.titleSmall,
-              ),
-            ),
-            visualDensity: VisualDensity.compact,
-            contentPadding: AppStyle.edgeInsetsH12,
-            trailing: IconButton(
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                SyncService.instance.refreshClients();
-              },
-              icon: const Icon(Icons.refresh),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
+            child: Text(
+              "远程同步",
+              style: Get.textTheme.titleSmall,
             ),
           ),
           SettingsCard(
-            child: Obx(
-              () => ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                separatorBuilder: (BuildContext context, int index) =>
-                    AppStyle.divider,
-                itemCount: SyncService.instance.scanClients.length,
-                itemBuilder: (BuildContext context, int index) {
-                  var client = SyncService.instance.scanClients[index];
-                  return ListTile(
-                    title: Text(client.name),
-                    subtitle: Text(client.address),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      controller.connectClient(client);
-                    },
-                  );
-                },
-              ),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text("创建房间"),
+                  leading: const Icon(Remix.home_wifi_line),
+                  subtitle: const Text("其他设备可以通过房间号加入"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kRemoteSyncRoom);
+                  },
+                ),
+                AppStyle.divider,
+                ListTile(
+                  title: const Text("加入房间"),
+                  leading: const Icon(Remix.add_circle_line),
+                  subtitle: const Text("加入其他设备创建的房间"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    var input = await Utils.showEditTextDialog(
+                      "",
+                      title: "加入房间",
+                      hintText: "请输入房间号,不区分大小写",
+                      validate: (text) {
+                        if (text.isEmpty) {
+                          SmartDialog.showToast("房间号不能为空");
+                          return false;
+                        }
+                        if (text.length != 5) {
+                          SmartDialog.showToast("请输入5位房间号");
+                          return false;
+                        }
+                        return true;
+                      },
+                    );
+                    if (input != null && input.isNotEmpty) {
+                      Get.toNamed(RoutePath.kRemoteSyncRoom,
+                          arguments: input.toUpperCase());
+                    }
+                  },
+                ),
+              ],
             ),
           ),
-          AppStyle.vGap12,
-          const Text(
-            "如果无法扫描到设备，请手动输入地址",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "局域网同步",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text("局域网同步"),
+                  subtitle: const Text("在局域网内同步数据"),
+                  leading: const Icon(Remix.device_line),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kLocalSync);
+                  },
+                ),
+              ],
             ),
           ),
         ],

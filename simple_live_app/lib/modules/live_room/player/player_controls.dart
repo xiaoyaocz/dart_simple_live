@@ -11,7 +11,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
-import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
+import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:window_manager/window_manager.dart';
 

@@ -95,7 +95,7 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kAutoUpdateFollowEnable, true);
 
     autoUpdateFollowDuration.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kAutoUpdateFollowEnable, 10);
+        .getValue(LocalStorageService.kUpdateFollowDuration, 10);
 
     updateFollowThreadCount.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
@@ -325,7 +325,7 @@ class AppSettingsController extends GetxController {
   void setAutoUpdateFollowDuration(int e) {
     autoUpdateFollowDuration.value = e;
     LocalStorageService.instance
-        .setValue(LocalStorageService.kAutoUpdateFollowEnable, e);
+        .setValue(LocalStorageService.kUpdateFollowDuration, e);
   }
 
   var updateFollowThreadCount = 4.obs;

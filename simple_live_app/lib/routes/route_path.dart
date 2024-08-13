@@ -48,6 +48,9 @@ class RoutePath {
   /// 账号管理
   static const kSettingsAccount = "/settings/account";
 
+  /// 关注设置
+  static const kSettingsFollow = "/settings/follow";
+
   /// BiliBili Web登录
   static const kBiliBiliWebLogin = "/settings/account/bilibili/web_login";
 

@@ -5,6 +5,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
@@ -14,7 +15,6 @@ class FollowUserPage extends GetView<FollowUserController> {
 
   @override
   Widget build(BuildContext context) {
-    controller.filterMode.value = 0;
     var count = MediaQuery.of(context).size.width ~/ 500;
     if (count < 1) count = 1;
     return Scaffold(
@@ -72,13 +72,13 @@ class FollowUserPage extends GetView<FollowUserController> {
             },
             onSelected: (value) {
               if (value == 0) {
-                controller.exportFile();
+                FollowService.instance.exportFile();
               } else if (value == 1) {
-                controller.inputFile();
+                FollowService.instance.inputFile();
               } else if (value == 2) {
-                controller.exportText();
+                FollowService.instance.exportText();
               } else if (value == 3) {
-                controller.inputText();
+                FollowService.instance.inputText();
               }
             },
           ),
@@ -122,7 +122,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                   ),
                 ),
                 Obx(
-                  () => controller.updating.value
+                  () => FollowService.instance.updating.value
                       ? TextButton.icon(
                           onPressed: null,
                           icon: const SizedBox(
@@ -150,7 +150,7 @@ class FollowUserPage extends GetView<FollowUserController> {
               crossAxisSpacing: 12,
               crossAxisCount: count,
               pageController: controller,
-              //firstRefresh: true,
+              firstRefresh: true,
               showPCRefreshButton: false,
               itemBuilder: (_, i) {
                 var item = controller.list[i];

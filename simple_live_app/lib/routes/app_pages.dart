@@ -6,6 +6,7 @@ import 'package:simple_live_app/modules/category/detail/category_detail_page.dar
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
+import 'package:simple_live_app/modules/settings/follow_settings_page.dart';
 import 'package:simple_live_app/modules/sync/sync_page.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_controller.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_page.dart';
@@ -115,7 +116,7 @@ class AppPages {
       name: RoutePath.kSettingsPlay,
       page: () => const PlaySettingsPage(),
     ),
-    //播放设置
+    //自动关闭
     GetPage(
       name: RoutePath.kSettingsAutoExit,
       page: () => const AutoExitSettingsPage(),
@@ -223,6 +224,11 @@ class AppPages {
       bindings: [
         BindingsBuilder.put(() => OtherSettingsController()),
       ],
+    ),
+    //关注设置
+    GetPage(
+      name: RoutePath.kSettingsFollow,
+      page: () => const FollowSettingsPage(),
     ),
   ];
 }

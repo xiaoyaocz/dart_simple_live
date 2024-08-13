@@ -8,6 +8,7 @@ import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/modules/settings/settings_controller.dart';
 import 'package:simple_live_tv_app/services/bilibili_account_service.dart';
+import 'package:simple_live_tv_app/services/follow_user_service.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_list_tile.dart';
@@ -77,9 +78,9 @@ class SettingsPage extends GetView<SettingsController> {
               Obx(
                 () => HighlightButton(
                   focusNode: AppFocusNode(),
-                  iconData: Icons.account_circle_outlined,
+                  iconData: Icons.favorite_border,
+                  text: "关注",
                   selected: controller.tabIndex.value == 2,
-                  text: "账号",
                   onTap: () {
                     controller.tabController.animateTo(2);
                   },
@@ -89,11 +90,23 @@ class SettingsPage extends GetView<SettingsController> {
               Obx(
                 () => HighlightButton(
                   focusNode: AppFocusNode(),
-                  iconData: Icons.info_outline,
+                  iconData: Icons.account_circle_outlined,
                   selected: controller.tabIndex.value == 3,
-                  text: "关于",
+                  text: "账号",
                   onTap: () {
                     controller.tabController.animateTo(3);
+                  },
+                ),
+              ),
+              AppStyle.hGap32,
+              Obx(
+                () => HighlightButton(
+                  focusNode: AppFocusNode(),
+                  iconData: Icons.info_outline,
+                  selected: controller.tabIndex.value == 4,
+                  text: "关于",
+                  onTap: () {
+                    controller.tabController.animateTo(4);
                   },
                 ),
               ),
@@ -107,6 +120,7 @@ class SettingsPage extends GetView<SettingsController> {
               children: [
                 buildPlayerSettings(),
                 buildDanmakuSettings(),
+                buildFollowSettings(),
                 buildAccountSettings(),
                 buildAbout(),
               ],
@@ -188,6 +202,80 @@ class SettingsPage extends GetView<SettingsController> {
             value: AppSettingsController.instance.qualityLevel.value,
             onChanged: (e) {
               AppSettingsController.instance.setQualityLevel(e);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildFollowSettings() {
+    return ListView(
+      padding: AppStyle.edgeInsetsA48,
+      children: [
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: controller.autoUpdateFollowEnableFocusNode,
+            autofocus:
+                controller.autoUpdateFollowEnableFocusNode.isFoucsed.value,
+            title: "自动更新关注",
+            items: const {
+              0: "关",
+              1: "开",
+            },
+            value: AppSettingsController.instance.autoUpdateFollowEnable.value
+                ? 1
+                : 0,
+            onChanged: (e) {
+              AppSettingsController.instance
+                  .setAutoUpdateFollowEnable(e == 1 ? true : false);
+              FollowUserService.instance.initTimer();
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: controller.autoUpdateFollowDurationFocusNode,
+            autofocus:
+                controller.autoUpdateFollowDurationFocusNode.isFoucsed.value,
+            title: "自动更新间隔",
+            items: const {
+              5: "5分钟",
+              10: "10分钟",
+              15: "15分钟",
+              20: "20分钟",
+              25: "25分钟",
+              30: "30分钟",
+              60: "1小时",
+            },
+            value:
+                AppSettingsController.instance.autoUpdateFollowDuration.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setAutoUpdateFollowDuration(e);
+              FollowUserService.instance.initTimer();
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: controller.updateFollowThreadFocusNode,
+            autofocus: controller.updateFollowThreadFocusNode.isFoucsed.value,
+            title: "更新线程数",
+            items: const {
+              1: "1",
+              2: "2",
+              3: "3",
+              4: "4",
+              6: "6",
+              8: "8",
+              10: "10",
+              12: "12",
+            },
+            value: AppSettingsController.instance.updateFollowThreadCount.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setUpdateFollowThreadCount(e);
             },
           ),
         ),

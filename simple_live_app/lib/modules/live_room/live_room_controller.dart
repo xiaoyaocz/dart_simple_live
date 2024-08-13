@@ -19,9 +19,10 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
-import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
-import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
+import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -48,8 +49,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   Site get site => rxSite.value;
   late Rx<String> rxRoomId;
   String get roomId => rxRoomId.value;
-
-  FollowUserController followController = Get.put(FollowUserController());
 
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
   var online = 0.obs;
@@ -105,8 +104,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
-    if (followController.allList.isEmpty) {
-      followController.refreshData();
+    if (FollowService.instance.followList.isEmpty) {
+      FollowService.instance.loadData();
     }
     initAutoExit();
     showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
@@ -815,32 +814,46 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void showFollowUserSheet() {
-    followController.setFilterMode(1);
     Utils.showBottomSheet(
       title: "关注列表",
       child: Obx(
-        () => RefreshIndicator(
-          onRefresh: followController.refreshData,
-          child: ListView.builder(
-            itemCount: followController.list.length,
-            itemBuilder: (_, i) {
-              var item = followController.list[i];
-              return Obx(
-                () => FollowUserItem(
-                  item: item,
-                  playing: rxSite.value.id == item.siteId &&
-                      rxRoomId.value == item.roomId,
-                  onTap: () {
-                    Get.back();
-                    resetRoom(
-                      Sites.allSites[item.siteId]!,
-                      item.roomId,
-                    );
-                  },
+        () => Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: FollowService.instance.loadData,
+              child: ListView.builder(
+                itemCount: FollowService.instance.liveList.length,
+                itemBuilder: (_, i) {
+                  var item = FollowService.instance.liveList[i];
+                  return Obx(
+                    () => FollowUserItem(
+                      item: item,
+                      playing: rxSite.value.id == item.siteId &&
+                          rxRoomId.value == item.roomId,
+                      onTap: () {
+                        Get.back();
+                        resetRoom(
+                          Sites.allSites[item.siteId]!,
+                          item.roomId,
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: Obx(
+                  () => DesktopRefreshButton(
+                    refreshing: FollowService.instance.updating.value,
+                    onPressed: FollowService.instance.loadData,
+                  ),
                 ),
-              );
-            },
-          ),
+              ),
+          ],
         ),
       ),
     );

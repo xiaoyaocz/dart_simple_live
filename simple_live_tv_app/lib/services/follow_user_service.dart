@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/constant.dart';
+import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_tv_app/app/controller/base_controller.dart';
 import 'package:simple_live_tv_app/app/event_bus.dart';
 import 'package:simple_live_tv_app/app/log.dart';
@@ -14,17 +15,38 @@ class FollowUserService extends BasePageController<FollowUser> {
   StreamSubscription<dynamic>? subscription;
 
   RxList<FollowUser> livingList = RxList<FollowUser>();
-
+  Timer? updateTimer;
+  bool needUpdate = true;
   @override
   void onInit() {
     subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
+      needUpdate = false;
       refreshData();
     });
 
     if (list.isEmpty) {
       refreshData();
     }
+    initTimer();
     super.onInit();
+  }
+
+  void initTimer() {
+    if (AppSettingsController.instance.autoUpdateFollowEnable.value) {
+      updateTimer?.cancel();
+      updateTimer = Timer.periodic(
+        Duration(
+          minutes:
+              AppSettingsController.instance.autoUpdateFollowDuration.value,
+        ),
+        (timer) {
+          Log.logPrint("Update Follow Timer");
+          refreshData();
+        },
+      );
+    } else {
+      updateTimer?.cancel();
+    }
   }
 
   var updatedCount = 0;
@@ -36,12 +58,10 @@ class FollowUserService extends BasePageController<FollowUser> {
     }
 
     var followList = DBService.instance.getFollowList();
-
-    updatedCount = 0;
-    updating.value = true;
-    for (var item in followList) {
-      updateLiveStatus(item);
+    if (needUpdate) {
+      startUpdateStatus(followList);
     }
+    needUpdate = true;
     if (followList.isEmpty) {
       updating.value = false;
     }
@@ -57,7 +77,35 @@ class FollowUserService extends BasePageController<FollowUser> {
     livingList.assignAll(list.where((x) => x.liveStatus.value == 2));
   }
 
-  void updateLiveStatus(FollowUser item) async {
+  void startUpdateStatus(List<FollowUser> followList) async {
+    updatedCount = 0;
+    updating.value = true;
+
+    var threadCount =
+        AppSettingsController.instance.updateFollowThreadCount.value;
+
+    var tasks = <Future>[];
+    for (var i = 0; i < threadCount; i++) {
+      tasks.add(
+        Future(() async {
+          var start = i * followList.length ~/ threadCount;
+          var end = (i + 1) * followList.length ~/ threadCount;
+
+          // 确保 end 不超出列表长度
+          if (end > followList.length) {
+            end = followList.length;
+          }
+          var items = followList.sublist(start, end);
+          for (var item in items) {
+            await updateLiveStatus(item);
+          }
+        }),
+      );
+    }
+    await Future.wait(tasks);
+  }
+
+  Future updateLiveStatus(FollowUser item) async {
     try {
       var site = Sites.allSites[item.siteId]!;
       item.liveStatus.value =
@@ -92,6 +140,7 @@ class FollowUserService extends BasePageController<FollowUser> {
 
   @override
   void onClose() {
+    updateTimer?.cancel();
     subscription?.cancel();
 
     super.onClose();

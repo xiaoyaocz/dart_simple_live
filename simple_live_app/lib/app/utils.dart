@@ -15,6 +15,8 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/requests/common_request.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+typedef TextValidate = bool Function(String text);
+
 class Utils {
   static late PackageInfo packageInfo;
   static DateFormat dateFormat = DateFormat("MM-dd HH:mm");
@@ -182,12 +184,12 @@ class Utils {
     SmartDialog.dismiss(status: SmartStatus.allCustom);
   }
 
-  static void showBottomSheet({
+  static Future showBottomSheet({
     required String title,
     required Widget child,
     double maxWidth = 600,
-  }) {
-    showModalBottomSheet(
+  }) async {
+    var result = await showModalBottomSheet(
       context: Get.context!,
       constraints: BoxConstraints(
         maxWidth: maxWidth,
@@ -216,6 +218,7 @@ class Utils {
         ],
       ),
     );
+    return result;
   }
 
   /// 文本编辑的弹窗
@@ -223,11 +226,14 @@ class Utils {
   /// - `title` 弹窗标题
   /// - `confirm` 确认按钮内容
   /// - `cancel` 取消按钮内容
-  static Future<String?> showEditTextDialog(String content,
-      {String title = '',
-      String? hintText,
-      String confirm = '',
-      String cancel = ''}) async {
+  static Future<String?> showEditTextDialog(
+    String content, {
+    String title = '',
+    String? hintText,
+    String confirm = '',
+    String cancel = '',
+    TextValidate? validate,
+  }) async {
     final TextEditingController textEditingController =
         TextEditingController(text: content);
     var result = await Get.dialog(
@@ -256,6 +262,10 @@ class Utils {
           ),
           TextButton(
             onPressed: () {
+              if (validate != null && !validate(textEditingController.text)) {
+                return;
+              }
+
               Get.back(result: textEditingController.text);
             },
             child: const Text("确定"),

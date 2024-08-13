@@ -1,41 +1,45 @@
 // ignore_for_file: prefer_inlined_adds
 
 import 'package:get/get.dart';
-import 'package:simple_live_app/modules/categoty_detail/category_detail_controller.dart';
-import 'package:simple_live_app/modules/categoty_detail/category_detail_page.dart';
+import 'package:simple_live_app/modules/category/detail/category_detail_controller.dart';
+import 'package:simple_live_app/modules/category/detail/category_detail_page.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
+import 'package:simple_live_app/modules/settings/follow_settings_page.dart';
+import 'package:simple_live_app/modules/sync/sync_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_controller.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_page.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
-import 'package:simple_live_app/modules/sync/device/sync_device_controller.dart';
-import 'package:simple_live_app/modules/sync/device/sync_device_page.dart';
-import 'package:simple_live_app/modules/sync/scan_qr/sync_scan_qr_controller.dart';
-import 'package:simple_live_app/modules/sync/scan_qr/sync_scan_qr_page.dart';
-import 'package:simple_live_app/modules/toolbox/toolbox_controller.dart';
-import 'package:simple_live_app/modules/toolbox/toolbox_page.dart';
-import 'package:simple_live_app/modules/sync/sync_controller.dart';
-import 'package:simple_live_app/modules/sync/sync_page.dart';
-import 'package:simple_live_app/modules/user/account/account_controller.dart';
-import 'package:simple_live_app/modules/user/account/account_page.dart';
-import 'package:simple_live_app/modules/user/account/bilibili/qr_login_controller.dart';
-import 'package:simple_live_app/modules/user/account/bilibili/qr_login_page.dart';
-import 'package:simple_live_app/modules/user/account/bilibili/web_login_controller.dart';
-import 'package:simple_live_app/modules/user/account/bilibili/web_login_page.dart';
-import 'package:simple_live_app/modules/user/appstyle_setting_page.dart';
-import 'package:simple_live_app/modules/user/auto_exit_settings_page.dart';
-import 'package:simple_live_app/modules/user/danmu_settings_page.dart';
-import 'package:simple_live_app/modules/user/danmu_shield/danmu_shield_controller.dart';
-import 'package:simple_live_app/modules/user/danmu_shield/danmu_shield_page.dart';
-import 'package:simple_live_app/modules/user/follow_user/follow_user_controller.dart';
-import 'package:simple_live_app/modules/user/follow_user/follow_user_page.dart';
-import 'package:simple_live_app/modules/user/history/history_controller.dart';
-import 'package:simple_live_app/modules/user/history/history_page.dart';
-import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_controller.dart';
-import 'package:simple_live_app/modules/user/indexed_settings/indexed_settings_page.dart';
-import 'package:simple_live_app/modules/user/other/other_settings_controller.dart';
-import 'package:simple_live_app/modules/user/other/other_settings_page.dart';
-import 'package:simple_live_app/modules/user/play_settings_page.dart';
+import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_controller.dart';
+import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_page.dart';
+import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_controller.dart';
+import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_page.dart';
+import 'package:simple_live_app/modules/mine/parse/parse_controller.dart';
+import 'package:simple_live_app/modules/mine/parse/parse_page.dart';
+import 'package:simple_live_app/modules/sync/local_sync/local_sync_controller.dart';
+import 'package:simple_live_app/modules/sync/local_sync/local_sync_page.dart';
+import 'package:simple_live_app/modules/mine/account/account_controller.dart';
+import 'package:simple_live_app/modules/mine/account/account_page.dart';
+import 'package:simple_live_app/modules/mine/account/bilibili/qr_login_controller.dart';
+import 'package:simple_live_app/modules/mine/account/bilibili/qr_login_page.dart';
+import 'package:simple_live_app/modules/mine/account/bilibili/web_login_controller.dart';
+import 'package:simple_live_app/modules/mine/account/bilibili/web_login_page.dart';
+import 'package:simple_live_app/modules/settings/appstyle_setting_page.dart';
+import 'package:simple_live_app/modules/settings/auto_exit_settings_page.dart';
+import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
+import 'package:simple_live_app/modules/settings/danmu_shield/danmu_shield_controller.dart';
+import 'package:simple_live_app/modules/settings/danmu_shield/danmu_shield_page.dart';
+import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
+import 'package:simple_live_app/modules/follow_user/follow_user_page.dart';
+import 'package:simple_live_app/modules/mine/history/history_controller.dart';
+import 'package:simple_live_app/modules/mine/history/history_page.dart';
+import 'package:simple_live_app/modules/settings/indexed_settings/indexed_settings_controller.dart';
+import 'package:simple_live_app/modules/settings/indexed_settings/indexed_settings_page.dart';
+import 'package:simple_live_app/modules/settings/other/other_settings_controller.dart';
+import 'package:simple_live_app/modules/settings/other/other_settings_page.dart';
+import 'package:simple_live_app/modules/settings/play_settings_page.dart';
 
 import '../modules/indexed/indexed_page.dart';
 import 'route_path.dart';
@@ -112,7 +116,7 @@ class AppPages {
       name: RoutePath.kSettingsPlay,
       page: () => const PlaySettingsPage(),
     ),
-    //播放设置
+    //自动关闭
     GetPage(
       name: RoutePath.kSettingsAutoExit,
       page: () => const AutoExitSettingsPage(),
@@ -120,9 +124,9 @@ class AppPages {
     //工具箱
     GetPage(
       name: RoutePath.kTools,
-      page: () => const ToolBoxPage(),
+      page: () => const ParsePage(),
       bindings: [
-        BindingsBuilder.put(() => ToolBoxController()),
+        BindingsBuilder.put(() => ParseController()),
       ],
     ),
     //关键词屏蔽
@@ -169,8 +173,17 @@ class AppPages {
     GetPage(
       name: RoutePath.kSync,
       page: () => const SyncPage(),
+    ),
+    // 本地同步
+    GetPage(
+      name: RoutePath.kLocalSync,
+      page: () => const LocalSyncPage(),
       bindings: [
-        BindingsBuilder.put(() => SyncController()),
+        BindingsBuilder.put(
+          () => LocalSyncController(
+            Get.arguments ?? "",
+          ),
+        ),
       ],
     ),
     //扫码
@@ -183,7 +196,7 @@ class AppPages {
     ),
     //同步设备
     GetPage(
-      name: RoutePath.kSyncDevice,
+      name: RoutePath.kLocalSyncDevice,
       page: () => const SyncDevicePage(),
       bindings: [
         BindingsBuilder.put(
@@ -194,6 +207,16 @@ class AppPages {
         ),
       ],
     ),
+    //远程同步-房间
+    GetPage(
+      name: RoutePath.kRemoteSyncRoom,
+      page: () => const RemoteSyncRoomPage(),
+      bindings: [
+        BindingsBuilder.put(
+          () => RemoteSyncRoomController(Get.arguments ?? ""),
+        ),
+      ],
+    ),
     //其他设置
     GetPage(
       name: RoutePath.kSettingsOther,
@@ -201,6 +224,11 @@ class AppPages {
       bindings: [
         BindingsBuilder.put(() => OtherSettingsController()),
       ],
+    ),
+    //关注设置
+    GetPage(
+      name: RoutePath.kSettingsFollow,
+      page: () => const FollowSettingsPage(),
     ),
   ];
 }

@@ -1,36 +1,24 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
+// ignore_for_file: invalid_use_of_protected_member
 
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'dart:async';
 import 'package:get/get.dart';
-import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
-import 'package:simple_live_app/app/log.dart';
-import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/services/db_service.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:simple_live_app/services/follow_service.dart';
 
 class FollowUserController extends BasePageController<FollowUser> {
-  StreamSubscription<dynamic>? subscription;
-  StreamSubscription<dynamic>? subscriptionIndexedUpdate;
-
-  RxList<FollowUser> allList = RxList<FollowUser>();
+  StreamSubscription<dynamic>? onUpdatedIndexedStream;
+  StreamSubscription<dynamic>? onUpdatedListStream;
 
   /// 0:全部 1:直播中 2:未直播
   var filterMode = 0.obs;
 
   @override
   void onInit() {
-    subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
-      refreshData();
-    });
-    subscriptionIndexedUpdate = EventBus.instance.listen(
+    onUpdatedIndexedStream = EventBus.instance.listen(
       EventBus.kBottomNavigationBarClicked,
       (index) {
         if (index == 1) {
@@ -38,63 +26,46 @@ class FollowUserController extends BasePageController<FollowUser> {
         }
       },
     );
-    if (allList.isEmpty) {
-      refreshData();
-    }
+    onUpdatedListStream =
+        FollowService.instance.updatedListStream.listen((event) {
+      filterData();
+    });
     super.onInit();
   }
 
-  var updatedCount = 0;
-  var updating = false.obs;
   @override
-  Future<List<FollowUser>> getData(int page, int pageSize) {
+  Future refreshData() async {
+    await FollowService.instance.loadData();
+    super.refreshData();
+  }
+
+  @override
+  Future<List<FollowUser>> getData(int page, int pageSize) async {
     if (page > 1) {
       return Future.value([]);
     }
-    var list = DBService.instance.getFollowList();
-    updatedCount = 0;
-    updating.value = true;
-    for (var item in list) {
-      updateLiveStatus(item);
+    if (filterMode.value == 0) {
+      return FollowService.instance.followList.value;
+    } else if (filterMode.value == 1) {
+      return FollowService.instance.liveList.value;
+    } else {
+      return FollowService.instance.notLiveList.value;
     }
-    if (list.isEmpty) {
-      updating.value = false;
-    }
-    allList.assignAll(list);
-    return Future.value(list);
   }
 
   void filterData() {
     if (filterMode.value == 0) {
-      list.assignAll(allList);
-      list.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+      list.assignAll(FollowService.instance.followList.value);
     } else if (filterMode.value == 1) {
-      list.assignAll(allList.where((x) => x.liveStatus.value == 2));
+      list.assignAll(FollowService.instance.liveList.value);
     } else if (filterMode.value == 2) {
-      list.assignAll(allList.where((x) => x.liveStatus.value == 1));
+      list.assignAll(FollowService.instance.notLiveList.value);
     }
-    allList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
   }
 
   void setFilterMode(int mode) {
     filterMode.value = mode;
     filterData();
-  }
-
-  void updateLiveStatus(FollowUser item) async {
-    try {
-      var site = Sites.allSites[item.siteId]!;
-      item.liveStatus.value =
-          (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
-    } catch (e) {
-      Log.logPrint(e);
-    } finally {
-      updatedCount++;
-      if (updatedCount >= list.length) {
-        filterData();
-        updating.value = false;
-      }
-    }
   }
 
   void removeItem(FollowUser item) async {
@@ -109,180 +80,7 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   @override
   void onClose() {
-    subscription?.cancel();
-    subscriptionIndexedUpdate?.cancel();
+    onUpdatedIndexedStream?.cancel();
     super.onClose();
-  }
-
-  void exportFile() async {
-    if (allList.isEmpty) {
-      SmartDialog.showToast("列表为空");
-      return;
-    }
-
-    try {
-      var status = await Utils.checkStorgePermission();
-      if (!status) {
-        SmartDialog.showToast("无权限");
-        return;
-      }
-
-      var dir = "";
-      if (Platform.isIOS) {
-        dir = (await getApplicationDocumentsDirectory()).path;
-      } else {
-        dir = await FilePicker.platform.getDirectoryPath() ?? "";
-      }
-
-      if (dir.isEmpty) {
-        return;
-      }
-      var jsonFile = File(
-          '$dir/SimpleLive_${DateTime.now().millisecondsSinceEpoch ~/ 1000}.json');
-      var jsonText = generateJson();
-      await jsonFile.writeAsString(jsonText);
-      SmartDialog.showToast("已导出关注列表");
-    } catch (e) {
-      Log.logPrint(e);
-      SmartDialog.showToast("导出失败：$e");
-    }
-  }
-
-  void inputFile() async {
-    try {
-      var status = await Utils.checkStorgePermission();
-      if (!status) {
-        SmartDialog.showToast("无权限");
-        return;
-      }
-      var file = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-      if (file == null) {
-        return;
-      }
-      var jsonFile = File(file.files.single.path!);
-      await inputJson(await jsonFile.readAsString());
-      SmartDialog.showToast("导入成功");
-    } catch (e) {
-      Log.logPrint(e);
-      SmartDialog.showToast("导入失败:$e");
-    } finally {
-      refreshData();
-    }
-  }
-
-  void exportText() {
-    if (allList.isEmpty) {
-      SmartDialog.showToast("列表为空");
-      return;
-    }
-    var content = generateJson();
-    Get.dialog(
-      AlertDialog(
-        title: const Text("导出为文本"),
-        content: TextField(
-          controller: TextEditingController(text: content),
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-          minLines: 5,
-          maxLines: 8,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-            },
-            child: const Text("关闭"),
-          ),
-          TextButton(
-            onPressed: () {
-              Utils.copyToClipboard(content);
-              Get.back();
-            },
-            child: const Text("复制"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void inputText() async {
-    final TextEditingController textController = TextEditingController();
-    await Get.dialog(
-      AlertDialog(
-        title: const Text("从文本导入"),
-        content: TextField(
-          controller: textController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: "请输入内容",
-          ),
-          minLines: 5,
-          maxLines: 8,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-            },
-            child: const Text("关闭"),
-          ),
-          TextButton(
-            onPressed: () async {
-              var content = await Utils.getClipboard();
-              if (content != null) {
-                textController.text = content;
-              }
-            },
-            child: const Text("粘贴"),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (textController.text.isEmpty) {
-                SmartDialog.showToast("内容为空");
-                return;
-              }
-              try {
-                await inputJson(textController.text);
-                SmartDialog.showToast("导入成功");
-                Get.back();
-                refreshData();
-              } catch (e) {
-                SmartDialog.showToast("导入失败，请检查内容是否正确");
-              }
-            },
-            child: const Text("导入"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String generateJson() {
-    var data = allList
-        .map(
-          (item) => {
-            "siteId": item.siteId,
-            "id": item.id,
-            "roomId": item.roomId,
-            "userName": item.userName,
-            "face": item.face,
-            "addTime": item.addTime.toString(),
-          },
-        )
-        .toList();
-    return jsonEncode(data);
-  }
-
-  Future inputJson(String content) async {
-    var data = jsonDecode(content);
-
-    for (var item in data) {
-      var user = FollowUser.fromJson(item);
-      await DBService.instance.followBox.put(user.id, user);
-    }
   }
 }

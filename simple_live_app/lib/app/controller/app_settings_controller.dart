@@ -126,6 +126,15 @@ class AppSettingsController extends GetxController {
       Platform.isAndroid ? "auto-safe" : "auto",
     );
 
+    autoUpdateFollowEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoUpdateFollowEnable, true);
+
+    autoUpdateFollowDuration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kAutoUpdateFollowEnable, 10);
+
+    updateFollowThreadCount.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
+
     initSiteSort();
     initHomeSort();
     super.onInit();
@@ -468,5 +477,26 @@ class AppSettingsController extends GetxController {
     videoHardwareDecoder.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kVideoHardwareDecoder, e);
+  }
+
+  var autoUpdateFollowEnable = false.obs;
+  void setAutoUpdateFollowEnable(bool e) {
+    autoUpdateFollowEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoUpdateFollowEnable, e);
+  }
+
+  var autoUpdateFollowDuration = 10.obs;
+  void setAutoUpdateFollowDuration(int e) {
+    autoUpdateFollowDuration.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAutoUpdateFollowEnable, e);
+  }
+
+  var updateFollowThreadCount = 4.obs;
+  void setUpdateFollowThreadCount(int e) {
+    updateFollowThreadCount.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kUpdateFollowThreadCount, e);
   }
 }

@@ -132,6 +132,15 @@ class LocalStorageService extends GetxService {
   /// 视频硬件解码器
   static const String kVideoHardwareDecoder = "VideoHardwareDecoder";
 
+  /// 开启自动更新关注
+  static const String kAutoUpdateFollowEnable = "AutoUpdateFollowEnable";
+
+  /// 定时自动更新关注间隔（分钟）
+  static const String kUpdateFollowDuration = "AutoUpdateFollowDuration";
+
+  /// 开启多线程更新关注
+  static const String kUpdateFollowThreadCount = "UpdateFollowThreadCount";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

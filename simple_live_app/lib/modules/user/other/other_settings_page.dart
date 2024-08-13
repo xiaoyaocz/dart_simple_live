@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
@@ -23,8 +24,38 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
+          SettingsCard(
+            child: Padding(
+              padding: AppStyle.edgeInsetsA4,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: controller.exportConfig,
+                      label: const Text("导出配置"),
+                      icon: const Icon(Remix.export_line),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: controller.importConfig,
+                      label: const Text("导入配置"),
+                      icon: const Icon(Remix.import_line),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: controller.resetDefaultConfig,
+                      label: const Text("重置配置"),
+                      icon: const Icon(Remix.restart_line),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           Padding(
-            padding: AppStyle.edgeInsetsH12,
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
               "播放器高级设置",
               style: Get.textTheme.titleSmall,

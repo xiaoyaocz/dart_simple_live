@@ -62,6 +62,12 @@ class LocalStorageService extends GetxService {
   /// 弹幕字重
   static const String kDanmuFontWeight = "DanmuFontWeight";
 
+  /// 同步用户名
+  static const String userName = "userName";
+
+  /// 同步url
+  static const String syncUrl = "syncUrl";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 

@@ -44,6 +44,10 @@ class AppSettingsController extends GetxController {
     danmuFontWeight.value = LocalStorageService.instance.getValue(
         LocalStorageService.kDanmuFontWeight, FontWeight.normal.index);
 
+    userName.value = LocalStorageService.instance
+        .getValue(LocalStorageService.userName, "");
+    syncUrl.value = LocalStorageService.instance
+        .getValue(LocalStorageService.syncUrl, "");
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
     chatTextSize.value = LocalStorageService.instance
@@ -230,6 +234,20 @@ class AppSettingsController extends GetxController {
 
     LocalStorageService.instance.setValue(LocalStorageService.kThemeMode, i);
     Get.changeThemeMode(mode);
+  }
+
+  var userName = "".obs;
+  void setUserName(String e) {
+    userName.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.userName, e);
+  }
+
+  var syncUrl = "".obs;
+  void setSyncUrl(String e) {
+    syncUrl.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.syncUrl, e);
   }
 
   var hardwareDecode = true.obs;

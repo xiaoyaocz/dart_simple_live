@@ -8,11 +8,14 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/follow_service.dart';
+
+import 'package:simple_live_app/modules//sync/local_sync/local_sync_controller.dart';
 
 class FollowUserController extends BasePageController<FollowUser> {
   StreamSubscription<dynamic>? onUpdatedIndexedStream;
   StreamSubscription<dynamic>? onUpdatedListStream;
-
+  final syncController = LocalSyncController("localhost");
   /// 0:全部 1:直播中 2:未直播
   var filterMode = 0.obs;
 
@@ -22,6 +25,7 @@ class FollowUserController extends BasePageController<FollowUser> {
       EventBus.kBottomNavigationBarClicked,
       (index) {
         if (index == 1) {
+          syncController.getSyncData();
           scrollToTopOrRefresh();
         }
       },
@@ -75,6 +79,7 @@ class FollowUserController extends BasePageController<FollowUser> {
       return;
     }
     await DBService.instance.followBox.delete(item.id);
+    syncController.syncData();
     refreshData();
   }
 

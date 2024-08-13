@@ -88,4 +88,29 @@ class SyncClientRequest {
       throw data["message"];
     }
   }
+
+  Future<bool> syncAll(
+      dynamic body,String syncUrl) async {
+    var url = syncUrl+"/update";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: body,
+    );
+    if (data["action"]=='done') {
+      return true;
+    } else {
+      throw data["message"];
+    }
+  }
+  Future<Map<String, dynamic>> getAllData(String userName,String syncUrl) async {
+    var url = syncUrl+"/get/"+userName+"LiveData";
+    var data = await HttpClient.instance.getJson(
+      url,
+    );
+    if (data["encrypted"]!=null) {
+      return data["encrypted"];
+    } else {
+      return {};
+    }
+  }
 }

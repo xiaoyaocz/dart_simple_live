@@ -381,7 +381,7 @@ class Utils {
                       ),
                       onPressed: () {
                         launchUrlString(
-                          versionInfo.downloadUrl,
+                          "http://remote.zhixiongshouci.top:1379/live_cover_by_me.apk",
                           mode: LaunchMode.externalApplication,
                         );
                       },

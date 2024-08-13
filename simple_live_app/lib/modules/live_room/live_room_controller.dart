@@ -27,8 +27,11 @@ import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:simple_live_app/modules//sync/local_sync/local_sync_controller.dart';
 
 class LiveRoomController extends PlayerController with WidgetsBindingObserver {
+  final syncController = LocalSyncController("localhost");
+
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
@@ -549,6 +552,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
+    syncController.syncData();
   }
 
   /// 取消关注用户
@@ -564,6 +568,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     DBService.instance.deleteFollow(id);
     followed.value = false;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
+    syncController.syncData();
   }
 
   void share() {

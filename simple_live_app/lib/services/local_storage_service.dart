@@ -141,6 +141,11 @@ class LocalStorageService extends GetxService {
   /// 开启多线程更新关注
   static const String kUpdateFollowThreadCount = "UpdateFollowThreadCount";
 
+  /// webdav信息
+  static const String kWebdavAct = "WebdavAct";
+  static const String kWebdavPsd = "WebdavPsd";
+  static const String kWebdavLink = "WebdavLink";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

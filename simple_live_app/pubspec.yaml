@@ -85,6 +85,7 @@ dependencies:
     sdk: flutter
   flutter_localizations: 
     sdk: flutter
+  http: ^1.2.2
 
 
 dependency_overrides: 

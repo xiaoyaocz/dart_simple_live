@@ -112,6 +112,28 @@ class SyncPage extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "WebDAV同步",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text("WebDAV同步"),
+                  subtitle: const Text("登录WebDAV来同步数据"),
+                  leading: const Icon(Remix.device_line),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kSyncWebDav);
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

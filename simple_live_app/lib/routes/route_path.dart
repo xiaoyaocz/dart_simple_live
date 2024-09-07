@@ -74,4 +74,7 @@ class RoutePath {
 
   /// 测试页面
   static const kTest = "/test";
+
+  /// webdav
+  static const kSyncWebDav = "/sync/webdav";
 }

@@ -10,6 +10,8 @@ import 'package:simple_live_app/modules/settings/follow_settings_page.dart';
 import 'package:simple_live_app/modules/sync/sync_page.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_controller.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/webdav_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/webdav_controller.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_controller.dart';
@@ -229,6 +231,14 @@ class AppPages {
     GetPage(
       name: RoutePath.kSettingsFollow,
       page: () => const FollowSettingsPage(),
+    ),
+    // webdav
+    GetPage(
+      name: RoutePath.kSyncWebDav,
+      page: () => const WebdavSyncPage(),
+      bindings: [
+        BindingsBuilder.put(() => WebDAVController()),
+      ],
     ),
   ];
 }

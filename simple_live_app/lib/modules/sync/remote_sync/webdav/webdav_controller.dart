@@ -25,26 +25,26 @@ class WebDAVController extends BaseController {
     return overlay;
   }
 
-  var webdavAct = "".obs;
+  var webdavAct = "";
   var webdavPsd = "";
-  var webdavLink = "";
+  var webdavLink = "".obs;
 
   @override
   void onInit() {
-    webdavAct.value = LocalStorageService.instance
+    webdavAct = LocalStorageService.instance
         .getValue(LocalStorageService.kWebdavAct, "");
     webdavPsd = LocalStorageService.instance
         .getValue(LocalStorageService.kWebdavPsd, "");
-    webdavLink = LocalStorageService.instance
+    webdavLink.value = LocalStorageService.instance
         .getValue(LocalStorageService.kWebdavLink, "");
-    SmartDialog.showToast("账号信息：${webdavAct.value}$webdavLink");
+    SmartDialog.showToast("账号信息：$webdavAct$webdavLink");
     super.onInit();
   }
 
   void setActInfo(String act) {
-    webdavAct.value = act;
+    webdavAct = act;
     LocalStorageService.instance
-        .setValue(LocalStorageService.kWebdavAct, webdavAct.value);
+        .setValue(LocalStorageService.kWebdavAct, webdavAct);
   }
 
   void setPsdInfo(String psd) {
@@ -54,21 +54,16 @@ class WebDAVController extends BaseController {
   }
 
   void setLinkInfo(String link) {
-    webdavLink = link;
+    webdavLink.value = link;
     LocalStorageService.instance
-        .setValue(LocalStorageService.kWebdavLink, webdavLink);
+        .setValue(LocalStorageService.kWebdavLink, webdavLink.value);
   }
 
   void deleteWebDAVAccount() {
-    webdavAct.value = "";
-    webdavPsd = "";
-    webdavLink = "";
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kWebdavAct, webdavAct);
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kWebdavPsd, webdavPsd);
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kWebdavLink, webdavLink);
+    webdavLink.value = "";
+    LocalStorageService.instance.setValue(LocalStorageService.kWebdavAct, "");
+    LocalStorageService.instance.setValue(LocalStorageService.kWebdavPsd, "");
+    LocalStorageService.instance.setValue(LocalStorageService.kWebdavLink, "");
   }
 
   void sendFavoritesToWebDAV() async {
@@ -80,7 +75,7 @@ class WebDAVController extends BaseController {
     // 同步
     var users = DBService.instance.getFollowList();
     var data = json.encode(users.map((e) => e.toJson()).toList());
-    var helper = WebDavHelper(webdavLink, webdavAct.value, webdavPsd);
+    var helper = WebDavHelper(webdavLink.value, webdavAct, webdavPsd);
     await helper.checkAndCreateFolder();
     var follow = {
       "follow": data,
@@ -98,9 +93,9 @@ class WebDAVController extends BaseController {
       SmartDialog.showToast("请先登录WebDAV账号");
       return;
     }
-    SmartDialog.showToast("开始同步$webdavLink${webdavAct.value}");
+    SmartDialog.showToast("开始同步${webdavLink.value}$webdavAct");
     //  同步
-    var helper = WebDavHelper(webdavLink, webdavAct.value, webdavPsd);
+    var helper = WebDavHelper(webdavLink.value, webdavAct, webdavPsd);
     var jsonData = await helper.downloadFileToTempAndReadJson();
     if (jsonData == null) {
       SmartDialog.showToast("同步失败");

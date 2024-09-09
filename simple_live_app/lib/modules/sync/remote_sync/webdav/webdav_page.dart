@@ -24,18 +24,18 @@ class WebdavSyncPage extends GetView<WebDAVController> {
               children: [
                 Obx(
                   () => ListTile(
-                    title: controller.webdavAct.isNotEmpty
+                    title: controller.webdavLink.isNotEmpty
                         ? const Text("已登录")
                         : const Text("点击登录"),
-                    leading: controller.webdavAct.isNotEmpty
+                    leading: controller.webdavLink.isNotEmpty
                         ? const Icon(Icons.logout)
                         : const Icon(Icons.login),
-                    subtitle: controller.webdavAct.isNotEmpty
+                    subtitle: controller.webdavLink.isNotEmpty
                         ? const Text("点击注销")
                         : const Text("登录后可以同步关注列表"),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
-                      if (controller.webdavAct.isNotEmpty) {
+                      if (controller.webdavLink.isNotEmpty) {
                         var result = await Utils.showAlertDialog(
                             "确定要注销已登录的WebDAV账号吗？下次需要重新登录",
                             title: "退出登录");
@@ -97,6 +97,20 @@ class WebdavSyncPage extends GetView<WebDAVController> {
                   },
                 ),
               ],
+            ),
+          ),
+          const Padding(
+            padding: AppStyle.edgeInsetsA12,
+            child: Text(
+              "WebDAV：基于Web的分布式编写和版本控制，简单的说类似百度网盘，数据全部存储在自己可控的网盘中，是大多数开源笔记，照片类应用所采用的云存储方式。",
+              textAlign: TextAlign.left,
+            ),
+          ),
+          const Padding(
+            padding: AppStyle.edgeInsetsA12,
+            child: Text(
+              "推荐使用坚果云，登录后点击右上角的“账户信息”-“安全选项”-“第三方应用管理”，然后使用创建的授权信息进行登录。",
+              textAlign: TextAlign.left,
             ),
           ),
         ],

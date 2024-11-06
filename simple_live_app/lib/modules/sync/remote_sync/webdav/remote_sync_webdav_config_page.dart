@@ -81,7 +81,7 @@ class _RemoteSyncWebDAVConfigPageState extends State<RemoteSyncWebDAVConfigPage>
                       size: 20,
                     ),
                     onTap: () => afterFirstFrame(() {
-                      _urlController.clear();
+                      _userNameController.clear();
                     }),
                   ),
                 ),

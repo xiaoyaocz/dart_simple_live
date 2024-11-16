@@ -4,6 +4,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/requests/sync_client_request.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
@@ -27,13 +28,50 @@ class SyncDataController extends BaseController {
         'bilibiliData': bilibili,
       };
       var params = {
-        "uuid": userName+"LiveData",
-        "encrypted": jsonData
+        "userName": userName,
+        "dataInfo": jsonData
       };
       var parmsStr = json.encode(params);
       // SmartDialog.showToast("已同步");
       await request.syncAll(parmsStr,syncUrl);
     } catch (e) {
+      SmartDialog.showToast("同步失败:$e");
+      Log.logPrint(e);
+    } finally {
+      SmartDialog.dismiss();
+    }
+  }
+
+  void addUserData(FollowUser user) async{
+    try{
+      var userName = AppSettingsController.instance.userName.value;
+      var syncUrl = AppSettingsController.instance.syncUrl.value;
+      Map<String, dynamic> param = user.toJson();
+      param['userNameSync'] = userName;
+      var parmsStr = json.encode(param);
+      await request.addUserData(parmsStr,syncUrl);
+    }catch(e){
+      SmartDialog.showToast("同步失败:$e");
+      Log.logPrint(e);
+    } finally {
+      SmartDialog.dismiss();
+    }
+
+
+  }
+
+  void delUserData(String id, String roomId) async{
+    try{
+      var userName = AppSettingsController.instance.userName.value;
+      var syncUrl = AppSettingsController.instance.syncUrl.value;
+      var param = {
+        "roomId":roomId,
+        "siteId":id,
+        "userNameSync":userName
+      };
+      var parmsStr = json.encode(param);
+      await request.delUserData(parmsStr,syncUrl);
+    }catch(e){
       SmartDialog.showToast("同步失败:$e");
       Log.logPrint(e);
     } finally {

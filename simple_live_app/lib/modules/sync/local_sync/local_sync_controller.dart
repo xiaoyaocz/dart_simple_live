@@ -8,6 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/requests/sync_client_request.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -214,4 +215,13 @@ class LocalSyncController extends BaseController {
       ),
     );
   }
+
+  void addUserData(FollowUser user) async{
+    syncDataController.addUserData(user);
+  }
+
+  void delUserData(String id, String roomId) async{
+    syncDataController.delUserData(id,roomId);
+  }
+
 }

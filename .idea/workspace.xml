@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="65d1deb0-c55d-48c2-928e-7e1dac5a62f5" name="更改" comment="更改">
+      <change beforePath="$PROJECT_DIR$/simple_live_app/android/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/android/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_live_app/android/settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/android/settings.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_live_app/lib/modules/follow_user/follow_user_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/lib/modules/follow_user/follow_user_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_live_app/lib/modules/live_room/live_room_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/lib/modules/live_room/live_room_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_live_app/lib/modules/sync/local_sync/local_sync_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/lib/modules/sync/local_sync/local_sync_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_live_app/lib/modules/sync/remote_sync/sync_data_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/lib/modules/sync/remote_sync/sync_data_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_live_app/lib/requests/sync_client_request.dart" beforeDir="false" afterPath="$PROJECT_DIR$/simple_live_app/lib/requests/sync_client_request.dart" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="DockDockBuild.Settings">
+    <option name="codePath" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <projects_view>
+          <tree_state>
+            <expand />
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="2hRESf6B2hX1GcC5Z98dv64ZS0E" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Flutter.main.dart.executor": "Debug",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "android.gradle.sync.needed": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "my__master",
+    "io.flutter.reload.alreadyRun": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/project/dart_simple_live/simple_live_app",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "AndroidSdkUpdater",
+    "show.migrate.to.gradle.popup": "false",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\project\dart_simple_live\simple_live_app\android\app" />
+      <recent name="D:\project\dart_simple_live\simple_live_app\lib\modules\sync\device" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\project\dart_simple_live\simple_live_app\android" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="main.dart" type="FlutterRunConfigurationType" factoryName="Flutter" temporary="true" nameIsGenerated="true">
+      <option name="filePath" value="$PROJECT_DIR$/simple_live_app/lib/main.dart" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9f38398b9061-39b83d9b5494-intellij.indexing.shared.core-IU-241.17011.79" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-IU-241.17011.79" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="65d1deb0-c55d-48c2-928e-7e1dac5a62f5" name="更改" comment="" />
+      <created>1717548491561</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1717548491561</updated>
+      <workItem from="1717548492665" duration="390000" />
+      <workItem from="1717548890700" duration="8735000" />
+      <workItem from="1717566879371" duration="130000" />
+      <workItem from="1719135288147" duration="8000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="my_desktop_dev" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>

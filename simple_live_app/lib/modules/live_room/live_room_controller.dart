@@ -540,19 +540,20 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
     var id = "${site.id}_$roomId";
+    var user = FollowUser(
+      id: id,
+      roomId: roomId,
+      siteId: site.id,
+      userName: detail.value?.userName ?? "",
+      face: detail.value?.userAvatar ?? "",
+      addTime: DateTime.now(),
+    );
     DBService.instance.addFollow(
-      FollowUser(
-        id: id,
-        roomId: roomId,
-        siteId: site.id,
-        userName: detail.value?.userName ?? "",
-        face: detail.value?.userAvatar ?? "",
-        addTime: DateTime.now(),
-      ),
+      user,
     );
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
-    syncController.syncData();
+    syncController.addUserData(user);
   }
 
   /// 取消关注用户
@@ -568,7 +569,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     DBService.instance.deleteFollow(id);
     followed.value = false;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
-    syncController.syncData();
+    syncController.delUserData(site.id,roomId);
   }
 
   void share() {

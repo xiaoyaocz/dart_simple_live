@@ -91,7 +91,7 @@ class SyncClientRequest {
 
   Future<bool> syncAll(
       dynamic body,String syncUrl) async {
-    var url = syncUrl+"/update";
+    var url = syncUrl+"/simpleLive/updateAll";
     var data = await HttpClient.instance.postJson(
       url,
       data: body,
@@ -103,14 +103,33 @@ class SyncClientRequest {
     }
   }
   Future<Map<String, dynamic>> getAllData(String userName,String syncUrl) async {
-    var url = syncUrl+"/get/"+userName+"LiveData";
-    var data = await HttpClient.instance.getJson(
+    var url = syncUrl+"/simpleLive/getAll";
+    var data = await HttpClient.instance.postJson(
       url,
+      data: {
+        "userName":userName
+      },
     );
-    if (data["encrypted"]!=null) {
-      return data["encrypted"];
+    if (data!=null) {
+      return data;
     } else {
       return {};
     }
+  }
+
+  Future<void> addUserData(String parmsStr, String syncUrl) async{
+    var url = syncUrl+"/simpleLive/addUserData";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: parmsStr,
+    );
+  }
+
+  Future<void> delUserData(String parmsStr, String syncUrl) async{
+    var url = syncUrl+"/simpleLive/delUserData";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: parmsStr,
+    );
   }
 }

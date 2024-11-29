@@ -260,6 +260,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           },
           aspectRatio: aspectRatio,
           fit: boxFit,
+          // 自己实现
+          wakelock: false,
         ),
         Obx(
           () => Visibility(

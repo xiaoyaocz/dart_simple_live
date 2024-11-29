@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.7.3+10703
+version: 1.7.4+10704
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -74,28 +74,6 @@ dependencies:
   flutter_localizations: 
     sdk: flutter
 
-
-dependency_overrides: 
-  media_kit:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit
-  media_kit_video:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit_video
-  media_kit_libs_video:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./libs/universal/media_kit_libs_video
-  media_kit_native_event_loop:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit_native_event_loop
 
 dev_dependencies: 
   flutter_lints: ^2.0.0

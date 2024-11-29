@@ -219,7 +219,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
 
     // 屏幕常亮
-    WakelockPlus.enable();
+    //WakelockPlus.enable();
 
     // 开始隐藏计时
     resetHideControlsTimer();
@@ -650,6 +650,7 @@ class PlayerController extends BaseController
   StreamSubscription? _widthSubscription;
   StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
+  StreamSubscription? _playingSubscription;
 
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
@@ -661,6 +662,13 @@ class PlayerController extends BaseController
       }
       //SmartDialog.showToast(event);
       mediaError(event);
+    });
+
+    _playingSubscription = player.stream.playing.listen((event) {
+      if (event) {
+        WakelockPlus.enable();
+        Log.d("Playing");
+      }
     });
 
     _completedSubscription = player.stream.completed.listen((event) {
@@ -692,11 +700,16 @@ class PlayerController extends BaseController
     _heightSubscription?.cancel();
     _logSubscription?.cancel();
     _pipSubscription?.cancel();
+    _playingSubscription?.cancel();
   }
 
-  void mediaEnd() {}
+  void mediaEnd() {
+    WakelockPlus.disable();
+  }
 
-  void mediaError(String error) {}
+  void mediaError(String error) {
+    WakelockPlus.disable();
+  }
 
   void showDebugInfo() {
     Utils.showBottomSheet(

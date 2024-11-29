@@ -98,6 +98,17 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     },
                   ),
                 ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    title: "使用HTTPS链接",
+                    subtitle: "将http链接替换为https",
+                    value: controller.playerForceHttps.value,
+                    onChanged: (e) {
+                      controller.setPlayerForceHttps(e);
+                    },
+                  ),
+                ),
               ],
             ),
           ),

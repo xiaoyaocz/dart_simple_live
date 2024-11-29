@@ -422,14 +422,19 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       };
     }
 
+    var playurl = playUrls[currentLineIndex];
+    if (AppSettingsController.instance.playerForceHttps.value) {
+      playurl = playurl.replaceAll("http://", "https://");
+    }
+
     player.open(
       Media(
-        playUrls[currentLineIndex],
+        playurl,
         httpHeaders: headers,
       ),
     );
 
-    Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");
+    Log.d("播放链接\r\n：$playurl");
   }
 
   @override

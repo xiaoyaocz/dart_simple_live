@@ -483,8 +483,8 @@ class HuyaSite implements LiveSite {
     // 通过ChatGPT转换的Dart代码
     var query = Uri.splitQueryString(anticode);
 
-    query["t"] = "102";
-    query["ctype"] = "tars_mp";
+    query["t"] = "103";
+    query["ctype"] = "tars_mobile";
 
     final wsTime = (DateTime.now().millisecondsSinceEpoch ~/ 1000 + 21600)
         .toRadixString(16);
@@ -508,14 +508,18 @@ class HuyaSite implements LiveSite {
       "ctype": query["ctype"]!,
       "ver": "1",
       "fs": query["fs"]!,
-      "sphdcdn": query["sphdcdn"] ?? "",
-      "sphdDC": query["sphdDC"] ?? "",
-      "sphd": query["sphd"] ?? "",
-      "exsphd": query["exsphd"] ?? "",
+      // "sphdcdn": query["sphdcdn"] ?? "",
+      // "sphdDC": query["sphdDC"] ?? "",
+      // "sphd": query["sphd"] ?? "",
+      // "exsphd": query["exsphd"] ?? "",
+      "dMod": "mseh-0",
+      "sdkPcdn": "1_1",
       "uid": uid,
       "uuid": getUUid(),
       "t": query["t"]!,
-      "sv": "2401310322"
+      "sv": "202411221719",
+      "sdk_sid": "1732862566708",
+      "a_block": "0"
     }).query;
   }
 

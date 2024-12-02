@@ -1,7 +1,7 @@
 {
-    "version": "1.7.3",
-    "version_num": 10703,
-    "version_desc": "- 修复斗鱼分类无法加载 #485\n- 修复哔哩哔哩直播加载失败 #489\n- 支持远程同步数据\n- 支持导入导出应用设置\n- 支持手动输入Cookie登录哔哩哔哩 #463\n- 支持定时自动更新关注列表 #453",
+    "version": "1.7.5",
+    "version_num": 10705,
+    "version_desc": "- 修复虎牙一起看播放中断 #543",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

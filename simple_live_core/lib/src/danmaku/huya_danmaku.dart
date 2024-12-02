@@ -1,14 +1,12 @@
-// ignore_for_file: no_leading_underscores_for_local_identifiers
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
-import 'package:dart_tars_protocol/tars_input_stream.dart';
-import 'package:dart_tars_protocol/tars_output_stream.dart';
-import 'package:dart_tars_protocol/tars_struct.dart';
+import 'package:simple_live_core/src/model/tars/huya_danmaku.dart';
+import 'package:tars_dart/tars/codec/tars_input_stream.dart';
+import 'package:tars_dart/tars/codec/tars_output_stream.dart';
 
 class HuyaDanmakuArgs {
   final int ayyuid;
@@ -159,86 +157,4 @@ class HuyaDanmaku implements LiveDanmaku {
       CoreLog.error(e);
     }
   }
-}
-
-class HYPushMessage extends TarsStruct {
-  int pushType = 0;
-  int uri = 0;
-  List<int> msg = <int>[];
-  int protocolType = 0;
-
-  @override
-  void readFrom(TarsInputStream _is) {
-    pushType = _is.read(pushType, 0, false);
-    uri = _is.read(uri, 1, false);
-    msg = _is.readBytes(2, false);
-    protocolType = _is.read(protocolType, 3, false);
-  }
-
-  @override
-  void display(StringBuffer sb, int level) {}
-
-  @override
-  void writeTo(TarsOutputStream _os) {}
-}
-
-class HYSender extends TarsStruct {
-  int uid = 0;
-  int lMid = 0;
-  String nickName = "";
-  int gender = 0;
-
-  @override
-  void readFrom(TarsInputStream _is) {
-    uid = _is.read(uid, 0, false);
-    lMid = _is.read(lMid, 0, false);
-    nickName = _is.read(nickName, 2, false);
-    gender = _is.read(gender, 3, false);
-  }
-
-  @override
-  void display(StringBuffer sb, int level) {}
-
-  @override
-  void writeTo(TarsOutputStream _os) {}
-}
-
-class HYMessage extends TarsStruct {
-  HYSender userInfo = HYSender();
-  String content = "";
-  HYBulletFormat bulletFormat = HYBulletFormat();
-
-  @override
-  void readFrom(TarsInputStream _is) {
-    userInfo = _is.readTarsStruct(userInfo, 0, false) as HYSender;
-    content = _is.read(content, 3, false);
-    bulletFormat = _is.readTarsStruct(bulletFormat, 6, false) as HYBulletFormat;
-  }
-
-  @override
-  void display(StringBuffer sb, int level) {}
-
-  @override
-  void writeTo(TarsOutputStream _os) {}
-}
-
-class HYBulletFormat extends TarsStruct {
-  int fontColor = 0;
-  int fontSize = 4;
-  int textSpeed = 0;
-  int transitionType = 1;
-
-  @override
-  void readFrom(TarsInputStream _is) {
-    fontColor = _is.read(fontColor, 0, false);
-    fontSize = _is.read(fontSize, 1, false);
-    textSpeed = _is.read(textSpeed, 2, false);
-    transitionType = _is.read(transitionType, 3, false);
-  }
-
-  @override
-  void display(StringBuffer sb, int level) {}
-
-  @override
-  void writeTo(TarsOutputStream _os) {}
 }

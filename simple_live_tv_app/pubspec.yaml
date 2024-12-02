@@ -1,7 +1,7 @@
 name: simple_live_tv_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 1.1.9+10109
+version: 1.2.2+10202
 
 environment:
   sdk: '>=3.1.2 <4.0.0'
@@ -50,45 +50,13 @@ dependencies:
   wakelock_plus: ^1.2.5 #屏幕常亮，media_kit中自带，但似乎不生效
   
   # 视频播放
-  media_kit:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit
-  media_kit_video:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit_video
-  media_kit_libs_video:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./libs/universal/media_kit_libs_video
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.5
 
 dependency_overrides: 
   fading_edge_scrollview: ^4.1.1
   wakelock_plus: ^1.2.5
-  media_kit:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit
-  media_kit_video:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit_video
-  media_kit_libs_video:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./libs/universal/media_kit_libs_video
-  media_kit_native_event_loop:
-    git:
-      url: https://github.com/media-kit/media-kit.git
-      ref: main
-      path: ./media_kit_native_event_loop
 
 dev_dependencies:
   flutter_test:

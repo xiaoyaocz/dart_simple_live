@@ -77,6 +77,9 @@ class AppSettingsController extends GetxController {
     playerAutoPause.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerAutoPause, false);
 
+    playerForceHttps.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerForceHttps, false);
+
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
 
@@ -498,5 +501,12 @@ class AppSettingsController extends GetxController {
     updateFollowThreadCount.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kUpdateFollowThreadCount, e);
+  }
+
+  var playerForceHttps = false.obs;
+  void setPlayerForceHttps(bool e) {
+    playerForceHttps.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerForceHttps, e);
   }
 }

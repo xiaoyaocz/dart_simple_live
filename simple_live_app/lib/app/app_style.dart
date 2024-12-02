@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -20,6 +22,7 @@ class AppStyle {
   static ThemeData lightTheme = ThemeData(
     colorScheme: AppColors.lightColorScheme,
     useMaterial3: true,
+    fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
     visualDensity: VisualDensity.standard,
     appBarTheme: AppBarTheme(
       //elevation: 0,
@@ -59,6 +62,12 @@ class AppStyle {
   static ThemeData darkTheme = ThemeData.dark().copyWith(
     colorScheme: AppColors.darkColorScheme,
     visualDensity: VisualDensity.standard,
+    textTheme: ThemeData.dark().textTheme.apply(
+          fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+        ),
+    primaryTextTheme: ThemeData().textTheme.apply(
+          fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+        ),
     appBarTheme: AppBarTheme(
       //elevation: 0,
 

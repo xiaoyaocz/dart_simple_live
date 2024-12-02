@@ -1,7 +1,7 @@
 {
-    "version": "1.1.9",
-    "version_num": 10109,
-    "version_desc": "- 修复斗鱼分类无法加载\n- 修复哔哩哔哩直播加载失败\n- 支持定时自动更新关注列表",
+    "version": "1.2.2",
+    "version_num": 10202,
+    "version_desc": "- 修复虎牙播放失败 #557",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

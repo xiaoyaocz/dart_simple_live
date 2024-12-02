@@ -416,24 +416,29 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       };
     } else if (site.id == Constant.kHuya) {
       headers = {
-        "referer": "https://www.huya.com",
-        "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0"
+        //"referer": "https://m.huya.com",
+        "user-agent": "HYSDK(Windows, 20000308)"
       };
+    }
+
+    var playurl = playUrls[currentLineIndex];
+    if (AppSettingsController.instance.playerForceHttps.value) {
+      playurl = playurl.replaceAll("http://", "https://");
     }
 
     player.open(
       Media(
-        playUrls[currentLineIndex],
+        playurl,
         httpHeaders: headers,
       ),
     );
 
-    Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");
+    Log.d("播放链接\r\n：$playurl");
   }
 
   @override
   void mediaEnd() async {
+    super.mediaEnd();
     if (mediaErrorRetryCount < 2) {
       Log.d("播放结束，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {
@@ -460,6 +465,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   int mediaErrorRetryCount = 0;
   @override
   void mediaError(String error) async {
+    super.mediaEnd();
     if (mediaErrorRetryCount < 2) {
       Log.d("播放失败，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {

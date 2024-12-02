@@ -14,10 +14,14 @@ import 'package:simple_live_core/src/model/live_room_detail.dart';
 import 'package:simple_live_core/src/model/live_play_quality.dart';
 import 'package:simple_live_core/src/model/live_category_result.dart';
 import 'package:crypto/crypto.dart';
+import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
+import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
+import 'package:tars_dart/tars/net/base_tars_http.dart';
 
 class HuyaSite implements LiveSite {
   final String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
+  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui");
 
   @override
   String id = "huya";
@@ -141,32 +145,36 @@ class HuyaSite implements LiveSite {
     //var url = getRealUrl(urlData.url);
 
     for (var item in urlData.bitRates) {
-      var urls = <String>[];
-      for (var line in urlData.lines) {
-        var src = line.line;
-        src += "/${line.streamName}";
-        if (line.lineType == HuyaLineType.flv) {
-          //src = src.replaceAll(".m3u8", ".flv");
-          src += ".flv";
-        }
-        if (line.lineType == HuyaLineType.hls) {
-          src += ".m3u8";
-        }
-        var parms = processAnticode(
-          line.lineType == HuyaLineType.flv
-              ? line.flvAntiCode
-              : line.hlsAntiCode,
-          urlData.uid,
-          line.streamName,
-        );
-        src += "?$parms";
-        if (item.bitRate > 0) {
-          src += "&ratio=${item.bitRate}";
-        }
-        urls.add(src);
-      }
+      // var urls = <String>[];
+      // for (var line in urlData.lines) {
+      //   var src = line.line;
+      //   src += "/${line.streamName}";
+      //   if (line.lineType == HuyaLineType.flv) {
+      //     //src = src.replaceAll(".m3u8", ".flv");
+      //     src += ".flv";
+      //   }
+      //   if (line.lineType == HuyaLineType.hls) {
+      //     src += ".m3u8";
+      //   }
+      //   var parms = processAnticode(
+      //     line.lineType == HuyaLineType.flv
+      //         ? line.flvAntiCode
+      //         : line.hlsAntiCode,
+      //     urlData.uid,
+      //     line.streamName,
+      //   );
+      //   src += "?$parms";
+      //   if (item.bitRate > 0) {
+      //     src += "&ratio=${item.bitRate}";
+      //   }
+      //   urls.add(src);
+      // }
+
       qualities.add(LivePlayQuality(
-        data: urls,
+        data: {
+          "urls": urlData.lines,
+          "bitRate": item.bitRate,
+        },
         quality: item.name,
       ));
     }
@@ -178,7 +186,27 @@ class HuyaSite implements LiveSite {
   Future<List<String>> getPlayUrls(
       {required LiveRoomDetail detail,
       required LivePlayQuality quality}) async {
-    return quality.data as List<String>;
+    var ls = <String>[];
+    for (var element in quality.data["urls"]) {
+      var line = element as HuyaLineModel;
+      var url = await getPlayUrl(line, quality.data["bitRate"]);
+      ls.add(url);
+    }
+    return ls;
+  }
+
+  Future<String> getPlayUrl(HuyaLineModel line, int bitRate) async {
+    var req = GetCdnTokenReq();
+    req.cdnType = line.cdnType;
+    req.streamName = line.streamName;
+    var resp =
+        await tupClient.tupRequest("getCdnTokenInfo", req, GetCdnTokenResp());
+    var url =
+        '${line.line}/${resp.streamName}.flv?${resp.flvAntiCode}&codec=264';
+    if (bitRate > 0) {
+      url += "&ratio=$bitRate";
+    }
+    return url;
   }
 
   @override
@@ -239,6 +267,7 @@ class HuyaSite implements LiveSite {
           flvAntiCode: item["sFlvAntiCode"].toString(),
           hlsAntiCode: item["sHlsAntiCode"].toString(),
           streamName: item["sStreamName"].toString(),
+          cdnType: item["sCdnType"].toString(),
         ));
       }
     }
@@ -483,8 +512,8 @@ class HuyaSite implements LiveSite {
     // 通过ChatGPT转换的Dart代码
     var query = Uri.splitQueryString(anticode);
 
-    query["t"] = "102";
-    query["ctype"] = "tars_mp";
+    query["t"] = "103";
+    query["ctype"] = "tars_mobile";
 
     final wsTime = (DateTime.now().millisecondsSinceEpoch ~/ 1000 + 21600)
         .toRadixString(16);
@@ -508,14 +537,18 @@ class HuyaSite implements LiveSite {
       "ctype": query["ctype"]!,
       "ver": "1",
       "fs": query["fs"]!,
-      "sphdcdn": query["sphdcdn"] ?? "",
-      "sphdDC": query["sphdDC"] ?? "",
-      "sphd": query["sphd"] ?? "",
-      "exsphd": query["exsphd"] ?? "",
+      // "sphdcdn": query["sphdcdn"] ?? "",
+      // "sphdDC": query["sphdDC"] ?? "",
+      // "sphd": query["sphd"] ?? "",
+      // "exsphd": query["exsphd"] ?? "",
+      "dMod": "mseh-0",
+      "sdkPcdn": "1_1",
       "uid": uid,
       "uuid": getUUid(),
       "t": query["t"]!,
-      "sv": "2401310322"
+      "sv": "202411221719",
+      "sdk_sid": "1732862566708",
+      "a_block": "0"
     }).query;
   }
 
@@ -547,10 +580,12 @@ enum HuyaLineType {
 
 class HuyaLineModel {
   final String line;
+  final String cdnType;
   final String flvAntiCode;
   final String hlsAntiCode;
   final String streamName;
   final HuyaLineType lineType;
+  int bitRate;
 
   HuyaLineModel({
     required this.line,
@@ -558,6 +593,8 @@ class HuyaLineModel {
     required this.flvAntiCode,
     required this.hlsAntiCode,
     required this.streamName,
+    required this.cdnType,
+    this.bitRate = 0,
   });
 }
 

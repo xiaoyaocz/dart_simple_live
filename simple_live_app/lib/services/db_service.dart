@@ -1,16 +1,50 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
+import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:uuid/uuid.dart';
 
 class DBService extends GetxService {
   static DBService get instance => Get.find<DBService>();
   late Box<History> historyBox;
   late Box<FollowUser> followBox;
+  late Box<FollowUserTag> tagBox;
+  final Uuid uuid = const Uuid();
 
   Future init() async {
     historyBox = await Hive.openBox("History");
     followBox = await Hive.openBox("FollowUser");
+    tagBox = await Hive.openBox("FollowUserTag");
+  }
+
+  bool getFollowTagExist(String id){
+    return tagBox.containsKey(id);
+  }
+
+  List<FollowUserTag> getFollowTagList() {
+    return tagBox.values.toList();
+  }
+
+  Future updateFollowTag(FollowUserTag followTag) async {
+    await tagBox.put(followTag.id, followTag);
+  }
+
+  Future<FollowUserTag> addFollowTag(String tag) async{
+    final String uniqueId = uuid.v4();
+    final followUserTag = FollowUserTag(id: uniqueId, tag: tag, userId: []);
+    await tagBox.put(uniqueId, followUserTag);
+    return followUserTag;
+  }
+
+  Future deleteFollowTag(String id) async {
+    await tagBox.delete(id);
+  }
+
+  FollowUserTag? getFollowTag(String tag){
+    return tagBox.get(tag);
   }
 
   bool getFollowExist(String id) {

@@ -14,13 +14,16 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
+import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
 
 class FollowService extends GetxService {
   StreamSubscription<dynamic>? subscription;
+
   static FollowService get instance => Get.find<FollowService>();
 
   final StreamController _updatedListController = StreamController.broadcast();
+
   Stream get updatedListStream => _updatedListController.stream;
 
   /// 关注用户列表
@@ -31,6 +34,12 @@ class FollowService extends GetxService {
 
   /// 未直播的用户列表
   RxList<FollowUser> notLiveList = RxList<FollowUser>();
+
+  /// 用户自定义的tag
+  RxList<FollowUserTag> followTagList = RxList<FollowUserTag>();
+
+  /// 当前tag的用户列表
+  RxList<FollowUser> curTagFollowList = RxList<FollowUser>();
 
   /// 已经更新状态的数量
   var updatedCount = 0;
@@ -47,6 +56,54 @@ class FollowService extends GetxService {
     });
     initTimer();
     super.onInit();
+  }
+
+  void updateFollowUserTag(FollowUserTag tag){
+    DBService.instance.updateFollowTag(tag);
+    // 查找并修改
+    var index = followTagList.indexWhere((oTag)=>oTag.id == tag.id);
+    followTagList[index] = tag;
+  }
+
+  Future<FollowUserTag> addFollowUserTag(String tag) async{
+    FollowUserTag item = await DBService.instance.addFollowTag(tag);
+    followTagList.add(item);
+    return item;
+  }
+
+  void delFollowUserTag(FollowUserTag tag){
+    followTagList.remove(tag);
+    DBService.instance.deleteFollowTag(tag.id);
+  }
+
+  // 获取用户自定义标签列表
+  void getAllTagList() {
+    var list = DBService.instance.getFollowTagList();
+    followTagList.assignAll(list);
+  }
+
+  void filterDataByTag(FollowUserTag tag) {
+    // 清空curTagFollowList
+    curTagFollowList.clear();
+    // 用一个新的列表来存储需要删除的 userId
+    List<String> toRemove = [];
+    for (var id in tag.userId) {
+      if (followList.any((x) => x.id == id)) {
+        // 找到对应的 followUser 添加到 curTagFollowList
+        curTagFollowList.add(followList.firstWhere((x) => x.id == id));
+      } else {
+        // 标记要删除的 id
+        toRemove.add(id);
+      }
+    }
+    // 在遍历结束后统一移除不在 followList 中的 id
+    tag.userId.removeWhere((id) => toRemove.contains(id));
+    // 更新数据库
+    if (toRemove.isNotEmpty) {
+      DBService.instance.updateFollowTag(tag);
+    }
+    // 标签内排序
+    curTagFollowList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
   }
 
   void initTimer() {
@@ -68,6 +125,7 @@ class FollowService extends GetxService {
 
   Future<void> loadData({bool updateStatus = true}) async {
     var list = DBService.instance.getFollowList();
+    getAllTagList();
     if (list.isEmpty) {
       updating.value = true;
       followList.assignAll(list);

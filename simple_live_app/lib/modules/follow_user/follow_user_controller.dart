@@ -8,7 +8,6 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
-import 'package:simple_live_app/services/follow_service.dart';
 
 import 'package:simple_live_app/modules//sync/local_sync/local_sync_controller.dart';
 

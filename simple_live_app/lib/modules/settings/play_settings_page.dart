@@ -34,7 +34,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               children: [
                 TextField(
                   controller: TextEditingController(text: controller.userName.value),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "同步用户名",
                     hintText: "请输入用户名",
                   ),
@@ -44,7 +44,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                 ),
                 TextField(
                   controller: TextEditingController(text: controller.syncUrl.value),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "同步服务地址",
                     hintText: "请输入同步服务地址",
                   ),

@@ -14,8 +14,8 @@ dependencies:
   protobuf: ^3.1.0
   crypto: ^3.0.3
   brotli: ^0.6.0
-  dart_tars_protocol:
-    git: https://github.com/xiaoyaocz/dart_tars_protocol.git
+  tars_dart:
+    path: ./packages/tars_dart
   fixnum: ^1.1.0
 
 dev_dependencies: 

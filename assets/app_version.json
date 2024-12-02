@@ -1,7 +1,7 @@
 {
-    "version": "1.7.4",
-    "version_num": 10704,
-    "version_desc": "- 修复虎牙一起看播放中断 #543\n- 播放中断后取消保持亮屏 #541\n- 强制使用HTTPS链接 #538\n- Windows字体使用微软雅黑 #535",
+    "version": "1.7.5",
+    "version_num": 10705,
+    "version_desc": "- 修复虎牙一起看播放中断 #543",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

@@ -16,6 +16,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils/archive.dart';
 import 'package:simple_live_app/app/utils/document.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
+import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/requests/webdav_client.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
@@ -35,10 +36,11 @@ class RemoteSyncWebDAVController extends BaseController {
   late DAVClient davClient;
   var user = "".obs;
 
-  var _userFollowJsonName = 'SimpleLive_follows.json';
-  var _userHistoriesJsonName = 'SimpleLive_histories.json';
-  var _userBlockedWordJsonName = 'SimpleLive_blocked_word.json';
-  var _userBilibiliAccountJsonName = 'SimpleLive_bilibili_account.json';
+  final _userFollowJsonName = 'SimpleLive_follows.json';
+  final _userHistoriesJsonName = 'SimpleLive_histories.json';
+  final _userBlockedWordJsonName = 'SimpleLive_blocked_word.json';
+  final _userBilibiliAccountJsonName = 'SimpleLive_bilibili_account.json';
+  final _userTagsJsonName = 'SimpleLive_Tags.json';
 
   @override
   void onInit() {
@@ -170,6 +172,14 @@ class RemoteSyncWebDAVController extends BaseController {
           File(join(profile.path, _userBilibiliAccountJsonName));
       await bilibiliAccountJsonFile
           .writeAsString(jsonEncode(userBiliAccountCookieMap));
+
+      // 用户自定义标签
+      var userTagsList = DBService.instance.getFollowTagList();
+      var dataTagsMap = {
+        'data': userTagsList.map((e) => e.toJson()).toList()
+      };
+      var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
+      await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
       // 遍历profile路径下的所有文件压缩
       await archive.addDirectoryToArchive(profile.path, profile.path);
       final zipEncoder = ZipEncoder();
@@ -249,6 +259,16 @@ class RemoteSyncWebDAVController extends BaseController {
           Log.i('已同步哔哩哔哩账号');
         } catch (e) {
           Log.i('同步哔哩哔哩账号失败：${e}');
+        }
+      } else if (file.name == _userTagsJsonName) {
+        try {
+          for (var item in jsonData) {
+            var tag = FollowUserTag.fromJson(item);
+            await DBService.instance.tagBox.put(tag.id, tag);
+          }
+          Log.i('已同步用户自定义标签');
+        } catch (e) {
+          Log.i('同步用户自定义标签失败');
         }
       } else {
         return;

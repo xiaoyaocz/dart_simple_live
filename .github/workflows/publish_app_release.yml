@@ -154,6 +154,8 @@ jobs:
       # 签出代码
       - uses: actions/checkout@v4
         with:
+          # 强制拉取分支master
+          repository: SlotSun/dart_simple_live
           ref: master
           fetch-depth: 1
           submodules: false
@@ -227,6 +229,7 @@ jobs:
       # 签出代码
       - uses: actions/checkout@v4
         with:
+          repository: SlotSun/dart_simple_live
           ref: master
           fetch-depth: 1
           submodules: false

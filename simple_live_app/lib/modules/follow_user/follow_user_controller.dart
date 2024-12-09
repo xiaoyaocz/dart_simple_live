@@ -119,7 +119,8 @@ class FollowUserController extends BasePageController<FollowUser> {
     // 处于自定义标签选择自定义标签->从当前tag移除 加入选择tag
     if (tagIndex >= 3 && curTagIndex >= 3 && tagIndex != curTagIndex) {
       filterMode.value.userId.remove(item.id);
-      tag.userId.add(item.id);
+      // 目标标签不包含当前关注则加入
+      tag.userId.addIf(!tag.userId.contains(item.id), item.id);
     }
     // 更新
     if(curTagIndex>=3){

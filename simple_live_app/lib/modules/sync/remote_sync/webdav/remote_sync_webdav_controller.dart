@@ -213,7 +213,10 @@ class RemoteSyncWebDAVController extends BaseController {
       var jsonData = json.decode(jsonString)['data'];
       // 同步follows
       if (file.name == _userFollowJsonName && isSyncFollows.value) {
+        // 修改为多端一致
         try {
+          // 清空本地关注列表
+          await DBService.instance.followBox.clear();
           for (var item in jsonData) {
             var user = FollowUser.fromJson(item);
             await DBService.instance.followBox.put(user.id, user);
@@ -262,9 +265,14 @@ class RemoteSyncWebDAVController extends BaseController {
         }
       } else if (file.name == _userTagsJsonName) {
         try {
+          // 清空本地标签列表
+          await DBService.instance.tagBox.clear();
           for (var item in jsonData) {
             var tag = FollowUserTag.fromJson(item);
             await DBService.instance.tagBox.put(tag.id, tag);
+            // 插入之后验证
+            var insertedTag = DBService.instance.tagBox.get(tag.id);
+            print('Inserted tag: ${insertedTag?.tag}');
           }
           Log.i('已同步用户自定义标签');
         } catch (e) {

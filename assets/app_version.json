@@ -1,7 +1,7 @@
 {
-    "version": "1.7.5",
+    "version": "1.7.6",
     "version_num": 10705,
-    "version_desc": "- 修复虎牙一起看播放中断 #543",
+    "version_desc": "多端一致 webdav覆盖本地",
     "prerelease":false,
-    "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
+    "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

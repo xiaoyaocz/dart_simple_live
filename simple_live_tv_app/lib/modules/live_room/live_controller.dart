@@ -74,13 +74,11 @@ class LiveController {
   }
 
   void _initChannel() {
-    var channel = const MethodChannel("flutterInvoker");
-    channel.setMethodCallHandler((MethodCall call) async {
+    platform.setMethodCallHandler((MethodCall call) async {
       // 同样也是根据方法名分发不同的函数
       switch(call.method) {
         case "onResume": {
           didChangeAppLifecycleState(AppLifecycleState.resumed);
-          return 'success';
         }
         case "onPause": {
           didChangeAppLifecycleState(AppLifecycleState.paused);
@@ -159,7 +157,8 @@ class LiveController {
     platform.invokeMethod("danmaku",
       {
         'type': msg.type.name,
-        'message': msg.message
+        'message': msg.message,
+        'color': msg.color.toString()
       });
   }
 

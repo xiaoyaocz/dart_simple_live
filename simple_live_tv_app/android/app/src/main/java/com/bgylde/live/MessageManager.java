@@ -24,6 +24,11 @@ public class MessageManager implements Handler.Callback {
     private final List<Handler.Callback> registerCallbacks = new ArrayList<>();
     private final Map<String, Handler.Callback> registerCallbackMap = new HashMap<>();
 
+    // 默认信号，仅传递数据
+    public static final int DEFAULT_CMD = 1000;
+    // 传递flutter回调java函数的消息
+    public static final int FLUTTER_TO_JAVA_CMD = 1001;
+
     private MessageManager() {
     }
 

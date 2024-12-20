@@ -29,14 +29,9 @@ import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import io.flutter.plugin.common.BinaryMessenger;
-import io.flutter.plugin.common.MethodChannel;
 import top.littlefogcat.danmakulib.danmaku.Danmaku;
 import top.littlefogcat.danmakulib.danmaku.DanmakuManager;
 
@@ -59,10 +54,6 @@ public class HomeActivity extends AppCompatActivity implements Player.Listener, 
 
     private DanmakuManager danmakuManager;
     private LiveModel liveModel;
-
-    // java调用flutter
-    BinaryMessenger binaryMessenger = FlutterManager.getInstance().getFlutterEngine().getDartExecutor().getBinaryMessenger();
-    MethodChannel methodChannel = new MethodChannel(binaryMessenger, "flutterInvoker");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -161,8 +152,9 @@ public class HomeActivity extends AppCompatActivity implements Player.Listener, 
         player = new SimpleExoPlayer.Builder(this).build();
 
         // 设置媒体源到ExoPlayer
-        player.setMediaSource(mediaSource);
+//        player.setMediaSource(mediaSource);
 
+        player.addMediaItem(mediaItem);
         // 关联ExoPlayer与PlayerView
         playerView.setPlayer(player);
 
@@ -287,7 +279,7 @@ public class HomeActivity extends AppCompatActivity implements Player.Listener, 
         // 移除进度更新任务
         handler.removeCallbacks(updateProgressRunnable);
         MessageManager.getInstance().unRegisterCallback(this);
-        methodChannel.invokeMethod("onDestroy", null);
+        FlutterManager.getInstance().invokerFlutterMethod("onDestroy", null);
         // 释放ExoPlayer资源
         if (player!= null) {
             player.release();
@@ -318,7 +310,7 @@ public class HomeActivity extends AppCompatActivity implements Player.Listener, 
 
         String type = bundle.getString("type");
         String msg = bundle.getString("message");
-        Log.w("Test", "onDanmaku: [" + type + "] " + msg);
+        String color = bundle.getString("color");
         if (type == null || msg == null) {
             return false;
         }
@@ -327,6 +319,7 @@ public class HomeActivity extends AppCompatActivity implements Player.Listener, 
         Danmaku danmaku = new Danmaku();
         danmaku.text = msg;
         danmaku.size = 42;
+        danmaku.color = color;
         danmakuManager.send(danmaku);
 
         return true;
@@ -335,12 +328,12 @@ public class HomeActivity extends AppCompatActivity implements Player.Listener, 
     @Override
     protected void onResume() {
         super.onResume();
-        methodChannel.invokeMethod("onResume", null);
+        FlutterManager.getInstance().invokerFlutterMethod("onResume", null);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        methodChannel.invokeMethod("onPause", null);
+        FlutterManager.getInstance().invokerFlutterMethod("onPause", null);
     }
 }

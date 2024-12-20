@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:simple_live_core/src/common/http_client.dart' as http;
+import 'package:dio/dio.dart' as dio2;
+import 'package:dio/io.dart';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
@@ -205,13 +207,40 @@ class DouyinDanmaku implements LiveDanmaku {
   /// 服务端代码：https://github.com/lovelyyoshino/douyin_python，请自行部署后使用
   Future<String> getSignature(String roomId, String uniqueId) async {
     try {
-      var signResult = await http.HttpClient.instance.postJson(
-        "https://dy.nsapps.cn/signature",
-        queryParameters: {},
-        header: {"Content-Type": "application/json"},
-        data: {"roomId": roomId, "uniqueId": uniqueId},
+      dio2.Dio dio = dio2.Dio();
+      // 禁用证书验证
+      dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final HttpClient client =
+            HttpClient(context: SecurityContext(withTrustedRoots: false));
+          client.badCertificateCallback =
+            ((X509Certificate cert, String host, int port) => true);
+          return client;
+        },
       );
-      return signResult["data"]["signature"];
+
+      var headers = {
+        'Content-Type': 'application/json'
+      };
+      var data = json.encode({
+        "roomId": roomId,
+        "uniqueId": uniqueId
+      });
+      var response = await dio.request(
+        'https://dy.nsapps.cn/signature',
+        options: dio2.Options(
+          method: 'POST',
+          headers: headers,
+        ),
+        data: data,
+      );
+      if (response.statusCode == 200) {
+        return response.data["data"]["signature"];
+      }
+      else {
+        CoreLog.error(response.statusMessage);
+      }
+      return "";
     } catch (e) {
       CoreLog.error(e);
       return "";

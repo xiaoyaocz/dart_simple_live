@@ -123,4 +123,9 @@ dependencies {
     implementation 'top.littlefogcat.easydanmaku:easydanmaku:0.1.3'
     // 弹窗使用
     implementation 'com.owen:tv-recyclerview:3.0.0'
+    // Gson
+    implementation 'com.google.code.gson:gson:2.10.1'
+    // lombok
+    implementation 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.28'
 }

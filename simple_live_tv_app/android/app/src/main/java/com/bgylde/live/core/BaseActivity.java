@@ -7,6 +7,7 @@ import android.os.Message;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,6 +20,7 @@ import com.bgylde.live.R;
 import com.bgylde.live.adapter.SelectDialogAdapter;
 import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.widgets.SelectDialog;
+import com.google.gson.Gson;
 
 import java.util.Locale;
 
@@ -40,32 +42,21 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected DanmakuManager danmakuManager;
     protected IVideoPlayer player;
 
+    protected RelativeLayout playerLayout;
     protected TextView btnFullscreen;
     protected TextView follow;
     protected TextView clarity;
     protected TextView line;
     protected boolean isPlaying = false;
     protected boolean isFullscreen = false;
-
-    @CallSuper
-    public void prepareToPlay() {
-        if (liveModel == null) {
-            return;
-        }
-
-        line.setText(String.format(Locale.CHINA, "线路%d", liveModel.getCurrentLineIndex() + 1));
-        clarity.setText(liveModel.getClarity());
-        follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
-    }
-
-    protected abstract int getLayoutId();
+    protected final Gson gson = new Gson();
 
     protected abstract void initExoPlayer();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(getLayoutId());
+        setContentView(R.layout.activity_live);
         // 先初始化数据
         initData();
 
@@ -77,11 +68,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
         // 设置播放控制按钮点击事件
         setButtonClickListeners();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
     }
 
     @Override
@@ -97,13 +83,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        player.stop();
-        player.release();
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         // 移除进度更新任务
@@ -114,6 +93,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     @CallSuper
     protected void initViews() {
         hideSystemUI(false);
+        playerLayout = findViewById(R.id.player_layout);
         btnFullscreen = findViewById(R.id.btn_fullscreen);
         follow = findViewById(R.id.like);
         clarity = findViewById(R.id.clarity);
@@ -135,6 +115,18 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         FlutterManager.getInstance().registerMethod("parseLiveUrl");
         FlutterManager.getInstance().registerMethod("stopPlay");
         FlutterManager.getInstance().invokerFlutterMethod("onCreate", null);
+    }
+
+
+    @CallSuper
+    public void prepareToPlay() {
+        if (liveModel == null) {
+            return;
+        }
+
+        line.setText(String.format(Locale.CHINA, "线路%d", liveModel.getCurrentLineIndex() + 1));
+        clarity.setText(liveModel.getClarity());
+        follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
     }
 
     @CallSuper
@@ -276,19 +268,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     }
 
     protected void parseLiveUrl(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-        liveModel = new LiveModel(
-                call.argument("id"),
-                call.argument("roomId"),
-                call.argument("name"),
-                call.argument("logo"),
-                call.argument("index"),
-                call.argument("followed"),
-                call.argument("liveUrl"),
-                call.argument("qualites")
-        );
-        liveModel.setCurrentLineIndex(call.argument("currentLineIndex"))
-                .setCurrentQuality(call.argument("currentQuality"));
-
+        liveModel = gson.fromJson((String) call.arguments, LiveModel.class);
+        OkHttpManager.getInstance().resetRequestHeader(liveModel.getRequestHeader());
         if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
             prepareToPlay();
             result.success(true);

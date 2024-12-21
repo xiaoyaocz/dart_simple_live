@@ -1,4 +1,4 @@
-package com.bgylde.live.activitys;
+package com.bgylde.live.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -60,8 +60,8 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
             msg.setData(bundle);
             MessageManager.getInstance().sendMessage(msg);
         } else if (message.arg1 == "openLivePage".hashCode()) {
-//            Intent intent = new Intent(this, IjkPlayerActivity.class);
-            Intent intent = new Intent(this, LiveActivity.class);
+            Intent intent = new Intent(this, IjkLiveActivity.class);
+//            Intent intent = new Intent(this, LiveActivity.class);
             startActivity(intent);
         } else {
             return false;

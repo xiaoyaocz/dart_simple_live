@@ -12,7 +12,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".activitys.FlutterActivity"
+            android:name=".activity.FlutterActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
@@ -36,7 +36,7 @@
         </activity>
 
         <activity
-            android:name=".activitys.LiveActivity"
+            android:name=".activity.ExoLiveActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/MainTheme"
@@ -47,7 +47,7 @@
             android:screenOrientation="landscape">
         </activity>
         <activity
-            android:name=".activitys.IjkPlayerActivity"
+            android:name=".activity.IjkLiveActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/MainTheme"

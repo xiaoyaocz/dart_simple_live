@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -292,7 +293,7 @@ class LiveController {
     }
 
     bool result = await platform.invokeMethod("parseLiveUrl",
-      {
+      json.encode({
         'liveUrl': playUrls,
         'id': site.id,
         'roomId': roomId,
@@ -303,7 +304,7 @@ class LiveController {
         'qualites': qualiteNames,
         'currentQuality': currentQuality,
         'currentLineIndex': currentLineIndex
-      });
+      }));
     if (!result) {
       onClose();
     }

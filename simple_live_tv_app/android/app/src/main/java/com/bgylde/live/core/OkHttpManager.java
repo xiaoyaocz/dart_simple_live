@@ -1,12 +1,11 @@
 package com.bgylde.live.core;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.util.Map;
 
+import lombok.Getter;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -20,6 +19,8 @@ import okhttp3.logging.HttpLoggingInterceptor;
 public class OkHttpManager implements Interceptor {
 
     private static volatile OkHttpManager manager;
+
+    @Getter
     private final OkHttpClient okHttpClient;
     private Map<String, String> headerMap;
 
@@ -28,7 +29,7 @@ public class OkHttpManager implements Interceptor {
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
             @Override
             public void log(@NonNull String s) {
-                Log.w("Test", s);
+                LogUtils.w("OkHttp", s);
             }
         });
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
@@ -50,14 +51,11 @@ public class OkHttpManager implements Interceptor {
         return manager;
     }
 
-    public OkHttpClient getOkHttpClient() {
-        return okHttpClient;
-    }
-
     public void resetRequestHeader(Map<String, String> headerMap) {
         this.headerMap = headerMap;
     }
 
+    @NonNull
     @Override
     public Response intercept(Chain chain) throws IOException {
         Request request = chain.request();
@@ -84,7 +82,7 @@ public class OkHttpManager implements Interceptor {
         }
 
         HttpUrl httpUrl = HttpUrl.parse(newUrl);
-        Log.w("Test", "httpUrl=>" + httpUrl);
+        LogUtils.w("OkHttp", "httpUrl=>" + httpUrl);
         if (httpUrl == null) {
             return response;
         }

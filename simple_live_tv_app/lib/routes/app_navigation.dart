@@ -27,7 +27,7 @@ class AppNavigator {
     }
 
     LiveController liveController = LiveController(pSite: site, pRoomId: roomId);
-    liveController.onInit();
+    liveController.openLivePage();
 
     // Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
     //   "roomId": roomId,

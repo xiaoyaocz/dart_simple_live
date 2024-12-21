@@ -46,5 +46,16 @@
             android:banner="@mipmap/ic_banner"
             android:screenOrientation="landscape">
         </activity>
+        <activity
+            android:name=".activitys.IjkPlayerActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/MainTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:banner="@mipmap/ic_banner"
+            android:screenOrientation="landscape">
+        </activity>
     </application>
 </manifest>

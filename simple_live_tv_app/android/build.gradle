@@ -16,6 +16,10 @@ buildscript {
 
 allprojects {
     repositories {
+        flatDir {
+            dirs project(':app').file('libs')  //将xxx替换为引入aar文件的module名
+        }
+
         maven { url 'https://maven.aliyun.com/nexus/content/groups/public/' }
         maven { url 'https://maven.aliyun.com/nexus/content/repositories/jcenter' }
         google()

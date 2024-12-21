@@ -1,6 +1,5 @@
 package com.bgylde.live.activitys;
 
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,12 +28,15 @@ import com.bgylde.live.adapter.SelectDialogAdapter;
 import com.bgylde.live.core.MessageManager;
 import com.bgylde.live.R;
 import com.bgylde.live.core.FlutterManager;
-import com.bgylde.live.core.OkHttpUtil;
+import com.bgylde.live.core.MethodCallModel;
+import com.bgylde.live.core.OkHttpManager;
 import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.widgets.SelectDialog;
 
 import java.util.Locale;
 
+import io.flutter.plugin.common.MethodCall;
+import io.flutter.plugin.common.MethodChannel;
 import top.littlefogcat.danmakulib.danmaku.Danmaku;
 import top.littlefogcat.danmakulib.danmaku.DanmakuManager;
 
@@ -71,12 +73,6 @@ public class LiveActivity extends AppCompatActivity implements Player.Listener, 
 
         // 设置播放控制按钮点击事件
         setButtonClickListeners();
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        initData();
     }
 
     @Override
@@ -128,12 +124,9 @@ public class LiveActivity extends AppCompatActivity implements Player.Listener, 
     }
 
     private void initData() {
-        Bundle bundle = getIntent().getBundleExtra("bundle");
-        if (bundle != null) {
-            liveModel = bundle.getParcelable("liveModel");
-        }
-
         MessageManager.getInstance().registerCallback(this);
+        FlutterManager.getInstance().registerMethod("parseLiveUrl");
+        FlutterManager.getInstance().invokerFlutterMethod("onCreate", null);
     }
 
     private void initViews() {
@@ -155,8 +148,8 @@ public class LiveActivity extends AppCompatActivity implements Player.Listener, 
 
     private void initExoPlayer() {
         playerView = findViewById(R.id.player_view);
-        OkHttpDataSource.Factory okHttpDataSource = new OkHttpDataSource.Factory(OkHttpUtil.generateOkHttp());
-        okHttpDataSource.setDefaultRequestProperties(liveModel.getRequestHeader());
+        OkHttpDataSource.Factory okHttpDataSource = new OkHttpDataSource.Factory(OkHttpManager.getInstance().getOkHttpClient());
+//        okHttpDataSource.setDefaultRequestProperties(liveModel.getRequestHeader());
         DefaultDataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(this, okHttpDataSource);
         player = new ExoPlayer.Builder(this)
                 .setMediaSourceFactory(new DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory))
@@ -175,6 +168,10 @@ public class LiveActivity extends AppCompatActivity implements Player.Listener, 
     }
 
     private void prepareToPlay() {
+        if (liveModel == null) {
+            return;
+        }
+
         line.setText(String.format(Locale.CHINA, "线路%d", liveModel.getCurrentLineIndex() + 1));
         clarity.setText(liveModel.getClarity());
         follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
@@ -286,8 +283,11 @@ public class LiveActivity extends AppCompatActivity implements Player.Listener, 
     @Override
     public boolean handleMessage(@NonNull Message message) {
         if (message.what == FLUTTER_TO_JAVA_CMD) {
+            MethodCallModel model = (MethodCallModel)message.obj;
             if (message.arg1 == "stopPlay".hashCode()) {
                 player.stop();
+            } else if (message.arg1 == "parseLiveUrl".hashCode()) {
+                parseLiveUrl(model.getMethodCall(), model.getResult());
             }
 
             return true;
@@ -384,5 +384,28 @@ public class LiveActivity extends AppCompatActivity implements Player.Listener, 
             // 这里可以弹出更多功能菜单，比如画质切换等功能
             Toast.makeText(LiveActivity.this, "更多功能待完善", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void parseLiveUrl(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
+        liveModel = new LiveModel(
+                call.argument("id"),
+                call.argument("roomId"),
+                call.argument("name"),
+                call.argument("logo"),
+                call.argument("index"),
+                call.argument("followed"),
+                call.argument("liveUrl"),
+                call.argument("qualites")
+        );
+        liveModel.setCurrentLineIndex(call.argument("currentLineIndex"))
+                .setCurrentQuality(call.argument("currentQuality"));
+        OkHttpManager.getInstance().resetRequestHeader(liveModel.getRequestHeader());
+        if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
+            prepareToPlay();
+            result.success(true);
+            return;
+        }
+
+        result.success(false);
     }
 }

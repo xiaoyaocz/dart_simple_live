@@ -29,6 +29,7 @@ class LiveController {
     rxSite = pSite.obs;
     rxRoomId = pRoomId.obs;
     liveDanmaku = site.liveSite.getDanmaku();
+    _initChannel();
   }
   final FocusNode focusNode = FocusNode();
   late Rx<Site> rxSite;
@@ -70,6 +71,7 @@ class LiveController {
 
   void _initChannel() {
     platform.setMethodCallHandler((MethodCall call) async {
+      print('methodCall=>${call.method}');
       // 同样也是根据方法名分发不同的函数
       switch(call.method) {
         case "onResume": {
@@ -113,8 +115,11 @@ class LiveController {
   /// 双击退出Timer
   Timer? doubleClickTimer;
 
+  void openLivePage() {
+    platform.invokeMethod("openLivePage");
+  }
+
   void onInit() {
-    _initChannel();
     initTimer();
     // showDanmakuState.value = AppSettingsController.instance.danmuEnable.value;
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");

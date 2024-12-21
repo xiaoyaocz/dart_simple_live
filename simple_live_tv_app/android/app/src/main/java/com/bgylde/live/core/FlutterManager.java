@@ -1,6 +1,7 @@
 package com.bgylde.live.core;
 
 import android.os.Message;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -51,6 +52,7 @@ public class FlutterManager implements MethodChannel.MethodCallHandler {
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
+        Log.w("Test", "onMethodCall=>" + call.method + " args: " + call.arguments);
         Message message = Message.obtain();
         message.what = MessageManager.FLUTTER_TO_JAVA_CMD;
         message.arg1 = methodMap.get(call.method);
@@ -59,10 +61,12 @@ public class FlutterManager implements MethodChannel.MethodCallHandler {
     }
 
     public void invokerFlutterMethod(String methodName, Object arguments) {
+        Log.w("Test", "invokerFlutterMethod=>" + methodName);
         this.channel.invokeMethod(methodName, arguments);
     }
 
     public void invokerFlutterMethod(String methodName, Object arguments, MethodChannel.Result result) {
+        Log.w("Test", "invokerFlutterMethod=>" + methodName);
         this.channel.invokeMethod(methodName, arguments, result);
     }
 

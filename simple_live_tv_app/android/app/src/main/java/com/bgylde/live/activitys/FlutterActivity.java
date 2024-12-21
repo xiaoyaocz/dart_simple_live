@@ -11,11 +11,8 @@ import androidx.annotation.Nullable;
 import com.bgylde.live.core.MessageManager;
 import com.bgylde.live.core.FlutterManager;
 import com.bgylde.live.core.MethodCallModel;
-import com.bgylde.live.model.LiveModel;
 
 import io.flutter.embedding.engine.FlutterEngine;
-import io.flutter.plugin.common.MethodCall;
-import io.flutter.plugin.common.MethodChannel;
 
 import static com.bgylde.live.core.MessageManager.DEFAULT_CMD;
 import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
@@ -32,8 +29,9 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
         FlutterManager.getInstance().initFlutter(flutterEngine);
-        FlutterManager.getInstance().registerMethod("parseLiveUrl");
+//        FlutterManager.getInstance().registerMethod("parseLiveUrl");
         FlutterManager.getInstance().registerMethod("danmaku");
+        FlutterManager.getInstance().registerMethod("openLivePage");
     }
 
     @Override
@@ -49,9 +47,7 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
         }
 
         MethodCallModel model = (MethodCallModel)message.obj;
-        if (message.arg1 == "parseLiveUrl".hashCode()) {
-            parseLiveUrl(model.getMethodCall(), model.getResult());
-        } else if (message.arg1 == "danmaku".hashCode()) {
+        if (message.arg1 == "danmaku".hashCode()) {
             String type = model.getMethodCall().argument("type");
             String info = model.getMethodCall().argument("message");
             String color = model.getMethodCall().argument("color");
@@ -63,35 +59,14 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
             bundle.putString("color", color);
             msg.setData(bundle);
             MessageManager.getInstance().sendMessage(msg);
-        }
-
-        return false;
-    }
-
-    private void parseLiveUrl(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-        LiveModel liveModel = new LiveModel(
-                call.argument("id"),
-                call.argument("roomId"),
-                call.argument("name"),
-                call.argument("logo"),
-                call.argument("index"),
-                call.argument("followed"),
-                call.argument("liveUrl"),
-                call.argument("qualites")
-        );
-        liveModel.setCurrentLineIndex(call.argument("currentLineIndex"))
-                .setCurrentQuality(call.argument("currentQuality"));
-
-        if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
+        } else if (message.arg1 == "openLivePage".hashCode()) {
+//            Intent intent = new Intent(this, IjkPlayerActivity.class);
             Intent intent = new Intent(this, LiveActivity.class);
-            Bundle bundle = new Bundle();
-            bundle.putParcelable("liveModel", liveModel);
-            intent.putExtra("bundle", bundle);
             startActivity(intent);
-            result.success(true);
-            return;
+        } else {
+            return false;
         }
 
-        result.success(false);
+        return true;
     }
 }

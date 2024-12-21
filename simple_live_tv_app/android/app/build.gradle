@@ -90,6 +90,11 @@ android {
             }
         }
     }
+    configurations.configureEach {
+        resolutionStrategy {
+            force 'com.squareup.okhttp3:okhttp:3.12.13'
+        }
+    }
 }
 
 flutter {
@@ -98,20 +103,20 @@ flutter {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
-
-    implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.18.6'
-
-    // ExoPlayer核心模块
-    implementation 'com.google.android.exoplayer:exoplayer-core:2.18.6'
-    // 用于处理HTTP类型的数据源相关，适合HTTP-FLV播放
-//    implementation 'com.google.android.exoplayer:exoplayer-http:2.18.6'
-    implementation 'com.google.android.exoplayer:exoplayer-hls:2.18.6'
-    implementation 'com.google.android.exoplayer:exoplayer-dash:2.18.6'
-    // 用于处理一些媒体格式解析等相关功能，是播放常见格式的基础支持
-    implementation 'com.google.android.exoplayer:extension-rtmp:2.18.6'
-    // 用于UI展示相关，包含PlayerView等组件
-    implementation 'com.google.android.exoplayer:exoplayer-ui:2.18.6'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
 
+    // 播放器
+    implementation "androidx.media3:media3-exoplayer:1.5.1"
+    implementation "androidx.media3:media3-exoplayer-dash:1.5.1"
+    implementation 'androidx.media3:media3-datasource-okhttp:1.5.1'
+    implementation "androidx.media3:media3-ui:1.5.1"
+
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+
+    // 弹幕库
     implementation 'top.littlefogcat.easydanmaku:easydanmaku:0.1.3'
+    // 弹窗使用
+    implementation 'com.owen:tv-recyclerview:3.0.0'
 }

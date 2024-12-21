@@ -1,13 +1,9 @@
 import 'dart:async';
-import 'dart:collection';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:ns_danmaku/models/danmaku_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_tv_app/app/constant.dart';
 import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
@@ -17,7 +13,6 @@ import 'package:simple_live_tv_app/app/sites.dart';
 import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/models/db/follow_user.dart';
 import 'package:simple_live_tv_app/models/db/history.dart';
-import 'package:simple_live_tv_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
 
@@ -88,6 +83,24 @@ class LiveController {
         }
         case "onDestory": {
           onClose();
+        }
+        case "followUser": {
+          if (followed.value) {
+            removeFollowUser();
+          } else {
+            followUser();
+          }
+          return followed.value;
+        }
+        case "mediaError": {
+          mediaError(call.arguments);
+        }
+        case "mediaEnd": {
+          mediaEnd();
+        }
+        case "changeQuality": {
+          currentQuality = call.arguments;
+          getPlayUrl();
         }
       }
       return null;
@@ -268,6 +281,11 @@ class LiveController {
       };
     }
 
+    RxList<String> qualiteNames = RxList<String>();
+    for (var element in qualites) {
+      qualiteNames.add(element.quality);
+    }
+
     bool result = await platform.invokeMethod("parseLiveUrl",
       {
         'liveUrl': playUrls,
@@ -275,7 +293,11 @@ class LiveController {
         'roomId': roomId,
         'name': site.name,
         'logo': site.logo,
-        'index': site.index
+        'index': site.index,
+        'followed': followed.value,
+        'qualites': qualiteNames,
+        'currentQuality': currentQuality,
+        'currentLineIndex': currentLineIndex
       });
     if (!result) {
       onClose();
@@ -407,6 +429,7 @@ class LiveController {
     liveDanmaku = site.liveSite.getDanmaku();
 
     // 停止播放
+    await platform.invokeMethod("stopPlay");
     // await player.stop();
 
     // 刷新信息

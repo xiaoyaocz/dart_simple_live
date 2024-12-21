@@ -1,4 +1,4 @@
-package com.bgylde.live;
+package com.bgylde.live.core;
 
 import android.os.Handler;
 import android.os.Looper;

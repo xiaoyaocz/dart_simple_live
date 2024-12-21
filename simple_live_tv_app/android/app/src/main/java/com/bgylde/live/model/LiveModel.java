@@ -19,7 +19,16 @@ public class LiveModel implements Parcelable {
     private String name;
     private String logo;
     private Integer index;
+    // 是否已经关注
+    private boolean followed;
+    // 当前播放线路
+    private Integer currentLineIndex;
+    // 播放线路地址
     private ArrayList<String> playUrls = new ArrayList<>();
+    // 当前清晰度index
+    private Integer currentQuality;
+    // 清晰度
+    private ArrayList<String> qualites = new ArrayList<>();
 
     private static final String kBiliBili = "bilibili";
     private static final String kDouyu = "douyu";
@@ -29,14 +38,17 @@ public class LiveModel implements Parcelable {
     public LiveModel() {
     }
 
-    public LiveModel(String id, String roomId, String name, String logo, Integer index, ArrayList<String> playUrls) {
+    public LiveModel(String id, String roomId, String name, String logo, Integer index, Boolean followed, ArrayList<String> playUrls, ArrayList<String> qualites) {
         this.id = id;
         this.roomId = roomId;
         this.name = name;
         this.logo = logo;
         this.index = index;
+        this.followed = followed;
         this.playUrls = playUrls;
+        this.qualites = qualites;
     }
+
 
     protected LiveModel(Parcel in) {
         id = in.readString();
@@ -48,7 +60,53 @@ public class LiveModel implements Parcelable {
         } else {
             index = in.readInt();
         }
+        followed = in.readByte() != 0;
+        if (in.readByte() == 0) {
+            currentLineIndex = null;
+        } else {
+            currentLineIndex = in.readInt();
+        }
         playUrls = in.createStringArrayList();
+        if (in.readByte() == 0) {
+            currentQuality = null;
+        } else {
+            currentQuality = in.readInt();
+        }
+        qualites = in.createStringArrayList();
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(id);
+        dest.writeString(roomId);
+        dest.writeString(name);
+        dest.writeString(logo);
+        if (index == null) {
+            dest.writeByte((byte) 0);
+        } else {
+            dest.writeByte((byte) 1);
+            dest.writeInt(index);
+        }
+        dest.writeByte((byte) (followed ? 1 : 0));
+        if (currentLineIndex == null) {
+            dest.writeByte((byte) 0);
+        } else {
+            dest.writeByte((byte) 1);
+            dest.writeInt(currentLineIndex);
+        }
+        dest.writeStringList(playUrls);
+        if (currentQuality == null) {
+            dest.writeByte((byte) 0);
+        } else {
+            dest.writeByte((byte) 1);
+            dest.writeInt(currentQuality);
+        }
+        dest.writeStringList(qualites);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
     }
 
     public static final Creator<LiveModel> CREATOR = new Creator<LiveModel>() {
@@ -91,63 +149,111 @@ public class LiveModel implements Parcelable {
                 '}';
     }
 
-    public String getRoomId() {
-        return roomId;
+    public String getClarity() {
+        String clarity = null;
+        if (currentQuality >= 0) {
+            clarity = qualites.get(currentQuality);
+        }
+
+        return clarity == null ? "" : clarity;
     }
 
-    public void setRoomId(String roomId) {
-        this.roomId = roomId;
+    public String getLine() {
+        String line = null;
+        if (currentLineIndex >= 0) {
+            line = playUrls.get(currentLineIndex);
+        }
+
+        return line == null ? "" : line;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRoomId() {
+        return roomId;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getLogo() {
         return logo;
-    }
-
-    public void setLogo(String logo) {
-        this.logo = logo;
     }
 
     public Integer getIndex() {
         return index;
     }
 
-    public void setIndex(Integer index) {
-        this.index = index;
+    public boolean isFollowed() {
+        return followed;
+    }
+
+    public Integer getCurrentLineIndex() {
+        return currentLineIndex;
     }
 
     public ArrayList<String> getPlayUrls() {
         return playUrls;
     }
 
-    public void setPlayUrls(ArrayList<String> playUrls) {
+    public Integer getCurrentQuality() {
+        return currentQuality;
+    }
+
+    public ArrayList<String> getQualites() {
+        return qualites;
+    }
+
+    public LiveModel setId(String id) {
+        this.id = id;
+        return this;
+    }
+
+    public LiveModel setRoomId(String roomId) {
+        this.roomId = roomId;
+        return this;
+    }
+
+    public LiveModel setName(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public LiveModel setLogo(String logo) {
+        this.logo = logo;
+        return this;
+    }
+
+    public LiveModel setIndex(Integer index) {
+        this.index = index;
+        return this;
+    }
+
+    public LiveModel setFollowed(boolean followed) {
+        this.followed = followed;
+        return this;
+    }
+
+    public LiveModel setCurrentLineIndex(Integer currentLineIndex) {
+        this.currentLineIndex = currentLineIndex;
+        return this;
+    }
+
+    public LiveModel setPlayUrls(ArrayList<String> playUrls) {
         this.playUrls = playUrls;
+        return this;
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
+    public LiveModel setCurrentQuality(Integer currentQuality) {
+        this.currentQuality = currentQuality;
+        return this;
     }
 
-    @Override
-    public void writeToParcel(@NonNull Parcel parcel, int i) {
-        parcel.writeString(id);
-        parcel.writeString(roomId);
-        parcel.writeString(name);
-        parcel.writeString(logo);
-        if (index == null) {
-            parcel.writeByte((byte) 0);
-        } else {
-            parcel.writeByte((byte) 1);
-            parcel.writeInt(index);
-        }
-        parcel.writeStringList(playUrls);
+    public LiveModel setQualites(ArrayList<String> qualites) {
+        this.qualites = qualites;
+        return this;
     }
 }

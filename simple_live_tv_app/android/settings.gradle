@@ -19,3 +19,8 @@ pluginManagement {
 include ":app"
 
 apply from: "${settings.ext.flutterSdkPath}/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+include ':simple_live_core'
+project(':simple_live_core').projectDir = file('./simple_live_core')
+
+include ':simple_live_tv_app'
+project(':simple_live_tv_app').projectDir = file('./lib')

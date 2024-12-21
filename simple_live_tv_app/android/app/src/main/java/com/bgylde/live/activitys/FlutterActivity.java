@@ -1,4 +1,4 @@
-package com.bgylde.live;
+package com.bgylde.live.activitys;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -8,6 +8,7 @@ import android.os.Message;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.bgylde.live.core.MessageManager;
 import com.bgylde.live.core.FlutterManager;
 import com.bgylde.live.core.MethodCallModel;
 import com.bgylde.live.model.LiveModel;
@@ -16,8 +17,8 @@ import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
-import static com.bgylde.live.MessageManager.DEFAULT_CMD;
-import static com.bgylde.live.MessageManager.FLUTTER_TO_JAVA_CMD;
+import static com.bgylde.live.core.MessageManager.DEFAULT_CMD;
+import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
 
 public class FlutterActivity extends io.flutter.embedding.android.FlutterActivity implements Handler.Callback {
 
@@ -74,11 +75,15 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
                 call.argument("name"),
                 call.argument("logo"),
                 call.argument("index"),
-                call.argument("liveUrl")
+                call.argument("followed"),
+                call.argument("liveUrl"),
+                call.argument("qualites")
         );
+        liveModel.setCurrentLineIndex(call.argument("currentLineIndex"))
+                .setCurrentQuality(call.argument("currentQuality"));
 
         if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
-            Intent intent = new Intent(this, HomeActivity.class);
+            Intent intent = new Intent(this, LiveActivity.class);
             Bundle bundle = new Bundle();
             bundle.putParcelable("liveModel", liveModel);
             intent.putExtra("bundle", bundle);

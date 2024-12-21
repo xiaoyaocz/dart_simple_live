@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/tvName"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:background="@drawable/button_dialog_main"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center"
+    android:padding="10dp"
+    android:text="@{name}"
+    android:textColor="@color/color_FFFFFF"
+    android:textSize="14sp"
+    tools:text="Source Name" />

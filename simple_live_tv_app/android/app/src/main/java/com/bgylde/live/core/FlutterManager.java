@@ -3,8 +3,7 @@ package com.bgylde.live.core;
 import android.os.Message;
 
 import androidx.annotation.NonNull;
-
-import com.bgylde.live.MessageManager;
+import androidx.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -65,5 +64,13 @@ public class FlutterManager implements MethodChannel.MethodCallHandler {
 
     public void invokerFlutterMethod(String methodName, Object arguments, MethodChannel.Result result) {
         this.channel.invokeMethod(methodName, arguments, result);
+    }
+
+    public interface Result extends MethodChannel.Result {
+        @Override
+        default void error(@NonNull String errorCode, @Nullable String errorMessage, @Nullable Object errorDetails) {}
+
+        @Override
+        default void notImplemented() {}
     }
 }

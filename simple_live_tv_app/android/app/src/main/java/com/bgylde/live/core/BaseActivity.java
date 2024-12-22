@@ -269,7 +269,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
     protected void parseLiveUrl(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         liveModel = gson.fromJson((String) call.arguments, LiveModel.class);
-        OkHttpManager.getInstance().resetRequestHeader(liveModel.getRequestHeader());
+        LogUtils.w("liveMode=> " + liveModel);
+        OkHttpManager.getInstance().resetRequestHeader(liveModel.getHeaderMap());
         if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
             prepareToPlay();
             result.success(true);

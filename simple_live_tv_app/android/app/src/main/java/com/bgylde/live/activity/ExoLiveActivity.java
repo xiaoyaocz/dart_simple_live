@@ -102,7 +102,6 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
         if (liveModel != null && !liveModel.isPlayEmpty()) {
             videoUrl = liveModel.getLine();
         }
-
         MediaItem mediaItem = MediaItem.fromUri(videoUrl);
         exoPlayer.setMediaItem(mediaItem);
         // 准备播放

@@ -60,8 +60,13 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
             msg.setData(bundle);
             MessageManager.getInstance().sendMessage(msg);
         } else if (message.arg1 == "openLivePage".hashCode()) {
-            Intent intent = new Intent(this, IjkLiveActivity.class);
-//            Intent intent = new Intent(this, LiveActivity.class);
+            Integer playerMode = model.getMethodCall().arguments();
+            Intent intent;
+            if (playerMode == null || playerMode == 0) {
+                intent = new Intent(this, ExoLiveActivity.class);
+            } else {
+                intent = new Intent(this, IjkLiveActivity.class);
+            }
             startActivity(intent);
         } else {
             return false;

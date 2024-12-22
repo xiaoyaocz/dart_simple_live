@@ -171,6 +171,24 @@ class SettingsPage extends GetView<SettingsController> {
         ),
         AppStyle.vGap24,
         Obx(
+            () => SettingsItemWidget(
+            foucsNode: controller.playerFoucsNode,
+            autofocus: controller.playerFoucsNode.isFoucsed.value,
+            title: "播放器",
+            items: const {
+              0: "ExoPlayer",
+              1: "IjkPlayer",
+              2: "Flutter",
+            },
+            value:
+            AppSettingsController.instance.playerMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setPlayerMode(e);
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
           () => SettingsItemWidget(
             foucsNode: controller.scaleFoucsNode,
             autofocus: controller.scaleFoucsNode.isFoucsed.value,

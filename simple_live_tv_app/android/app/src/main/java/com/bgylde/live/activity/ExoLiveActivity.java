@@ -13,6 +13,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 
+import com.bgylde.live.R;
 import com.bgylde.live.core.BaseActivity;
 import com.bgylde.live.core.FlutterManager;
 import com.bgylde.live.core.OkHttpManager;
@@ -27,6 +28,10 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
     protected void initViews() {
         super.initViews();
         playerView = new ExoPlayerView(this);
+        playerView.setUseController(false);
+        playerView.setId(R.id.player_view);
+        playerView.setFocusable(false);
+        playerView.setClickable(false);
         player = playerView;
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
@@ -136,7 +141,6 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
         this.isPlaying = isPlaying;
         if (!isPlaying) {
             // 播放结束后的处理，比如自动播放下一集（如果有）等
-            Toast.makeText(this, "视频播放完毕", Toast.LENGTH_SHORT).show();
             FlutterManager.getInstance().invokerFlutterMethod("mediaEnd", null);
         }
     }
@@ -156,13 +160,15 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
                 // and headers.
                 HttpDataSource.InvalidResponseCodeException invalidResponseCodeException = (HttpDataSource.InvalidResponseCodeException)httpError;
                 errorMessage = invalidResponseCodeException.getMessage();
+                if (invalidResponseCodeException.responseCode == 302) {
+                    return;
+                }
             } else {
                 // Try calling httpError.getCause() to retrieve the underlying cause, although
                 // note that it may be null.
                 errorMessage = httpError.getCause() == null ? "" : httpError.getCause().getMessage();
             }
         }
-        Toast.makeText(this, "播放出错：" + errorMessage, Toast.LENGTH_LONG).show();
         FlutterManager.getInstance().invokerFlutterMethod("mediaError", errorMessage);
     }
 }

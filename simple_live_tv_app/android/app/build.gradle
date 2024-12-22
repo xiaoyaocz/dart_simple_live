@@ -90,11 +90,6 @@ android {
             }
         }
     }
-    configurations.configureEach {
-        resolutionStrategy {
-            force 'com.squareup.okhttp3:okhttp:3.12.13'
-        }
-    }
 }
 
 flutter {
@@ -127,5 +122,5 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     // lombok
     implementation 'org.projectlombok:lombok:1.18.30'
-    annotationProcessor 'org.projectlombok:lombok:1.18.28'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 }

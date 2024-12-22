@@ -45,6 +45,18 @@ public class SelectDialogAdapter<T> extends ListAdapter<T, SelectDialogAdapter.S
         }
     };
 
+    public static DiffUtil.ItemCallback<Integer> integerDiff = new DiffUtil.ItemCallback<Integer>() {
+
+        @Override
+        public boolean areItemsTheSame(@NonNull Integer oldItem, @NonNull Integer newItem) {
+            return oldItem.equals(newItem);
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Integer oldItem, @NonNull Integer newItem) {
+            return oldItem.equals(newItem);
+        }
+    };
 
     private final ArrayList<T> data = new ArrayList<>();
 

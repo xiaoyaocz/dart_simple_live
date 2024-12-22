@@ -105,6 +105,11 @@ class LiveController {
           currentQuality = call.arguments;
           getPlayUrl();
         }
+        case "changeLine": {
+          currentLineIndex = call.arguments;
+          // 重置错误次数
+          mediaErrorRetryCount = 0;
+        }
       }
       return null;
     });
@@ -304,7 +309,8 @@ class LiveController {
         'qualites': qualiteNames,
         'currentQuality': currentQuality,
         'currentLineIndex': currentLineIndex,
-        'headers': headers
+        'headers': headers,
+        'roomTitle': detail.value?.title
       }));
     if (!result) {
       onClose();

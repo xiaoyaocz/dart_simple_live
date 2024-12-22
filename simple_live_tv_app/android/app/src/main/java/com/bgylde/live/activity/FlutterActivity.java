@@ -1,27 +1,57 @@
 package com.bgylde.live.activity;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 
+import com.bgylde.live.core.LogUtils;
 import com.bgylde.live.core.MessageManager;
 import com.bgylde.live.core.FlutterManager;
 import com.bgylde.live.core.MethodCallModel;
+import com.bgylde.live.core.OkHttpManager;
+
+import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Objects;
 
 import io.flutter.embedding.engine.FlutterEngine;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Request;
+import okhttp3.Response;
 
-import static com.bgylde.live.core.MessageManager.DEFAULT_CMD;
 import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
 
 public class FlutterActivity extends io.flutter.embedding.android.FlutterActivity implements Handler.Callback {
 
+    private static final String TAG = "FlutterActivity";
+    private static final String TEST_APK_URL = "http://192.168.100.1:12321/test.apk";
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static final String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
+    private File tempApk;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        tempApk = new File(getExternalCacheDir(), "test.apk");
         MessageManager.getInstance().registerCallback(this);
     }
 
@@ -29,9 +59,8 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
         FlutterManager.getInstance().initFlutter(flutterEngine);
-//        FlutterManager.getInstance().registerMethod("parseLiveUrl");
-        FlutterManager.getInstance().registerMethod("danmaku");
         FlutterManager.getInstance().registerMethod("openLivePage");
+        FlutterManager.getInstance().registerMethod("checkTestUpdate");
     }
 
     @Override
@@ -47,19 +76,7 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
         }
 
         MethodCallModel model = (MethodCallModel)message.obj;
-        if (message.arg1 == "danmaku".hashCode()) {
-            String type = model.getMethodCall().argument("type");
-            String info = model.getMethodCall().argument("message");
-            String color = model.getMethodCall().argument("color");
-            Message msg = Message.obtain();
-            msg.what = DEFAULT_CMD;
-            Bundle bundle = new Bundle();
-            bundle.putString("type", type);
-            bundle.putString("message", info);
-            bundle.putString("color", color);
-            msg.setData(bundle);
-            MessageManager.getInstance().sendMessage(msg);
-        } else if (message.arg1 == "openLivePage".hashCode()) {
+        if (message.arg1 == "openLivePage".hashCode()) {
             Integer playerMode = model.getMethodCall().arguments();
             Intent intent;
             if (playerMode == null || playerMode == 0) {
@@ -68,10 +85,116 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
                 intent = new Intent(this, IjkLiveActivity.class);
             }
             startActivity(intent);
+        } else if (message.arg1 == "checkTestUpdate".hashCode()) {
+            if (checkoutPermission()) {
+                downloadApk();
+            }
         } else {
             return false;
         }
 
         return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQUEST_EXTERNAL_STORAGE) {
+            return;
+        }
+
+        if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        downloadApk();
+    }
+
+    private boolean checkoutPermission() {
+        boolean havePermission = false;
+        // 检查权限（NEED_PERMISSION）是否被授权 PackageManager.PERMISSION_GRANTED表示同意授权
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, PERMISSIONS_STORAGE, REQUEST_EXTERNAL_STORAGE);
+            } else {
+                havePermission = true;
+            }
+        } else {
+            havePermission = true;
+        }
+        LogUtils.w("Test", "havePermission: " + havePermission);
+        return havePermission;
+    }
+
+    private void installAPK() {
+        if (!tempApk.exists()) {
+            LogUtils.w("Test", "tempApk not exist: " + tempApk.getAbsolutePath());
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);         // 安装完成后打开新版本
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); // 给目标应用一个临时授权
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {   // 判断版本大于等于7.0
+                // 如果SDK版本>=24，即：Build.VERSION.SDK_INT >= 24，使用FileProvider兼容安装apk
+                String packageName = this.getApplicationContext().getPackageName();
+                String authority = packageName + ".fileprovider";
+                Uri apkUri = FileProvider.getUriForFile(this, authority, tempApk);
+                intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            } else {
+                intent.setDataAndType(Uri.fromFile(tempApk), "application/vnd.android.package-archive");
+            }
+
+            this.startActivity(intent);
+        } catch (Exception e) {
+            LogUtils.e(TAG, "install failed", e);
+        }
+    }
+
+    private void downloadApk() {
+        if (tempApk.exists() && tempApk.delete()) {
+            LogUtils.w(TAG, "Delete exist apk!");
+        }
+
+        Request request = new Request.Builder()
+                .get()
+                .url(FlutterActivity.TEST_APK_URL)
+                .build();
+        Call call = OkHttpManager.getInstance().getOkHttpClient().newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                LogUtils.e(TAG, "http error", e);
+                if (tempApk.exists() && tempApk.delete()) {
+                    LogUtils.e(TAG, "delete apk", e);
+                }
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                if (!response.isSuccessful()) {
+                    return;
+                }
+
+                InputStream inputStream = Objects.requireNonNull(response.body()).byteStream();
+                FileOutputStream fileOutputStream = new FileOutputStream(tempApk);
+                try {
+                    byte[] buffer = new byte[2048];
+                    int len;
+                    while ((len = inputStream.read(buffer)) != -1) {
+                        fileOutputStream.write(buffer, 0, len);
+                    }
+                    fileOutputStream.flush();
+                    installAPK();
+                } catch (IOException e) {
+                    LogUtils.e(TAG, "download error", e);
+                } finally {
+                    inputStream.close();
+                    fileOutputStream.close();
+                    response.close();
+                }
+            }
+        });
     }
 }

@@ -7,12 +7,14 @@ import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Created by wangyan on 2024/12/20
  */
-@Data
+@Setter
+@Getter
 public class LiveModel {
 
     private String id;
@@ -34,6 +36,8 @@ public class LiveModel {
     private List<String> qualites;
     @SerializedName("headers")
     private Map<String, String> headerMap;
+    @SerializedName("roomTitle")
+    private String roomTitle;
 
     private static final String kBiliBili = "bilibili";
     private static final String kDouyu = "douyu";

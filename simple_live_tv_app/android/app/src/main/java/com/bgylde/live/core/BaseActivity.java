@@ -1,9 +1,11 @@
 package com.bgylde.live.core;
 
-import android.content.pm.ActivityInfo;
+import android.animation.ObjectAnimator;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -22,6 +24,8 @@ import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.widgets.SelectDialog;
 import com.google.gson.Gson;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import io.flutter.plugin.common.MethodCall;
@@ -29,14 +33,14 @@ import io.flutter.plugin.common.MethodChannel;
 import top.littlefogcat.danmakulib.danmaku.Danmaku;
 import top.littlefogcat.danmakulib.danmaku.DanmakuManager;
 
+import static com.bgylde.live.adapter.SelectDialogAdapter.integerDiff;
 import static com.bgylde.live.adapter.SelectDialogAdapter.stringDiff;
-import static com.bgylde.live.core.MessageManager.DEFAULT_CMD;
 import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
 
 /**
  * Created by wangyan on 2024/12/19
  */
-public abstract class BaseActivity extends AppCompatActivity implements View.OnClickListener, Handler.Callback {
+public abstract class BaseActivity extends AppCompatActivity implements View.OnClickListener, Handler.Callback, Runnable {
 
     protected LiveModel liveModel;
     protected DanmakuManager danmakuManager;
@@ -47,9 +51,15 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected TextView follow;
     protected TextView clarity;
     protected TextView line;
+    protected TextView liveTitle;
+    protected View topControlLayout;
+    protected View bottomControlLayout;
+
+    protected long lastRequestFocusTime;
     protected boolean isPlaying = false;
-    protected boolean isFullscreen = false;
+    protected boolean isShowControl = false;
     protected final Gson gson = new Gson();
+    protected final Handler handler = new Handler(Looper.getMainLooper());
 
     protected abstract void initExoPlayer();
 
@@ -74,6 +84,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected void onResume() {
         super.onResume();
         FlutterManager.getInstance().invokerFlutterMethod("onResume", null);
+        bottomControlLayout.post(this);
     }
 
     @Override
@@ -88,6 +99,32 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         // 移除进度更新任务
         MessageManager.getInstance().unRegisterCallback(this);
         FlutterManager.getInstance().invokerFlutterMethod("onDestroy", null);
+        handler.removeCallbacksAndMessages(null);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event == null) {
+            return super.dispatchKeyEvent(null);
+        }
+
+        int keyCode = event.getKeyCode();
+        int action = event.getAction();
+        lastRequestFocusTime = System.currentTimeMillis();
+        if (action == KeyEvent.ACTION_UP) {
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                if (isShowControl) {
+                    hideControlView();
+                    return true;
+                }
+            } else {
+                if (!isShowControl) {
+                    showControlView();
+                }
+            }
+        }
+
+        return super.dispatchKeyEvent(event);
     }
 
     @CallSuper
@@ -98,6 +135,10 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         follow = findViewById(R.id.like);
         clarity = findViewById(R.id.clarity);
         line = findViewById(R.id.line);
+        liveTitle = findViewById(R.id.tv_video_title);
+        topControlLayout = findViewById(R.id.top_control_bar);
+        bottomControlLayout = findViewById(R.id.bottom_control_bar);
+        findViewById(R.id.back_layout).requestFocus();
 
         // 获得DanmakuManager单例
         danmakuManager = DanmakuManager.getInstance();
@@ -114,9 +155,9 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         MessageManager.getInstance().registerCallback(this);
         FlutterManager.getInstance().registerMethod("parseLiveUrl");
         FlutterManager.getInstance().registerMethod("stopPlay");
+        FlutterManager.getInstance().registerMethod("danmaku");
         FlutterManager.getInstance().invokerFlutterMethod("onCreate", null);
     }
-
 
     @CallSuper
     public void prepareToPlay() {
@@ -127,6 +168,11 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         line.setText(String.format(Locale.CHINA, "线路%d", liveModel.getCurrentLineIndex() + 1));
         clarity.setText(liveModel.getClarity());
         follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
+        if (liveModel.getRoomTitle() != null) {
+            liveTitle.setText(liveModel.getRoomTitle());
+        } else {
+            liveTitle.setText(liveModel.getName());
+        }
     }
 
     @CallSuper
@@ -142,8 +188,9 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         findViewById(R.id.danmaku_opacity_layout).setOnClickListener(this);
         findViewById(R.id.danmaku_stroke_layout).setOnClickListener(this);
         findViewById(R.id.fullscreen_layout).setOnClickListener(this);
-        findViewById(R.id.btn_back).setOnClickListener(this);
-        findViewById(R.id.btn_more).setOnClickListener(this);
+        findViewById(R.id.back_layout).setOnClickListener(this);
+        findViewById(R.id.more_layout).setOnClickListener(this);
+        findViewById(R.id.player_view).setOnClickListener(this);
     }
 
     @Override
@@ -154,28 +201,19 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 player.stop();
             } else if (message.arg1 == "parseLiveUrl".hashCode()) {
                 parseLiveUrl(model.getMethodCall(), model.getResult());
-            }
-
-            return true;
-        } else if (message.what == DEFAULT_CMD) {
-            Bundle bundle = message.getData();
-            if (bundle == null) {
+            } else if (message.arg1 == "danmaku".hashCode()) {
+                String type = model.getMethodCall().argument("type");
+                String info = model.getMethodCall().argument("message");
+                String color = model.getMethodCall().argument("color");
+                // 发送弹幕
+                Danmaku danmaku = new Danmaku();
+                danmaku.text = info;
+                danmaku.size = 42;
+                danmaku.color = color;
+                danmakuManager.send(danmaku);
+            } else {
                 return false;
             }
-
-            String type = bundle.getString("type");
-            String msg = bundle.getString("message");
-            String color = bundle.getString("color");
-            if (type == null || msg == null) {
-                return false;
-            }
-
-            // 发送弹幕
-            Danmaku danmaku = new Danmaku();
-            danmaku.text = msg;
-            danmaku.size = 42;
-            danmaku.color = color;
-            danmakuManager.send(danmaku);
 
             return true;
         } else {
@@ -219,7 +257,30 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             }, stringDiff, liveModel.getQualites(), liveModel.getCurrentQuality());
             dialog.show();
         } else if (viewId == R.id.line_layout) {
+            SelectDialog<Integer> dialog = new SelectDialog<>(this);
+            dialog.setTip(getString(R.string.line));
+            List<Integer> dataList = new ArrayList<>(liveModel.getPlayUrls().size());
+            for (int index = 1; index <= liveModel.getPlayUrls().size(); index++) {
+                dataList.add(index);
+            }
 
+            dialog.setAdapter(null, new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+                @Override
+                public void click(Integer value, int pos) {
+                    try {
+                        dialog.cancel();
+                        liveModel.setCurrentLineIndex(pos);
+                        FlutterManager.getInstance().invokerFlutterMethod("changeLine", pos);
+                        prepareToPlay();
+                    } catch (Exception ignore) {}
+                }
+
+                @Override
+                public String getDisplay(Integer val) {
+                    return "线路" + val;
+                }
+            }, integerDiff, dataList, liveModel.getCurrentLineIndex());
+            dialog.show();
         } else if (viewId == R.id.ratio_layout) {
 
         } else if (viewId == R.id.danmaku_layout) {
@@ -235,20 +296,27 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         } else if (viewId == R.id.danmaku_stroke_layout) {
 
         } else if (viewId == R.id.fullscreen_layout) {
-            if (!isFullscreen) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-                isFullscreen = true;
-                btnFullscreen.setText(R.string.landscape);
-            } else {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-                isFullscreen = false;
-                btnFullscreen.setText(R.string.portrait);
-            }
-        } else if (viewId == R.id.btn_back) {
+
+        } else if (viewId == R.id.back_layout) {
             onBackPressed();
-        } else if (viewId == R.id.btn_more) {
+        } else if (viewId == R.id.more_layout) {
             // 这里可以弹出更多功能菜单，比如画质切换等功能
             Toast.makeText(this, "更多功能待完善", Toast.LENGTH_SHORT).show();
+        } else if (viewId == R.id.player_view) {
+            if (!isShowControl) {
+                showControlView();
+            } else {
+                hideControlView();
+            }
+        }
+    }
+
+    @Override
+    public void run() {
+        if (System.currentTimeMillis() - lastRequestFocusTime > 3000) {
+            hideControlView();
+        } else {
+            handler.postDelayed(this, 3000);
         }
     }
 
@@ -269,7 +337,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
     protected void parseLiveUrl(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         liveModel = gson.fromJson((String) call.arguments, LiveModel.class);
-        LogUtils.w("liveMode=> " + liveModel);
         OkHttpManager.getInstance().resetRequestHeader(liveModel.getHeaderMap());
         if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
             prepareToPlay();
@@ -278,5 +345,29 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         }
 
         result.success(false);
+    }
+
+    protected void showControlView() {
+        ObjectAnimator topAnimator = ObjectAnimator.ofFloat(topControlLayout, "translationY", -topControlLayout.getHeight(), 0);
+        topAnimator.setDuration(400); // 动画时长
+        topAnimator.start();
+
+        ObjectAnimator bottomAnimator = ObjectAnimator.ofFloat(bottomControlLayout, "translationY", bottomControlLayout.getHeight(), 0);
+        bottomAnimator.setDuration(400); // 动画时长
+        bottomAnimator.start();
+        isShowControl = true;
+        handler.removeCallbacks(this);
+        handler.postDelayed(this, 3000);
+    }
+
+    protected void hideControlView() {
+        ObjectAnimator topAnimator = ObjectAnimator.ofFloat(topControlLayout, "translationY", 0, -topControlLayout.getHeight());
+        topAnimator.setDuration(400); // 动画时长
+        topAnimator.start();
+
+        ObjectAnimator bottomAnimator = ObjectAnimator.ofFloat(bottomControlLayout, "translationY", 0, bottomControlLayout.getHeight());
+        bottomAnimator.setDuration(400); // 动画时长
+        bottomAnimator.start();
+        isShowControl = false;
     }
 }

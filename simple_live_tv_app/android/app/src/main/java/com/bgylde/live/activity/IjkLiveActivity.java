@@ -2,9 +2,11 @@ package com.bgylde.live.activity;
 
 import android.net.Uri;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 import androidx.ijk.widget.VideoHolder;
+
+import com.bgylde.live.R;
 import com.bgylde.live.core.BaseActivity;
 import com.bgylde.live.core.FlutterManager;
 import com.bgylde.live.core.LogUtils;
@@ -21,6 +23,9 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
     protected void initViews() {
         super.initViews();
         playerView = new IjkPlayerView(this);
+        playerView.setId(R.id.player_view);
+        playerView.setFocusable(false);
+        playerView.setClickable(false);
         player = playerView;
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
@@ -51,6 +56,7 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
         // playerView.setRatio(Display.RATIO_WIDTH,16,9);
         // 视频控制ViewHolder
         VideoHolder holder = playerView.getVideoHolder();
+        holder.getControlGroup().setVisibility(View.GONE);
         playerView.setOnIJKVideoListener(this);
         // 自定义全屏还是小屏幕显示，不设置就采用默认的逻辑；
         playerView.setOnVideoSwitchScreenListener(orientation -> {
@@ -105,7 +111,6 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
 
     @Override
     public void onVideoError(IMediaPlayer mp, int what, int extra) {
-        Toast.makeText(this, "播放出错：" + what, Toast.LENGTH_LONG).show();
         LogUtils.w("Test", "what = " + what + " extra = " + extra);
         FlutterManager.getInstance().invokerFlutterMethod("mediaError", extra);
         isPlaying = false;

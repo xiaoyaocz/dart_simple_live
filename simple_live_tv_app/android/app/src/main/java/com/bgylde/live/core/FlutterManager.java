@@ -52,9 +52,15 @@ public class FlutterManager implements MethodChannel.MethodCallHandler {
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         LogUtils.w("Test", "onMethodCall=>" + call.method + " args: " + call.arguments);
+
+        Integer methodCode = methodMap.get(call.method);
+        if (methodCode == null) {
+            return;
+        }
+
         Message message = Message.obtain();
         message.what = MessageManager.FLUTTER_TO_JAVA_CMD;
-        message.arg1 = methodMap.get(call.method);
+        message.arg1 = methodCode;
         message.obj = new MethodCallModel(call, result);
         MessageManager.getInstance().sendMessage(message);
     }

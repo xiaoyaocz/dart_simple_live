@@ -152,6 +152,10 @@
 -keep class androidx.media3.exoplayer.** { *; }
 -dontwarn androidx.media3.exoplayer.**
 
+# lombok
+-keep class lombok.** {*;}
+-dontwarn lombok.**
+
 # 实体类
 -keep class com.bgylde.live.**{*;}
 

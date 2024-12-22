@@ -506,6 +506,13 @@ class SettingsPage extends GetView<SettingsController> {
           subtitle: "v${Utils.packageInfo.version}",
           onTap: controller.checkUpdate,
         ),
+        AppStyle.vGap24,
+        HighlightListTile(
+          focusNode: AppFocusNode(),
+          title: "本地更新",
+          subtitle: "v${Utils.packageInfo.version}",
+          onTap: controller.checkTestUpdate,
+        ),
       ],
     );
   }

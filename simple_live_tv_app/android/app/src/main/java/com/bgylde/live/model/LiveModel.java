@@ -1,14 +1,9 @@
 package com.bgylde.live.model;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
 import androidx.annotation.NonNull;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +32,8 @@ public class LiveModel {
     // 清晰度
     @SerializedName("qualites")
     private List<String> qualites;
+    @SerializedName("headers")
+    private Map<String, String> headerMap;
 
     private static final String kBiliBili = "bilibili";
     private static final String kDouyu = "douyu";
@@ -45,18 +42,6 @@ public class LiveModel {
 
     public boolean isPlayEmpty() {
         return playUrls == null || playUrls.isEmpty();
-    }
-
-    public Map<String, String> getRequestHeader() {
-        Map<String, String> headerMap = new HashMap<>();
-        if (kBiliBili.equals(id)) {
-            headerMap.put("referer", "https://live.bilibili.com");
-            headerMap.put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188");
-        } else if (kHuya.equals(id)) {
-            headerMap.put("user-agent", "HYSDK(Windows, 20000308)");
-        }
-
-        return headerMap;
     }
 
     @NonNull

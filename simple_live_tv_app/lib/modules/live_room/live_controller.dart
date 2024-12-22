@@ -116,8 +116,8 @@ class LiveController {
   /// 双击退出Timer
   Timer? doubleClickTimer;
 
-  void openLivePage() {
-    platform.invokeMethod("openLivePage");
+  void openLivePage(int playerMode) {
+    platform.invokeMethod("openLivePage", playerMode);
   }
 
   void onInit() {
@@ -303,7 +303,8 @@ class LiveController {
         'followed': followed.value,
         'qualites': qualiteNames,
         'currentQuality': currentQuality,
-        'currentLineIndex': currentLineIndex
+        'currentLineIndex': currentLineIndex,
+        'headers': headers
       }));
     if (!result) {
       onClose();

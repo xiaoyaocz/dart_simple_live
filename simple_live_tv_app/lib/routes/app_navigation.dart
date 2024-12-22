@@ -26,12 +26,17 @@ class AppNavigator {
       }
     }
 
-    LiveController liveController = LiveController(pSite: site, pRoomId: roomId);
-    liveController.openLivePage();
-
-    // Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
-    //   "roomId": roomId,
-    // });
+    if (AppSettingsController.instance.playerMode.value == 0) {
+      LiveController liveController = LiveController(pSite: site, pRoomId: roomId);
+      liveController.openLivePage(0);
+    } else if (AppSettingsController.instance.playerMode.value == 1) {
+      LiveController liveController = LiveController(pSite: site, pRoomId: roomId);
+      liveController.openLivePage(1);
+    } else {
+      Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
+        "roomId": roomId,
+      });
+    }
   }
 
   /// 跳转至哔哩哔哩登录

@@ -331,7 +331,7 @@
                 android:layout_gravity="center"
                 android:textSize="12sp"
                 android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/portrait"/>
+                android:text="@string/landscape"/>
         </FrameLayout>
     </LinearLayout>
 

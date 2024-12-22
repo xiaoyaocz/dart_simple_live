@@ -83,11 +83,11 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
         // 开始播放
         String source = playerView.getDataSource();
         if (TextUtils.isEmpty(source)) {
-            playerView.setDataSource(Uri.parse(videoUrl), liveModel.getRequestHeader());
+            playerView.setDataSource(Uri.parse(videoUrl), liveModel.getHeaderMap());
             playerView.start();
         } else {
             playerView.reset();
-            playerView.setDataSource(Uri.parse(videoUrl), liveModel.getRequestHeader());
+            playerView.setDataSource(Uri.parse(videoUrl), liveModel.getHeaderMap());
             playerView.prepareAsync();
         }
     }
@@ -106,6 +106,7 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
     @Override
     public void onVideoError(IMediaPlayer mp, int what, int extra) {
         Toast.makeText(this, "播放出错：" + what, Toast.LENGTH_LONG).show();
+        LogUtils.w("Test", "what = " + what + " extra = " + extra);
         FlutterManager.getInstance().invokerFlutterMethod("mediaError", extra);
         isPlaying = false;
     }

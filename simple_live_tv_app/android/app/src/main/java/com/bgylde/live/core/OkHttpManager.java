@@ -59,7 +59,6 @@ public class OkHttpManager implements Interceptor {
     @Override
     public Response intercept(Chain chain) throws IOException {
         Request request = chain.request();
-
         Request.Builder builder = request.newBuilder();
         if (headerMap != null && !headerMap.isEmpty()) {
             for (String key: headerMap.keySet()) {
@@ -82,16 +81,15 @@ public class OkHttpManager implements Interceptor {
         }
 
         HttpUrl httpUrl = HttpUrl.parse(newUrl);
-        LogUtils.w("OkHttp", "httpUrl=>" + httpUrl);
         if (httpUrl == null) {
             return response;
         }
 
         if (httpUrl.scheme().equals("https") && httpUrl.host().contains("_")) {
             httpUrl = httpUrl.newBuilder().scheme("http").build();
-            builder.url(httpUrl);
         }
 
+        builder.url(httpUrl);
         response.close();
         return chain.proceed(builder.build());
     }

@@ -1,8 +1,6 @@
 package com.bgylde.live.activity;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -11,7 +9,6 @@ import android.os.Message;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 
 import com.bgylde.live.core.LogUtils;
@@ -40,12 +37,6 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
 
     private static final String TAG = "FlutterActivity";
     private static final String TEST_APK_URL = "http://192.168.100.1:12321/test.apk";
-    private static final int REQUEST_EXTERNAL_STORAGE = 1;
-    private static final String[] PERMISSIONS_STORAGE = {
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-    };
-
     private File tempApk;
 
     @Override
@@ -86,44 +77,12 @@ public class FlutterActivity extends io.flutter.embedding.android.FlutterActivit
             }
             startActivity(intent);
         } else if (message.arg1 == "checkTestUpdate".hashCode()) {
-            if (checkoutPermission()) {
-                downloadApk();
-            }
+            downloadApk();
         } else {
             return false;
         }
 
         return true;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode != REQUEST_EXTERNAL_STORAGE) {
-            return;
-        }
-
-        if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        downloadApk();
-    }
-
-    private boolean checkoutPermission() {
-        boolean havePermission = false;
-        // 检查权限（NEED_PERMISSION）是否被授权 PackageManager.PERMISSION_GRANTED表示同意授权
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, PERMISSIONS_STORAGE, REQUEST_EXTERNAL_STORAGE);
-            } else {
-                havePermission = true;
-            }
-        } else {
-            havePermission = true;
-        }
-        LogUtils.w("Test", "havePermission: " + havePermission);
-        return havePermission;
     }
 
     private void installAPK() {

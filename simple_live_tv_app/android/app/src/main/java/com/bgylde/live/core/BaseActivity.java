@@ -113,14 +113,12 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         lastRequestFocusTime = System.currentTimeMillis();
         if (action == KeyEvent.ACTION_UP) {
             if (keyCode == KeyEvent.KEYCODE_BACK) {
-                hideControlView();
-                return true;
-            } else {
-                if (!isShowControl) {
-                    showControlView();
-                } else {
+                if (isShowControl) {
                     hideControlView();
+                    return true;
                 }
+            } else {
+                showControlView();
             }
         }
 

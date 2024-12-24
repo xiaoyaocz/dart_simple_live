@@ -57,7 +57,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
     protected long lastRequestFocusTime;
     protected boolean isPlaying = false;
-    protected boolean isShowControl = false;
+    protected volatile boolean isShowControl = true;
     protected final Gson gson = new Gson();
     protected final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -113,13 +113,13 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         lastRequestFocusTime = System.currentTimeMillis();
         if (action == KeyEvent.ACTION_UP) {
             if (keyCode == KeyEvent.KEYCODE_BACK) {
-                if (isShowControl) {
-                    hideControlView();
-                    return true;
-                }
+                hideControlView();
+                return true;
             } else {
                 if (!isShowControl) {
                     showControlView();
+                } else {
+                    hideControlView();
                 }
             }
         }
@@ -138,7 +138,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         liveTitle = findViewById(R.id.tv_video_title);
         topControlLayout = findViewById(R.id.top_control_bar);
         bottomControlLayout = findViewById(R.id.bottom_control_bar);
-        findViewById(R.id.back_layout).requestFocus();
+        findViewById(R.id.like_layout).requestFocus();
 
         // 获得DanmakuManager单例
         danmakuManager = DanmakuManager.getInstance();
@@ -235,6 +235,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                     boolean followed = (boolean) result;
                     liveModel.setFollowed(followed);
                     follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
+                    Toast.makeText(BaseActivity.this, followed ? "关注成功!" : "取消关注成功!", Toast.LENGTH_SHORT).show();
                 }
             });
         } else if (viewId == R.id.clarity_layout) {
@@ -348,6 +349,11 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     }
 
     protected void showControlView() {
+        if (isShowControl) {
+            return;
+        }
+
+        isShowControl = true;
         ObjectAnimator topAnimator = ObjectAnimator.ofFloat(topControlLayout, "translationY", -topControlLayout.getHeight(), 0);
         topAnimator.setDuration(400); // 动画时长
         topAnimator.start();
@@ -355,12 +361,16 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         ObjectAnimator bottomAnimator = ObjectAnimator.ofFloat(bottomControlLayout, "translationY", bottomControlLayout.getHeight(), 0);
         bottomAnimator.setDuration(400); // 动画时长
         bottomAnimator.start();
-        isShowControl = true;
         handler.removeCallbacks(this);
         handler.postDelayed(this, 3000);
     }
 
     protected void hideControlView() {
+        if (!isShowControl) {
+            return;
+        }
+
+        isShowControl = false;
         ObjectAnimator topAnimator = ObjectAnimator.ofFloat(topControlLayout, "translationY", 0, -topControlLayout.getHeight());
         topAnimator.setDuration(400); // 动画时长
         topAnimator.start();
@@ -368,6 +378,5 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         ObjectAnimator bottomAnimator = ObjectAnimator.ofFloat(bottomControlLayout, "translationY", 0, bottomControlLayout.getHeight());
         bottomAnimator.setDuration(400); // 动画时长
         bottomAnimator.start();
-        isShowControl = false;
     }
 }

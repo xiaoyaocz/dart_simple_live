@@ -2,7 +2,6 @@ package com.bgylde.live.activity;
 
 import android.os.Build;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -16,6 +15,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import com.bgylde.live.R;
 import com.bgylde.live.core.BaseActivity;
 import com.bgylde.live.core.FlutterManager;
+import com.bgylde.live.core.LogUtils;
 import com.bgylde.live.core.OkHttpManager;
 import com.bgylde.live.player.ExoPlayerView;
 
@@ -169,6 +169,7 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
                 errorMessage = httpError.getCause() == null ? "" : httpError.getCause().getMessage();
             }
         }
+        LogUtils.e("OkHttp", errorMessage, error);
         FlutterManager.getInstance().invokerFlutterMethod("mediaError", errorMessage);
     }
 }

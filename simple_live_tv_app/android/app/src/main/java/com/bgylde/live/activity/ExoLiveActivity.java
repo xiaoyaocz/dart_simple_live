@@ -6,6 +6,7 @@ import android.widget.RelativeLayout;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.common.VideoSize;
 import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.datasource.okhttp.OkHttpDataSource;
@@ -21,6 +22,7 @@ import com.bgylde.live.player.ExoPlayerView;
 
 public class ExoLiveActivity extends BaseActivity implements Player.Listener {
 
+    private static final String TAG = "ExoLiveActivity";
     private ExoPlayer exoPlayer;
     private ExoPlayerView playerView;
 
@@ -60,9 +62,7 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
         super.onPause();
         playerView.onPause();
         if (Build.VERSION.SDK_INT < 24) {
-            if (exoPlayer != null) {
-                exoPlayer.release();
-            }
+            exoPlayer.release();
         }
     }
 
@@ -70,9 +70,7 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
     protected void onStop() {
         super.onStop();
         if (Build.VERSION.SDK_INT >= 24) {
-            if (exoPlayer != null) {
-                exoPlayer.release();
-            }
+            exoPlayer.release();
         }
     }
 
@@ -111,28 +109,6 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
     }
 
     @Override
-    public void onPlaybackStateChanged(int playbackState) {
-        switch (playbackState) {
-            case Player.STATE_IDLE:
-                break;
-            case Player.STATE_BUFFERING:
-                // 显示缓冲提示，比如加载动画等
-                break;
-            case Player.STATE_READY:
-                break;
-            case Player.STATE_ENDED:
-                break;
-        }
-    }
-
-    @Override
-    public void onPlayWhenReadyChanged(boolean playWhenReady, int reason) {
-        if (playWhenReady) {
-            isPlaying = true;
-        }
-    }
-
-    @Override
     public void onIsPlayingChanged(boolean isPlaying) {
         this.isPlaying = isPlaying;
         if (!isPlaying) {
@@ -165,7 +141,12 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
                 errorMessage = httpError.getCause() == null ? "" : httpError.getCause().getMessage();
             }
         }
-        LogUtils.e("OkHttp", errorMessage, error);
+        LogUtils.e(TAG, errorMessage, error);
         FlutterManager.getInstance().invokerFlutterMethod("mediaError", errorMessage);
+    }
+
+    @Override
+    public void onVideoSizeChanged(VideoSize videoSize) {
+        LogUtils.i(TAG, videoSize.width + "x" + videoSize.height);
     }
 }

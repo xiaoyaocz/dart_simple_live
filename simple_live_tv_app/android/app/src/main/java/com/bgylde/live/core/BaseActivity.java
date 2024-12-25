@@ -1,6 +1,7 @@
 package com.bgylde.live.core;
 
 import android.animation.ObjectAnimator;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,7 +9,6 @@ import android.os.Message;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,10 +20,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bgylde.live.R;
 import com.bgylde.live.adapter.SelectDialogAdapter;
-import com.bgylde.live.danmaku.danmaku.Danmaku;
-import com.bgylde.live.danmaku.danmaku.DanmakuManager;
 import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.widgets.SelectDialog;
+import com.bytedance.danmaku.render.engine.DanmakuView;
+import com.bytedance.danmaku.render.engine.control.DanmakuConfig;
+import com.bytedance.danmaku.render.engine.control.DanmakuController;
+import com.bytedance.danmaku.render.engine.render.draw.text.TextData;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ import io.flutter.plugin.common.MethodChannel;
 import static com.bgylde.live.adapter.SelectDialogAdapter.integerDiff;
 import static com.bgylde.live.adapter.SelectDialogAdapter.stringDiff;
 import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
+import static com.bytedance.danmaku.render.engine.utils.ConstantsKt.LAYER_TYPE_SCROLL;
 
 /**
  * Created by wangyan on 2024/12/19
@@ -43,7 +46,6 @@ import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
 public abstract class BaseActivity extends AppCompatActivity implements View.OnClickListener, Handler.Callback, Runnable {
 
     protected LiveModel liveModel;
-    protected DanmakuManager danmakuManager;
     protected IVideoPlayer player;
 
     protected RelativeLayout playerLayout;
@@ -60,6 +62,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected volatile boolean isShowControl = true;
     protected final Gson gson = new Gson();
     protected final Handler handler = new Handler(Looper.getMainLooper());
+
+    private DanmakuController danmakuController;
 
     protected abstract void initExoPlayer();
 
@@ -85,12 +89,14 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         super.onResume();
         FlutterManager.getInstance().invokerFlutterMethod("onResume", null);
         bottomControlLayout.post(this);
+        danmakuController.start(0);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         FlutterManager.getInstance().invokerFlutterMethod("onPause", null);
+        danmakuController.pause();
     }
 
     @Override
@@ -100,6 +106,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         MessageManager.getInstance().unRegisterCallback(this);
         FlutterManager.getInstance().invokerFlutterMethod("onDestroy", null);
         handler.removeCallbacksAndMessages(null);
+        danmakuController.clear(LAYER_TYPE_SCROLL);
+        danmakuController.stop();
     }
 
     @Override
@@ -138,14 +146,14 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         bottomControlLayout = findViewById(R.id.bottom_control_bar);
         findViewById(R.id.like_layout).requestFocus();
 
-        // 获得DanmakuManager单例
-        danmakuManager = DanmakuManager.getInstance();
-
-        // 设置一个FrameLayout为弹幕容器
-        FrameLayout container = findViewById(R.id.container);
-        danmakuManager.init(this, container);
-        danmakuManager.getConfig().setLineHeight(50);
-        danmakuManager.getConfig().setMaxScrollLine(100);
+        DanmakuView danmakuPlayer = findViewById(R.id.container);
+        danmakuController = danmakuPlayer.getController();
+        DanmakuConfig config = danmakuController.getConfig();
+        config.getScroll().setLineCount(10);
+        config.getText().setStrokeColor(0xFF000000);
+        config.getText().setStrokeWidth(2f);
+        config.getText().setColor(0xFFFFFFFF);
+        config.getText().setIncludeFontPadding(false);
     }
 
     @CallSuper
@@ -204,11 +212,14 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 String info = model.getMethodCall().argument("message");
                 String color = model.getMethodCall().argument("color");
                 // 发送弹幕
-                Danmaku danmaku = new Danmaku();
-                danmaku.text = info;
-                danmaku.size = 42;
-                danmaku.color = color;
-                danmakuManager.send(danmaku);
+                TextData textData = new TextData();
+                textData.setText(info);
+                textData.setShowAtTime(0);
+                textData.setLayerType(LAYER_TYPE_SCROLL);
+                try {
+                    textData.setTextColor(Color.parseColor(color));
+                } catch (Exception ignore) {}
+                danmakuController.addFakeData(textData);
             } else {
                 return false;
             }

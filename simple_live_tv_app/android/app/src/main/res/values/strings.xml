@@ -12,6 +12,7 @@
     <string name="danmaku_area">弹幕区域</string>
     <string name="danmaku_opacity">不透明度</string>
     <string name="danmaku_stroke">描边宽度</string>
+    <string name="refresh">刷新</string>
     <string name="landscape">横屏</string>
     <string name="portrait">竖屏</string>
 </resources>

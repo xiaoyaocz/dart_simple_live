@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.bgylde.live.danmaku.danmaku.DanmakuView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="none"
+    android:shadowColor="#000000"
+    android:shadowDx="0"
+    android:shadowDy="0"
+    android:shadowRadius="2.5"
+    android:singleLine="true" />

@@ -20,6 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bgylde.live.R;
 import com.bgylde.live.adapter.SelectDialogAdapter;
+import com.bgylde.live.danmaku.danmaku.Danmaku;
+import com.bgylde.live.danmaku.danmaku.DanmakuManager;
 import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.widgets.SelectDialog;
 import com.google.gson.Gson;
@@ -30,8 +32,6 @@ import java.util.Locale;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
-import top.littlefogcat.danmakulib.danmaku.Danmaku;
-import top.littlefogcat.danmakulib.danmaku.DanmakuManager;
 
 import static com.bgylde.live.adapter.SelectDialogAdapter.integerDiff;
 import static com.bgylde.live.adapter.SelectDialogAdapter.stringDiff;
@@ -47,7 +47,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected IVideoPlayer player;
 
     protected RelativeLayout playerLayout;
-    protected TextView btnFullscreen;
+    protected TextView refresh;
     protected TextView follow;
     protected TextView clarity;
     protected TextView line;
@@ -129,7 +129,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected void initViews() {
         hideSystemUI(false);
         playerLayout = findViewById(R.id.player_layout);
-        btnFullscreen = findViewById(R.id.btn_fullscreen);
+        refresh = findViewById(R.id.refresh);
         follow = findViewById(R.id.like);
         clarity = findViewById(R.id.clarity);
         line = findViewById(R.id.line);
@@ -185,7 +185,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         findViewById(R.id.danmaku_area_layout).setOnClickListener(this);
         findViewById(R.id.danmaku_opacity_layout).setOnClickListener(this);
         findViewById(R.id.danmaku_stroke_layout).setOnClickListener(this);
-        findViewById(R.id.fullscreen_layout).setOnClickListener(this);
+        findViewById(R.id.refresh_layout).setOnClickListener(this);
         findViewById(R.id.back_layout).setOnClickListener(this);
         findViewById(R.id.more_layout).setOnClickListener(this);
         findViewById(R.id.player_view).setOnClickListener(this);
@@ -294,8 +294,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
         } else if (viewId == R.id.danmaku_stroke_layout) {
 
-        } else if (viewId == R.id.fullscreen_layout) {
-
+        } else if (viewId == R.id.refresh_layout) {
+            FlutterManager.getInstance().invokerFlutterMethod("refresh", null);
         } else if (viewId == R.id.back_layout) {
             onBackPressed();
         } else if (viewId == R.id.more_layout) {

@@ -110,6 +110,9 @@ class LiveController {
           // 重置错误次数
           mediaErrorRetryCount = 0;
         }
+        case "refresh": {
+          refreshRoom();
+        }
       }
       return null;
     });

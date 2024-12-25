@@ -71,13 +71,6 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
     public void prepareToPlay() {
         super.prepareToPlay();
 
-        if (isPlaying) {
-            playerView.showLoading();
-            playerView.reset();
-            playerView.setSurface(playerView.getSurface());
-            playerView.stop();
-        }
-
         // 播放视频
         String videoUrl = "";
         if (liveModel != null && !liveModel.isPlayEmpty()) {

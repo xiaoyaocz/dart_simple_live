@@ -99,10 +99,6 @@ public class ExoLiveActivity extends BaseActivity implements Player.Listener {
     @Override
     public void prepareToPlay() {
         super.prepareToPlay();
-        if (isPlaying) {
-            exoPlayer.stop();
-        }
-
         String videoUrl = "";
         if (liveModel != null && !liveModel.isPlayEmpty()) {
             videoUrl = liveModel.getLine();

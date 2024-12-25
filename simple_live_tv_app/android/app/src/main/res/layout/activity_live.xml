@@ -371,7 +371,7 @@
         </FrameLayout>
     </LinearLayout>
 
-    <FrameLayout
+    <com.bytedance.danmaku.render.engine.DanmakuView
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

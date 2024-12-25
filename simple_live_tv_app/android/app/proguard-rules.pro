@@ -162,6 +162,15 @@
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
 
+#弹幕库
+-dontwarn com.badlogic.gdx.backends.android.AndroidFragmentApplication
+-dontwarn com.badlogic.gdx.utils.GdxBuild
+-dontwarn com.badlogic.gdx.jnigen.BuildTarget*
+-dontwarn com.badlogic.gdx.graphics.g2d.freetype.FreetypeBuild
+
+# Required if using Gdx-Controllers extension
+-keep class com.badlogic.gdx.controllers.android.AndroidControllers
+
 # from app -> build -> outputs -> mapping -> your_app_name -> missing_rules.txt
 # Please add these rules to your existing keep rules in order to suppress warnings.
 # This is generated automatically by the Android Gradle plugin.

@@ -95,7 +95,7 @@
             android:layout_weight="1"
             android:focusable="true"
             android:clickable="true"
-            android:nextFocusLeft="@id/fullscreen_layout"
+            android:nextFocusLeft="@id/refresh_layout"
             android:nextFocusRight="@id/clarity_layout"
             android:background="@drawable/shape_model_focus">
 
@@ -331,7 +331,7 @@
             android:focusable="true"
             android:clickable="true"
             android:nextFocusLeft="@id/danmaku_opacity_layout"
-            android:nextFocusRight="@id/fullscreen_layout"
+            android:nextFocusRight="@id/refresh_layout"
             android:background="@drawable/shape_model_focus">
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/danmaku_stroke"
@@ -347,7 +347,7 @@
 
         <!-- 全屏切换按钮 -->
         <FrameLayout
-            android:id="@+id/fullscreen_layout"
+            android:id="@+id/refresh_layout"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:paddingVertical="12dp"
@@ -359,7 +359,7 @@
             android:nextFocusRight="@id/like_layout"
             android:background="@drawable/shape_model_focus">
             <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/btn_fullscreen"
+                android:id="@+id/refresh"
                 android:includeFontPadding="false"
                 android:gravity="center"
                 android:layout_width="wrap_content"
@@ -367,7 +367,7 @@
                 android:layout_gravity="center"
                 android:textSize="14sp"
                 android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/landscape"/>
+                android:text="@string/refresh"/>
         </FrameLayout>
     </LinearLayout>
 

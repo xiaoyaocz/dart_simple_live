@@ -47,8 +47,8 @@ import com.bgylde.live.danmaku.util.SystemClock;
 /**
  * DanmakuTextureView需要开启GPU加速才能显示弹幕
  * 很遗憾...经过测试TextureView没有提升绘制速度,也许哪里用的不对
- * @author ch
  *
+ * @author ch
  */
 @SuppressLint("NewApi")
 public class DanmakuTextureView extends TextureView implements IDanmakuView, IDanmakuViewController,
@@ -66,14 +66,14 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
 
     private boolean mEnableDanmakuDrwaingCache = true;
 
-	private OnDanmakuClickListener mOnDanmakuClickListener;
+    private OnDanmakuClickListener mOnDanmakuClickListener;
 
     private DanmakuTouchHelper mTouchHelper;
 
     private boolean mShowFps;
 
     private boolean mDanmakuVisible = true;
-    
+
     protected int mDrawingThreadType = THREAD_TYPE_NORMAL_PRIORITY;
 
     public DanmakuTextureView(Context context) {
@@ -81,7 +81,6 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
         init();
     }
 
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     private void init() {
         setLayerType(View.LAYER_TYPE_HARDWARE, null);
         setOpaque(false);
@@ -90,8 +89,8 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
         setWillNotDraw(true);
         setSurfaceTextureListener(this);
         DrawHelper.useDrawColorToClearCanvas(true, true);
-		mTouchHelper = DanmakuTouchHelper.instance(this);    
-	}
+        mTouchHelper = DanmakuTouchHelper.instance(this);
+    }
 
     public DanmakuTextureView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -122,7 +121,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
             handler.removeAllDanmakus(isClearDanmakusOnScreen);
         }
     }
-    
+
     @Override
     public void removeAllLiveDanmakus() {
         if (handler != null) {
@@ -172,7 +171,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
     @Override
     public void release() {
         stop();
-        if(mDrawTimes!= null) mDrawTimes.clear();
+        if (mDrawTimes != null) mDrawTimes.clear();
     }
 
     @Override
@@ -196,13 +195,13 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
             handlerThread.quit();
         }
     }
-    
-    protected Looper getLooper(int type){
+
+    protected Looper getLooper(int type) {
         if (mHandlerThread != null) {
             mHandlerThread.quit();
             mHandlerThread = null;
         }
-        
+
         int priority;
         switch (type) {
             case THREAD_TYPE_MAIN_THREAD:
@@ -218,7 +217,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
                 priority = android.os.Process.THREAD_PRIORITY_DEFAULT;
                 break;
         }
-        String threadName = "DFM Handler Thread #"+priority;
+        String threadName = "DFM Handler Thread #" + priority;
         mHandlerThread = new HandlerThread(threadName, priority);
         mHandlerThread.start();
         return mHandlerThread.getLooper();
@@ -255,9 +254,11 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
     public void showFPS(boolean show) {
         mShowFps = show;
     }
+
     private static final int MAX_RECORD_SIZE = 50;
     private static final int ONE_SECOND = 1000;
     private LinkedList<Long> mDrawTimes;
+
     private float fps() {
         long lastTime = SystemClock.uptimeMillis();
         mDrawTimes.addLast(lastTime);
@@ -268,7 +269,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
         }
         return dtime > 0 ? mDrawTimes.size() * ONE_SECOND / dtime : 0.0f;
     }
-    
+
     @Override
     public synchronized long drawDanmakus() {
         if (!isSurfaceCreated)
@@ -323,10 +324,10 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
             restart();
         }
     }
-    
+
     @Override
     public boolean isPaused() {
-        if(handler != null) {
+        if (handler != null) {
             return handler.isStop();
         }
         return false;
@@ -352,7 +353,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
         handler.obtainMessage(DrawHandler.START, postion).sendToTarget();
     }
 
-	@Override
+    @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (null != mTouchHelper) {
             mTouchHelper.onTouchEvent(event);
@@ -390,7 +391,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
     public void show() {
         showAndResumeDrawTask(null);
     }
-    
+
     @Override
     public void showAndResumeDrawTask(Long position) {
         mDanmakuVisible = true;
@@ -408,7 +409,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
         }
         handler.hideDanmakus(false);
     }
-    
+
     @Override
     public long hideAndPauseDrawTask() {
         mDanmakuVisible = false;
@@ -433,7 +434,7 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
     public synchronized void clear() {
         if (!isViewReady()) {
             return;
-        }        
+        }
         Canvas canvas = lockCanvas();
         if (canvas != null) {
             DrawHelper.clearCanvas(canvas);
@@ -471,5 +472,4 @@ public class DanmakuTextureView extends TextureView implements IDanmakuView, IDa
             handler.clearDanmakusOnScreen();
         }
     }
-
 }

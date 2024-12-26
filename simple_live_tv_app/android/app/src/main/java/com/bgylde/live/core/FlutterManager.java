@@ -66,7 +66,7 @@ public class FlutterManager implements MethodChannel.MethodCallHandler {
     }
 
     public void invokerFlutterMethod(String methodName, Object arguments) {
-        LogUtils.w("Test", "invokerFlutterMethod=>" + methodName);
+        LogUtils.w("Test", "invokerFlutterMethod=>" + methodName + " args=>" + arguments);
         this.channel.invokeMethod(methodName, arguments);
     }
 

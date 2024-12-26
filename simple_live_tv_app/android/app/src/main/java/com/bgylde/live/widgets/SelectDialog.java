@@ -41,16 +41,17 @@ public class SelectDialog<T> extends BaseDialog {
     }
 
     public void setAdapter(TvRecyclerView tvRecyclerView, SelectDialogAdapter.SelectDialogInterface<T> sourceBeanSelectDialogInterface, DiffUtil.ItemCallback<T> sourceBeanItemCallback, List<T> data, int select) {
-        if (select >= data.size() || select < 0) select = 0;//if source update, data item count maybe smaller than before
+        if (select >= data.size() || select < 0)
+            select = 0;//if source update, data item count maybe smaller than before
         final int selectIdx = select;
         SelectDialogAdapter<T> adapter = new SelectDialogAdapter<>(sourceBeanSelectDialogInterface, sourceBeanItemCallback, muteCheck);
         adapter.setData(data, select);
-        if(tvRecyclerView == null){
+        if (tvRecyclerView == null) {
             tvRecyclerView = findViewById(R.id.list);
         }
         tvRecyclerView.setAdapter(adapter);
         tvRecyclerView.setSelectedPosition(select);
-        if (select<10){
+        if (select < 10) {
             tvRecyclerView.setSelection(select);
         }
         TvRecyclerView finalTvRecyclerView = tvRecyclerView;

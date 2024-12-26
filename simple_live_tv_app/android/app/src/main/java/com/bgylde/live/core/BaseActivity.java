@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.RelativeLayout;
@@ -17,19 +18,23 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bgylde.live.R;
 import com.bgylde.live.adapter.SelectDialogAdapter;
+import com.bgylde.live.core.setting.ButtonDelegate;
+import com.bgylde.live.core.setting.LineDelegate;
+import com.bgylde.live.core.setting.SelectDelegate;
 import com.bgylde.live.danmaku.model.BaseDanmaku;
 import com.bgylde.live.danmaku.model.IDisplayer;
 import com.bgylde.live.danmaku.model.android.DanmakuContext;
-import com.bgylde.live.danmaku.model.android.SpannedCacheStuffer;
+import com.bgylde.live.danmaku.model.android.SimpleTextCacheStuffer;
 import com.bgylde.live.danmaku.widget.DanmakuView;
 import com.bgylde.live.model.LiveModel;
-import com.bgylde.live.widgets.SelectDialog;
+import com.bgylde.live.multitype.MultiTypeAdapter;
 import com.google.gson.Gson;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -37,8 +42,6 @@ import java.util.Locale;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
-import static com.bgylde.live.adapter.SelectDialogAdapter.integerDiff;
-import static com.bgylde.live.adapter.SelectDialogAdapter.stringDiff;
 import static com.bgylde.live.core.MessageManager.FLUTTER_TO_JAVA_CMD;
 
 /**
@@ -50,14 +53,10 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected IVideoPlayer player;
 
     protected RelativeLayout playerLayout;
-    protected TextView refresh;
-    protected TextView follow;
-    protected TextView clarity;
-    protected TextView line;
     protected TextView liveTitle;
-    protected TextView danmaku;
     protected View topControlLayout;
-    protected View bottomControlLayout;
+    protected RecyclerView settingRecycler;
+    protected final MultiTypeAdapter multiTypeAdapter = new MultiTypeAdapter();
 
     protected long lastRequestFocusTime;
     protected boolean isPlaying = false;
@@ -69,6 +68,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected DanmakuContext danmakuContext;
     // 弹幕文本大小
     protected int danmakuTextSize = 40;
+    // 弹幕透明度 (1-10代表10%到100%)
+    protected int danmakuOpacity = 10;
 
     protected abstract void initExoPlayer();
 
@@ -93,7 +94,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected void onResume() {
         super.onResume();
         FlutterManager.getInstance().invokerFlutterMethod("onResume", null);
-        bottomControlLayout.post(this);
+        settingRecycler.post(this);
     }
 
     @Override
@@ -113,6 +114,12 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             danmakuView.release();
             danmakuView = null;
         }
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        lastRequestFocusTime = System.currentTimeMillis();
+        return super.onTouchEvent(event);
     }
 
     @Override
@@ -142,18 +149,15 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected void initViews() {
         hideSystemUI(false);
         playerLayout = findViewById(R.id.player_layout);
-        refresh = findViewById(R.id.refresh);
-        follow = findViewById(R.id.like);
-        danmaku = findViewById(R.id.danmaku_switch);
-        clarity = findViewById(R.id.clarity);
-        line = findViewById(R.id.line);
         liveTitle = findViewById(R.id.tv_video_title);
         topControlLayout = findViewById(R.id.top_control_bar);
-        bottomControlLayout = findViewById(R.id.bottom_control_bar);
         danmakuView = findViewById(R.id.container);
-        findViewById(R.id.like_layout).requestFocus();
-
-        danmaku.setText(danmakuSwitch ? R.string.danmaku_open : R.string.danmaku_close);
+        settingRecycler = findViewById(R.id.setting_recyclerview);
+        multiTypeAdapter.register(SelectDelegate.SelectModel.class, new SelectDelegate());
+        multiTypeAdapter.register(Boolean.class, new LineDelegate());
+        multiTypeAdapter.register(ButtonDelegate.ButtonModel.class, new ButtonDelegate());
+        this.settingRecycler.setLayoutManager(new LinearLayoutManager(this));
+        this.settingRecycler.setAdapter(multiTypeAdapter);
 
         // 设置最大显示行数
         HashMap<Integer, Integer> maxLinesPair = new HashMap<>();
@@ -170,13 +174,13 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 .setScrollSpeedFactor(1.2f)
                 .setScaleTextSize(1.2f)
                 .setDuplicateMergingEnabled(false)
-                .setCacheStuffer(new SpannedCacheStuffer(), null)
+                .setCacheStuffer(new SimpleTextCacheStuffer(), null)
                 .setMaximumLines(maxLinesPair)
                 .preventOverlapping(overlappingEnablePair);
         DanmakuInstance danmakuInstance = new DanmakuInstance(danmakuView);
         danmakuView.setCallback(danmakuInstance);
         danmakuView.prepare(danmakuInstance, danmakuContext);
-        danmakuView.showFPS(true);
+        danmakuView.showFPS(false);
         danmakuView.enableDanmakuDrawingCache(true);
     }
 
@@ -195,9 +199,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             return;
         }
 
-        line.setText(String.format(Locale.CHINA, "线路%d", liveModel.getCurrentLineIndex() + 1));
-        clarity.setText(liveModel.getClarity());
-        follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
+        this.multiTypeAdapter.setItems(buildSettingData());
+        this.multiTypeAdapter.notifyDataSetChanged();
         if (liveModel.getRoomTitle() != null) {
             liveTitle.setText(liveModel.getRoomTitle());
         } else {
@@ -207,17 +210,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
     @CallSuper
     protected void setButtonClickListeners() {
-        findViewById(R.id.like_layout).setOnClickListener(this);
-        findViewById(R.id.clarity_layout).setOnClickListener(this);
-        findViewById(R.id.line_layout).setOnClickListener(this);
-        findViewById(R.id.ratio_layout).setOnClickListener(this);
-        findViewById(R.id.danmaku_layout).setOnClickListener(this);
-        findViewById(R.id.danmaku_size_layout).setOnClickListener(this);
-        findViewById(R.id.danmaku_speed_layout).setOnClickListener(this);
-        findViewById(R.id.danmaku_area_layout).setOnClickListener(this);
-        findViewById(R.id.danmaku_opacity_layout).setOnClickListener(this);
-        findViewById(R.id.danmaku_stroke_layout).setOnClickListener(this);
-        findViewById(R.id.refresh_layout).setOnClickListener(this);
         findViewById(R.id.back_layout).setOnClickListener(this);
         findViewById(R.id.more_layout).setOnClickListener(this);
         findViewById(R.id.player_view).setOnClickListener(this);
@@ -246,12 +238,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 danmaku.isLive = true; // 是否是直播弹幕
                 danmaku.time = danmakuView.getCurrentTime(); // 显示时间
                 danmaku.textSize = danmakuTextSize;
-                try {
-                    danmaku.textColor = Color.parseColor(color);
-                } catch (Exception ignore) {
-                    danmaku.textColor = Color.WHITE;
-                }
-
+                danmaku.textColor = getColor(color);
                 danmaku.textShadowColor = Color.BLACK; // 阴影/描边颜色
                 danmaku.borderColor = 0; // 边框颜色，0表示无边框
                 danmakuView.addDanmaku(danmaku);
@@ -268,97 +255,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     @Override
     public void onClick(View view) {
         int viewId = view.getId();
-        if (viewId == R.id.like_layout) {
-            FlutterManager.getInstance().invokerFlutterMethod("followUser", null, new FlutterManager.Result() {
-                @Override
-                public void success(@Nullable Object result) {
-                    if (result == null) {
-                        return;
-                    }
-
-                    boolean followed = (boolean) result;
-                    liveModel.setFollowed(followed);
-                    follow.setText(liveModel.isFollowed() ? R.string.followed : R.string.unfollowed);
-                    Toast.makeText(BaseActivity.this, followed ? "关注成功!" : "取消关注成功!", Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else if (viewId == R.id.clarity_layout) {
-            SelectDialog<String> dialog = new SelectDialog<>(this);
-            dialog.setTip(getString(R.string.clarity));
-            dialog.setAdapter(null, new SelectDialogAdapter.SelectDialogInterface<String>() {
-                @Override
-                public void click(String value, int pos) {
-                    try {
-                        dialog.cancel();
-                        liveModel.setCurrentQuality(pos);
-                        FlutterManager.getInstance().invokerFlutterMethod("changeQuality", pos);
-                    } catch (Exception ignore) {}
-                }
-
-                @Override
-                public String getDisplay(String val) {
-                    return val;
-                }
-            }, stringDiff, liveModel.getQualites(), liveModel.getCurrentQuality());
-            dialog.show();
-        } else if (viewId == R.id.line_layout) {
-            SelectDialog<Integer> dialog = new SelectDialog<>(this);
-            dialog.setTip(getString(R.string.line));
-            List<Integer> dataList = new ArrayList<>(liveModel.getPlayUrls().size());
-            for (int index = 1; index <= liveModel.getPlayUrls().size(); index++) {
-                dataList.add(index);
-            }
-
-            dialog.setAdapter(null, new SelectDialogAdapter.SelectDialogInterface<Integer>() {
-                @Override
-                public void click(Integer value, int pos) {
-                    try {
-                        dialog.cancel();
-                        liveModel.setCurrentLineIndex(pos);
-                        FlutterManager.getInstance().invokerFlutterMethod("changeLine", pos);
-                        prepareToPlay();
-                    } catch (Exception ignore) {}
-                }
-
-                @Override
-                public String getDisplay(Integer val) {
-                    return "线路" + val;
-                }
-            }, integerDiff, dataList, liveModel.getCurrentLineIndex());
-            dialog.show();
-        } else if (viewId == R.id.ratio_layout) {
-
-        } else if (viewId == R.id.danmaku_layout) {
-            danmakuSwitch = !danmakuSwitch;
-            danmaku.setText(danmakuSwitch ? R.string.danmaku_open : R.string.danmaku_close);
-        } else if (viewId == R.id.danmaku_size_layout) {
-            SelectDialog<Integer> dialog = new SelectDialog<>(this);
-            dialog.setTip(getString(R.string.danmaku_size));
-            List<Integer> dataList = List.of(20, 30, 40, 50, 60, 70, 80);
-            dialog.setAdapter(null, new SelectDialogAdapter.SelectDialogInterface<Integer>() {
-                @Override
-                public void click(Integer value, int pos) {
-                    dialog.cancel();
-                    danmakuTextSize = value;
-                }
-
-                @Override
-                public String getDisplay(Integer val) {
-                    return String.valueOf(val);
-                }
-            }, integerDiff, dataList, dataList.indexOf(danmakuTextSize));
-            dialog.show();
-        } else if (viewId == R.id.danmaku_speed_layout) {
-
-        } else if (viewId == R.id.danmaku_area_layout) {
-
-        } else if (viewId == R.id.danmaku_opacity_layout) {
-
-        } else if (viewId == R.id.danmaku_stroke_layout) {
-
-        } else if (viewId == R.id.refresh_layout) {
-            FlutterManager.getInstance().invokerFlutterMethod("refresh", null);
-        } else if (viewId == R.id.back_layout) {
+        if (viewId == R.id.back_layout) {
             onBackPressed();
         } else if (viewId == R.id.more_layout) {
             // 这里可以弹出更多功能菜单，比如画质切换等功能
@@ -418,9 +315,10 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         topAnimator.setDuration(400); // 动画时长
         topAnimator.start();
 
-        ObjectAnimator bottomAnimator = ObjectAnimator.ofFloat(bottomControlLayout, "translationY", bottomControlLayout.getHeight(), 0);
-        bottomAnimator.setDuration(400); // 动画时长
-        bottomAnimator.start();
+        ObjectAnimator recyclerViewAnimator = ObjectAnimator.ofFloat(settingRecycler, "translationX", settingRecycler.getWidth(), 0);
+        recyclerViewAnimator.setDuration(400); // 动画时长
+        recyclerViewAnimator.start();
+
         handler.removeCallbacks(this);
         handler.postDelayed(this, 3000);
     }
@@ -435,8 +333,124 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         topAnimator.setDuration(400); // 动画时长
         topAnimator.start();
 
-        ObjectAnimator bottomAnimator = ObjectAnimator.ofFloat(bottomControlLayout, "translationY", 0, bottomControlLayout.getHeight());
-        bottomAnimator.setDuration(400); // 动画时长
-        bottomAnimator.start();
+        ObjectAnimator recyclerViewAnimator = ObjectAnimator.ofFloat(settingRecycler, "translationX", 0, settingRecycler.getWidth());
+        recyclerViewAnimator.setDuration(400); // 动画时长
+        recyclerViewAnimator.start();
+    }
+
+    private List<Object> buildSettingData() {
+        ButtonDelegate.ButtonModel settingTitle = new ButtonDelegate.ButtonModel("设置", "刷新", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FlutterManager.getInstance().invokerFlutterMethod("refresh", null);
+            }
+        });
+        SelectDelegate.SelectModel followSetting = new SelectDelegate.SelectModel("关注用户", List.of("是", "否"), liveModel.isFollowed() ? 0 : 1, new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                boolean result = pos == 0;
+                if (result == liveModel.isFollowed()) {
+                    return;
+                }
+
+                FlutterManager.getInstance().invokerFlutterMethod("followUser", null, new FlutterManager.Result() {
+                    @Override
+                    public void success(@Nullable Object result) {
+                        if (result == null) {
+                            return;
+                        }
+
+                        boolean followed = (boolean) result;
+                        liveModel.setFollowed(followed);
+                        Toast.makeText(BaseActivity.this, followed ? "关注成功!" : "取消关注成功!", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        SelectDelegate.SelectModel clarityAndLine = new SelectDelegate.SelectModel("清晰度与线路", null, -1, null);
+        SelectDelegate.SelectModel claritySelect = new SelectDelegate.SelectModel("清晰度", liveModel.getQualites(), liveModel.getCurrentQuality(), new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                liveModel.setCurrentQuality(pos);
+                FlutterManager.getInstance().invokerFlutterMethod("changeQuality", pos);
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        SelectDelegate.SelectModel lineSelect = new SelectDelegate.SelectModel("线路", liveModel.getPlayUrls(), liveModel.getCurrentLineIndex(), new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                liveModel.setCurrentLineIndex(pos);
+                FlutterManager.getInstance().invokerFlutterMethod("changeLine", pos);
+                prepareToPlay();
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return "线路" + (liveModel.getPlayUrls().indexOf(val) + 1);
+            }
+        });
+
+        SelectDelegate.SelectModel danmaku = new SelectDelegate.SelectModel("弹幕", null, -1, null);
+        SelectDelegate.SelectModel danmakuStatus = new SelectDelegate.SelectModel("弹幕开关", List.of("开", "关"), danmakuSwitch ? 0 : 1, new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                danmakuSwitch = (pos == 0);
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        List<String> dataList = List.of("20", "30", "40", "50", "60", "70", "80");
+        SelectDelegate.SelectModel danmakuSize = new SelectDelegate.SelectModel("弹幕大小", dataList, dataList.indexOf(String.valueOf(danmakuTextSize)), new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                danmakuTextSize = Integer.parseInt(dataList.get(pos));
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        List<String> opacityList = List.of("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%");
+        SelectDelegate.SelectModel danmakuOpacitySetting = new SelectDelegate.SelectModel("不透明度", opacityList, danmakuOpacity - 1, new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                danmakuOpacity = pos + 1;
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting);
+    }
+
+    private int getColor(String colorStr) {
+        int color = 0xFFFFFFFF;
+        try {
+            color = Color.parseColor(colorStr);
+        } catch (Exception ignore) {}
+
+        int opacity = (int) (0xFF * (danmakuOpacity * 1.0f / 10)) << 24 | 0x00FFFFFF;
+        color = color & opacity;
+        return color;
     }
 }

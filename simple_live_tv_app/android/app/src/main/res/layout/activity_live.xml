@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@color/color_000000_70"
+        android:background="@color/transparent"
         android:padding="8dp"
         android:layout_alignParentTop="true">
 
@@ -71,306 +71,6 @@
         </FrameLayout>
     </LinearLayout>
 
-    <!-- 底部控制栏布局 -->
-    <LinearLayout
-        android:id="@+id/bottom_control_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:baselineAligned="false"
-        android:orientation="horizontal"
-        android:background="@color/color_000000_70"
-        android:gravity="center_vertical"
-        android:padding="8dp"
-        android:weightSum="11"
-        android:layout_alignParentBottom="true">
-
-        <!-- 关注/取消关注按钮 -->
-        <FrameLayout
-            android:id="@+id/like_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/refresh_layout"
-            android:nextFocusRight="@id/clarity_layout"
-            android:background="@drawable/shape_model_focus">
-
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/like"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                android:includeFontPadding="false"
-                android:gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/unfollowed"/>
-        </FrameLayout>
-
-        <!-- 清晰度按钮 -->
-        <FrameLayout
-            android:id="@+id/clarity_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/like_layout"
-            android:nextFocusRight="@id/line_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/clarity"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:includeFontPadding="false"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/clarity"/>
-        </FrameLayout>
-
-        <!-- 线路按钮 -->
-        <FrameLayout
-            android:id="@+id/line_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/clarity_layout"
-            android:nextFocusRight="@id/ratio_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/line"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:includeFontPadding="false"
-                android:textSize="14sp"
-                android:gravity="center"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/line"/>
-        </FrameLayout>
-
-        <!-- 画面比例按钮 -->
-        <FrameLayout
-            android:id="@+id/ratio_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/line_layout"
-            android:nextFocusRight="@id/danmaku_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/ratio"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:includeFontPadding="false"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/ratio"/>
-        </FrameLayout>
-
-        <!-- 弹幕开关 -->
-        <FrameLayout
-            android:id="@+id/danmaku_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/ratio_layout"
-            android:nextFocusRight="@id/danmaku_size_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/danmaku_switch"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:includeFontPadding="false"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/danmaku_open"/>
-        </FrameLayout>
-
-        <!-- 弹幕大小 -->
-        <FrameLayout
-            android:id="@+id/danmaku_size_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/danmaku_layout"
-            android:nextFocusRight="@id/danmaku_speed_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/danmaku_size"
-                android:includeFontPadding="false"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:layout_gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/danmaku_size"/>
-        </FrameLayout>
-
-        <!-- 弹幕速度 -->
-        <FrameLayout
-            android:id="@+id/danmaku_speed_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/danmaku_size_layout"
-            android:nextFocusRight="@id/danmaku_area_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/danmaku_speed"
-                android:includeFontPadding="false"
-                android:gravity="center"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/danmaku_speed"/>
-        </FrameLayout>
-
-        <!-- 显示区域 -->
-        <FrameLayout
-            android:id="@+id/danmaku_area_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/danmaku_speed_layout"
-            android:nextFocusRight="@id/danmaku_opacity_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/danmaku_area"
-                android:includeFontPadding="false"
-                android:gravity="center"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/danmaku_area"/>
-        </FrameLayout>
-
-        <!-- 不透明度 -->
-        <FrameLayout
-            android:id="@+id/danmaku_opacity_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/danmaku_area_layout"
-            android:nextFocusRight="@id/danmaku_stroke_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/danmaku_opacity"
-                android:includeFontPadding="false"
-                android:gravity="center"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/danmaku_opacity"/>
-        </FrameLayout>
-
-        <!-- 描边宽度 -->
-        <FrameLayout
-            android:id="@+id/danmaku_stroke_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_marginEnd="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/danmaku_opacity_layout"
-            android:nextFocusRight="@id/refresh_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/danmaku_stroke"
-                android:includeFontPadding="false"
-                android:gravity="center"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/danmaku_stroke"/>
-        </FrameLayout>
-
-        <!-- 全屏切换按钮 -->
-        <FrameLayout
-            android:id="@+id/refresh_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="5dp"
-            android:layout_weight="1"
-            android:focusable="true"
-            android:clickable="true"
-            android:nextFocusLeft="@id/danmaku_stroke_layout"
-            android:nextFocusRight="@id/like_layout"
-            android:background="@drawable/shape_model_focus">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/refresh"
-                android:includeFontPadding="false"
-                android:gravity="center"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="14sp"
-                android:textColor="@color/color_FFFFFF_80"
-                android:text="@string/refresh"/>
-        </FrameLayout>
-    </LinearLayout>
-
     <com.bgylde.live.danmaku.widget.DanmakuView
         android:id="@+id/container"
         android:layout_width="match_parent"
@@ -378,4 +78,19 @@
         android:focusable="false"
         android:clickable="false"/>
 
+    <View
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_centerInParent="true"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/setting_recyclerview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="120dp"
+        android:paddingHorizontal="20dp"
+        android:background="@color/color_3D3D3D_80"
+        android:layout_alignStart="@id/divider"
+        android:layout_alignParentEnd="true"/>
 </RelativeLayout>

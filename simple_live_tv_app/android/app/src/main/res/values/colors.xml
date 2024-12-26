@@ -11,6 +11,7 @@
     <color name="color_theme_40">#66F80000</color>
     <!-- Main Dialog Button BG -->
     <color name="color_theme_dark_70">#B3601216</color>
+    <color name="color_424242">#FF424242</color>
 
     <!-- EPG Colors -->
     <color name="color_32364E">#32364E</color>

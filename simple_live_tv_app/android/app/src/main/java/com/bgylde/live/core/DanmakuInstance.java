@@ -1,14 +1,12 @@
 package com.bgylde.live.core;
 
-import com.bgylde.live.danmaku.controller.DrawHandler;
-import com.bgylde.live.danmaku.controller.IDanmakuView;
-import com.bgylde.live.danmaku.model.BaseDanmaku;
-import com.bgylde.live.danmaku.model.DanmakuTimer;
-import com.bgylde.live.danmaku.model.IDanmakus;
-import com.bgylde.live.danmaku.model.android.Danmakus;
-import com.bgylde.live.danmaku.parser.BaseDanmakuParser;
-import com.bgylde.live.danmaku.widget.DanmakuSurfaceView;
-import com.bgylde.live.danmaku.widget.DanmakuView;
+import com.bgylde.live.danmaku.flame.controller.DrawHandler;
+import com.bgylde.live.danmaku.flame.controller.IDanmakuView;
+import com.bgylde.live.danmaku.flame.model.BaseDanmaku;
+import com.bgylde.live.danmaku.flame.model.DanmakuTimer;
+import com.bgylde.live.danmaku.flame.model.IDanmakus;
+import com.bgylde.live.danmaku.flame.model.android.Danmakus;
+import com.bgylde.live.danmaku.flame.parser.BaseDanmakuParser;
 
 /**
  * Created by wangyan on 2024/12/26

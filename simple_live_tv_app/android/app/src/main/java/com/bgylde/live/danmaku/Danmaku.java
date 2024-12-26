@@ -22,7 +22,7 @@ public class Danmaku {
     // 描边颜色
     public int strokeColor = Color.BLACK;
     // 描边宽度
-    public int strokeWidth = 1;
+    public int strokeWidth = 0;
 
     public enum Mode {
         scroll, top, bottom

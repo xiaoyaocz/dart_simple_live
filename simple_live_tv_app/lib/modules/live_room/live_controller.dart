@@ -72,7 +72,6 @@ class LiveController {
 
   void _initChannel() {
     platform.setMethodCallHandler((MethodCall call) async {
-      print('methodCall=>${call.method}');
       // 同样也是根据方法名分发不同的函数
       switch(call.method) {
         case "onResume": {
@@ -179,6 +178,10 @@ class LiveController {
       online.value = msg.data;
     } else if (msg.type == LiveMessageType.superChat) {
       //superChats.add(msg.data);
+    }
+
+    if (msg.message.isEmpty) {
+      return;
     }
 
     platform.invokeMethod("danmaku",

@@ -25,6 +25,7 @@ import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -167,6 +168,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
     });
   }
+
   // 弹窗逻辑
 
   void refreshRoom() {
@@ -463,6 +465,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   int mediaErrorRetryCount = 0;
+
   @override
   void mediaError(String error) async {
     super.mediaEnd();
@@ -578,6 +581,15 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
     Utils.copyToClipboard(detail.value!.url);
     SmartDialog.showToast("已复制直播间链接");
+  }
+
+  Future<void> visitWebLive() async {
+    var uri = Uri.parse(detail.value!.url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      throw '无法打开网页 $uri';
+    }
   }
 
   /// 底部打开播放器设置

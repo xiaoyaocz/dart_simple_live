@@ -214,14 +214,23 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 icon: const Icon(Remix.share_line),
                 label: const Text("分享"),
               ),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  textStyle: const TextStyle(fontSize: 14),
-                ),
-                onPressed: controller.copyUrl,
-                icon: const Icon(Remix.file_copy_line),
-                label: const Text("复制链接"),
-              ),
+              (Platform.isWindows || Platform.isLinux)
+                  ? TextButton.icon(
+                      style: TextButton.styleFrom(
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
+                      onPressed: controller.visitWebLive,
+                      icon: const Icon(Remix.chrome_fill),
+                      label: const Text("浏览器打开"),
+                    )
+                  : TextButton.icon(
+                      style: TextButton.styleFrom(
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
+                      onPressed: controller.copyUrl,
+                      icon: const Icon(Remix.file_copy_line),
+                      label: const Text("复制链接"),
+                    ),
             ],
           ),
         ),

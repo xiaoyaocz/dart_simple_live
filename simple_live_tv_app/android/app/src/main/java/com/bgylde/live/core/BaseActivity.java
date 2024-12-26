@@ -10,6 +10,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,18 +27,15 @@ import com.bgylde.live.adapter.SelectDialogAdapter;
 import com.bgylde.live.core.setting.ButtonDelegate;
 import com.bgylde.live.core.setting.LineDelegate;
 import com.bgylde.live.core.setting.SelectDelegate;
-import com.bgylde.live.danmaku.model.BaseDanmaku;
-import com.bgylde.live.danmaku.model.IDisplayer;
-import com.bgylde.live.danmaku.model.android.DanmakuContext;
-import com.bgylde.live.danmaku.model.android.SimpleTextCacheStuffer;
-import com.bgylde.live.danmaku.widget.DanmakuView;
+import com.bgylde.live.danmaku.Danmaku;
+import com.bgylde.live.danmaku.DanmakuManager;
+import com.bgylde.live.danmaku.DanmakuView;
 import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.multitype.MultiTypeAdapter;
 import com.google.gson.Gson;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -64,10 +62,12 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected volatile boolean isShowControl = true;
     protected final Gson gson = new Gson();
     protected final Handler handler = new Handler(Looper.getMainLooper());
-    protected DanmakuView danmakuView;
-    protected DanmakuContext danmakuContext;
+    protected DanmakuManager danmakuManager;
+
     // 弹幕文本大小
     protected int danmakuTextSize = 40;
+    // 弹幕描边宽度
+    protected int danmakuStrokeWidth = 1;
     // 弹幕透明度 (1-10代表10%到100%)
     protected int danmakuOpacity = 10;
 
@@ -110,10 +110,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         MessageManager.getInstance().unRegisterCallback(this);
         FlutterManager.getInstance().invokerFlutterMethod("onDestroy", null);
         handler.removeCallbacksAndMessages(null);
-        if (danmakuView != null) {
-            danmakuView.release();
-            danmakuView = null;
-        }
     }
 
     @Override
@@ -151,7 +147,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         playerLayout = findViewById(R.id.player_layout);
         liveTitle = findViewById(R.id.tv_video_title);
         topControlLayout = findViewById(R.id.top_control_bar);
-        danmakuView = findViewById(R.id.container);
         settingRecycler = findViewById(R.id.setting_recyclerview);
         multiTypeAdapter.register(SelectDelegate.SelectModel.class, new SelectDelegate());
         multiTypeAdapter.register(Boolean.class, new LineDelegate());
@@ -159,29 +154,14 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         this.settingRecycler.setLayoutManager(new LinearLayoutManager(this));
         this.settingRecycler.setAdapter(multiTypeAdapter);
 
-        // 设置最大显示行数
-        HashMap<Integer, Integer> maxLinesPair = new HashMap<>();
-        // 滚动弹幕最大显示10行
-        maxLinesPair.put(BaseDanmaku.TYPE_SCROLL_RL, 10);
-        // 设置是否禁止重叠
-        HashMap<Integer, Boolean> overlappingEnablePair = new HashMap<>();
-        overlappingEnablePair.put(BaseDanmaku.TYPE_SCROLL_RL, true);
-        overlappingEnablePair.put(BaseDanmaku.TYPE_FIX_TOP, true);
+        // 获得DanmakuManager单例
+        danmakuManager = DanmakuManager.getInstance();
 
-        danmakuContext = DanmakuContext.create();
-        danmakuContext.setDanmakuStyle(IDisplayer.DANMAKU_STYLE_STROKEN, 3)
-                .setDuplicateMergingEnabled(false)
-                .setScrollSpeedFactor(1.2f)
-                .setScaleTextSize(1.2f)
-                .setDuplicateMergingEnabled(false)
-                .setCacheStuffer(new SimpleTextCacheStuffer(), null)
-                .setMaximumLines(maxLinesPair)
-                .preventOverlapping(overlappingEnablePair);
-        DanmakuInstance danmakuInstance = new DanmakuInstance(danmakuView);
-        danmakuView.setCallback(danmakuInstance);
-        danmakuView.prepare(danmakuInstance, danmakuContext);
-        danmakuView.showFPS(false);
-        danmakuView.enableDanmakuDrawingCache(true);
+        // 设置一个FrameLayout为弹幕容器
+        FrameLayout container = findViewById(R.id.container);
+        danmakuManager.init(this, container);
+        danmakuManager.getConfig().setLineHeight(50);
+        danmakuManager.getConfig().setMaxScrollLine(100);
     }
 
     @CallSuper
@@ -231,17 +211,12 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 String info = model.getMethodCall().argument("message");
                 String color = model.getMethodCall().argument("color");
                 // 发送弹幕
-                BaseDanmaku danmaku = danmakuContext.mDanmakuFactory.createDanmaku(BaseDanmaku.TYPE_SCROLL_RL, danmakuContext);
+                Danmaku danmaku = new Danmaku();
                 danmaku.text = info;
-                danmaku.padding = 5;
-                danmaku.priority = 1;  // 0 表示可能会被各种过滤器过滤并隐藏显示 //1 表示一定会显示, 一般用于本机发送的弹幕
-                danmaku.isLive = true; // 是否是直播弹幕
-                danmaku.time = danmakuView.getCurrentTime(); // 显示时间
-                danmaku.textSize = danmakuTextSize;
-                danmaku.textColor = getColor(color);
-                danmaku.textShadowColor = Color.BLACK; // 阴影/描边颜色
-                danmaku.borderColor = 0; // 边框颜色，0表示无边框
-                danmakuView.addDanmaku(danmaku);
+                danmaku.size = danmakuTextSize;
+                danmaku.strokeWidth = danmakuStrokeWidth;
+                danmaku.color = getColor(color, danmaku);
+                danmakuManager.send(danmaku);
             } else {
                 return false;
             }
@@ -440,10 +415,23 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             }
         });
 
-        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting);
+        List<String> strokeList = List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+        SelectDelegate.SelectModel danmakuStroke = new SelectDelegate.SelectModel("描边宽度", strokeList, strokeList.indexOf(String.valueOf(danmakuStrokeWidth)), new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                danmakuStrokeWidth = pos + 1;
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting, danmakuStroke);
     }
 
-    private int getColor(String colorStr) {
+    private int getColor(String colorStr, Danmaku danmaku) {
         int color = 0xFFFFFFFF;
         try {
             color = Color.parseColor(colorStr);
@@ -451,6 +439,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
         int opacity = (int) (0xFF * (danmakuOpacity * 1.0f / 10)) << 24 | 0x00FFFFFF;
         color = color & opacity;
+
+        danmaku.strokeColor = opacity & 0xFF000000;
         return color;
     }
 }

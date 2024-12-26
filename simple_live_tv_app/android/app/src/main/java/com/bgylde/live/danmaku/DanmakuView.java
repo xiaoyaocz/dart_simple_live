@@ -235,6 +235,11 @@ public class DanmakuView extends AppCompatTextView {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if (mDanmaku.strokeWidth <= 0) {
+            super.onDraw(canvas);
+            return;
+        }
+
         TextPaint wkPaint = getLayout().getPaint();
         int preColor = wkPaint.getColor();
         Paint.Style prePaintStyle = wkPaint.getStyle();

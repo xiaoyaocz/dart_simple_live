@@ -67,7 +67,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     // 弹幕文本大小
     protected int danmakuTextSize = 40;
     // 弹幕描边宽度
-    protected int danmakuStrokeWidth = 1;
+    protected int danmakuStrokeWidth = 0;
     // 弹幕透明度 (1-10代表10%到100%)
     protected int danmakuOpacity = 10;
 
@@ -415,11 +415,11 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             }
         });
 
-        List<String> strokeList = List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+        List<String> strokeList = List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         SelectDelegate.SelectModel danmakuStroke = new SelectDelegate.SelectModel("描边宽度", strokeList, strokeList.indexOf(String.valueOf(danmakuStrokeWidth)), new SelectDialogAdapter.SelectDialogInterface<String>() {
             @Override
             public void click(String value, int pos) {
-                danmakuStrokeWidth = pos + 1;
+                danmakuStrokeWidth = pos;
             }
 
             @Override

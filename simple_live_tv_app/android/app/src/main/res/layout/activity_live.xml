@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/player_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -15,7 +16,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="@color/transparent"
-        android:padding="8dp"
+        android:padding="@dimen/ds24"
         android:layout_alignParentTop="true">
 
         <!-- 返回按钮 -->
@@ -23,9 +24,9 @@
             android:id="@+id/back_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingVertical="10dp"
-            android:paddingHorizontal="10dp"
-            android:layout_marginStart="5dp"
+            android:paddingVertical="@dimen/ds30"
+            android:paddingHorizontal="@dimen/ds30"
+            android:layout_marginStart="@dimen/ds15"
             android:focusable="true"
             android:clickable="true"
             android:nextFocusLeft="@id/more_layout"
@@ -33,8 +34,8 @@
             android:background="@drawable/icon_select">
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/btn_back"
-                android:layout_width="25dp"
-                android:layout_height="25dp"
+                android:layout_width="@dimen/ds75"
+                android:layout_height="@dimen/ds75"
                 android:focusable="false"
                 android:src="@drawable/icon_back" />
         </FrameLayout>
@@ -47,17 +48,18 @@
             android:layout_weight="1"
             android:focusable="false"
             android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:gravity="center" />
+            android:textSize="@dimen/ds75"
+            android:gravity="center"
+            tools:ignore="SpUsage" />
 
         <!-- 更多功能按钮（比如画质切换等，可扩展更多功能菜单） -->
         <FrameLayout
             android:id="@+id/more_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingVertical="10dp"
-            android:paddingHorizontal="10dp"
-            android:layout_marginEnd="5dp"
+            android:paddingVertical="@dimen/ds30"
+            android:paddingHorizontal="@dimen/ds30"
+            android:layout_marginEnd="@dimen/ds15"
             android:focusable="true"
             android:clickable="true"
             android:nextFocusLeft="@id/back_layout"
@@ -65,8 +67,8 @@
             android:background="@drawable/icon_select">
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/btn_more"
-                android:layout_width="25dp"
-                android:layout_height="25dp"
+                android:layout_width="@dimen/ds75"
+                android:layout_height="@dimen/ds75"
                 android:src="@drawable/icon_more" />
         </FrameLayout>
     </LinearLayout>
@@ -88,8 +90,8 @@
         android:id="@+id/setting_recyclerview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginStart="120dp"
-        android:paddingHorizontal="20dp"
+        android:layout_marginStart="@dimen/ds300"
+        android:paddingHorizontal="@dimen/ds60"
         android:background="@color/color_3D3D3D_80"
         android:layout_alignStart="@id/divider"
         android:layout_alignParentEnd="true"/>

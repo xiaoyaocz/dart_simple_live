@@ -10,8 +10,9 @@
     android:clickable="true"
     android:focusable="true"
     android:gravity="center"
-    android:padding="10dp"
+    android:padding="@dimen/ds30"
     android:text="@{name}"
     android:textColor="@color/color_FFFFFF"
-    android:textSize="14sp"
-    tools:text="Source Name" />
+    android:textSize="@dimen/ds50"
+    tools:text="Source Name"
+    tools:ignore="SpUsage" />

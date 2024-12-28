@@ -56,7 +56,7 @@ public class DanmakuRender implements DanmakuRenderer {
     public void updatePaint(@NonNull DanmakuItem danmakuItem, @NonNull DanmakuDisplayer danmakuDisplayer, @NonNull DanmakuConfig danmakuConfig) {
         DanmakuItemData danmakuItemData = danmakuItem.getData();
         // update textPaint
-        float textSize = danmakuItemData.getTextSize() * (danmakuDisplayer.getDensity() - 0.6f);
+        float textSize = danmakuItemData.getTextSize() * 2.0f;
         textPaint.setTextSize(textSize * danmakuConfig.getTextSizeScale());
         textPaint.setTypeface(danmakuConfig.getBold() ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
         textPaint.setColor(danmakuItemData.getTextColor());

@@ -69,12 +69,15 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
     // 弹幕文本大小
     protected int danmakuTextSize = 40;
+    protected int danmakuTextSizeIndex = 2;
     // 弹幕描边宽度
     protected int danmakuStrokeWidth = 0;
     // 弹幕透明度 (1-10代表10%到100%)
     protected int danmakuOpacity = 10;
     // 弹幕绘制类
     protected DanmakuRender danmakuRender = new DanmakuRender();
+    // 双击退出页面
+    protected long lastBackTime = 0;
 
     protected abstract void initExoPlayer();
 
@@ -123,6 +126,17 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     }
 
     @Override
+    public void onBackPressed() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastBackTime < 3000) {
+            super.onBackPressed();
+        } else {
+            Toast.makeText(this, "再按一次退出", Toast.LENGTH_SHORT).show();
+            lastBackTime = currentTime;
+        }
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent event) {
         lastRequestFocusTime = System.currentTimeMillis();
         return super.onTouchEvent(event);
@@ -163,8 +177,9 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         multiTypeAdapter.register(ButtonDelegate.ButtonModel.class, new ButtonDelegate());
         this.settingRecycler.setLayoutManager(new LinearLayoutManager(this));
         this.settingRecycler.setAdapter(multiTypeAdapter);
-
+        danmakuTextSize = getResources().getDimensionPixelSize(R.dimen.ds40);
         DanmakuView danmakuView = findViewById(R.id.container);
+        danmakuView.setLayerType(View.LAYER_TYPE_NONE, null);
         dataSource = new DataSource();
         danmakuPlayer = new DanmakuPlayer(danmakuRender, dataSource);
         danmakuPlayer.bindView(danmakuView);
@@ -197,6 +212,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         danmakuConfig.setAllowOverlap(false);
         danmakuConfig.setVisibility(true);
         danmakuConfig.setBold(true);
+        danmakuConfig.setDurationMs(1000);
+        danmakuConfig.setRollingDurationMs(1000);
         danmakuPlayer.start(danmakuConfig);
     }
 
@@ -227,13 +244,12 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 }
                 // 发送弹幕
                 DanmakuItemData data = new DanmakuItemData(
-                        System.nanoTime(), danmakuPlayer.getCurrentTimeMs() + 500, info,
+                        danmakuPlayer.getCurrentTimeMs(), danmakuPlayer.getCurrentTimeMs(), info,
                         DanmakuItemData.DANMAKU_MODE_ROLLING, danmakuTextSize, getColor(color),
-                        9, DanmakuItemData.DANMAKU_STYLE_NONE, 1,
-                        100L, 1);
+                        1, DanmakuItemData.DANMAKU_STYLE_NONE, 1,
+                        100L, DanmakuItemData.MERGED_TYPE_NORMAL);
                 DanmakuItem danmakuItem = danmakuPlayer.obtainItem(data);
                 danmakuRender.setStrokeWidth(danmakuStrokeWidth);
-                danmakuItem.reset();
                 danmakuPlayer.send(danmakuItem);
             } else {
                 return false;
@@ -335,7 +351,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         ButtonDelegate.ButtonModel settingTitle = new ButtonDelegate.ButtonModel("设置", "刷新", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                danmakuPlayer.stop();
                 FlutterManager.getInstance().invokerFlutterMethod("refresh", null);
             }
         });
@@ -368,7 +383,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         });
 
         SelectDelegate.SelectModel clarityAndLine = new SelectDelegate.SelectModel("清晰度与线路", null, -1, null);
-        SelectDelegate.SelectModel claritySelect = new SelectDelegate.SelectModel("清晰度", liveModel.getQualites(), liveModel.getCurrentQuality(), new SelectDialogAdapter.SelectDialogInterface<String>() {
+        SelectDelegate.SelectModel claritySelect = new SelectDelegate.SelectModel(getResources().getString(R.string.clarity), liveModel.getQualites(), liveModel.getCurrentQuality(), new SelectDialogAdapter.SelectDialogInterface<String>() {
             @Override
             public void click(String value, int pos) {
                 liveModel.setCurrentQuality(pos);
@@ -400,11 +415,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             @Override
             public void click(String value, int pos) {
                 danmakuSwitch = (pos == 0);
-                if (danmakuSwitch) {
-                    danmakuPlayer.start(danmakuPlayer.getConfig());
-                } else {
-                    danmakuPlayer.stop();
-                }
             }
 
             @Override
@@ -413,11 +423,13 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             }
         });
 
-        List<String> dataList = List.of("20", "30", "40", "50", "60", "70", "80");
-        SelectDelegate.SelectModel danmakuSize = new SelectDelegate.SelectModel("弹幕大小", dataList, dataList.indexOf(String.valueOf(danmakuTextSize)), new SelectDialogAdapter.SelectDialogInterface<String>() {
+        List<String> dataList = List.of("24", "32", "40", "48", "56", "64", "72");
+        SelectDelegate.SelectModel danmakuSize = new SelectDelegate.SelectModel("弹幕大小", dataList, danmakuTextSizeIndex, new SelectDialogAdapter.SelectDialogInterface<String>() {
             @Override
             public void click(String value, int pos) {
-                danmakuTextSize = Integer.parseInt(dataList.get(pos));
+                danmakuTextSizeIndex = pos;
+                danmakuTextSize = getResources().getDimensionPixelSize(getResources()
+                        .getIdentifier("ds" + dataList.get(danmakuTextSizeIndex), "dimen", getPackageName()));
             }
 
             @Override
@@ -439,11 +451,11 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             }
         });
 
-        List<String> strokeList = List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+        List<String> strokeList = List.of("0", "2", "4", "6", "8", "10", "12", "14", "16");
         SelectDelegate.SelectModel danmakuStroke = new SelectDelegate.SelectModel("描边宽度", strokeList, strokeList.indexOf(String.valueOf(danmakuStrokeWidth)), new SelectDialogAdapter.SelectDialogInterface<String>() {
             @Override
             public void click(String value, int pos) {
-                danmakuStrokeWidth = pos;
+                danmakuStrokeWidth = Integer.parseInt(value);
             }
 
             @Override

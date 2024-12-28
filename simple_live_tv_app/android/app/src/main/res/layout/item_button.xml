@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
-    android:paddingVertical="5dp"
-    android:layout_marginBottom="5dp"
+    android:paddingVertical="@dimen/ds15"
+    android:layout_marginBottom="@dimen/ds15"
     android:orientation="horizontal">
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/button_content"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:padding="5dp"
+        android:layout_width="@dimen/ds120"
+        android:layout_height="@dimen/ds120"
+        android:padding="@dimen/ds15"
         android:includeFontPadding="false"
         android:background="@drawable/shape_model_focus"
         android:src="@drawable/icon_refresh"/>
@@ -20,8 +21,9 @@
         android:id="@+id/item_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:textSize="24sp"
+        android:layout_marginStart="@dimen/ds30"
+        android:textSize="@dimen/ds50"
         android:includeFontPadding="false"
-        android:textColor="@color/color_FFFFFF" />
+        android:textColor="@color/color_FFFFFF"
+        tools:ignore="SpUsage" />
 </LinearLayout>

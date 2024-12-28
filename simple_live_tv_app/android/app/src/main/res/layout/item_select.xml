@@ -4,30 +4,31 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
-    android:paddingHorizontal="10dp"
-    android:paddingVertical="10dp"
-    android:layout_marginBottom="5dp"
+    android:paddingHorizontal="@dimen/ds30"
+    android:paddingVertical="@dimen/ds30"
+    android:layout_marginBottom="@dimen/ds15"
     android:orientation="horizontal">
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/select_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
+        android:textSize="@dimen/ds60"
         android:includeFontPadding="false"
-        android:textColor="@color/color_FFFFFF"/>
+        android:textColor="@color/color_FFFFFF"
+        tools:ignore="SpUsage" />
 
     <View
         android:layout_width="0dp"
-        android:layout_height="1dp"
+        android:layout_height="@dimen/ds1"
         android:layout_weight="1"/>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/select_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
+        android:textSize="@dimen/ds60"
         android:includeFontPadding="false"
         android:textColor="@color/color_FFFFFF"
-        tools:ignore="RelativeOverlap" />
+        tools:ignore="RelativeOverlap,SpUsage" />
 </LinearLayout>

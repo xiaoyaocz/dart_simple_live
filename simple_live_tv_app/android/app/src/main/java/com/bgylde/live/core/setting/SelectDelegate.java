@@ -81,6 +81,7 @@ public class SelectDelegate extends ItemViewBinder<SelectDelegate.SelectModel, S
 
             if (showValue == null) {
                 selectValue.setVisibility(View.GONE);
+                this.itemView.setBackgroundResource(R.color.transparent);
                 return;
             }
 
@@ -94,6 +95,25 @@ public class SelectDelegate extends ItemViewBinder<SelectDelegate.SelectModel, S
             this.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if (selectModel.getSelectList().size() == 2) {
+                        int selectIndex = selectModel.getSelectedIndex();
+                        selectIndex = selectModel.getSelectList().size() - selectIndex - 1;
+                        String value = selectModel.getSelectList().get(selectIndex);
+                        if (selectModel.getDialogInterface() != null) {
+                            selectModel.getDialogInterface().click(value, selectIndex);
+                        }
+
+                        selectModel.setSelectedIndex(selectIndex);
+                        String showValue;
+                        if (selectModel.getDialogInterface() != null) {
+                            showValue = "< " + selectModel.getDialogInterface().getDisplay(value) + " >";
+                        } else {
+                            showValue = "< " + value + " >";
+                        }
+                        selectValue.setText(showValue);
+                        return;
+                    }
+
                     SelectDialog<String> dialog = new SelectDialog<>(itemView.getContext());
                     dialog.setTip(selectModel.getSelectTitle());
                     dialog.setAdapter(null, new SelectDialogAdapter.SelectDialogInterface<String>() {

@@ -71,7 +71,7 @@
         </FrameLayout>
     </LinearLayout>
 
-    <FrameLayout
+    <com.kuaishou.akdanmaku.ui.DanmakuView
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

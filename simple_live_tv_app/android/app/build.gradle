@@ -116,4 +116,7 @@ dependencies {
     // lombok
     implementation 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    // 弹幕库
+    implementation 'com.kuaishou:akdanmaku:1.0.3'
 }

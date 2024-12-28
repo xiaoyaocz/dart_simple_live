@@ -10,7 +10,6 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,14 +26,17 @@ import com.bgylde.live.adapter.SelectDialogAdapter;
 import com.bgylde.live.core.setting.ButtonDelegate;
 import com.bgylde.live.core.setting.LineDelegate;
 import com.bgylde.live.core.setting.SelectDelegate;
-import com.bgylde.live.danmaku.Danmaku;
-import com.bgylde.live.danmaku.DanmakuManager;
-import com.bgylde.live.danmaku.DanmakuView;
+import com.bgylde.live.danmaku.DanmakuRender;
 import com.bgylde.live.model.LiveModel;
 import com.bgylde.live.multitype.MultiTypeAdapter;
 import com.google.gson.Gson;
+import com.kuaishou.akdanmaku.DanmakuConfig;
+import com.kuaishou.akdanmaku.data.DanmakuItem;
+import com.kuaishou.akdanmaku.data.DanmakuItemData;
+import com.kuaishou.akdanmaku.data.DataSource;
+import com.kuaishou.akdanmaku.ui.DanmakuPlayer;
+import com.kuaishou.akdanmaku.ui.DanmakuView;
 
-import java.util.HashMap;
 import java.util.List;
 
 import io.flutter.plugin.common.MethodCall;
@@ -62,7 +64,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected volatile boolean isShowControl = true;
     protected final Gson gson = new Gson();
     protected final Handler handler = new Handler(Looper.getMainLooper());
-    protected DanmakuManager danmakuManager;
+    protected DanmakuPlayer danmakuPlayer;
+    protected DataSource dataSource;
 
     // 弹幕文本大小
     protected int danmakuTextSize = 40;
@@ -70,6 +73,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected int danmakuStrokeWidth = 0;
     // 弹幕透明度 (1-10代表10%到100%)
     protected int danmakuOpacity = 10;
+    // 弹幕绘制类
+    protected DanmakuRender danmakuRender = new DanmakuRender();
 
     protected abstract void initExoPlayer();
 
@@ -100,6 +105,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     @Override
     protected void onPause() {
         super.onPause();
+        danmakuPlayer.pause();
         FlutterManager.getInstance().invokerFlutterMethod("onPause", null);
     }
 
@@ -110,6 +116,10 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         MessageManager.getInstance().unRegisterCallback(this);
         FlutterManager.getInstance().invokerFlutterMethod("onDestroy", null);
         handler.removeCallbacksAndMessages(null);
+        if (danmakuPlayer != null) {
+            danmakuPlayer.release();
+            danmakuPlayer = null;
+        }
     }
 
     @Override
@@ -154,14 +164,10 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         this.settingRecycler.setLayoutManager(new LinearLayoutManager(this));
         this.settingRecycler.setAdapter(multiTypeAdapter);
 
-        // 获得DanmakuManager单例
-        danmakuManager = DanmakuManager.getInstance();
-
-        // 设置一个FrameLayout为弹幕容器
-        FrameLayout container = findViewById(R.id.container);
-        danmakuManager.init(this, container);
-        danmakuManager.getConfig().setLineHeight(50);
-        danmakuManager.getConfig().setMaxScrollLine(100);
+        DanmakuView danmakuView = findViewById(R.id.container);
+        dataSource = new DataSource();
+        danmakuPlayer = new DanmakuPlayer(danmakuRender, dataSource);
+        danmakuPlayer.bindView(danmakuView);
     }
 
     @CallSuper
@@ -186,6 +192,12 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         } else {
             liveTitle.setText(liveModel.getName());
         }
+
+        DanmakuConfig danmakuConfig = new DanmakuConfig();
+        danmakuConfig.setAllowOverlap(false);
+        danmakuConfig.setVisibility(true);
+        danmakuConfig.setBold(true);
+        danmakuPlayer.start(danmakuConfig);
     }
 
     @CallSuper
@@ -210,13 +222,19 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
                 String info = model.getMethodCall().argument("message");
                 String color = model.getMethodCall().argument("color");
+                if (info == null) {
+                    return true;
+                }
                 // 发送弹幕
-                Danmaku danmaku = new Danmaku();
-                danmaku.text = info;
-                danmaku.size = danmakuTextSize;
-                danmaku.strokeWidth = danmakuStrokeWidth;
-                danmaku.color = getColor(color, danmaku);
-                danmakuManager.send(danmaku);
+                DanmakuItemData data = new DanmakuItemData(
+                        System.nanoTime(), danmakuPlayer.getCurrentTimeMs() + 500, info,
+                        DanmakuItemData.DANMAKU_MODE_ROLLING, danmakuTextSize, getColor(color),
+                        9, DanmakuItemData.DANMAKU_STYLE_NONE, 1,
+                        100L, 1);
+                DanmakuItem danmakuItem = danmakuPlayer.obtainItem(data);
+                danmakuRender.setStrokeWidth(danmakuStrokeWidth);
+                danmakuItem.reset();
+                danmakuPlayer.send(danmakuItem);
             } else {
                 return false;
             }
@@ -317,6 +335,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         ButtonDelegate.ButtonModel settingTitle = new ButtonDelegate.ButtonModel("设置", "刷新", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                danmakuPlayer.stop();
                 FlutterManager.getInstance().invokerFlutterMethod("refresh", null);
             }
         });
@@ -381,6 +400,11 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             @Override
             public void click(String value, int pos) {
                 danmakuSwitch = (pos == 0);
+                if (danmakuSwitch) {
+                    danmakuPlayer.start(danmakuPlayer.getConfig());
+                } else {
+                    danmakuPlayer.stop();
+                }
             }
 
             @Override
@@ -431,7 +455,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting, danmakuStroke);
     }
 
-    private int getColor(String colorStr, Danmaku danmaku) {
+    private int getColor(String colorStr) {
         int color = 0xFFFFFFFF;
         try {
             color = Color.parseColor(colorStr);
@@ -440,7 +464,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         int opacity = (int) (0xFF * (danmakuOpacity * 1.0f / 10)) << 24 | 0x00FFFFFF;
         color = color & opacity;
 
-        danmaku.strokeColor = opacity & 0xFF000000;
         return color;
     }
 }

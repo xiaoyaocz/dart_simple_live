@@ -74,6 +74,10 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected int danmakuStrokeWidth = 0;
     // 弹幕透明度 (1-10代表10%到100%)
     protected int danmakuOpacity = 10;
+    // 弹幕是否播放
+    protected boolean danmakuPlaying = true;
+    // 弹幕显示方式
+    protected boolean danmakuRollStyle = true;
     // 弹幕绘制类
     protected DanmakuRender danmakuRender = new DanmakuRender();
     // 双击退出页面
@@ -152,13 +156,30 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         int action = event.getAction();
         lastRequestFocusTime = System.currentTimeMillis();
         if (action == KeyEvent.ACTION_UP) {
-            if (keyCode == KeyEvent.KEYCODE_BACK) {
-                if (isShowControl) {
-                    hideControlView();
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_BACK:
+                    if (isShowControl) {
+                        hideControlView();
+                        return true;
+                    }
+                    break;
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                    if (isShowControl) {
+                        break;
+                    }
+
+                    if (danmakuPlaying) {
+                        danmakuPlaying = false;
+                        danmakuPlayer.pause();
+                    } else {
+                        danmakuPlaying = true;
+                        danmakuPlayer.start(danmakuPlayer.getConfig());
+                    }
                     return true;
-                }
-            } else {
-                showControlView();
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                    showControlView();
+                    return true;
             }
         }
 
@@ -208,12 +229,13 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             liveTitle.setText(liveModel.getName());
         }
 
-        DanmakuConfig danmakuConfig = new DanmakuConfig();
+        DanmakuConfig danmakuConfig = danmakuPlayer.getConfig() == null ?
+                new DanmakuConfig() : danmakuPlayer.getConfig();
         danmakuConfig.setAllowOverlap(false);
         danmakuConfig.setVisibility(true);
         danmakuConfig.setBold(true);
-        danmakuConfig.setDurationMs(1000);
-        danmakuConfig.setRollingDurationMs(1000);
+        danmakuConfig.setDurationMs(2000);
+        danmakuConfig.setRollingDurationMs(4000);
         danmakuPlayer.start(danmakuConfig);
     }
 
@@ -242,10 +264,16 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                 if (info == null) {
                     return true;
                 }
-                // 发送弹幕
+
+                int style = danmakuRollStyle ?
+                        DanmakuItemData.DANMAKU_MODE_ROLLING :
+                        (System.currentTimeMillis() % 2 == 0 ?
+                                DanmakuItemData.DANMAKU_MODE_CENTER_TOP :
+                                DanmakuItemData.DANMAKU_MODE_CENTER_BOTTOM);
+                        // 发送弹幕
                 DanmakuItemData data = new DanmakuItemData(
                         danmakuPlayer.getCurrentTimeMs(), danmakuPlayer.getCurrentTimeMs(), info,
-                        DanmakuItemData.DANMAKU_MODE_ROLLING, danmakuTextSize, getColor(color),
+                        style, danmakuTextSize, getColor(color),
                         1, DanmakuItemData.DANMAKU_STYLE_NONE, 1,
                         100L, DanmakuItemData.MERGED_TYPE_NORMAL);
                 DanmakuItem danmakuItem = danmakuPlayer.obtainItem(data);
@@ -306,8 +334,8 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         liveModel = gson.fromJson((String) call.arguments, LiveModel.class);
         OkHttpManager.getInstance().resetRequestHeader(liveModel.getHeaderMap());
         if (liveModel.getPlayUrls() != null && !liveModel.getPlayUrls().isEmpty()) {
-            prepareToPlay();
             result.success(true);
+            prepareToPlay();
             return;
         }
 
@@ -401,7 +429,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             public void click(String value, int pos) {
                 liveModel.setCurrentLineIndex(pos);
                 FlutterManager.getInstance().invokerFlutterMethod("changeLine", pos);
-                prepareToPlay();
             }
 
             @Override
@@ -464,7 +491,19 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
             }
         });
 
-        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting, danmakuStroke);
+        SelectDelegate.SelectModel danmakuStyleSetting = new SelectDelegate.SelectModel("显示方式", List.of("固定", "滚动"), danmakuRollStyle ? 1 : 0, new SelectDialogAdapter.SelectDialogInterface<String>() {
+            @Override
+            public void click(String value, int pos) {
+                danmakuRollStyle = pos == 1;
+            }
+
+            @Override
+            public String getDisplay(String val) {
+                return val;
+            }
+        });
+
+        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting, danmakuStroke, danmakuStyleSetting);
     }
 
     private int getColor(String colorStr) {

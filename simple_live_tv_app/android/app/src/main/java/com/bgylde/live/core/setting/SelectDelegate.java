@@ -10,7 +10,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bgylde.live.R;
 import com.bgylde.live.adapter.SelectDialogAdapter;
-import com.bgylde.live.core.FlutterManager;
 import com.bgylde.live.multitype.ItemViewBinder;
 import com.bgylde.live.widgets.SelectDialog;
 
@@ -82,9 +81,13 @@ public class SelectDelegate extends ItemViewBinder<SelectDelegate.SelectModel, S
             if (showValue == null) {
                 selectValue.setVisibility(View.GONE);
                 this.itemView.setBackgroundResource(R.color.transparent);
+                this.itemView.setFocusable(false);
+                this.itemView.setClickable(false);
                 return;
             }
 
+            this.itemView.setFocusable(true);
+            this.itemView.setClickable(true);
             selectValue.setVisibility(View.VISIBLE);
             if (selectModel.getDialogInterface() != null) {
                 showValue = "< " + selectModel.getDialogInterface().getDisplay(showValue) + " >";

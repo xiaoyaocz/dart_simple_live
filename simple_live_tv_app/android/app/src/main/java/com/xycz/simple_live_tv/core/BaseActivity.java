@@ -22,7 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.xycz.simple_live_tv.R;
-import com.xycz.simple_live_tv.adapter.SelectDialogAdapter;
+import com.xycz.simple_live_tv.adapter.SelectAdapter;
 import com.xycz.simple_live_tv.core.setting.ButtonDelegate;
 import com.xycz.simple_live_tv.core.setting.LineDelegate;
 import com.xycz.simple_live_tv.core.setting.SelectDelegate;
@@ -37,7 +37,9 @@ import com.kuaishou.akdanmaku.data.DataSource;
 import com.kuaishou.akdanmaku.ui.DanmakuPlayer;
 import com.kuaishou.akdanmaku.ui.DanmakuView;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -69,7 +71,6 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
 
     // 弹幕文本大小
     protected int danmakuTextSize = 40;
-    protected int danmakuTextSizeIndex = 2;
     // 弹幕描边宽度
     protected int danmakuStrokeWidth = 0;
     // 弹幕透明度 (1-10代表10%到100%)
@@ -243,7 +244,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     protected void setButtonClickListeners() {
         findViewById(R.id.back_layout).setOnClickListener(this);
         findViewById(R.id.more_layout).setOnClickListener(this);
-        findViewById(R.id.player_view).setOnClickListener(this);
+        findViewById(R.id.container).setOnClickListener(this);
     }
 
     @Override
@@ -297,7 +298,7 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
         } else if (viewId == R.id.more_layout) {
             // 这里可以弹出更多功能菜单，比如画质切换等功能
             Toast.makeText(this, "更多功能待完善", Toast.LENGTH_SHORT).show();
-        } else if (viewId == R.id.player_view) {
+        } else if (viewId == R.id.container) {
             if (!isShowControl) {
                 showControlView();
             } else {
@@ -376,16 +377,20 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
     }
 
     private List<Object> buildSettingData() {
-        ButtonDelegate.ButtonModel settingTitle = new ButtonDelegate.ButtonModel("设置", "刷新", new View.OnClickListener() {
+        ButtonDelegate.ButtonModel settingTitle = new ButtonDelegate.ButtonModel("设置", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 FlutterManager.getInstance().invokerFlutterMethod("refresh", null);
             }
         });
-        SelectDelegate.SelectModel followSetting = new SelectDelegate.SelectModel("关注用户", List.of("是", "否"), liveModel.isFollowed() ? 0 : 1, new SelectDialogAdapter.SelectDialogInterface<String>() {
+
+        LinkedHashMap<Boolean, String> followMap = new LinkedHashMap<>();
+        followMap.put(true, "是");
+        followMap.put(false, "否");
+        SelectDelegate.SelectModel<Boolean> followSetting = new SelectDelegate.SelectModel<Boolean>("关注用户", followMap, liveModel.isFollowed(), new SelectAdapter.ISelectDialog<Boolean>() {
             @Override
-            public void click(String value, int pos) {
-                boolean result = pos == 0;
+            public void click(Boolean key, String value) {
+                boolean result = key;
                 if (result == liveModel.isFollowed()) {
                     return;
                 }
@@ -403,107 +408,107 @@ public abstract class BaseActivity extends AppCompatActivity implements View.OnC
                     }
                 });
             }
+        });
 
+        SelectDelegate.SelectModel<Void> clarityAndLine = new SelectDelegate.SelectModel<Void>("清晰度与线路", null, null, null);
+        LinkedHashMap<Integer, String> clarityMap = new LinkedHashMap<>();
+        for (int index = 0; index < liveModel.getQualites().size(); index++) {
+            String quality = liveModel.getQualites().get(index);
+            clarityMap.put(index, quality);
+        }
+        SelectDelegate.SelectModel<Integer> claritySelect = new SelectDelegate.SelectModel<Integer>(getResources().getString(R.string.clarity), clarityMap, liveModel.getCurrentQuality(), new SelectAdapter.ISelectDialog<Integer>() {
             @Override
-            public String getDisplay(String val) {
-                return val;
+            public void click(Integer key, String value) {
+                liveModel.setCurrentQuality(key);
+                FlutterManager.getInstance().invokerFlutterMethod("changeQuality", key);
             }
         });
 
-        SelectDelegate.SelectModel clarityAndLine = new SelectDelegate.SelectModel("清晰度与线路", null, -1, null);
-        SelectDelegate.SelectModel claritySelect = new SelectDelegate.SelectModel(getResources().getString(R.string.clarity), liveModel.getQualites(), liveModel.getCurrentQuality(), new SelectDialogAdapter.SelectDialogInterface<String>() {
-            @Override
-            public void click(String value, int pos) {
-                liveModel.setCurrentQuality(pos);
-                FlutterManager.getInstance().invokerFlutterMethod("changeQuality", pos);
-            }
+        LinkedHashMap<Integer, String> lineMap = new LinkedHashMap<>();
+        for (int index = 0; index < liveModel.getPlayUrls().size(); index++) {
+            lineMap.put(index, "线路" + (index + 1));
+        }
 
+        SelectDelegate.SelectModel<Integer> lineSelect = new SelectDelegate.SelectModel<>("线路", lineMap, liveModel.getCurrentLineIndex(), new SelectAdapter.ISelectDialog<Integer>() {
             @Override
-            public String getDisplay(String val) {
-                return val;
-            }
-        });
-
-        SelectDelegate.SelectModel lineSelect = new SelectDelegate.SelectModel("线路", liveModel.getPlayUrls(), liveModel.getCurrentLineIndex(), new SelectDialogAdapter.SelectDialogInterface<String>() {
-            @Override
-            public void click(String value, int pos) {
-                liveModel.setCurrentLineIndex(pos);
-                FlutterManager.getInstance().invokerFlutterMethod("changeLine", pos);
-            }
-
-            @Override
-            public String getDisplay(String val) {
-                return "线路" + (liveModel.getPlayUrls().indexOf(val) + 1);
+            public void click(Integer key, String value) {
+                liveModel.setCurrentLineIndex(key);
+                FlutterManager.getInstance().invokerFlutterMethod("changeLine", key);
             }
         });
 
-        SelectDelegate.SelectModel danmaku = new SelectDelegate.SelectModel("弹幕", null, -1, null);
-        SelectDelegate.SelectModel danmakuStatus = new SelectDelegate.SelectModel("弹幕开关", List.of("开", "关"), danmakuSwitch ? 0 : 1, new SelectDialogAdapter.SelectDialogInterface<String>() {
+        SelectDelegate.SelectModel<Void> danmaku = new SelectDelegate.SelectModel<Void>("弹幕", null, null, null);
+        LinkedHashMap<Boolean, String> danmakuMap = new LinkedHashMap<>();
+        danmakuMap.put(true, "开");
+        danmakuMap.put(false, "关");
+        SelectDelegate.SelectModel<Boolean> danmakuStatus = new SelectDelegate.SelectModel<>("弹幕开关", danmakuMap, danmakuSwitch, new SelectAdapter.ISelectDialog<Boolean>() {
             @Override
-            public void click(String value, int pos) {
-                danmakuSwitch = (pos == 0);
-            }
-
-            @Override
-            public String getDisplay(String val) {
-                return val;
+            public void click(Boolean key, String value) {
+                danmakuSwitch = key;
             }
         });
 
-        List<String> dataList = List.of("24", "32", "40", "48", "56", "64", "72");
-        SelectDelegate.SelectModel danmakuSize = new SelectDelegate.SelectModel("弹幕大小", dataList, danmakuTextSizeIndex, new SelectDialogAdapter.SelectDialogInterface<String>() {
+        LinkedHashMap<Integer, String> danmakuSizeMap = new LinkedHashMap<>();
+        danmakuSizeMap.put(24, "24");
+        danmakuSizeMap.put(32, "32");
+        danmakuSizeMap.put(40, "40");
+        danmakuSizeMap.put(48, "48");
+        danmakuSizeMap.put(56, "56");
+        danmakuSizeMap.put(64, "64");
+        danmakuSizeMap.put(72, "72");
+        SelectDelegate.SelectModel<Integer> danmakuSizeModel = new SelectDelegate.SelectModel<>("弹幕大小", danmakuSizeMap, danmakuTextSize, new SelectAdapter.ISelectDialog<Integer>() {
             @Override
-            public void click(String value, int pos) {
-                danmakuTextSizeIndex = pos;
-                danmakuTextSize = getResources().getDimensionPixelSize(getResources()
-                        .getIdentifier("ds" + dataList.get(danmakuTextSizeIndex), "dimen", getPackageName()));
-            }
-
-            @Override
-            public String getDisplay(String val) {
-                return val;
-            }
-        });
-
-        List<String> opacityList = List.of("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%");
-        SelectDelegate.SelectModel danmakuOpacitySetting = new SelectDelegate.SelectModel("不透明度", opacityList, danmakuOpacity - 1, new SelectDialogAdapter.SelectDialogInterface<String>() {
-            @Override
-            public void click(String value, int pos) {
-                danmakuOpacity = pos + 1;
-            }
-
-            @Override
-            public String getDisplay(String val) {
-                return val;
+            public void click(Integer key, String value) {
+                danmakuTextSize = key;
             }
         });
 
-        List<String> strokeList = List.of("0", "2", "4", "6", "8", "10", "12", "14", "16");
-        SelectDelegate.SelectModel danmakuStroke = new SelectDelegate.SelectModel("描边宽度", strokeList, strokeList.indexOf(String.valueOf(danmakuStrokeWidth)), new SelectDialogAdapter.SelectDialogInterface<String>() {
+        LinkedHashMap<Integer, String> opacityMap = new LinkedHashMap<>();
+        opacityMap.put(10, "10%");
+        opacityMap.put(20, "20%");
+        opacityMap.put(30, "30%");
+        opacityMap.put(40, "40%");
+        opacityMap.put(50, "50%");
+        opacityMap.put(60, "60%");
+        opacityMap.put(70, "70%");
+        opacityMap.put(80, "80%");
+        opacityMap.put(90, "90%");
+        opacityMap.put(100, "100%");
+        SelectDelegate.SelectModel<Integer> danmakuOpacitySetting = new SelectDelegate.SelectModel<>("不透明度", opacityMap, danmakuOpacity, new SelectAdapter.ISelectDialog<Integer>() {
             @Override
-            public void click(String value, int pos) {
-                danmakuStrokeWidth = Integer.parseInt(value);
-            }
-
-            @Override
-            public String getDisplay(String val) {
-                return val;
-            }
-        });
-
-        SelectDelegate.SelectModel danmakuStyleSetting = new SelectDelegate.SelectModel("显示方式", List.of("固定", "滚动"), danmakuRollStyle ? 1 : 0, new SelectDialogAdapter.SelectDialogInterface<String>() {
-            @Override
-            public void click(String value, int pos) {
-                danmakuRollStyle = pos == 1;
-            }
-
-            @Override
-            public String getDisplay(String val) {
-                return val;
+            public void click(Integer key, String value) {
+                danmakuOpacity = key;
             }
         });
 
-        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSize, danmakuOpacitySetting, danmakuStroke, danmakuStyleSetting);
+        LinkedHashMap<Integer, String> strokeMap = new LinkedHashMap<>();
+        strokeMap.put(0, "0");
+        strokeMap.put(2, "2");
+        strokeMap.put(4, "4");
+        strokeMap.put(6, "6");
+        strokeMap.put(8, "8");
+        strokeMap.put(10, "10");
+        strokeMap.put(12, "12");
+        strokeMap.put(14, "14");
+        strokeMap.put(16, "16");
+        SelectDelegate.SelectModel<Integer> danmakuStroke = new SelectDelegate.SelectModel<>("描边宽度", strokeMap, danmakuStrokeWidth, new SelectAdapter.ISelectDialog<Integer>() {
+            @Override
+            public void click(Integer key, String value) {
+                danmakuStrokeWidth = key;
+            }
+        });
+
+        LinkedHashMap<Boolean, String> danmakuStyleMap = new LinkedHashMap<>(Map.of(false, "固定", true, "滚动"));
+        danmakuStyleMap.put(true, "滚动");
+        danmakuStyleMap.put(false, "固定");
+        SelectDelegate.SelectModel<Boolean> danmakuStyleSetting = new SelectDelegate.SelectModel<>("显示方式", danmakuStyleMap, danmakuRollStyle, new SelectAdapter.ISelectDialog<Boolean>() {
+            @Override
+            public void click(Boolean key, String value) {
+                danmakuRollStyle = key;
+            }
+        });
+
+        return List.of(settingTitle, true, followSetting, true, clarityAndLine, claritySelect, lineSelect, true, danmaku, danmakuStatus, danmakuSizeModel, danmakuOpacitySetting, danmakuStroke, danmakuStyleSetting);
     }
 
     private int getColor(String colorStr) {

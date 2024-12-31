@@ -8,10 +8,10 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 
 import com.xycz.simple_live_tv.R;
-import com.xycz.simple_live_tv.adapter.SelectDialogAdapter;
+import com.xycz.simple_live_tv.adapter.SelectAdapter;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 
-import java.util.List;
+import java.util.LinkedHashMap;
 
 public class SelectDialog<T> extends BaseDialog {
 
@@ -40,28 +40,44 @@ public class SelectDialog<T> extends BaseDialog {
         ((TextView) findViewById(R.id.title)).setText(tip);
     }
 
-    public void setAdapter(TvRecyclerView tvRecyclerView, SelectDialogAdapter.SelectDialogInterface<T> sourceBeanSelectDialogInterface, DiffUtil.ItemCallback<T> sourceBeanItemCallback, List<T> data, int select) {
-        if (select >= data.size() || select < 0)
-            select = 0;//if source update, data item count maybe smaller than before
-        final int selectIdx = select;
-        SelectDialogAdapter<T> adapter = new SelectDialogAdapter<>(sourceBeanSelectDialogInterface, sourceBeanItemCallback, muteCheck);
+    public void setAdapter(TvRecyclerView tvRecyclerView, SelectAdapter.ISelectDialog<T> selectDialogCb, DiffUtil.ItemCallback<T> itemDiffCallback, LinkedHashMap<T, String> data, T select) {
+        int selectIndex = 0;
+        if (select == null) {
+            for (T key : data.keySet()) {
+                select = key;
+                break;
+            }
+        } else {
+            int index = 0;
+            for (T key : data.keySet()) {
+                if (key == select) {
+                    selectIndex = index;
+                    break;
+                }
+
+                index++;
+            }
+        }
+
+        SelectAdapter<T> adapter = new SelectAdapter<>(selectDialogCb, itemDiffCallback, muteCheck);
         adapter.setData(data, select);
         if (tvRecyclerView == null) {
             tvRecyclerView = findViewById(R.id.list);
         }
+
         tvRecyclerView.setAdapter(adapter);
-        tvRecyclerView.setSelectedPosition(select);
-        if (select < 10) {
-            tvRecyclerView.setSelection(select);
+        tvRecyclerView.setSelectedPosition(selectIndex);
+        if (selectIndex < 10) {
+            tvRecyclerView.setSelection(selectIndex);
         }
+
         TvRecyclerView finalTvRecyclerView = tvRecyclerView;
+        int finalSelectIndex = selectIndex;
         tvRecyclerView.post(new Runnable() {
             @Override
-            public void run() {//不清楚会不会存在什么问题
-                if (selectIdx >= 10) {
-                    finalTvRecyclerView.smoothScrollToPosition(selectIdx);
-                    finalTvRecyclerView.setSelectionWithSmooth(selectIdx);
-                }
+            public void run() {
+                finalTvRecyclerView.smoothScrollToPosition(finalSelectIndex);
+                finalTvRecyclerView.setSelectionWithSmooth(finalSelectIndex);
             }
         });
     }

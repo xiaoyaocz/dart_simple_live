@@ -24,11 +24,33 @@
         android:layout_weight="1"/>
 
     <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/left_arrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:textSize="@dimen/ds60"
+        android:textColor="@color/color_FFFFFF"
+        android:text="@string/left_arrow"
+        tools:ignore="SpUsage" />
+
+    <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/select_value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/ds40"
         android:textSize="@dimen/ds60"
         android:includeFontPadding="false"
         android:textColor="@color/color_FFFFFF"
         tools:ignore="RelativeOverlap,SpUsage" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/right_arrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:textSize="@dimen/ds60"
+        android:textColor="@color/color_FFFFFF"
+        android:text="@string/right_arrow"
+        tools:ignore="SpUsage" />
+
 </LinearLayout>

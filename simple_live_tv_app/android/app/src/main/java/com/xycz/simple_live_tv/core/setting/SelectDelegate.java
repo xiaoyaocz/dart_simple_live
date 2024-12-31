@@ -1,105 +1,107 @@
 package com.xycz.simple_live_tv.core.setting;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.xycz.simple_live_tv.R;
-import com.xycz.simple_live_tv.adapter.SelectDialogAdapter;
+import com.xycz.simple_live_tv.adapter.SelectAdapter;
 import com.xycz.simple_live_tv.multitype.ItemViewBinder;
 import com.xycz.simple_live_tv.widgets.SelectDialog;
 
-import java.util.List;
-
-import static com.xycz.simple_live_tv.adapter.SelectDialogAdapter.stringDiff;
+import java.util.LinkedHashMap;
 
 /**
  * Created by wangyan on 2024/12/26
  */
-public class SelectDelegate extends ItemViewBinder<SelectDelegate.SelectModel, SelectDelegate.ViewHolder> {
+public class SelectDelegate<T> extends ItemViewBinder<SelectDelegate.SelectModel<T>, SelectDelegate.ViewHolder<T>> {
 
     @NonNull
     @Override
-    protected ViewHolder onCreateViewHolder(@NonNull LayoutInflater inflater, @NonNull ViewGroup parent) {
+    protected ViewHolder<T> onCreateViewHolder(@NonNull LayoutInflater inflater, @NonNull ViewGroup parent) {
         View view = inflater.inflate(R.layout.item_select, parent, false);
-        return new SelectDelegate.ViewHolder(view);
+        return new SelectDelegate.ViewHolder<T>(view);
     }
 
     @Override
-    protected void onBindViewHolder(@NonNull ViewHolder holder, @NonNull SelectModel item) {
+    protected void onBindViewHolder(@NonNull ViewHolder<T> holder, @NonNull SelectModel<T> item) {
         holder.setData(item);
     }
 
-    public static class SelectModel {
+    public static class SelectModel<T> {
         private final String selectTitle;
 
-        private final List<String> selectList;
+        private final LinkedHashMap<T, String> selectMap;
 
-        private int selectedIndex;
+        private T selectValue;
 
-        private final SelectDialogAdapter.SelectDialogInterface<String> dialogInterface;
+        private final SelectAdapter.ISelectDialog<T> selectCallback;
 
-        public SelectModel(String selectTitle, List<String> selectList, int selectedIndex, SelectDialogAdapter.SelectDialogInterface<String> dialogInterface) {
+        public SelectModel(String selectTitle, LinkedHashMap<T, String> selectMap, T selectValue, SelectAdapter.ISelectDialog<T> dialogInterface) {
             this.selectTitle = selectTitle;
-            this.selectList = selectList;
-            this.dialogInterface = dialogInterface;
-            this.selectedIndex = selectedIndex;
+            this.selectMap = selectMap;
+            this.selectCallback = dialogInterface;
+            this.selectValue = selectValue;
         }
 
         public String getSelectTitle() {
             return selectTitle;
         }
 
-        public List<String> getSelectList() {
-            return selectList;
+        public LinkedHashMap<T, String> getSelectMap() {
+            return selectMap;
         }
 
-        public int getSelectedIndex() {
-            return selectedIndex;
+        public T getSelectValue() {
+            return selectValue;
         }
 
-        public void setSelectedIndex(int selectedIndex) {
-            this.selectedIndex = selectedIndex;
+        public void setSelectValue(T selectValue) {
+            this.selectValue = selectValue;
         }
 
-        public SelectDialogAdapter.SelectDialogInterface<String> getDialogInterface() {
-            return dialogInterface;
+        public SelectAdapter.ISelectDialog<T> getSelectCallback() {
+            return selectCallback;
         }
 
         public String getCurrent() {
-            if (selectList == null) {
+            if (selectMap == null || selectValue == null) {
                 return null;
             }
 
-            if (selectedIndex < 0 || selectedIndex >= selectList.size()) {
-                return null;
-            }
-
-            return selectList.get(selectedIndex);
+            return selectMap.get(selectValue);
         }
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder<T> extends RecyclerView.ViewHolder {
 
         private final TextView title;
         private final TextView selectValue;
+
+        private final TextView leftArrow;
+        private final TextView rightArrow;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             this.title = itemView.findViewById(R.id.select_title);
             this.selectValue = itemView.findViewById(R.id.select_value);
+            this.leftArrow = itemView.findViewById(R.id.left_arrow);
+            this.rightArrow = itemView.findViewById(R.id.right_arrow);
         }
 
-        public void setData(SelectModel selectModel) {
+        public void setData(SelectModel<T> selectModel) {
             this.title.setText(selectModel.getSelectTitle());
             String showValue = selectModel.getCurrent();
-
             if (showValue == null) {
-                selectValue.setVisibility(View.GONE);
+                this.selectValue.setVisibility(View.GONE);
+                this.leftArrow.setVisibility(View.GONE);
+                this.rightArrow.setVisibility(View.GONE);
                 this.itemView.setBackgroundResource(R.color.transparent);
                 this.itemView.setFocusable(false);
                 this.itemView.setClickable(false);
@@ -108,60 +110,64 @@ public class SelectDelegate extends ItemViewBinder<SelectDelegate.SelectModel, S
 
             this.itemView.setFocusable(true);
             this.itemView.setClickable(true);
-            selectValue.setVisibility(View.VISIBLE);
-            if (selectModel.getDialogInterface() != null) {
-                showValue = "< " + selectModel.getDialogInterface().getDisplay(showValue) + " >";
-            }
-
-            selectValue.setText(showValue);
+            this.selectValue.setVisibility(View.VISIBLE);
+            this.leftArrow.setVisibility(View.VISIBLE);
+            this.rightArrow.setVisibility(View.VISIBLE);
+            this.selectValue.setText(showValue);
             this.itemView.setBackgroundResource(R.drawable.shape_model_focus);
             this.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (selectModel.getSelectList().size() == 2) {
-                        int selectIndex = selectModel.getSelectedIndex();
-                        selectIndex = selectModel.getSelectList().size() - selectIndex - 1;
-                        String value = selectModel.getSelectList().get(selectIndex);
-                        if (selectModel.getDialogInterface() != null) {
-                            selectModel.getDialogInterface().click(value, selectIndex);
+                    if (selectModel.getSelectMap().size() == 2) {
+                        T currentKey = selectModel.getSelectValue();
+                        LinkedHashMap<T, String> valueMap = selectModel.getSelectMap();
+                        for (T key : valueMap.keySet()) {
+                            if (!key.equals(currentKey)) {
+                                currentKey = key;
+                                break;
+                            }
                         }
 
-                        selectModel.setSelectedIndex(selectIndex);
-                        String showValue;
-                        if (selectModel.getDialogInterface() != null) {
-                            showValue = "< " + selectModel.getDialogInterface().getDisplay(value) + " >";
-                        } else {
-                            showValue = "< " + value + " >";
-                        }
+                        String showValue = valueMap.get(currentKey);
+                        selectModel.setSelectValue(currentKey);
                         selectValue.setText(showValue);
+                        if (selectModel.getSelectCallback() != null) {
+                            selectModel.getSelectCallback().click(currentKey, showValue);
+                        }
+
                         return;
                     }
 
-                    SelectDialog<String> dialog = new SelectDialog<>(itemView.getContext());
+                    SelectDialog<T> dialog = new SelectDialog<>(itemView.getContext());
                     dialog.setTip(selectModel.getSelectTitle());
-                    dialog.setAdapter(null, new SelectDialogAdapter.SelectDialogInterface<String>() {
+                    dialog.setAdapter(null, new SelectAdapter.ISelectDialog<T>() {
                         @Override
-                        public void click(String value, int pos) {
+                        public void click(T key, String value) {
                             dialog.cancel();
-                            if (selectModel.getDialogInterface() != null) {
-                                selectModel.getDialogInterface().click(value, pos);
+                            if (selectModel.getSelectCallback() != null) {
+                                selectModel.getSelectCallback().click(key, value);
                             }
-                            selectValue.setText(value);
-                            selectModel.setSelectedIndex(pos);
+                            selectValue.setText(value == null ? "" : value);
+                            selectModel.setSelectValue(key);
                         }
-
-                        @Override
-                        public String getDisplay(String val) {
-                            if (selectModel.getDialogInterface() != null) {
-                                return selectModel.getDialogInterface().getDisplay(val);
-                            }
-
-                            return val;
-                        }
-                    }, stringDiff, selectModel.getSelectList(), selectModel.getSelectedIndex());
+                    }, itemDiff, selectModel.getSelectMap(), selectModel.getSelectValue());
                     dialog.show();
                 }
             });
         }
+
+        public DiffUtil.ItemCallback<T> itemDiff = new DiffUtil.ItemCallback<T>() {
+
+            @Override
+            public boolean areItemsTheSame(@NonNull T oldItem, @NonNull T newItem) {
+                return oldItem.equals(newItem);
+            }
+
+            @SuppressLint("DiffUtilEquals")
+            @Override
+            public boolean areContentsTheSame(@NonNull T oldItem, @NonNull T newItem) {
+                return oldItem.equals(newItem);
+            }
+        };
     }
 }

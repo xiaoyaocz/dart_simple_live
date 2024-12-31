@@ -26,6 +26,8 @@ public class IjkLiveActivity extends BaseActivity implements VideoPlayerListener
         playerView.setId(R.id.player_view);
         playerView.setFocusable(false);
         playerView.setClickable(false);
+        playerView.getVideoHolder().setControlGroupVisibility(false);
+        playerView.setLiveSource(true);
         player = playerView;
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);

@@ -157,7 +157,7 @@
 -dontwarn lombok.**
 
 # 实体类
--keep class com.bgylde.live.**{*;}
+-keep class com.xycz.simple_live_tv.**{*;}
 
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken

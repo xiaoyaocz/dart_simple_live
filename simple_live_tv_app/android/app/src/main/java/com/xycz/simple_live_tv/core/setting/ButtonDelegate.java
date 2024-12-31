@@ -32,13 +32,10 @@ public class ButtonDelegate extends ItemViewBinder<ButtonDelegate.ButtonModel, B
     public static class ButtonModel {
         private final String title;
 
-        private final String buttonContent;
-
         private final View.OnClickListener clickListener;
 
-        public ButtonModel(String title, String buttonContent, View.OnClickListener clickListener) {
+        public ButtonModel(String title, View.OnClickListener clickListener) {
             this.title = title;
-            this.buttonContent = buttonContent;
             this.clickListener = clickListener;
         }
     }

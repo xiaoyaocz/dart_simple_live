@@ -15,4 +15,6 @@
     <string name="refresh">刷新</string>
     <string name="landscape">横屏</string>
     <string name="portrait">竖屏</string>
+    <string name="left_arrow"><![CDATA[<]]></string>
+    <string name="right_arrow"><![CDATA[>]]></string>
 </resources>

@@ -8,6 +8,13 @@
 
     <!-- ExoPlayer的视频展示视图，占据大部分屏幕空间 -->
 
+    <com.kuaishou.akdanmaku.ui.DanmakuView
+        android:id="@+id/container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:focusable="true"
+        android:clickable="true"/>
+
     <!-- 顶部控制栏布局 -->
     <LinearLayout
         android:id="@+id/top_control_bar"
@@ -72,13 +79,6 @@
                 android:src="@drawable/icon_more" />
         </FrameLayout>
     </LinearLayout>
-
-    <com.kuaishou.akdanmaku.ui.DanmakuView
-        android:id="@+id/container"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:focusable="false"
-        android:clickable="false"/>
 
     <View
         android:id="@+id/divider"

@@ -176,8 +176,8 @@ class SettingsPage extends GetView<SettingsController> {
             autofocus: controller.playerFoucsNode.isFoucsed.value,
             title: "播放器",
             items: const {
-              0: "ExoPlayer",
-              1: "IjkPlayer",
+              0: "IjkPlayer",
+              1: "ExoPlayer",
               2: "Flutter",
             },
             value:

@@ -1,7 +1,7 @@
 {
-    "version": "1.7.6",
+    "version": "1.7.7",
     "version_num": 10705,
-    "version_desc": "多端一致 webdav覆盖本地",
+    "version_desc": "Fix(虎牙断流)：increase ua version. Fixes #585",
     "prerelease":false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

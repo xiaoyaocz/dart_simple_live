@@ -16,7 +16,7 @@ class CommonRequest {
   /// 检查更新
   Future<VersionModel> checkUpdateGitMirror() async {
     var result = await HttpClient.instance.getJson(
-      "https://raw.gitmirror.com/xiaoyaocz/dart_simple_live/master/assets/app_version.json",
+      "https://raw.gitmirror.com/slotsun/dart_simple_live/master/assets/app_version.json",
       queryParameters: {
         "ts": DateTime.now().millisecondsSinceEpoch,
       },
@@ -30,7 +30,7 @@ class CommonRequest {
   /// 检查更新
   Future<VersionModel> checkUpdateJsDelivr() async {
     var result = await HttpClient.instance.getJson(
-      "https://cdn.jsdelivr.net/gh/xiaoyaocz/dart_simple_live@master/assets/app_version.json",
+      "https://cdn.jsdelivr.net/gh/slotsun/dart_simple_live@master/assets/app_version.json",
       queryParameters: {
         "ts": DateTime.now().millisecondsSinceEpoch,
       },

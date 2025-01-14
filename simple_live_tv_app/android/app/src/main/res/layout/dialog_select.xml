@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="300dp"
+    android:layout_height="match_parent"
+    android:background="@drawable/shape_dialog_bg_main"
+    android:layout_marginVertical="@dimen/ds30"
+    android:paddingHorizontal="@dimen/ds30"
+    android:paddingVertical="@dimen/ds30"
+    android:layout_gravity="center"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:paddingVertical="@dimen/ds30"
+        android:shadowColor="@color/color_FF000000"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="5"
+        android:singleLine="true"
+        android:textColor="@color/color_FFFFFF"
+        android:textSize="@dimen/ds50"
+        android:textStyle="bold"
+        tools:ignore="SpUsage" />
+
+    <com.owen.tvrecyclerview.widget.TvRecyclerView
+        android:id="@+id/list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="20dp"
+        app:layout_constrainedHeight="true"
+        app:layout_constraintHeight_max="@dimen/ds15"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/title"
+        app:tv_horizontalSpacingWithMargins="@dimen/ds30"
+        app:tv_layoutManager="V7LinearLayoutManager"
+        app:tv_selectedItemIsCentered="true"
+        app:tv_verticalSpacingWithMargins="10dp" />
+
+</LinearLayout>

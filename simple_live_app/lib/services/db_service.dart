@@ -32,6 +32,14 @@ class DBService extends GetxService {
     await tagBox.put(followTag.id, followTag);
   }
 
+  Future updateFollowTagOrder(List<FollowUserTag> userTagList) async {
+    final Map<int, FollowUserTag> updatedMap = {
+      for (int i = 0; i < userTagList.length; i++) i: userTagList[i]
+    };
+    await tagBox.clear();
+    await tagBox.putAll(updatedMap);
+  }
+
   Future<FollowUserTag> addFollowTag(String tag) async{
     final String uniqueId = uuid.v4();
     final followUserTag = FollowUserTag(id: uniqueId, tag: tag, userId: []);

@@ -22,6 +22,9 @@ class FollowUserController extends BasePageController<FollowUser> {
     FollowUserTag(id: "2", tag: "未开播", userId: []),
   ].obs;
 
+  // 用户自定义标签
+  RxList<FollowUserTag> userTagList = <FollowUserTag>[].obs;
+
   @override
   void onInit() {
     onUpdatedIndexedStream = EventBus.instance.listen(
@@ -64,9 +67,9 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void updateTagList() {
-    var tagData = FollowService.instance.followTagList;
+    userTagList = FollowService.instance.followTagList;
     tagList.value = tagList.take(3).toList();
-    for (var i in tagData) {
+    for (var i in userTagList) {
       if (!tagList.contains(i)) {
         tagList.add(i);
       }
@@ -123,7 +126,7 @@ class FollowUserController extends BasePageController<FollowUser> {
       tag.userId.addIf(!tag.userId.contains(item.id), item.id);
     }
     // 更新
-    if(curTagIndex>=3){
+    if (curTagIndex >= 3) {
       updateTag(filterMode.value);
     }
     updateTag(tag);
@@ -150,6 +153,15 @@ class FollowUserController extends BasePageController<FollowUser> {
     final FollowUserTag item = followUserTag.copyWith(tag: tag);
     DBService.instance.updateFollowTag(item);
     updateTagList();
+  }
+
+  void updateTagOrder(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1; // 处理索引调整
+    final item = userTagList.removeAt(oldIndex);
+    userTagList.insert(newIndex, item);
+    tagList.value = tagList.take(3).toList();
+    tagList.addAll(userTagList);
+    DBService.instance.updateFollowTagOrder(userTagList);
   }
 
   @override

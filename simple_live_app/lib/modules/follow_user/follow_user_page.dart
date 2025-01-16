@@ -276,26 +276,28 @@ class FollowUserPage extends GetView<FollowUserController> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // 标题栏
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '标签管理',
-                  style: TextStyle(
-                    fontSize: 18,
+            Padding(
+              padding: const EdgeInsets.only(left: 22.0, right: 22),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '标签管理',
+                    style: TextStyle(
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.add,
-                    color: Colors.black,
+                  IconButton(
+                    icon: const Icon(
+                      Icons.add,
+                      color: Colors.black,
+                    ),
+                    onPressed: () {
+                      editTagDialog("添加标签");
+                    },
                   ),
-                  onPressed: () {
-                    editTagDialog("添加标签");
-                  },
-                  padding: const EdgeInsets.only(right: 10),
-                ),
-              ],
+                ],
+              ),
             ),
             const Divider(),
             // 列表内容
@@ -303,33 +305,40 @@ class FollowUserPage extends GetView<FollowUserController> {
               () => SizedBox(
                 height: 300, // 设置列表高度
                 width: 300,
-                child: ListView.builder(
+                child: ReorderableListView.builder(
+                  buildDefaultDragHandles: false,
                   shrinkWrap: true,
-                  itemCount: controller.tagList.length - 3,
+                  itemCount: controller.userTagList.length,
                   itemBuilder: (context, index) {
                     // 偏移
-                    final actualIndex = index + 3;
-                    FollowUserTag item = controller.tagList[actualIndex];
-                    return Column(
-                      children: [
-                        ListTile(
-                          title: Text(item.tag),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () {
-                              controller.removeTag(item);
-                            },
+                    FollowUserTag item = controller.userTagList[index];
+                    return ReorderableDragStartListener(
+                      key: ValueKey(item.id),
+                      index: index,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: Text(item.tag),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () {
+                                controller.removeTag(item);
+                              },
+                            ),
+                            leading: IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () {
+                                editTagDialog("修改标签", followUserTag: item);
+                              },
+                            ),
                           ),
-                          leading: IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () {
-                              editTagDialog("修改标签", followUserTag: item);
-                            },
-                          ),
-                        ),
-                        const Divider(),
-                      ],
+                          const Divider(),
+                        ],
+                      ),
                     );
+                  },
+                  onReorder: (int oldIndex, int newIndex) {
+                    controller.updateTagOrder(oldIndex, newIndex);
                   },
                 ),
               ),
@@ -358,7 +367,7 @@ class FollowUserPage extends GetView<FollowUserController> {
             children: [
               Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                 ),
               ),

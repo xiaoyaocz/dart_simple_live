@@ -1,7 +1,7 @@
 {
-    "version": "1.7.7",
-    "version_num": 10705,
-    "version_desc": "Fix(虎牙断流)：increase ua version. Fixes #585",
+    "version": "1.7.8",
+    "version_num": 10708,
+    "version_desc": "fix(虎牙断流)：make wup ua dynamic. Fixes #594",
     "prerelease":false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

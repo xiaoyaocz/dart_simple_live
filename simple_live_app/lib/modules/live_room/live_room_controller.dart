@@ -415,9 +415,11 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
       };
     } else if (site.id == Constant.kHuya) {
+      // fix #594
+      var currentTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       headers = {
         //"referer": "https://m.huya.com",
-        "user-agent": "HYSDK(Windows, 21000308)"
+        "user-agent": "HYSDK(Windows, $currentTs)"
       };
     }
 

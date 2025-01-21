@@ -32,6 +32,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
+
   LiveRoomController({
     required this.pSite,
     required this.pRoomId,
@@ -46,8 +47,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   late Rx<Site> rxSite;
+
   Site get site => rxSite.value;
   late Rx<String> rxRoomId;
+
   String get roomId => rxRoomId.value;
 
   Rx<LiveRoomDetail?> detail = Rx<LiveRoomDetail?>(null);
@@ -167,6 +170,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
     });
   }
+
   // 弹窗逻辑
 
   void refreshRoom() {
@@ -415,9 +419,11 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
       };
     } else if (site.id == Constant.kHuya) {
+      // "referer":https://github.com/stream-rec/stream-rec/commit/ec97d034cc3d523ca3eca052ff5aeafa272fdd32
+      int currentTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       headers = {
         //"referer": "https://m.huya.com",
-        "user-agent": "HYSDK(Windows, 21000308)"
+        "user-agent": "HYSDK(Windows, $currentTs)"
       };
     }
 
@@ -463,6 +469,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   int mediaErrorRetryCount = 0;
+
   @override
   void mediaError(String error) async {
     super.mediaEnd();

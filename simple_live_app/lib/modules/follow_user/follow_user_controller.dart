@@ -1,6 +1,7 @@
 // ignore_for_file: invalid_use_of_protected_member
 
 import 'dart:async';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
@@ -67,7 +68,7 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void updateTagList() {
-    userTagList = FollowService.instance.followTagList;
+    userTagList.assignAll(FollowService.instance.followTagList);
     tagList.value = tagList.take(3).toList();
     for (var i in userTagList) {
       if (!tagList.contains(i)) {
@@ -116,20 +117,23 @@ class FollowUserController extends BasePageController<FollowUser> {
       tag.userId.add(item.id);
     }
     // 处于自定义标签选择默认->从当前tag移除
-    if (tagIndex == 0 && curTagIndex >= 3) {
+    else if (tagIndex == 0 && curTagIndex >= 3) {
       filterMode.value.userId.remove(item.id);
     }
     // 处于自定义标签选择自定义标签->从当前tag移除 加入选择tag
-    if (tagIndex >= 3 && curTagIndex >= 3 && tagIndex != curTagIndex) {
+    else if (tagIndex >= 3 && curTagIndex >= 3 && tagIndex != curTagIndex) {
       filterMode.value.userId.remove(item.id);
       // 目标标签不包含当前关注则加入
       tag.userId.addIf(!tag.userId.contains(item.id), item.id);
     }
-    // 更新
+    // 更新当前tag和目标tag
     if (curTagIndex >= 3) {
       updateTag(filterMode.value);
     }
-    updateTag(tag);
+    // 目标tag不为全部更新
+    if(tagIndex != 0){
+      updateTag(tag);
+    }
     filterData();
   }
 
@@ -141,8 +145,9 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void addTag(String tag) async {
-    await FollowService.instance.addFollowUserTag(tag);
-    updateTagList();
+    FollowService.instance
+        .addFollowUserTag(tag)
+        .then((value) => updateTagList());
   }
 
   void updateTag(FollowUserTag followUserTag) {
@@ -150,6 +155,11 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void updateTagName(FollowUserTag followUserTag, String tag) {
+    // 避免重名
+    if (tagList.any((item) => item.tag == tag)) {
+      SmartDialog.showToast("标签名重复，修改失败");
+      return;
+    }
     final FollowUserTag item = followUserTag.copyWith(tag: tag);
     DBService.instance.updateFollowTag(item);
     updateTagList();

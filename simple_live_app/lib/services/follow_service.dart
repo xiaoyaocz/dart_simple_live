@@ -65,10 +65,14 @@ class FollowService extends GetxService {
     followTagList[index] = tag;
   }
 
-  Future<FollowUserTag> addFollowUserTag(String tag) async{
+   Future<void> addFollowUserTag(String tag) async{
+    // 判断待添加tag是否已存在，存在则return
+    if(followTagList.any((item)=>item.tag == tag)){
+      SmartDialog.showToast("标签名重复，修改失败");
+      return;
+    }
     FollowUserTag item = await DBService.instance.addFollowTag(tag);
     followTagList.add(item);
-    return item;
   }
 
   void delFollowUserTag(FollowUserTag tag){

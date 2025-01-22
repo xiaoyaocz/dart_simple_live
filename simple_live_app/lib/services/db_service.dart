@@ -29,6 +29,10 @@ class DBService extends GetxService {
   }
 
   Future updateFollowTag(FollowUserTag followTag) async {
+    // 避免重名修改
+    if(getFollowTagExistByTag(followTag.tag)){
+      return;
+    }
     await tagBox.put(followTag.id, followTag);
   }
 
@@ -41,6 +45,10 @@ class DBService extends GetxService {
   }
 
   Future<FollowUserTag> addFollowTag(String tag) async{
+    // 查找数据库中是否已存在 存在则直接返回
+    if(getFollowTagExistByTag(tag)){
+      return getFollowTag(tag)!;
+    }
     final String uniqueId = uuid.v4();
     final followUserTag = FollowUserTag(id: uniqueId, tag: tag, userId: []);
     await tagBox.put(uniqueId, followUserTag);
@@ -53,6 +61,11 @@ class DBService extends GetxService {
 
   FollowUserTag? getFollowTag(String tag){
     return tagBox.get(tag);
+  }
+
+  // 判断tag名称是否重复
+  bool getFollowTagExistByTag(String tag){
+    return tagBox.values.any((item) => item.tag == tag);
   }
 
   bool getFollowExist(String id) {

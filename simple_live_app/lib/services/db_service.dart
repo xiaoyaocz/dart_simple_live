@@ -29,10 +29,6 @@ class DBService extends GetxService {
   }
 
   Future updateFollowTag(FollowUserTag followTag) async {
-    // 避免重名修改
-    if(getFollowTagExistByTag(followTag.tag)){
-      return;
-    }
     await tagBox.put(followTag.id, followTag);
   }
 

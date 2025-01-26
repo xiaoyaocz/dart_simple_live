@@ -297,7 +297,8 @@ class HuyaSite implements LiveSite {
       userAvatar: tProfileInfo["sAvatar180"].toString(),
       introduction: tLiveInfo["sIntroduction"].toString(),
       notice: roomInfo["welcomeText"].toString(),
-      status: roomInfo["roomInfo"]["eLiveStatus"] == 2,
+      status: roomInfo["roomInfo"]["eLiveStatus"] == 2 &&
+          tLiveInfo["sRoomName"] != "【回放】欢迎来到我的直播间",
       data: HuyaUrlDataModel(
         url:
             "https:${utf8.decode(base64.decode(roomInfo["roomProfile"]["liveLineUrl"].toString()))}",
@@ -424,7 +425,9 @@ class HuyaSite implements LiveSite {
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     var roomInfo = await _getRoomInfo(roomId);
-    return roomInfo["roomInfo"]["eLiveStatus"] == 2;
+    // 部分主播开回放
+    return roomInfo["roomInfo"]["eLiveStatus"] == 2 &&
+        roomInfo["roomInfo"]["tLiveInfo"]["sRoomName"] != "【回放】欢迎来到我的直播间";
   }
 
   /// 匿名登录获取uid

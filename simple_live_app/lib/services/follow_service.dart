@@ -15,7 +15,9 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
+import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:synchronized/synchronized.dart';
 
 class FollowService extends GetxService {
   StreamSubscription<dynamic>? subscription;
@@ -41,6 +43,9 @@ class FollowService extends GetxService {
   /// 当前tag的用户列表
   RxList<FollowUser> curTagFollowList = RxList<FollowUser>();
 
+  /// 线程安全
+  final _lock = Lock();
+
   /// 已经更新状态的数量
   var updatedCount = 0;
 
@@ -51,8 +56,12 @@ class FollowService extends GetxService {
 
   @override
   void onInit() {
-    subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
-      loadData(updateStatus: false);
+    subscription = EventBus.instance.listen(Constant.kUpdateFollow, (data) {
+      if(data is History){
+        updateFollow(data);
+      }else{
+        loadData(updateStatus: false);
+      }
     });
     initTimer();
     super.onInit();
@@ -108,6 +117,28 @@ class FollowService extends GetxService {
     }
     // 标签内排序
     curTagFollowList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+  }
+
+  // 添加关注
+  void addFollow(FollowUser follow){
+    DBService.instance.addFollow(follow);
+  }
+
+  // 取消关注
+  void removeFollowUser(String id){
+    DBService.instance.deleteFollow(id);
+  }
+
+  // 更新关注的历史记录
+  void updateFollow(History history){
+    var follow = followList.where((follow)=>follow.id == history.id).firstOrNull;
+    if(follow == null){
+      return;
+    }else{
+      follow.watchDuration = history.watchDuration;
+      addFollow(follow);
+    }
+    Log.i("已更新当前播放的观看时长：${follow.watchDuration}");
   }
 
   void initTimer() {
@@ -177,7 +208,9 @@ class FollowService extends GetxService {
     } catch (e) {
       Log.logPrint(e);
     } finally {
-      updatedCount++;
+      await _lock.synchronized(() {
+        updatedCount++;
+      });
       if (updatedCount >= followList.length) {
         filterData();
         updating.value = false;

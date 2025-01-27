@@ -22,6 +22,7 @@ import 'package:simple_live_app/modules/live_room/player/player_controller.dart'
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/history_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -519,11 +520,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
     var id = "${site.id}_$roomId";
-    var history = DBService.instance.getHistory(id);
-    if (history != null) {
-      history.updateTime = DateTime.now();
-    }
-    history ??= History(
+    History history = History(
       id: id,
       roomId: roomId,
       siteId: site.id,
@@ -531,8 +528,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       face: detail.value?.userAvatar ?? "",
       updateTime: DateTime.now(),
     );
-
-    DBService.instance.addOrUpdateHistory(history);
+    HistoryService.instance.start(history);
   }
 
   /// 关注用户
@@ -541,7 +537,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
     var id = "${site.id}_$roomId";
-    DBService.instance.addFollow(
+    FollowService.instance.addFollow(
       FollowUser(
         id: id,
         roomId: roomId,
@@ -565,7 +561,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
 
     var id = "${site.id}_$roomId";
-    DBService.instance.deleteFollow(id);
+    FollowService.instance.removeFollowUser(id);
     followed.value = false;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
   }
@@ -1032,6 +1028,7 @@ ${error?.stackTrace}''');
     WidgetsBinding.instance.removeObserver(this);
     scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
+    HistoryService.instance.stop();
 
     liveDanmaku.stop();
     danmakuController = null;

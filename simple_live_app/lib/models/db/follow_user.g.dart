@@ -23,7 +23,7 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       userName: fields[3] as String,
       face: fields[4] as String,
       addTime: fields[5] as DateTime,
-      watchDuration: fields[6] as Duration,
+      watchDuration: fields[6] as String?,
     );
   }
 

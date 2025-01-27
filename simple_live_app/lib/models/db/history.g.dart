@@ -23,7 +23,7 @@ class HistoryAdapter extends TypeAdapter<History> {
       userName: fields[3] as String,
       face: fields[4] as String,
       updateTime: fields[5] as DateTime,
-      watchDuration: fields[6] as Duration,
+      watchDuration: fields[6] as String?,
     );
   }
 

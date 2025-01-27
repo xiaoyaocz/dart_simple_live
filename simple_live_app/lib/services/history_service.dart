@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/utils/duration2strUtils.dart';
 import 'package:simple_live_app/models/db/history.dart';
 
 import 'db_service.dart';
@@ -50,7 +51,9 @@ class HistoryService extends GetxService {
   // updateHistory
   void _updateHistory() {
     // 累加到当前历史记录
-    curLiveRoomHistory?.watchDuration += _elapsed;
+    var temp = curLiveRoomHistory!.watchDuration!.toDuration();
+    temp += _elapsed;
+    curLiveRoomHistory?.watchDuration = temp.toHMSString();
     curLiveRoomHistory?.updateTime = DateTime.now();
     DBService.instance.addOrUpdateHistory(curLiveRoomHistory!);
   }

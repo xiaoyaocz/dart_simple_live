@@ -11,7 +11,7 @@ class History {
     required this.userName,
     required this.face,
     required this.updateTime,
-    this.watchDuration = Duration.zero,
+    this.watchDuration = "00:00:00",
   });
 
   ///id=siteId_roomId
@@ -34,7 +34,7 @@ class History {
   DateTime updateTime;
 
   @HiveField(6)
-  Duration watchDuration;
+  String? watchDuration; // "00:00:00"
 
 
   factory History.fromJson(Map<String, dynamic> json) => History(
@@ -44,7 +44,7 @@ class History {
         userName: json["userName"],
         face: json["face"],
         updateTime: DateTime.parse(json["updateTime"]),
-        watchDuration: Duration(minutes: json["watchDuration"] ?? 0),
+        watchDuration: json["watchDuration"]??"00:00:00",
       );
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +54,6 @@ class History {
         "userName": userName,
         "face": face,
         "updateTime": updateTime.toString(),
-        "watchDuration": watchDuration.inMinutes,
+        "watchDuration": watchDuration??"00:00:00",
       };
 }

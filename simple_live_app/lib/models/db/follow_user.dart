@@ -12,7 +12,7 @@ class FollowUser {
     required this.userName,
     required this.face,
     required this.addTime,
-    this.watchDuration = Duration.zero
+    this.watchDuration = "00:00:00"
   });
 
   ///id=siteId_roomId
@@ -35,7 +35,7 @@ class FollowUser {
   DateTime addTime;
 
   @HiveField(6)
-  Duration watchDuration;
+  String? watchDuration; // "00:00:00"
 
   /// 直播状态
   /// 0=未知(加载中) 1=未开播 2=直播中
@@ -48,7 +48,7 @@ class FollowUser {
         userName: json['userName'],
         face: json['face'],
         addTime: DateTime.parse(json['addTime']),
-        watchDuration: Duration(minutes: json['watchDuration'] ?? 0),
+        watchDuration: json["watchDuration"]??"00:00:00",
       );
 
   Map<String, dynamic> toJson() => {
@@ -58,6 +58,6 @@ class FollowUser {
         'userName': userName,
         'face': face,
         'addTime': addTime.toString(),
-        'watchDuration': watchDuration.inMinutes,
+        "watchDuration": watchDuration??"00:00:00",
       };
 }

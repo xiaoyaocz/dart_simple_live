@@ -13,6 +13,7 @@ import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/duration2strUtils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
@@ -57,9 +58,9 @@ class FollowService extends GetxService {
   @override
   void onInit() {
     subscription = EventBus.instance.listen(Constant.kUpdateFollow, (data) {
-      if(data is History){
+      if (data is History) {
         updateFollow(data);
-      }else{
+      } else {
         loadData(updateStatus: false);
       }
     });
@@ -67,16 +68,16 @@ class FollowService extends GetxService {
     super.onInit();
   }
 
-  void updateFollowUserTag(FollowUserTag tag){
+  void updateFollowUserTag(FollowUserTag tag) {
     DBService.instance.updateFollowTag(tag);
     // 查找并修改
-    var index = followTagList.indexWhere((oTag)=>oTag.id == tag.id);
+    var index = followTagList.indexWhere((oTag) => oTag.id == tag.id);
     followTagList[index] = tag;
   }
 
-   Future<void> addFollowUserTag(String tag) async{
+  Future<void> addFollowUserTag(String tag) async {
     // 判断待添加tag是否已存在，存在则return
-    if(followTagList.any((item)=>item.tag == tag)){
+    if (followTagList.any((item) => item.tag == tag)) {
       SmartDialog.showToast("标签名重复，修改失败");
       return;
     }
@@ -84,7 +85,7 @@ class FollowService extends GetxService {
     followTagList.add(item);
   }
 
-  void delFollowUserTag(FollowUserTag tag){
+  void delFollowUserTag(FollowUserTag tag) {
     followTagList.remove(tag);
     DBService.instance.deleteFollowTag(tag.id);
   }
@@ -120,12 +121,12 @@ class FollowService extends GetxService {
   }
 
   // 添加关注
-  void addFollow(FollowUser follow){
+  void addFollow(FollowUser follow) {
     DBService.instance.addFollow(follow);
   }
 
   // 取消关注
-  void removeFollowUser(String id){
+  void removeFollowUser(String id) {
     DBService.instance.deleteFollow(id);
   }
 
@@ -134,7 +135,7 @@ class FollowService extends GetxService {
     var follow = followList.where((follow)=>follow.id == history.id).firstOrNull;
     if(follow == null){
       return;
-    }else{
+    } else {
       follow.watchDuration = history.watchDuration;
       addFollow(follow);
     }
@@ -219,7 +220,12 @@ class FollowService extends GetxService {
   }
 
   void filterData() {
-    followList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    followList.sort((a, b) {
+      if(a.liveStatus.value != b.liveStatus.value){
+        return b.liveStatus.value.compareTo(a.liveStatus.value);
+      }
+      return b.watchDuration!.toDuration().compareTo(a.watchDuration!.toDuration());
+    },);
     liveList.assignAll(followList.where((x) => x.liveStatus.value == 2));
     notLiveList.assignAll(followList.where((x) => x.liveStatus.value == 1));
     _updatedListController.add(0);

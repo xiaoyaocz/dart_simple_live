@@ -88,6 +88,14 @@ class FollowUserItem extends StatelessWidget {
               color: Colors.grey,
             ),
           ),
+          AppStyle.hGap4,
+          Text(
+            item.watchDuration??"00:00:00",
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
         ],
       ),
       trailing: playing

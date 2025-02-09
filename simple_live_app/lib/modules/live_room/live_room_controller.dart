@@ -994,6 +994,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     // 刷新信息
     loadData();
+    HistoryService.instance.reset("${site.id}_$roomId");
   }
 
   void copyErrorDetail() {

@@ -62,8 +62,9 @@ class HistoryService extends GetxService {
   void _updateHistory() {
     // 累加到当前历史记录
     _elapsed = _stopwatch.elapsed;
-    _oldWatchedDuration += _elapsed;
-    curLiveRoomHistory?.watchDuration = _oldWatchedDuration.toHMSString();
+    Duration curTime = _oldWatchedDuration+_elapsed;
+    Log.i("已观看时间：${_oldWatchedDuration.toHMSString()}_增加时间：${_elapsed.toHMSString()}");
+    curLiveRoomHistory?.watchDuration = curTime.toHMSString();
     curLiveRoomHistory?.updateTime = DateTime.now();
     DBService.instance.addOrUpdateHistory(curLiveRoomHistory!);
     EventBus.instance.emit(Constant.kUpdateFollow, curLiveRoomHistory);

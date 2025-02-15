@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/constant.dart';
@@ -13,6 +14,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/archive.dart';
 import 'package:simple_live_app/app/utils/document.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
@@ -35,6 +37,8 @@ class RemoteSyncWebDAVController extends BaseController {
 
   late DAVClient davClient;
   var user = "".obs;
+  var lastRecoverTime = "".obs;
+  var lastUploadTime = "".obs;
 
   final _userFollowJsonName = 'SimpleLive_follows.json';
   final _userHistoriesJsonName = 'SimpleLive_histories.json';
@@ -61,6 +65,18 @@ class RemoteSyncWebDAVController extends BaseController {
       var _password = LocalStorageService.instance
           .getValue(LocalStorageService.kWebDAVPassword, "");
       davClient = DAVClient(_uri, user.value, _password);
+      lastRecoverTime.value = Utils.parseTime(
+        LocalStorageService.instance.getValue(
+          LocalStorageService.kWebDAVLastRecoverTime,
+          DateTime.now(),
+        ),
+      );
+      lastUploadTime.value = Utils.parseTime(
+        LocalStorageService.instance.getValue(
+          LocalStorageService.kWebDAVLastUploadTime,
+          DateTime.now(),
+        ),
+      );
       checkIsLogin();
     }
   }
@@ -90,22 +106,28 @@ class RemoteSyncWebDAVController extends BaseController {
           .setValue(LocalStorageService.kWebDAVUri, webDAVUri);
       LocalStorageService.instance
           .setValue(LocalStorageService.kWebDAVUser, webDAVUser);
+      user.value = webDAVUser;
       LocalStorageService.instance
           .setValue(LocalStorageService.kWebDAVPassword, webDAVPassword);
       Get.back();
+      SmartDialog.showToast("登录成功！");
     } else {
       SmartDialog.showToast("WebDAV账号密码验证失败，请重新输入！");
     }
   }
 
   // WebDAV登出
-  void doWebDAVLogout() {
-    // 清除本地账号数据
-    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUri, "");
-    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUser, "");
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kWebDAVPassword, "");
-    notLogin.value = true;
+  @override
+  Future<void> onLogout() async {
+    var result = await Utils.showAlertDialog("确定要登出WebDAV账号？", title: "退出登录");
+    if(result){
+      // 清除本地账号数据
+      LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUri, "");
+      LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUser, "");
+      LocalStorageService.instance
+          .setValue(LocalStorageService.kWebDAVPassword, "");
+      notLogin.value = true;
+    }
   }
 
   // webDAV上传到云端
@@ -117,6 +139,9 @@ class RemoteSyncWebDAVController extends BaseController {
         var result = await davClient.backup(Uint8List.fromList(value));
         if (result) {
           SmartDialog.showToast("上传成功");
+          DateTime uploadTime =DateTime.now();
+          lastUploadTime.value = Utils.parseTime(uploadTime);
+          LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastUploadTime, uploadTime);
         } else {
           Log.e("备份失败", StackTrace.current);
           SmartDialog.showToast("上传失败");
@@ -205,6 +230,9 @@ class RemoteSyncWebDAVController extends BaseController {
     }
     SmartDialog.dismiss();
     SmartDialog.showToast('同步完成');
+    DateTime recoverTime =DateTime.now();
+    lastRecoverTime.value = Utils.parseTime(recoverTime);
+    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastRecoverTime, recoverTime);
   }
   // todo: 后续迁出实现无感同步
   Future<void> _recovery(ArchiveFile file) async {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="clarity">清晰度</string>
+    <string name="line">播放线路</string>
+    <string name="ratio">画面比例</string>
+    <string name="followed">已关注</string>
+    <string name="unfollowed">未关注</string>
+    <string name="danmaku_open">弹幕开</string>
+    <string name="danmaku_close">弹幕关</string>
+    <string name="danmaku_size">弹幕大小</string>
+    <string name="danmaku_speed">弹幕速度</string>
+    <string name="danmaku_area">弹幕区域</string>
+    <string name="danmaku_opacity">不透明度</string>
+    <string name="danmaku_stroke">描边宽度</string>
+    <string name="refresh">刷新</string>
+    <string name="landscape">横屏</string>
+    <string name="portrait">竖屏</string>
+    <string name="left_arrow"><![CDATA[<]]></string>
+    <string name="right_arrow"><![CDATA[>]]></string>
+</resources>

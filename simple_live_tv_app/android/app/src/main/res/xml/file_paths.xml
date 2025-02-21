@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path
+        name="live_cache_path"
+        path="." />
+    <external-path
+        name="live_external_path"
+        path="." />
+    <external-cache-path
+        name="live_external_cache_path"
+        path="." />
+
+    <!-- /storage/emulated/0/Download/${applicationId}/.beta/apk-->
+    <external-path
+        name="live_download_external_path"
+        path="Download/" />
+    <!--/storage/emulated/0/Android/data/${applicationId}/files/apk/-->
+    <external-path
+        name="live_external_files_path"
+        path="Android/data/" />
+</paths>

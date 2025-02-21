@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/constant.dart';
@@ -27,10 +26,12 @@ class AppNavigator {
     }
 
     if (AppSettingsController.instance.playerMode.value == 0) {
-      LiveController liveController = LiveController(pSite: site, pRoomId: roomId);
+      LiveController liveController =
+          LiveController(pSite: site, pRoomId: roomId);
       liveController.openLivePage(0);
     } else if (AppSettingsController.instance.playerMode.value == 1) {
-      LiveController liveController = LiveController(pSite: site, pRoomId: roomId);
+      LiveController liveController =
+          LiveController(pSite: site, pRoomId: roomId);
       liveController.openLivePage(1);
     } else {
       Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {

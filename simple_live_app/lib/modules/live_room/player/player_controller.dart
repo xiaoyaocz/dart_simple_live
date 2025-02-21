@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
@@ -233,7 +233,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   /// 释放一些系统状态
   Future resetSystem() async {
     _pipSubscription?.cancel();
-    pip.dispose();
+    //pip.dispose();
     await SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
       overlays: SystemUiOverlay.values,
@@ -378,7 +378,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       }
 
       if (Platform.isIOS || Platform.isAndroid) {
-        await ImageGallerySaver.saveImage(
+        await FlutterImageGallerySaver.saveImage(
           imageData,
         );
         SmartDialog.showToast("已保存截图至相册");
@@ -437,10 +437,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       ratio = const Rational.landscape();
     }
     await pip.enable(
-      aspectRatio: ratio,
+      ImmediatePiP(
+        aspectRatio: ratio,
+      ),
     );
 
-    _pipSubscription ??= pip.pipStatus$.listen((event) {
+    _pipSubscription ??= pip.pipStatusStream.listen((event) {
       if (event == PiPStatus.disabled) {
         danmakuController?.clear();
         showDanmakuState.value = danmakuStateBeforePIP;

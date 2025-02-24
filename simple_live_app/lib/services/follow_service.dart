@@ -117,7 +117,16 @@ class FollowService extends GetxService {
       DBService.instance.updateFollowTag(tag);
     }
     // 标签内排序
-    curTagFollowList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    curTagFollowList.sort(
+      (a, b) {
+        if (a.liveStatus.value != b.liveStatus.value) {
+          return b.liveStatus.value.compareTo(a.liveStatus.value);
+        }
+        return b.watchDuration!
+            .toDuration()
+            .compareTo(a.watchDuration!.toDuration());
+      },
+    );
   }
 
   // 添加关注

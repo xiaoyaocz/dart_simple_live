@@ -54,12 +54,12 @@ dependencies:
   auto_orientation: ^2.3.1 #屏幕方向
   wakelock_plus: ^1.2.5 #屏幕常亮
   file_picker: ^8.0.3 #文件选择
-  window_manager: ^0.3.9 #窗口管理
+  window_manager: ^0.4.3 #窗口管理
   floating: ^2.0.1 #PIP画中画
   flutter_inappwebview: ^5.8.0 #WebView
   connectivity_plus: ^6.0.3 #网络状态
   qr_code_scanner: ^1.0.1 #二维码扫描
-  
+  flutter_single_instance: ^1.2.3 #应用启动检测
   # 网络相关
   webdav_client: ^1.2.2 # WebDAV
   shelf: ^1.4.1 

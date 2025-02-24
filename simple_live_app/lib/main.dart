@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_single_instance/flutter_single_instance.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -105,6 +106,15 @@ Future initWindow() async {
     return;
   }
   await windowManager.ensureInitialized();
+  // 判定程序是否启动
+  if (!await FlutterSingleInstance().isFirstInstance()) {
+    Log.i("App is already running");
+    final err = await FlutterSingleInstance().focus();
+    if (err != null) {
+      Log.e("Error focusing running instance: $err",StackTrace.current);
+    }
+    exit(0);
+  }
   WindowOptions windowOptions = const WindowOptions(
     minimumSize: Size(280, 280),
     center: true,

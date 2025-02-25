@@ -418,7 +418,7 @@ void showPlayerSettings(LiveRoomController controller) {
               ),
 
               Divider(
-                color: Colors.grey.withOpacity(.2),
+                color: Colors.grey.withAlpha(50),
                 height: 36.w,
               ),
               AppStyle.vGap24,
@@ -481,7 +481,7 @@ void showPlayerSettings(LiveRoomController controller) {
                 ),
               ),
               Divider(
-                color: Colors.grey.withOpacity(.2),
+                color: Colors.grey.withAlpha(50),
                 height: 36.w,
               ),
               Padding(
@@ -514,7 +514,7 @@ void showPlayerSettings(LiveRoomController controller) {
                 ),
               ),
               Divider(
-                color: Colors.grey.withOpacity(.2),
+                color: Colors.grey.withAlpha(50),
                 height: 36.w,
               ),
               Padding(

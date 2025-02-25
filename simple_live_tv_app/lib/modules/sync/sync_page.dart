@@ -136,7 +136,7 @@ class SyncPage extends GetView<SyncController> {
                   ),
                 ),
                 VerticalDivider(
-                  color: Colors.white.withOpacity(.2),
+                  color: Colors.white.withAlpha(50),
                   thickness: 2.w,
                   endIndent: 120.w,
                   indent: 120.w,

@@ -79,7 +79,7 @@ class _ScanRectangleState extends State<ScanRectangle>
         width: 240,
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.grey.withOpacity(.2),
+            color: Colors.grey.withAlpha(50),
             width: 2,
           ),
         ),

@@ -8,7 +8,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_inappwebview_windows
   media_kit_libs_windows_video
   media_kit_video
-  network_info_plus
   permission_handler_windows
   screen_brightness_windows
   screen_retriever

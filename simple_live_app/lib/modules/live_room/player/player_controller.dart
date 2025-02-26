@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:auto_orientation/auto_orientation.dart';
+import 'package:auto_orientation_v2/auto_orientation_v2.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:floating/floating.dart';
@@ -12,7 +12,7 @@ import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
-import 'package:perfect_volume_control/perfect_volume_control.dart';
+import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
@@ -208,14 +208,14 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   final screenBrightness = ScreenBrightness();
-
+  final VolumeController volumeController = VolumeController();
   final pip = Floating();
   StreamSubscription<PiPStatus>? _pipSubscription;
 
   /// 初始化一些系统状态
   void initSystem() async {
     if (Platform.isAndroid || Platform.isIOS) {
-      PerfectVolumeControl.hideUI = true;
+      volumeController.showSystemUI = false;
     }
 
     // 屏幕常亮
@@ -526,7 +526,7 @@ mixin PlayerGestureControlMixin
     verticalDragging = true;
     showGestureTip.value = true;
     if (Platform.isAndroid || Platform.isIOS) {
-      _currentVolume = await PerfectVolumeControl.volume;
+      _currentVolume = await volumeController.getVolume();
     }
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       _currentBrightness = await screenBrightness.current;
@@ -588,9 +588,9 @@ mixin PlayerGestureControlMixin
     return (volume / 5).round() * 5;
   }
 
-  Future<void> _realSetVolume(int volume) async {
+  Future _realSetVolume(int volume) async {
     Log.logPrint(volume);
-    return await PerfectVolumeControl.setVolume(volume / 100);
+    volumeController.setVolume(volume / 100);
   }
 
   void setGestureBrightness(double dy) {

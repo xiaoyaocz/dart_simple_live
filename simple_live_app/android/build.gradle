@@ -5,27 +5,12 @@ allprojects {
     }
 }
 
-rootProject.buildDir = '../build'
-subprojects {
-    // 兼容perfect_volume_control
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android {
-                if (namespace == null) {
-                    namespace project.group
-                }
-                if(namespace.contains('perfect_volume_control')){
-                    compileSdkVersion 35 
-                }
-            }
-        }
-    }
-}
+rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
-    project.evaluationDependsOn(':app')
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {

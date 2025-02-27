@@ -55,9 +55,8 @@ dependencies:
   file_picker: ^8.0.3 #文件选择
   window_manager: ^0.4.3 #窗口管理
   floating: ^6.0.0 #PIP画中画
-  flutter_inappwebview: ^^6.1.5 #WebView
+  flutter_inappwebview: ^6.1.5 #WebView
   connectivity_plus: ^6.0.3 #网络状态
-  qr_code_scanner: ^1.0.1 #二维码扫描
   flutter_single_instance: ^1.2.3 #应用启动检测
   qr_code_scanner_plus: ^2.0.10+1 #二维码扫描
 

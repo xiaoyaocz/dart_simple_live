@@ -15,7 +15,7 @@ class DesktopRefreshButton extends StatelessWidget {
         borderRadius: AppStyle.radius48,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(.2),
+            color: Colors.grey.withAlpha(50),
             blurRadius: 4,
           ),
         ],

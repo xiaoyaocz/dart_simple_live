@@ -167,7 +167,7 @@ class Utils {
                 ),
                 Divider(
                   height: 1,
-                  color: Colors.grey.withOpacity(.1),
+                  color: Colors.grey.withAlpha(25),
                 ),
                 Expanded(
                   child: child,

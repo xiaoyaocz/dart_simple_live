@@ -172,7 +172,7 @@ class FollowService extends GetxService {
     var list = DBService.instance.getFollowList();
     getAllTagList();
     if (list.isEmpty) {
-      updating.value = true;
+      updating.value = false;
       followList.assignAll(list);
       return;
     }

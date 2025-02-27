@@ -89,7 +89,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         if (controller.fullScreenState.value) {
           return PopScope(
             canPop: false,
-            onPopInvoked: (e) {
+            onPopInvokedWithResult: (e, r) {
               controller.exitFull();
             },
             child: Scaffold(
@@ -169,7 +169,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             color: Theme.of(context).cardColor,
             border: Border(
               top: BorderSide(
-                color: Colors.grey.withOpacity(.1),
+                color: Colors.grey.withAlpha(25),
               ),
             ),
           ),
@@ -293,10 +293,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         color: Theme.of(context).cardColor,
         border: Border(
           top: BorderSide(
-            color: Colors.grey.withOpacity(.1),
+            color: Colors.grey.withAlpha(25),
           ),
           bottom: BorderSide(
-            color: Colors.grey.withOpacity(.1),
+            color: Colors.grey.withAlpha(25),
           ),
         ),
       ),
@@ -310,7 +310,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           children: [
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withOpacity(.2)),
+                border: Border.all(color: Colors.grey.withAlpha(50)),
                 borderRadius: AppStyle.radius24,
               ),
               child: NetImage(
@@ -380,7 +380,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         color: Theme.of(context).cardColor,
         border: Border(
           top: BorderSide(
-            color: Colors.grey.withOpacity(.1),
+            color: Colors.grey.withAlpha(25),
           ),
         ),
       ),
@@ -541,7 +541,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 Flexible(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.blueGrey.withOpacity(.1),
+                      color: Colors.blueGrey.withAlpha(25),
                       //borderRadius: AppStyle.radius8,
                       borderRadius: const BorderRadius.only(
                         topRight: Radius.circular(12),

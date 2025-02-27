@@ -41,30 +41,31 @@ dependencies:
 
 
   #系统交互
-  package_info_plus: ^8.0.0 #包信息
-  device_info_plus: ^10.1.0 #设备信息
-  url_launcher: ^6.2.6 #打开链接
-  share_plus: ^9.0.0 #分享
+  package_info_plus: ^8.2.1 #包信息
+  device_info_plus: ^11.3.0 #设备信息
+  url_launcher: ^6.3.1 #打开链接
+  share_plus: ^10.1.4 #分享
   path_provider: ^2.1.3 #常用路径
   cross_file: ^0.3.4+1 #跨平台文件
   permission_handler: ^11.3.1 #权限处理
-  image_gallery_saver: ^2.0.3 #图片保存到相册
-  perfect_volume_control: ^1.0.5 #音量控制
+  flutter_image_gallery_saver: ^0.0.2 #图片保存到相册
   screen_brightness: ^0.2.2+1 #亮度控制
-  auto_orientation: ^2.3.1 #屏幕方向
+  auto_orientation_v2: ^2.3.6 #屏幕方向
   wakelock_plus: ^1.2.5 #屏幕常亮
   file_picker: ^8.0.3 #文件选择
   window_manager: ^0.4.3 #窗口管理
-  floating: ^2.0.1 #PIP画中画
-  flutter_inappwebview: ^5.8.0 #WebView
+  floating: ^6.0.0 #PIP画中画
+  flutter_inappwebview: ^^6.1.5 #WebView
   connectivity_plus: ^6.0.3 #网络状态
   qr_code_scanner: ^1.0.1 #二维码扫描
   flutter_single_instance: ^1.2.3 #应用启动检测
+  qr_code_scanner_plus: ^2.0.10+1 #二维码扫描
+
   # 网络相关
   webdav_client: ^1.2.2 # WebDAV
-  shelf: ^1.4.1 
+  shelf: ^1.4.1
   shelf_router: ^1.1.4
-  network_info_plus: 3.0.5
+  network_info_plus: ^6.1.3
   signalr_netcore: ^1.3.9 #SignalR
 
   # 视频播放
@@ -76,9 +77,6 @@ dependencies:
     sdk: flutter
   flutter_localizations: 
     sdk: flutter
-
-
-
 
 dev_dependencies: 
   flutter_lints: ^2.0.0

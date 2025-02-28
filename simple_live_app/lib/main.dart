@@ -15,6 +15,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
@@ -260,6 +261,7 @@ class MyApp extends StatelessWidget {
                         if (!Platform.isAndroid && !Platform.isIOS) {
                           if (await windowManager.isFullScreen()) {
                             await windowManager.setFullScreen(false);
+                            EventBus.instance.emit(EventBus.kEscapePressed, 0);
                             return;
                           }
                         }

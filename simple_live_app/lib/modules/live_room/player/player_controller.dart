@@ -12,6 +12,7 @@ import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -653,6 +654,7 @@ class PlayerController extends BaseController
   StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
   StreamSubscription? _playingSubscription;
+  StreamSubscription? _escSubscription;
 
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
@@ -693,6 +695,9 @@ class PlayerController extends BaseController
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
+    _escSubscription = EventBus.instance.listen(EventBus.kEscapePressed, (event){
+      exitFull();
+    });
   }
 
   void disposeStream() {
@@ -703,6 +708,7 @@ class PlayerController extends BaseController
     _logSubscription?.cancel();
     _pipSubscription?.cancel();
     _playingSubscription?.cancel();
+    _escSubscription?.cancel();
   }
 
   void mediaEnd() {

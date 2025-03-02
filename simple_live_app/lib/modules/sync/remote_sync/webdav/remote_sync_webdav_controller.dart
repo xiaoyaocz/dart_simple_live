@@ -319,9 +319,7 @@ class RemoteSyncWebDAVController extends BaseController {
       } else if (file.name == _userSettingsJsonName) {
         try{
           await LocalStorageService.instance.settingsBox.clear();
-          for(var setting in jsonData){
-            await LocalStorageService.instance.settingsBox.put(setting.key, setting.value);
-          }
+          LocalStorageService.instance.settingsBox.putAll(jsonData);
           Log.i('已同步用户设置');
         } catch (e) {
           Log.e("同步用户设置失败：$e", StackTrace.current);

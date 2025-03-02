@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/constant.dart';
@@ -45,6 +44,7 @@ class RemoteSyncWebDAVController extends BaseController {
   final _userBlockedWordJsonName = 'SimpleLive_blocked_word.json';
   final _userBilibiliAccountJsonName = 'SimpleLive_bilibili_account.json';
   final _userTagsJsonName = 'SimpleLive_Tags.json';
+  final _userSettingsJsonName = 'SimpleLive_Settings.json';
 
   @override
   void onInit() {
@@ -55,26 +55,30 @@ class RemoteSyncWebDAVController extends BaseController {
   // webDAV 逻辑
   // 初始化webDAV
   void doWebDAVInit() {
-    var _uri = LocalStorageService.instance
+    var uri = LocalStorageService.instance
         .getValue(LocalStorageService.kWebDAVUri, "");
-    if (_uri.isEmpty) {
+    if (uri.isEmpty) {
       notLogin.value = true;
     } else {
       user.value = LocalStorageService.instance
           .getValue(LocalStorageService.kWebDAVUser, "");
-      var _password = LocalStorageService.instance
+      var password = LocalStorageService.instance
           .getValue(LocalStorageService.kWebDAVPassword, "");
-      davClient = DAVClient(_uri, user.value, _password);
+      davClient = DAVClient(uri, user.value, password);
       lastRecoverTime.value = Utils.parseTime(
-        LocalStorageService.instance.getValue(
-          LocalStorageService.kWebDAVLastRecoverTime,
-          DateTime.now(),
+        DateTime.fromMillisecondsSinceEpoch(
+          LocalStorageService.instance.getValue(
+            LocalStorageService.kWebDAVLastRecoverTime,
+            DateTime.now().millisecondsSinceEpoch,
+          ),
         ),
       );
       lastUploadTime.value = Utils.parseTime(
-        LocalStorageService.instance.getValue(
-          LocalStorageService.kWebDAVLastUploadTime,
-          DateTime.now(),
+        DateTime.fromMillisecondsSinceEpoch(
+          LocalStorageService.instance.getValue(
+            LocalStorageService.kWebDAVLastUploadTime,
+            DateTime.now().millisecondsSinceEpoch,
+          ),
         ),
       );
       checkIsLogin();
@@ -88,10 +92,9 @@ class RemoteSyncWebDAVController extends BaseController {
       bool value = await davClient.pingCompleter.future;
       notLogin.value = !value;
     } catch (e) {
-      Log.e("${e}", StackTrace.current);
+      Log.e("$e", StackTrace.current);
       notLogin.value = true;
     }
-    ;
   }
 
   // WebDAV登录
@@ -141,7 +144,7 @@ class RemoteSyncWebDAVController extends BaseController {
           SmartDialog.showToast("上传成功");
           DateTime uploadTime =DateTime.now();
           lastUploadTime.value = Utils.parseTime(uploadTime);
-          LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastUploadTime, uploadTime);
+          LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastUploadTime, uploadTime.millisecondsSinceEpoch);
         } else {
           Log.e("备份失败", StackTrace.current);
           SmartDialog.showToast("上传失败");
@@ -197,7 +200,6 @@ class RemoteSyncWebDAVController extends BaseController {
           File(join(profile.path, _userBilibiliAccountJsonName));
       await bilibiliAccountJsonFile
           .writeAsString(jsonEncode(userBiliAccountCookieMap));
-
       // 用户自定义标签
       var userTagsList = DBService.instance.getFollowTagList();
       var dataTagsMap = {
@@ -205,6 +207,14 @@ class RemoteSyncWebDAVController extends BaseController {
       };
       var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
       await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
+      // 同步所有设置
+      var settingList = LocalStorageService.instance.settingsBox.toMap();
+      var dataSettingListMap = {
+        'data': settingList
+      };
+      final settingJsonFile = File(join(profile.path,  _userSettingsJsonName));
+      await settingJsonFile.writeAsString(jsonEncode(dataSettingListMap));
+
       // 遍历profile路径下的所有文件压缩
       await archive.addDirectoryToArchive(profile.path, profile.path);
       final zipEncoder = ZipEncoder();
@@ -232,7 +242,7 @@ class RemoteSyncWebDAVController extends BaseController {
     SmartDialog.showToast('同步完成');
     DateTime recoverTime =DateTime.now();
     lastRecoverTime.value = Utils.parseTime(recoverTime);
-    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastRecoverTime, recoverTime);
+    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastRecoverTime, recoverTime.millisecondsSinceEpoch);
   }
   // todo: 后续迁出实现无感同步
   Future<void> _recovery(ArchiveFile file) async {
@@ -252,7 +262,7 @@ class RemoteSyncWebDAVController extends BaseController {
           EventBus.instance.emit(Constant.kUpdateFollow, 0);
           Log.i('已同步关注用户列表');
         } catch (e) {
-          Log.i('同步关注用户列表失败');
+          Log.e('同步关注用户列表失败: $e', StackTrace.current);
         }
       } else if (file.name == _userHistoriesJsonName && isSyncHistories.value) {
         try {
@@ -269,7 +279,7 @@ class RemoteSyncWebDAVController extends BaseController {
           }
           Log.i('已同步用户观看历史记录');
         } catch (e) {
-          Log.i('同步用户观看历史记录失败');
+          Log.e('同步用户观看历史记录失败: $e',StackTrace.current);
         }
       } else if (file.name == _userBlockedWordJsonName &&
           isSyncBlockWord.value) {
@@ -279,7 +289,7 @@ class RemoteSyncWebDAVController extends BaseController {
           }
           Log.i('已同步用户屏蔽词');
         } catch (e) {
-          Log.i('同步用户屏蔽词失败');
+          Log.e('同步用户屏蔽词失败:$e',StackTrace.current);
         }
       } else if (file.name == _userBilibiliAccountJsonName &&
           isSyncBilibiliAccount.value) {
@@ -289,7 +299,7 @@ class RemoteSyncWebDAVController extends BaseController {
           BiliBiliAccountService.instance.loadUserInfo();
           Log.i('已同步哔哩哔哩账号');
         } catch (e) {
-          Log.i('同步哔哩哔哩账号失败：${e}');
+          Log.e('同步哔哩哔哩账号失败：$e',StackTrace.current);
         }
       } else if (file.name == _userTagsJsonName) {
         try {
@@ -300,11 +310,21 @@ class RemoteSyncWebDAVController extends BaseController {
             await DBService.instance.tagBox.put(tag.id, tag);
             // 插入之后验证
             var insertedTag = DBService.instance.tagBox.get(tag.id);
-            print('Inserted tag: ${insertedTag?.tag}');
+            Log.i('Inserted tag: ${insertedTag?.tag}');
           }
           Log.i('已同步用户自定义标签');
         } catch (e) {
-          Log.i('同步用户自定义标签失败');
+          Log.e('同步用户自定义标签失败:$e',StackTrace.current);
+        }
+      } else if (file.name == _userSettingsJsonName) {
+        try{
+          await LocalStorageService.instance.settingsBox.clear();
+          for(var setting in jsonData){
+            await LocalStorageService.instance.settingsBox.put(setting.key, setting.value);
+          }
+          Log.i('已同步用户设置');
+        } catch (e) {
+          Log.e("同步用户设置失败：$e", StackTrace.current);
         }
       } else {
         return;

@@ -50,6 +50,7 @@ void main() async {
   );
   //初始化服务
   await initServices();
+  migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   //设置状态栏为透明
   SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
@@ -100,6 +101,18 @@ Future migrateData() async {
   } catch (e) {
     Log.logPrint(e);
   }
+}
+
+/// 数据迁移根据版本：from 1.7.8
+void migrateDataByVersion(){
+  int curAppVer = Utils.parseVersion(Utils.packageInfo.version);
+  // 修改webdav同步时间在Hive中的数据格式
+  int curDBVer = AppSettingsController.instance.dbVer;
+  if(curDBVer == 10708){
+    LocalStorageService.instance.settingsBox.delete(LocalStorageService.kWebDAVLastUploadTime);
+    LocalStorageService.instance.settingsBox.delete(LocalStorageService.kWebDAVLastRecoverTime);
+  }
+  LocalStorageService.instance.settingsBox.put(LocalStorageService.kHiveDbVer, curAppVer);
 }
 
 Future initWindow() async {

@@ -87,6 +87,15 @@ class SyncPage extends StatelessWidget {
                     }
                   },
                 ),
+                ListTile(
+                  title: const Text("WebDAV"),
+                  leading: const Icon(Icons.cloud_upload_outlined),
+                  subtitle: const Text("通过WebDAV同步数据"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kRemoteSyncWebDav);
+                  },
+                ),
               ],
             ),
           ),

@@ -24,6 +24,8 @@ dependencies:
   path: any
   udp: ^5.0.3 #UDP
   uuid: ^4.3.3 #UUID
+  webdav_client: ^1.2.2 # WebDAV
+  archive: ^3.6.1 #文件压缩
 
   #Widget
   flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView

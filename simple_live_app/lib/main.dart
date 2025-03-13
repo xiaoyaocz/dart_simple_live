@@ -30,6 +30,7 @@ import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/history_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/migration_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -103,17 +104,6 @@ Future migrateData() async {
   }
 }
 
-/// 数据迁移根据版本：from 1.7.8
-void migrateDataByVersion(){
-  int curAppVer = Utils.parseVersion(Utils.packageInfo.version);
-  // 修改webdav同步时间在Hive中的数据格式
-  int curDBVer = AppSettingsController.instance.dbVer;
-  if(curDBVer == 10708){
-    LocalStorageService.instance.settingsBox.delete(LocalStorageService.kWebDAVLastUploadTime);
-    LocalStorageService.instance.settingsBox.delete(LocalStorageService.kWebDAVLastRecoverTime);
-  }
-  LocalStorageService.instance.settingsBox.put(LocalStorageService.kHiveDbVer, curAppVer);
-}
 
 Future initWindow() async {
   if (!(Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {

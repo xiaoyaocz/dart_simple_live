@@ -74,7 +74,8 @@ class FollowUserItem extends StatelessWidget {
           ],
         ),
       ),
-      subtitle: Row(
+      subtitle: Wrap(
+        runSpacing: 1.0,
         children: [
           Image.asset(
             site.logo,
@@ -95,6 +96,16 @@ class FollowUserItem extends StatelessWidget {
               fontSize: 12,
               color: Colors.grey,
             ),
+          ),
+          AppStyle.hGap4,
+          Text(
+            item.tag.length > 8 ? '${item.tag.substring(0, 8)}...' : item.tag,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

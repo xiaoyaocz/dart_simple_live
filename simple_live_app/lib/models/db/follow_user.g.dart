@@ -24,6 +24,7 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       face: fields[4] as String,
       addTime: fields[5] as DateTime,
       watchDuration: fields[6] as String?,
+      tag: fields[7] ?? "全部"
     );
   }
 
@@ -44,7 +45,9 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       ..writeByte(5)
       ..write(obj.addTime)
       ..writeByte(6)
-      ..write(obj.watchDuration);
+      ..write(obj.watchDuration)
+      ..writeByte(7)
+      ..write(obj.tag);
   }
 
   @override

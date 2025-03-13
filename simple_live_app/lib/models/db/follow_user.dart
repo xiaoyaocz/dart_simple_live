@@ -53,7 +53,7 @@ class FollowUser {
         face: json['face'],
         addTime: DateTime.parse(json['addTime']),
         watchDuration: json["watchDuration"]??"00:00:00",
-        tag: json["tag"]
+        tag: json["tag"]??"全部"
       );
 
   Map<String, dynamic> toJson() => {

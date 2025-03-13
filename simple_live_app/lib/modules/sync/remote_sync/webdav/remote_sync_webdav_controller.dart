@@ -23,6 +23,7 @@ import 'package:simple_live_app/requests/webdav_client.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/migration_service.dart';
 
 class RemoteSyncWebDAVController extends BaseController {
   // ui
@@ -238,6 +239,8 @@ class RemoteSyncWebDAVController extends BaseController {
     for (ArchiveFile file in archive) {
       await _recovery(file);
     }
+    // 旧版本备份需要迁移
+    MigrationService.instance.migrateDataByVersion();
     SmartDialog.dismiss();
     SmartDialog.showToast('同步完成');
     DateTime recoverTime =DateTime.now();

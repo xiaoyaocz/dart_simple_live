@@ -51,7 +51,8 @@ void main() async {
   );
   //初始化服务
   await initServices();
-  migrateDataByVersion();
+
+  MigrationService.instance.migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   //设置状态栏为透明
   SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
@@ -151,6 +152,8 @@ Future initServices() async {
   Get.put(FollowService());
 
   Get.put(HistoryService());
+
+  Get.put(MigrationService());
 
   initCoreLog();
 }

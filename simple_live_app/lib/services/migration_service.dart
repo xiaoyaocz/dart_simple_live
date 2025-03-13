@@ -31,6 +31,7 @@ class MigrationService extends GetxService {
           if (tag.userId.contains(followList[i].id)) {
             followList[i].tag = tag.tag;
             DBService.instance.addFollow(followList[i]);
+            break;
           }
         }
       }

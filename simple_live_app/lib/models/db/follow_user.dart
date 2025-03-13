@@ -39,7 +39,7 @@ class FollowUser {
   String? watchDuration; // "00:00:00"
 
   @HiveField(7)
-  String tag = "全部";
+  String tag;
 
   /// 直播状态
   /// 0=未知(加载中) 1=未开播 2=直播中

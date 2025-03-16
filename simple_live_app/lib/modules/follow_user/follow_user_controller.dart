@@ -114,7 +114,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     }
     // 处于默认标签选择自定义标签->加入选择tag
     if (tagIndex >= 3 && curTagIndex < 3) {
-      tag.userId.add(item.id);
+      tag.userId.addIf(!tag.userId.contains(item.id), item.id);
     }
     // 处于自定义标签选择默认->从当前tag移除
     else if (tagIndex == 0 && curTagIndex >= 3) {

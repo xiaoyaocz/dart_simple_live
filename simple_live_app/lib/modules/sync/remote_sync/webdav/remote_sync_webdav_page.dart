@@ -42,7 +42,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                       subtitle: Text(controller.user.value),
                       trailing: const Icon(Icons.logout),
                       onTap: () {
-                        controller.doWebDAVLogout();
+                        controller.onLogout();
                       },
                     ),
                   ),
@@ -50,7 +50,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                     visible: !controller.notLogin.value,
                     child: ListTile(
                       title: const Text("上传到云端"),
-                      subtitle: const Text("同步"),
+                      subtitle: Text("上次上传：${controller.lastUploadTime}"),
                       leading: const Icon(Icons.cloud_upload_outlined),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
@@ -126,7 +126,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                           )
                         : ListTile(
                             title: const Text("恢复到本地"),
-                            subtitle: const Text("长按弹出同步数据种类选项"),
+                            subtitle: Text("上次恢复：${controller.lastRecoverTime}"),
                             leading: const Icon(Icons.cloud_download_outlined),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {

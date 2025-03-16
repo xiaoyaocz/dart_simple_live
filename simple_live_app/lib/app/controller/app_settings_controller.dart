@@ -19,6 +19,8 @@ class AppSettingsController extends GetxController {
 
   var firstRun = false;
 
+  var dbVer = 0;
+
   @override
   void onInit() {
     themeMode.value = LocalStorageService.instance
@@ -137,6 +139,8 @@ class AppSettingsController extends GetxController {
 
     updateFollowThreadCount.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
+
+    dbVer = LocalStorageService.instance.getValue(LocalStorageService.kHiveDbVer, 10708);
 
     initSiteSort();
     initHomeSort();

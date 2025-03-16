@@ -45,7 +45,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
+          flutter-version: '3.27.x'
           cache: true 
 
       # 打开MAC Desktop支持
@@ -81,35 +81,6 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-
-      # TV APK签名设置
-      - name: Download Android TV keystore
-        id: android_tv_keystore
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: keystore_tv.jks
-          encodedString: ${{ secrets.TV_KEYSTORE_BASE64 }}
-      - name: Create key.properties
-        run: |
-          echo "storeFile=${{ steps.android_tv_keystore.outputs.filePath }}" > simple_live_tv_app/android/key.properties
-          echo "storePassword=${{ secrets.TV_STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyAlias=${{ secrets.TV_KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
-
-      #打包 Android TV APK
-      - name: Build TV APK
-        run: |
-          cd simple_live_tv_app
-          flutter build apk --release --split-per-abi
-      #上传TV APK至Artifacts
-      - name: Upload TV APK to Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android_tv
-          path: |
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
 
       #打包iOS
       - name: Build IPA
@@ -166,7 +137,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.27.x"
           cache: true
       # 安装依赖
       - name: Update apt-get
@@ -215,7 +186,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.27.x"
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop

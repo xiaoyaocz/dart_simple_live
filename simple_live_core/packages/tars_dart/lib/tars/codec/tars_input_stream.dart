@@ -243,8 +243,6 @@ class TarsInputStream {
       case TarsStructType.STRUCT_END:
       case TarsStructType.ZERO_TAG:
         break;
-      default:
-        throw TarsDecodeException('invalid type.');
     }
   }
 

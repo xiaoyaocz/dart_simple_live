@@ -13,9 +13,12 @@ import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/duration2strUtils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
+import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:synchronized/synchronized.dart';
 
 class FollowService extends GetxService {
   StreamSubscription<dynamic>? subscription;
@@ -41,6 +44,9 @@ class FollowService extends GetxService {
   /// 当前tag的用户列表
   RxList<FollowUser> curTagFollowList = RxList<FollowUser>();
 
+  /// 线程安全
+  final _lock = Lock();
+
   /// 已经更新状态的数量
   var updatedCount = 0;
 
@@ -51,23 +57,27 @@ class FollowService extends GetxService {
 
   @override
   void onInit() {
-    subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
-      loadData(updateStatus: false);
+    subscription = EventBus.instance.listen(Constant.kUpdateFollow, (data) {
+      if (data is History) {
+        updateFollow(data);
+      } else {
+        loadData(updateStatus: false);
+      }
     });
     initTimer();
     super.onInit();
   }
 
-  void updateFollowUserTag(FollowUserTag tag){
+  void updateFollowUserTag(FollowUserTag tag) {
     DBService.instance.updateFollowTag(tag);
     // 查找并修改
-    var index = followTagList.indexWhere((oTag)=>oTag.id == tag.id);
+    var index = followTagList.indexWhere((oTag) => oTag.id == tag.id);
     followTagList[index] = tag;
   }
 
-   Future<void> addFollowUserTag(String tag) async{
+  Future<void> addFollowUserTag(String tag) async {
     // 判断待添加tag是否已存在，存在则return
-    if(followTagList.any((item)=>item.tag == tag)){
+    if (followTagList.any((item) => item.tag == tag)) {
       SmartDialog.showToast("标签名重复，修改失败");
       return;
     }
@@ -75,7 +85,7 @@ class FollowService extends GetxService {
     followTagList.add(item);
   }
 
-  void delFollowUserTag(FollowUserTag tag){
+  void delFollowUserTag(FollowUserTag tag) {
     followTagList.remove(tag);
     DBService.instance.deleteFollowTag(tag.id);
   }
@@ -107,7 +117,38 @@ class FollowService extends GetxService {
       DBService.instance.updateFollowTag(tag);
     }
     // 标签内排序
-    curTagFollowList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    curTagFollowList.sort(
+      (a, b) {
+        if (a.liveStatus.value != b.liveStatus.value) {
+          return b.liveStatus.value.compareTo(a.liveStatus.value);
+        }
+        return b.watchDuration!
+            .toDuration()
+            .compareTo(a.watchDuration!.toDuration());
+      },
+    );
+  }
+
+  // 添加关注
+  void addFollow(FollowUser follow) {
+    DBService.instance.addFollow(follow);
+  }
+
+  // 取消关注
+  void removeFollowUser(String id) {
+    DBService.instance.deleteFollow(id);
+  }
+
+  // 更新关注的历史记录
+  void updateFollow(History history){
+    var follow = followList.where((follow)=>follow.id == history.id).firstOrNull;
+    if(follow == null){
+      return;
+    } else {
+      follow.watchDuration = history.watchDuration;
+      addFollow(follow);
+    }
+    Log.i("已更新当前播放的观看时长：${follow.watchDuration}");
   }
 
   void initTimer() {
@@ -131,7 +172,7 @@ class FollowService extends GetxService {
     var list = DBService.instance.getFollowList();
     getAllTagList();
     if (list.isEmpty) {
-      updating.value = true;
+      updating.value = false;
       followList.assignAll(list);
       return;
     }
@@ -177,7 +218,9 @@ class FollowService extends GetxService {
     } catch (e) {
       Log.logPrint(e);
     } finally {
-      updatedCount++;
+      await _lock.synchronized(() {
+        updatedCount++;
+      });
       if (updatedCount >= followList.length) {
         filterData();
         updating.value = false;
@@ -186,7 +229,12 @@ class FollowService extends GetxService {
   }
 
   void filterData() {
-    followList.sort((a, b) => b.liveStatus.value.compareTo(a.liveStatus.value));
+    followList.sort((a, b) {
+      if(a.liveStatus.value != b.liveStatus.value){
+        return b.liveStatus.value.compareTo(a.liveStatus.value);
+      }
+      return b.watchDuration!.toDuration().compareTo(a.watchDuration!.toDuration());
+    },);
     liveList.assignAll(followList.where((x) => x.liveStatus.value == 2));
     notLiveList.assignAll(followList.where((x) => x.liveStatus.value == 1));
     _updatedListController.add(0);

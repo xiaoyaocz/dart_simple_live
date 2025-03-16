@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_single_instance/flutter_single_instance.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -14,6 +15,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
@@ -26,7 +28,9 @@ import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/history_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/migration_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -47,6 +51,8 @@ void main() async {
   );
   //初始化服务
   await initServices();
+
+  MigrationService.instance.migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   //设置状态栏为透明
   SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
@@ -99,11 +105,21 @@ Future migrateData() async {
   }
 }
 
+
 Future initWindow() async {
   if (!(Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
     return;
   }
   await windowManager.ensureInitialized();
+  // 判定程序是否启动
+  if (!await FlutterSingleInstance().isFirstInstance()) {
+    Log.i("App is already running");
+    final err = await FlutterSingleInstance().focus();
+    if (err != null) {
+      Log.e("Error focusing running instance: $err",StackTrace.current);
+    }
+    exit(0);
+  }
   WindowOptions windowOptions = const WindowOptions(
     minimumSize: Size(280, 280),
     center: true,
@@ -134,6 +150,10 @@ Future initServices() async {
   Get.put(SyncService());
 
   Get.put(FollowService());
+
+  Get.put(HistoryService());
+
+  Get.put(MigrationService());
 
   initCoreLog();
 }
@@ -247,6 +267,7 @@ class MyApp extends StatelessWidget {
                         if (!Platform.isAndroid && !Platform.isIOS) {
                           if (await windowManager.isFullScreen()) {
                             await windowManager.setFullScreen(false);
+                            EventBus.instance.emit(EventBus.kEscapePressed, 0);
                             return;
                           }
                         }

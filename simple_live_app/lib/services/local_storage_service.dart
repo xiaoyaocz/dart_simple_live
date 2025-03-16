@@ -152,6 +152,15 @@ class LocalStorageService extends GetxService {
 
   /// WebDAV_登录密码
   static const String kWebDAVPassword = "kWebDAVPassword";
+
+  /// WebDAV_最后一次上传时间
+  static const String kWebDAVLastUploadTime = "kWebDAVLastUploadTime";
+
+  /// WebDAV_最后一次备份时间
+  static const String kWebDAVLastRecoverTime = "kWebDAVLastRecoverTime";
+
+  /// 数据库版本
+  static const String kHiveDbVer = "kHiveDbVer";
   
   late Box settingsBox;
   late Box<String> shieldBox;

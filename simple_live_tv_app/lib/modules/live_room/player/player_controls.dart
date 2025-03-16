@@ -418,7 +418,7 @@ void showPlayerSettings(LiveRoomController controller) {
               ),
 
               Divider(
-                color: Colors.grey.withOpacity(.2),
+                color: Colors.grey.withAlpha(50),
                 height: 36.w,
               ),
               AppStyle.vGap24,
@@ -481,7 +481,7 @@ void showPlayerSettings(LiveRoomController controller) {
                 ),
               ),
               Divider(
-                color: Colors.grey.withOpacity(.2),
+                color: Colors.grey.withAlpha(50),
                 height: 36.w,
               ),
               Padding(
@@ -514,7 +514,7 @@ void showPlayerSettings(LiveRoomController controller) {
                 ),
               ),
               Divider(
-                color: Colors.grey.withOpacity(.2),
+                color: Colors.grey.withAlpha(50),
                 height: 36.w,
               ),
               Padding(
@@ -576,6 +576,7 @@ void showPlayerSettings(LiveRoomController controller) {
                   autofocus: danmakuSpeedFoucsNode.isFoucsed.value,
                   title: "弹幕速度",
                   items: {
+                    54.0: "超级慢",
                     18.0: "很慢",
                     14.0: "较慢",
                     12.0: "慢",

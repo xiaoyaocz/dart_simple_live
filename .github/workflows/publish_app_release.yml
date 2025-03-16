@@ -1,6 +1,7 @@
 name: app-build-action
 #推送Tag时触发
 on:
+  workflow_dispatch: # 允许手动触发
   push:
     tags:
       - "v*"
@@ -163,7 +164,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.27.x"
           cache: true
       # 安装依赖
       - name: Update apt-get
@@ -220,7 +221,7 @@ jobs:
         #完成
       - run: echo "🍏 Linux job's status is ${{ job.status }}."
 
-  # 打包Windows
+    # 打包Windows
   build-windows:
     runs-on: windows-latest
     permissions:
@@ -237,8 +238,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.27.x"
           cache: true
+          channel: "stable"
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop
       - name: Restore Packages
@@ -253,7 +255,6 @@ jobs:
         run: |
           cd simple_live_app
           flutter_distributor package --platform windows --targets msix,zip --skip-clean
-
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4

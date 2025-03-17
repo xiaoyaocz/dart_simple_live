@@ -101,6 +101,7 @@ class BiliBiliSite implements LiveSite {
         cover: "${item["cover"]}@400w.jpg",
         userName: item["uname"].toString(),
         online: int.tryParse(item["online"].toString()) ?? 0,
+        keyframeUrl: item["keyframe"].toString(),
       );
       items.add(roomItem);
     }
@@ -205,6 +206,7 @@ class BiliBiliSite implements LiveSite {
         cover: "${item["cover"]}@400w.jpg",
         userName: item["uname"].toString(),
         online: int.tryParse(item["online"].toString()) ?? 0,
+        keyframeUrl: item["keyframe"].toString(),
       );
       items.add(roomItem);
     }
@@ -296,6 +298,7 @@ class BiliBiliSite implements LiveSite {
         cover: "https:${item["cover"]}@400w.jpg",
         userName: item["uname"].toString(),
         online: int.tryParse(item["online"].toString()) ?? 0,
+        keyframeUrl: item["keyframe"].toString(),
       );
       items.add(roomItem);
     }

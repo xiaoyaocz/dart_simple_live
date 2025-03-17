@@ -132,6 +132,7 @@ class DouyinSite implements LiveSite {
         online: int.tryParse(
                 item["room"]["room_view_stats"]["display_value"].toString()) ??
             0,
+        keyframeUrl: item["room"]["keyframe_url"].toString(),
       );
       items.add(roomItem);
     }
@@ -166,6 +167,7 @@ class DouyinSite implements LiveSite {
         online: int.tryParse(
                 item["room"]["room_view_stats"]["display_value"].toString()) ??
             0,
+        keyframeUrl: item["room"]["keyframe_url"].toString(),
       );
       items.add(roomItem);
     }

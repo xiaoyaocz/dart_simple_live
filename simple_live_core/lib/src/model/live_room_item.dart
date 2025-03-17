@@ -15,12 +15,17 @@ class LiveRoomItem {
 
   /// 人气/在线人数
   final int online;
+
+  /// 关键帧URL
+  final String keyframeUrl;
+
   LiveRoomItem({
     required this.roomId,
     required this.title,
     required this.cover,
     required this.userName,
     this.online = 0,
+    required this.keyframeUrl,
   });
 
   @override
@@ -31,6 +36,7 @@ class LiveRoomItem {
       "cover": cover,
       "userName": userName,
       "online": online,
+      "keyframeUrl": keyframeUrl,
     });
   }
 }

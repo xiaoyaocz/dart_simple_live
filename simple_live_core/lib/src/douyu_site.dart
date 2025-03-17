@@ -172,6 +172,7 @@ class DouyuSite implements LiveSite {
         roomId: item['rid'].toString(),
         title: item['rn'].toString(),
         userName: item['nn'].toString(),
+        keyframeUrl: item['keyframe'].toString(),
       );
       items.add(roomItem);
     }

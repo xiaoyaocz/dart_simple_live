@@ -238,6 +238,7 @@ class HuyaSite implements LiveSite {
         cover: cover,
         userName: item["nick"].toString(),
         online: int.tryParse(item["totalCount"].toString()) ?? 0,
+        keyframeUrl: item["liveKeyFrame"].toString(),
       );
       items.add(roomItem);
     }

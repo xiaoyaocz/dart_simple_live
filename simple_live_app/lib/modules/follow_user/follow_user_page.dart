@@ -387,7 +387,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                   contentPadding: AppStyle.edgeInsetsA12,
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Colors.grey.withOpacity(.2),
+                      color: Colors.grey.withValues(alpha: .2),
                     ),
                   ),
                 ),

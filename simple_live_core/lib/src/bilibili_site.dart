@@ -37,6 +37,7 @@ class BiliBiliSite implements LiveSite {
         ? {
             "user-agent": kDefaultUserAgent,
             "referer": kDefaultReferer,
+            "cookie": 'buvid3=infoc;',
           }
         : {
             "cookie": cookie,

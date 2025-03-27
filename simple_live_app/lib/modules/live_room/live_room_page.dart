@@ -522,7 +522,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildMessageItem(LiveMessage message) {
     if (message.userName == "LiveSysMessage") {
       return Obx(
-        () => Text(
+        () => SelectableText(
           message.message,
           style: TextStyle(
             color: Colors.grey,
@@ -551,7 +551,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     ),
                     padding:
                         AppStyle.edgeInsetsA4.copyWith(left: 12, right: 12),
-                    child: Text.rich(
+                    child: SelectableText.rich(
                       TextSpan(
                         text: "${message.userName}：",
                         style: TextStyle(
@@ -575,7 +575,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 ),
               ],
             )
-          : Text.rich(
+          : SelectableText.rich(
               TextSpan(
                 text: "${message.userName}：",
                 style: TextStyle(

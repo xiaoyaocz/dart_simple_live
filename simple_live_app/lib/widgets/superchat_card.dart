@@ -107,7 +107,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
                     Utils.convertHexColor(widget.message.backgroundBottomColor),
               ),
               padding: AppStyle.edgeInsetsA8,
-              child: Text(
+              child: SelectableText(
                 widget.message.message,
                 style: const TextStyle(color: Colors.white),
               ),

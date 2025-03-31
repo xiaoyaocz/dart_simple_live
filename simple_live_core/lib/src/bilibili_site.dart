@@ -185,6 +185,13 @@ class BiliBiliSite implements LiveSite {
 
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
+    var header = getHeader();
+
+    if (!cookie.contains("buvid3")) {
+      var buvid = await getBuvid();
+      header["cookie"] = "buvid3=$buvid;$cookie";
+    }
+
     var result = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/xlive/web-interface/v1/second/getListByArea",
       queryParameters: {
@@ -193,7 +200,7 @@ class BiliBiliSite implements LiveSite {
         "page_size": 30,
         "page": page
       },
-      header: getHeader(),
+      header: header,
     );
 
     var hasMore = (result["data"]["list"] as List).isNotEmpty;

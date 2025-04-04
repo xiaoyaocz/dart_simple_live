@@ -105,34 +105,23 @@ class FollowUserController extends BasePageController<FollowUser> {
     refreshData();
   }
 
-  void setItemTag(FollowUser item, FollowUserTag tag) {
-    int tagIndex = tagList.indexOf(tag);
-    int curTagIndex = tagList.indexOf(filterMode.value);
-    // 处于默认标签选择默认 或切换标签->return
-    if ((tagIndex == 0 && curTagIndex < 3) || (tagIndex == curTagIndex)) {
-      return;
+  void updateItem(FollowUser item){
+    FollowService.instance.addFollow(item);
+  }
+
+  void setItemTag(FollowUser item, FollowUserTag targetTag) {
+    FollowUserTag tarTag = targetTag;
+    var curTag = filterMode.value;
+    FollowUser itemNew = item;
+    itemNew.tag = tarTag.tag;
+    FollowService.instance.addFollow(itemNew);
+    if(tagList.indexOf(tarTag)>=3){
+      tarTag.userId.addIf(!targetTag.userId.contains(item.id), item.id);
+      updateTag(tarTag);
     }
-    // 处于默认标签选择自定义标签->加入选择tag
-    if (tagIndex >= 3 && curTagIndex < 3) {
-      tag.userId.addIf(!tag.userId.contains(item.id), item.id);
-    }
-    // 处于自定义标签选择默认->从当前tag移除
-    else if (tagIndex == 0 && curTagIndex >= 3) {
-      filterMode.value.userId.remove(item.id);
-    }
-    // 处于自定义标签选择自定义标签->从当前tag移除 加入选择tag
-    else if (tagIndex >= 3 && curTagIndex >= 3 && tagIndex != curTagIndex) {
-      filterMode.value.userId.remove(item.id);
-      // 目标标签不包含当前关注则加入
-      tag.userId.addIf(!tag.userId.contains(item.id), item.id);
-    }
-    // 更新当前tag和目标tag
-    if (curTagIndex >= 3) {
-      updateTag(filterMode.value);
-    }
-    // 目标tag不为全部更新
-    if(tagIndex != 0){
-      updateTag(tag);
+    if(tagList.indexOf(curTag)>=3){
+      curTag.userId.remove(itemNew.id);
+      updateTag(curTag);
     }
     filterData();
   }

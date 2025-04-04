@@ -193,6 +193,7 @@ jobs:
       - name: Restore Packages
         run: |
           cd simple_live_app
+          flutter clean
           flutter pub get
       # 设置flutter_distributor环境
       - name: Install flutter_distributor
@@ -209,6 +210,5 @@ jobs:
           name: windows
           path: |
             simple_live_app/build/dist/*/*.msix
-            simple_live_app/build/dist/*/*.zip
         #完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."

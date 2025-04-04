@@ -111,18 +111,14 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   void setItemTag(FollowUser item, FollowUserTag targetTag) {
     FollowUserTag tarTag = targetTag;
-    var curTag = filterMode.value;
-    FollowUser itemNew = item;
-    itemNew.tag = tarTag.tag;
-    updateItem(itemNew);
-    if(tagList.indexOf(tarTag)>=3){
-      tarTag.userId.addIf(!targetTag.userId.contains(item.id), item.id);
-      updateTag(tarTag);
-    }
-    if(tagList.indexOf(curTag)>=3){
-      curTag.userId.remove(itemNew.id);
-      updateTag(curTag);
-    }
+    FollowUserTag curTag =
+        tagList.firstWhere((tag) => tag.tag == item.tag);
+    curTag.userId.remove(item.id);
+    tarTag.userId.addIf(!tarTag.userId.contains(item.id), item.id);
+    item.tag = tarTag.tag;
+    updateTag(curTag);
+    updateTag(tarTag);
+    updateItem(item);
     filterData();
   }
 
@@ -140,6 +136,9 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void updateTag(FollowUserTag followUserTag) {
+    if(followUserTag.tag == '全部'){
+      return;
+    }
     FollowService.instance.updateFollowUserTag(followUserTag);
   }
 

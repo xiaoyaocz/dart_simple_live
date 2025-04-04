@@ -114,7 +114,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     var curTag = filterMode.value;
     FollowUser itemNew = item;
     itemNew.tag = tarTag.tag;
-    FollowService.instance.addFollow(itemNew);
+    updateItem(itemNew);
     if(tagList.indexOf(tarTag)>=3){
       tarTag.userId.addIf(!targetTag.userId.contains(item.id), item.id);
       updateTag(tarTag);

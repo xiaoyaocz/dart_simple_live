@@ -22,7 +22,7 @@ class NoneBorderCircularTextField extends StatelessWidget {
 
   final bool needPadding;
 
-  NoneBorderCircularTextField({
+  const NoneBorderCircularTextField({
     Key? key,
     required this.editingController,
     this.hintText,
@@ -54,7 +54,7 @@ class NoneBorderCircularTextField extends StatelessWidget {
         prefixIcon: prefixIcon,
         hintText: hintText,
         filled: true,
-        contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         suffix: trailing,
         helperText: helperText,
         helperMaxLines: 3,
@@ -79,7 +79,7 @@ class NoneBorderCircularTextField extends StatelessWidget {
     );
     if (needPadding) {
       return Padding(
-        padding: EdgeInsets.only(
+        padding: const EdgeInsets.only(
           top: 10,
           bottom: 10,
         ),

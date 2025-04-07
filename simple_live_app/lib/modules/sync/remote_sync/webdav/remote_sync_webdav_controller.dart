@@ -28,7 +28,6 @@ import 'package:simple_live_app/services/migration_service.dart';
 class RemoteSyncWebDAVController extends BaseController {
   // ui
   var passwordVisible = true.obs;
-  var isExpanded = false.obs;
   // ui-用户选择是否同步
   var isSyncFollows = true.obs;
   var isSyncHistories = true.obs;
@@ -36,9 +35,9 @@ class RemoteSyncWebDAVController extends BaseController {
   var isSyncBilibiliAccount = true.obs;
 
   late DAVClient davClient;
-  var user = "".obs;
-  var lastRecoverTime = "".obs;
-  var lastUploadTime = "".obs;
+  var user = "--".obs;
+  var lastRecoverTime = "--".obs;
+  var lastUploadTime = "--".obs;
 
   final _userFollowJsonName = 'SimpleLive_follows.json';
   final _userHistoriesJsonName = 'SimpleLive_histories.json';
@@ -66,6 +65,7 @@ class RemoteSyncWebDAVController extends BaseController {
       var password = LocalStorageService.instance
           .getValue(LocalStorageService.kWebDAVPassword, "");
       davClient = DAVClient(uri, user.value, password);
+      // 从未同步过默认为最新数据
       lastRecoverTime.value = Utils.parseTime(
         DateTime.fromMillisecondsSinceEpoch(
           LocalStorageService.instance.getValue(
@@ -124,10 +124,11 @@ class RemoteSyncWebDAVController extends BaseController {
   @override
   Future<void> onLogout() async {
     var result = await Utils.showAlertDialog("确定要登出WebDAV账号？", title: "退出登录");
-    if(result){
+    if (result) {
       // 清除本地账号数据
       LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUri, "");
-      LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUser, "");
+      LocalStorageService.instance
+          .setValue(LocalStorageService.kWebDAVUser, "");
       LocalStorageService.instance
           .setValue(LocalStorageService.kWebDAVPassword, "");
       notLogin.value = true;
@@ -286,7 +287,7 @@ class RemoteSyncWebDAVController extends BaseController {
           }
           Log.i('已同步用户屏蔽词');
         } catch (e) {
-          Log.e('同步用户屏蔽词失败:$e',StackTrace.current);
+          Log.e('同步用户屏蔽词失败:$e', StackTrace.current);
         }
       } else if (file.name == _userBilibiliAccountJsonName &&
           isSyncBilibiliAccount.value) {
@@ -348,9 +349,5 @@ class RemoteSyncWebDAVController extends BaseController {
 
   void changeIsSyncBilibiliAccount() {
     isSyncBilibiliAccount.value = !isSyncBilibiliAccount.value;
-  }
-
-  void changeExpanded() {
-    isExpanded.value = !isExpanded.value;
   }
 }

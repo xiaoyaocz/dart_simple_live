@@ -69,7 +69,7 @@ class FollowService extends GetxService {
   Future<void> loadData({bool updateStatus = true}) async {
     var list = DBService.instance.getFollowList();
     if (list.isEmpty) {
-      updating.value = true;
+      updating.value = false;
       followList.assignAll(list);
       return;
     }

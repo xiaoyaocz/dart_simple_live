@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/signalr_service.dart';
@@ -55,7 +56,7 @@ class MinePage extends StatelessWidget {
             Divider(
               indent: 12,
               endIndent: 12,
-              color: Colors.grey.withOpacity(.1),
+              color: Colors.grey.withAlpha(25),
             ),
             _buildCard(
               context,
@@ -76,7 +77,7 @@ class MinePage extends StatelessWidget {
             Divider(
               indent: 12,
               endIndent: 12,
-              color: Colors.grey.withOpacity(.1),
+              color: Colors.grey.withAlpha(25),
             ),
             ListTile(
               leading: const Icon(Remix.account_circle_line),
@@ -92,7 +93,7 @@ class MinePage extends StatelessWidget {
             Divider(
               indent: 12,
               endIndent: 12,
-              color: Colors.grey.withOpacity(.1),
+              color: Colors.grey.withAlpha(25),
             ),
             ListTile(
               leading: const Icon(Icons.devices),
@@ -108,7 +109,7 @@ class MinePage extends StatelessWidget {
             Divider(
               indent: 12,
               endIndent: 12,
-              color: Colors.grey.withOpacity(.1),
+              color: Colors.grey.withAlpha(25),
             ),
             ListTile(
               leading: const Icon(Remix.link),
@@ -124,7 +125,7 @@ class MinePage extends StatelessWidget {
             Divider(
               indent: 12,
               endIndent: 12,
-              color: Colors.grey.withOpacity(.1),
+              color: Colors.grey.withAlpha(25),
             ),
             _buildCard(
               context,
@@ -219,7 +220,7 @@ class MinePage extends StatelessWidget {
                       await signalRService.connect();
                       //Get.toNamed(RoutePath.kTest);
                       var room = await signalRService.createRoom();
-                      print(room);
+                      Log.logPrint(room);
                     },
                   ),
               ],
@@ -227,7 +228,7 @@ class MinePage extends StatelessWidget {
             Divider(
               indent: 12,
               endIndent: 12,
-              color: Colors.grey.withOpacity(.1),
+              color: Colors.grey.withAlpha(25),
             ),
             _buildCard(
               context,

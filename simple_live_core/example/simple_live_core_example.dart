@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
@@ -9,7 +10,7 @@ import 'package:tars_dart/tars/tup/uni_packet.dart';
 void main() async {
   // CoreLog.enableLog = true;
   // CoreLog.requestLogType = RequestLogType.short;
-  // LiveSite site = BiliBiliSite();
+  LiveSite site = BiliBiliSite();
   // var danmaku = site.getDanmaku();
   // danmaku.onMessage = (event) {
   //   if (event.type == LiveMessageType.chat) {
@@ -27,7 +28,8 @@ void main() async {
 
   // //var search = await site.searchRooms("东方");
 
-  // //var categores = await site.getCategores();
+  var categores = await site.getCategores();
+  var rooms = await site.getCategoryRooms(categores.first.children.first);
   // //print(categores.length);
   // var detail = await site.getRoomDetail(roomId: '7734200');
   // // var playQualites = await site.getPlayQualites(detail: detail);
@@ -42,7 +44,7 @@ void main() async {
   // danmaku.start(detail.danmakuData);
 
   // await Future.wait({});
-  sendReq();
+  //sendReq();
 }
 
 void testHuyaReq() async {

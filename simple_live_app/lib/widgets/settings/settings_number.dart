@@ -45,7 +45,7 @@ class SettingsNumber extends StatelessWidget {
       contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 12),
       trailing: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(.1),
+          color: Colors.grey.withAlpha(25),
           borderRadius: AppStyle.radius24,
         ),
         height: 36,
@@ -66,7 +66,7 @@ class SettingsNumber extends StatelessWidget {
               },
               icon: Icon(
                 Icons.remove,
-                color: Get.textTheme.bodyMedium!.color!.withOpacity(.6),
+                color: Get.textTheme.bodyMedium!.color!.withAlpha(150),
               ),
             ),
             Text(
@@ -91,7 +91,7 @@ class SettingsNumber extends StatelessWidget {
               },
               icon: Icon(
                 Icons.add,
-                color: Get.textTheme.bodyMedium!.color!.withOpacity(.6),
+                color: Get.textTheme.bodyMedium!.color!.withAlpha(150),
               ),
             ),
           ],

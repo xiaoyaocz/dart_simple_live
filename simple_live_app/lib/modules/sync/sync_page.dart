@@ -87,6 +87,7 @@ class SyncPage extends StatelessWidget {
                     }
                   },
                 ),
+                AppStyle.divider,
                 ListTile(
                   title: const Text("WebDAV"),
                   leading: const Icon(Icons.cloud_upload_outlined),

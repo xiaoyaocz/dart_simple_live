@@ -26,7 +26,6 @@ import 'package:simple_live_app/services/local_storage_service.dart';
 class RemoteSyncWebDAVController extends BaseController {
   // ui
   var passwordVisible = true.obs;
-  var isExpanded = false.obs;
   // ui-用户选择是否同步
   var isSyncFollows = true.obs;
   var isSyncHistories = true.obs;
@@ -34,9 +33,9 @@ class RemoteSyncWebDAVController extends BaseController {
   var isSyncBilibiliAccount = true.obs;
 
   late DAVClient davClient;
-  var user = "".obs;
-  var lastRecoverTime = "".obs;
-  var lastUploadTime = "".obs;
+  var user = "--".obs;
+  var lastRecoverTime = "--".obs;
+  var lastUploadTime = "--".obs;
 
   final _userFollowJsonName = 'SimpleLive_follows.json';
   final _userHistoriesJsonName = 'SimpleLive_histories.json';
@@ -122,10 +121,11 @@ class RemoteSyncWebDAVController extends BaseController {
   @override
   Future<void> onLogout() async {
     var result = await Utils.showAlertDialog("确定要登出WebDAV账号？", title: "退出登录");
-    if(result){
+    if (result) {
       // 清除本地账号数据
       LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUri, "");
-      LocalStorageService.instance.setValue(LocalStorageService.kWebDAVUser, "");
+      LocalStorageService.instance
+          .setValue(LocalStorageService.kWebDAVUser, "");
       LocalStorageService.instance
           .setValue(LocalStorageService.kWebDAVPassword, "");
       notLogin.value = true;
@@ -141,9 +141,11 @@ class RemoteSyncWebDAVController extends BaseController {
         var result = await davClient.backup(Uint8List.fromList(value));
         if (result) {
           SmartDialog.showToast("上传成功");
-          DateTime uploadTime =DateTime.now();
+          DateTime uploadTime = DateTime.now();
           lastUploadTime.value = Utils.parseTime(uploadTime);
-          LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastUploadTime, uploadTime.millisecondsSinceEpoch);
+          LocalStorageService.instance.setValue(
+              LocalStorageService.kWebDAVLastUploadTime,
+              uploadTime.millisecondsSinceEpoch);
         } else {
           Log.e("备份失败", StackTrace.current);
           SmartDialog.showToast("上传失败");
@@ -180,14 +182,14 @@ class RemoteSyncWebDAVController extends BaseController {
         'data': userHistoriesList.map((e) => e.toJson()).toList()
       };
       final userHistoriesJsonFile =
-      File(join(profile.path, _userHistoriesJsonName));
+          File(join(profile.path, _userHistoriesJsonName));
       await userHistoriesJsonFile.writeAsString(jsonEncode(dataHistoriesMap));
 
       // blocked_word
       var userShieldList = AppSettingsController.instance.shieldList;
       var dataShieldListMap = {'data': userShieldList.toList()};
       final userBlockedWordJsonFile =
-      File(join(profile.path, _userBlockedWordJsonName));
+          File(join(profile.path, _userBlockedWordJsonName));
       await userBlockedWordJsonFile
           .writeAsString(jsonEncode(dataShieldListMap));
 
@@ -196,15 +198,13 @@ class RemoteSyncWebDAVController extends BaseController {
         'data': {'cookie': BiliBiliAccountService.instance.cookie}
       };
       final bilibiliAccountJsonFile =
-      File(join(profile.path, _userBilibiliAccountJsonName));
+          File(join(profile.path, _userBilibiliAccountJsonName));
       await bilibiliAccountJsonFile
           .writeAsString(jsonEncode(userBiliAccountCookieMap));
       // settings
       var settingList = LocalStorageService.instance.settingsBox.toMap();
-      var dataSettingListMap = {
-        'data': settingList
-      };
-      final settingJsonFile = File(join(profile.path,  _userSettingsJsonName));
+      var dataSettingListMap = {'data': settingList};
+      final settingJsonFile = File(join(profile.path, _userSettingsJsonName));
       await settingJsonFile.writeAsString(jsonEncode(dataSettingListMap));
 
       // 遍历profile路径下的所有文件压缩
@@ -232,9 +232,11 @@ class RemoteSyncWebDAVController extends BaseController {
     }
     SmartDialog.dismiss();
     SmartDialog.showToast('同步完成');
-    DateTime recoverTime =DateTime.now();
+    DateTime recoverTime = DateTime.now();
     lastRecoverTime.value = Utils.parseTime(recoverTime);
-    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastRecoverTime, recoverTime.millisecondsSinceEpoch);
+    LocalStorageService.instance.setValue(
+        LocalStorageService.kWebDAVLastRecoverTime,
+        recoverTime.millisecondsSinceEpoch);
   }
 
   Future<void> _recovery(ArchiveFile file) async {
@@ -271,7 +273,7 @@ class RemoteSyncWebDAVController extends BaseController {
           }
           Log.i('已同步用户观看历史记录');
         } catch (e) {
-          Log.e('同步用户观看历史记录失败: $e',StackTrace.current);
+          Log.e('同步用户观看历史记录失败: $e', StackTrace.current);
         }
       } else if (file.name == _userBlockedWordJsonName &&
           isSyncBlockWord.value) {
@@ -281,7 +283,7 @@ class RemoteSyncWebDAVController extends BaseController {
           }
           Log.i('已同步用户屏蔽词');
         } catch (e) {
-          Log.e('同步用户屏蔽词失败:$e',StackTrace.current);
+          Log.e('同步用户屏蔽词失败:$e', StackTrace.current);
         }
       } else if (file.name == _userBilibiliAccountJsonName &&
           isSyncBilibiliAccount.value) {
@@ -291,10 +293,10 @@ class RemoteSyncWebDAVController extends BaseController {
           BiliBiliAccountService.instance.loadUserInfo();
           Log.i('已同步哔哩哔哩账号');
         } catch (e) {
-          Log.e('同步哔哩哔哩账号失败：$e',StackTrace.current);
+          Log.e('同步哔哩哔哩账号失败：$e', StackTrace.current);
         }
       } else if (file.name == _userSettingsJsonName) {
-        try{
+        try {
           await LocalStorageService.instance.settingsBox.clear();
           LocalStorageService.instance.settingsBox.putAll(jsonData);
           Log.i('已同步用户设置');
@@ -328,9 +330,5 @@ class RemoteSyncWebDAVController extends BaseController {
 
   void changeIsSyncBilibiliAccount() {
     isSyncBilibiliAccount.value = !isSyncBilibiliAccount.value;
-  }
-
-  void changeExpanded() {
-    isExpanded.value = !isExpanded.value;
   }
 }

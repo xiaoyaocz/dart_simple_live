@@ -34,7 +34,7 @@ class ParsePage extends GetView<ParseController> {
                     contentPadding: AppStyle.edgeInsetsA12,
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
-                        color: Colors.grey.withOpacity(.2),
+                        color: Colors.grey.withAlpha(50),
                       ),
                     ),
                   ),
@@ -73,7 +73,7 @@ class ParsePage extends GetView<ParseController> {
                     contentPadding: AppStyle.edgeInsetsA12,
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
-                        color: Colors.grey.withOpacity(.2),
+                        color: Colors.grey.withAlpha(50),
                       ),
                     ),
                   ),
@@ -124,7 +124,7 @@ https://webcast.amemv.com/webcast/reflow/xxxxx
             : [
                 BoxShadow(
                   blurRadius: 8,
-                  color: Colors.grey.withOpacity(.2),
+                  color: Colors.grey.withAlpha(50),
                 )
               ],
       ),

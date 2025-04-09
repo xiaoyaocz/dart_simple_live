@@ -167,7 +167,7 @@ class Utils {
                 ),
                 Divider(
                   height: 1,
-                  color: Colors.grey.withOpacity(.1),
+                  color: Colors.grey.withAlpha(25),
                 ),
                 Expanded(
                   child: child,
@@ -298,6 +298,31 @@ class Utils {
               ),
             )
             .toList(),
+      ),
+    );
+    return result;
+  }
+
+  /// 多段指引用户内容的弹窗
+  /// - `content` 内容：可滚动
+  /// - `title` 顶部弹窗标题
+  /// - `actions` 底部按钮
+  static Future<T?> showInformationHelpDialog<T>({
+    required List<Widget> content,
+    Widget? title,
+    List<Widget>? actions,
+  }) async {
+    var result = await Get.dialog(
+      AlertDialog(
+        title: title ?? const Text("帮助"),
+        scrollable: true,
+        content: SingleChildScrollView(child: ListBody(children: content)),
+        actions: actions??[
+          TextButton(
+            onPressed: Get.back,
+            child: const Text("确定"),
+          ),
+        ],
       ),
     );
     return result;

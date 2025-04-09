@@ -1,7 +1,7 @@
 {
-    "version": "1.7.6",
-    "version_num": 10706,
-    "version_desc": "- 修复虎牙播放中断 #585",
+    "version": "1.7.7",
+    "version_num": 10707,
+    "version_desc": "- 1. 修复哔哩哔哩分类加载失败 #630\n- 2. 支持WebDAV同步 #617 @SlotSun\n- 3. 修复屏蔽词列表同步失败 #619 @SlotSun\n- 4. 修复虎牙断流 #585 @SlotSun",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

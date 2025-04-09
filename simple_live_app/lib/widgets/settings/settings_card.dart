@@ -9,12 +9,12 @@ class SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.grey.withOpacity(0.2)
+          ? Colors.grey.withAlpha(50)
           : Colors.white70,
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,
         side: BorderSide(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.grey.withAlpha(25),
         ),
       ),
       child: Container(

@@ -76,6 +76,11 @@ class AppSettingsController extends GetxController {
       0,
     );
 
+    playerMode.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kPlayerMode,
+      0,
+    );
+
     pipHideDanmu.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPIPHideDanmu, true);
 
@@ -210,6 +215,12 @@ class AppSettingsController extends GetxController {
     playerCompatMode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerCompatMode, e);
+  }
+
+  var playerMode = 0.obs;
+  void setPlayerMode(int value) {
+    playerMode.value = value;
+    LocalStorageService.instance.setValue(LocalStorageService.kPlayerMode, value);
   }
 
   var playerBufferSize = 32.obs;

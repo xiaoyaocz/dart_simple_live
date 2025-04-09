@@ -91,7 +91,7 @@ class AppStyle {
     //   labelColor: AppColors.darkColorScheme.primary,
     //   unselectedLabelColor: Colors.white70,
     //   indicator: RectangularIndicator(
-    //     color: Colors.white.withOpacity(.2),
+    //     color: Colors.white.withAlpha(50),
     //     topLeftRadius: 24,
     //     bottomLeftRadius: 24,
     //     topRightRadius: 24,
@@ -205,6 +205,6 @@ class AppStyle {
         thickness: 1,
         indent: 16,
         endIndent: 16,
-        color: Colors.grey.withOpacity(.1),
+        color: Colors.grey.withAlpha(25),
       );
 }

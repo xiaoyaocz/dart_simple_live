@@ -171,6 +171,24 @@ class SettingsPage extends GetView<SettingsController> {
         ),
         AppStyle.vGap24,
         Obx(
+            () => SettingsItemWidget(
+            foucsNode: controller.playerFoucsNode,
+            autofocus: controller.playerFoucsNode.isFoucsed.value,
+            title: "播放器",
+            items: const {
+              0: "IjkPlayer",
+              1: "ExoPlayer",
+              2: "Flutter",
+            },
+            value:
+            AppSettingsController.instance.playerMode.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setPlayerMode(e);
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
           () => SettingsItemWidget(
             foucsNode: controller.scaleFoucsNode,
             autofocus: controller.scaleFoucsNode.isFoucsed.value,
@@ -487,6 +505,13 @@ class SettingsPage extends GetView<SettingsController> {
           title: "版本",
           subtitle: "v${Utils.packageInfo.version}",
           onTap: controller.checkUpdate,
+        ),
+        AppStyle.vGap24,
+        HighlightListTile(
+          focusNode: AppFocusNode(),
+          title: "本地更新",
+          subtitle: "v${Utils.packageInfo.version}",
+          onTap: controller.checkTestUpdate,
         ),
       ],
     );

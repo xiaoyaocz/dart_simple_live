@@ -40,7 +40,7 @@ class IndexedPage extends GetView<IndexedController> {
                       border: Border(
                         left: orientation == Orientation.landscape
                             ? BorderSide(
-                                color: Colors.grey.withOpacity(.2),
+                                color: Colors.grey.withAlpha(50),
                                 width: 1,
                               )
                             : BorderSide.none,

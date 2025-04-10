@@ -271,13 +271,7 @@ class RemoteSyncWebDAVController extends BaseController {
         try {
           for (var item in jsonData) {
             var history = History.fromJson(item);
-            if (DBService.instance.historyBox.containsKey(history.id)) {
-              var old = DBService.instance.historyBox.get(history.id);
-              //如果本地的更新时间比较新，就不更新
-              if (old!.updateTime.isAfter(history.updateTime)) {
-                continue;
-              }
-            }
+            // 完全同步机制
             await DBService.instance.addOrUpdateHistory(history);
           }
           Log.i('已同步用户观看历史记录');

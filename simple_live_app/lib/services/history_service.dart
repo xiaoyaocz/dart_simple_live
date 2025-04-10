@@ -45,6 +45,7 @@ class HistoryService extends GetxService {
     // 取消定时器
     _timer?.cancel();
     _timer = null;
+    curLiveRoomHistory = null;
     Log.i("本次观看时长：$_elapsed");
   }
 
@@ -55,13 +56,16 @@ class HistoryService extends GetxService {
       curLiveRoomHistory = history;
       DBService.instance.addOrUpdateHistory(history);
     }
-    _oldWatchedDuration = curLiveRoomHistory!.watchDuration!.toDuration();
   }
 
   // updateHistory
   void _updateHistory() {
+    if(curLiveRoomHistory == null){
+      return;
+    }
     // 累加到当前历史记录
     _elapsed = _stopwatch.elapsed;
+    _oldWatchedDuration = curLiveRoomHistory!.watchDuration!.toDuration();
     Duration curTime = _oldWatchedDuration+_elapsed;
     Log.i("已观看时间：${_oldWatchedDuration.toHMSString()}_增加时间：${_elapsed.toHMSString()}");
     curLiveRoomHistory?.watchDuration = curTime.toHMSString();

@@ -148,11 +148,11 @@ class _RemoteSyncWebDAVConfigPageState extends State<RemoteSyncWebDAVConfigPage>
                     elevation: 0,
                     highlightElevation: 4,
                     height: 40,
-                    shape: RoundedRectangleBorder(
+                    shape: const RoundedRectangleBorder(
                       borderRadius:
-                          const BorderRadius.all(Radius.circular(8.0)),
+                          BorderRadius.all(Radius.circular(8.0)),
                     ),
-                    child: Text(
+                    child: const Text(
                       "登录",
                       style: TextStyle(color: Colors.white),
                     ),

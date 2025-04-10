@@ -1,7 +1,7 @@
 {
-    "version": "1.2.4",
-    "version_num": 10204,
-    "version_desc": "- 修复哔哩哔哩分类加载失败\n- 支持原生播放器，播放更流畅 @bgylde #581",
+    "version": "1.2.5",
+    "version_num": 10205,
+    "version_desc": "- 回滚原生播放器更新",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Simple Live
+Exec=simple_live %U
+Icon=com.xiaoyaocz.simple_live
+Type=Application
+Terminal=false
+Categories=AudioVideo;Audio;Video;

@@ -4,7 +4,6 @@ import 'package:simple_live_tv_app/app/constant.dart';
 import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_tv_app/app/sites.dart';
 import 'package:simple_live_tv_app/modules/category/category_controller.dart';
-import 'package:simple_live_tv_app/modules/live_room/live_controller.dart';
 import 'package:simple_live_tv_app/routes/route_path.dart';
 import 'package:simple_live_tv_app/services/bilibili_account_service.dart';
 
@@ -25,19 +24,9 @@ class AppNavigator {
       }
     }
 
-    if (AppSettingsController.instance.playerMode.value == 0) {
-      LiveController liveController =
-          LiveController(pSite: site, pRoomId: roomId);
-      liveController.openLivePage(0);
-    } else if (AppSettingsController.instance.playerMode.value == 1) {
-      LiveController liveController =
-          LiveController(pSite: site, pRoomId: roomId);
-      liveController.openLivePage(1);
-    } else {
-      Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
-        "roomId": roomId,
-      });
-    }
+    Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
+      "roomId": roomId,
+    });
   }
 
   /// 跳转至哔哩哔哩登录

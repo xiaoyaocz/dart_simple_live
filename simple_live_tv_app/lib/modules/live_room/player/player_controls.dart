@@ -576,7 +576,6 @@ void showPlayerSettings(LiveRoomController controller) {
                   autofocus: danmakuSpeedFoucsNode.isFoucsed.value,
                   title: "弹幕速度",
                   items: {
-                    54.0: "超级慢",
                     18.0: "很慢",
                     14.0: "较慢",
                     12.0: "慢",

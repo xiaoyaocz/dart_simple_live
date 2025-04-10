@@ -7,6 +7,9 @@ import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
 import 'package:simple_live_app/modules/settings/follow_settings_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_config_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_controller.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_page.dart';
 import 'package:simple_live_app/modules/sync/sync_page.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_controller.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_page.dart';
@@ -216,6 +219,21 @@ class AppPages {
           () => RemoteSyncRoomController(Get.arguments ?? ""),
         ),
       ],
+    ),
+    //远程同步-WebDAV
+    GetPage(
+      name: RoutePath.kRemoteSyncWebDav,
+      page: () => const RemoteSyncWebDAVPage(),
+      bindings: [
+        BindingsBuilder.put(
+              () => RemoteSyncWebDAVController(),
+        ),
+      ],
+    ),
+    //远程同步-WebDAVConfig
+    GetPage(
+      name: RoutePath.kRemoteSyncWebDavConfig,
+      page: () => const RemoteSyncWebDAVConfigPage(),
     ),
     //其他设置
     GetPage(

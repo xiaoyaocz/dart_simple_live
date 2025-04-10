@@ -72,6 +72,12 @@ class RoutePath {
   /// 远程同步-房间
   static const kRemoteSyncRoom = "/remote_sync/room";
 
+  /// 远程同步-WebDAV
+  static const kRemoteSyncWebDav = "/remote_sync/webDAV";
+
+  /// 远程同步-WebDAVConfig
+  static const kRemoteSyncWebDavConfig = "/remote_sync/webDAVConfig";
+
   /// 测试页面
   static const kTest = "/test";
 }

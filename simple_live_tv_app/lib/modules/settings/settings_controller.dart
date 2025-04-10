@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
@@ -12,7 +11,6 @@ class SettingsController extends BaseController
     with GetTickerProviderStateMixin {
   late TabController tabController;
   var tabIndex = 0.obs;
-  MethodChannel platform = const MethodChannel('samples.flutter.jumpto.android');
 
   SettingsController() {
     tabController = TabController(length: 5, vsync: this);
@@ -41,7 +39,6 @@ class SettingsController extends BaseController
   }
   var hardwareDecodeFocusNode = AppFocusNode()..isFoucsed.value = true;
   var compatibleModeFocusNode = AppFocusNode();
-  var playerFoucsNode = AppFocusNode();
   var scaleFoucsNode = AppFocusNode();
   var defaultQualityFocusNode = AppFocusNode();
   var danmakuFoucsNode = AppFocusNode();
@@ -71,10 +68,5 @@ class SettingsController extends BaseController
   void checkUpdate() {
     SmartDialog.showToast("检查更新中...");
     Utils.checkUpdate(showMsg: true);
-  }
-
-  void checkTestUpdate() {
-    SmartDialog.showToast("检查更新中...");
-    platform.invokeMethod("checkTestUpdate");
   }
 }

@@ -169,10 +169,11 @@ class RemoteSyncRoomController extends BaseController {
     try {
       var jsonBody = json.decode(data);
       if (overlay) {
-        AppSettingsController.instance.shieldList.clear();
+        AppSettingsController.instance.clearShieldList();
       }
       for (var item in jsonBody) {
-        AppSettingsController.instance.shieldList.add(item);
+        // add to Hive
+        AppSettingsController.instance.addShieldList(item);
       }
       SmartDialog.showToast('已同步屏蔽词');
     } catch (e) {

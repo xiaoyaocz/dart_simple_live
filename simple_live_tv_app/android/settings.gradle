@@ -12,15 +12,9 @@ pluginManagement {
 
     plugins {
         id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
-        id "org.jetbrains.kotlin.android" version "1.7.10" apply false
     }
 }
 
 include ":app"
 
 apply from: "${settings.ext.flutterSdkPath}/packages/flutter_tools/gradle/app_plugin_loader.gradle"
-include ':simple_live_core'
-project(':simple_live_core').projectDir = file('./simple_live_core')
-
-include ':simple_live_tv_app'
-project(':simple_live_tv_app').projectDir = file('./lib')

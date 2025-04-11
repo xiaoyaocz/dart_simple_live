@@ -4,6 +4,7 @@ publish_to: none
 description: "Simple Live APP"
 environment: 
   sdk: '>=3.0.5 <4.0.0'
+  flutter: 3.29.2
 
 dependencies: 
   simple_live_core:

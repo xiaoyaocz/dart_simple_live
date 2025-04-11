@@ -222,6 +222,14 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 icon: const Icon(Remix.file_copy_line),
                 label: const Text("复制链接"),
               ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(fontSize: 14),
+                ),
+                onPressed: controller.copyUrl,
+                icon: const Icon(Remix.file_copy_line),
+                label: const Text("复制播放直链"),
+              ),
             ],
           ),
         ),

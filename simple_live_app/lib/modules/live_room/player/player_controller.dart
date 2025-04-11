@@ -207,15 +207,14 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 }
 mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  final screenBrightness = ScreenBrightness();
-  final VolumeController volumeController = VolumeController();
+
   final pip = Floating();
   StreamSubscription<PiPStatus>? _pipSubscription;
 
   /// 初始化一些系统状态
   void initSystem() async {
     if (Platform.isAndroid || Platform.isIOS) {
-      volumeController.showSystemUI = false;
+      VolumeController.instance.showSystemUI = false;
     }
 
     // 屏幕常亮
@@ -243,7 +242,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       // 亮度重置,桌面平台可能会报错,暂时不处理桌面平台的亮度
       try {
-        await screenBrightness.resetScreenBrightness();
+        await ScreenBrightness.instance.resetApplicationScreenBrightness();
       } catch (e) {
         Log.logPrint(e);
       }
@@ -526,10 +525,10 @@ mixin PlayerGestureControlMixin
     verticalDragging = true;
     showGestureTip.value = true;
     if (Platform.isAndroid || Platform.isIOS) {
-      _currentVolume = await volumeController.getVolume();
+      _currentVolume = await VolumeController.instance.getVolume();
     }
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      _currentBrightness = await screenBrightness.current;
+      _currentBrightness = await ScreenBrightness.instance.application;
     }
   }
 
@@ -590,7 +589,7 @@ mixin PlayerGestureControlMixin
 
   Future _realSetVolume(int volume) async {
     Log.logPrint(volume);
-    volumeController.setVolume(volume / 100);
+    VolumeController.instance.setVolume(volume / 100);
   }
 
   void setGestureBrightness(double dy) {
@@ -602,7 +601,7 @@ mixin PlayerGestureControlMixin
       if (seek < 0) {
         seek = 0;
       }
-      screenBrightness.setScreenBrightness(seek);
+      ScreenBrightness.instance.setApplicationScreenBrightness(seek);
 
       gestureTipText.value = "亮度 ${(seek * 100).toInt()}%";
       Log.logPrint(value);
@@ -613,7 +612,7 @@ mixin PlayerGestureControlMixin
         seek = 1;
       }
 
-      screenBrightness.setScreenBrightness(seek);
+      ScreenBrightness.instance.setApplicationScreenBrightness(seek);
       gestureTipText.value = "亮度 ${(seek * 100).toInt()}%";
       Log.logPrint(value);
     }

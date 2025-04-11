@@ -582,6 +582,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     SmartDialog.showToast("已复制直播间链接");
   }
 
+  void copyPlayUrl() {
+    if (playurl == null) {
+      return;
+    }
+    Utils.copyToClipboard(playurl);
+    SmartDialog.showToast("已复制播放直链");
+  }
+
   /// 底部打开播放器设置
   void showDanmuSettingsSheet() {
     Utils.showBottomSheet(

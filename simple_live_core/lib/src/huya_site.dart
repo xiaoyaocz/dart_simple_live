@@ -571,6 +571,16 @@ class HuyaUrlDataModel {
     required this.url,
     required this.uid,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "url": url,
+      "uid": uid,
+      "lines": lines.map((e) => e.toString()).toList(),
+      "bitRates": bitRates.map((e) => e.toString()).toList(),
+    });
+  }
 }
 
 enum HuyaLineType {
@@ -596,6 +606,18 @@ class HuyaLineModel {
     required this.cdnType,
     this.bitRate = 0,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "line": line,
+      "cdnType": cdnType,
+      "flvAntiCode": flvAntiCode,
+      "hlsAntiCode": hlsAntiCode,
+      "streamName": streamName,
+      "lineType": lineType.toString(),
+    });
+  }
 }
 
 class HuyaBitRateModel {
@@ -605,4 +627,12 @@ class HuyaBitRateModel {
     required this.bitRate,
     required this.name,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "name": name,
+      "bitRate": bitRate,
+    });
+  }
 }

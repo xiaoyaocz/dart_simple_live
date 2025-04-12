@@ -423,15 +423,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       };
     }
 
-    // 当前播放URL
-    String? _currentPlayUrl;
-    String? get currentPlayUrl => _currentPlayUrl;
-
     var playurl = playUrls[currentLineIndex];
     if (AppSettingsController.instance.playerForceHttps.value) {
       playurl = playurl.replaceAll("http://", "https://");
     }
-    _currentPlayUrl = playurl;
 
     player.open(
       Media(
@@ -587,11 +582,19 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     SmartDialog.showToast("已复制直播间链接");
   }
 
+  /// 获取当前播放URL
+  String? get playurl {
+    if (currentLineIndex < 0 || playUrls.isEmpty || currentLineIndex >= playUrls.length) {
+      return null;
+    }
+    return playUrls[currentLineIndex];
+  }
+
   void copyPlayUrl() {
-    if (currentPlayUrl == null) {
+    if (playurl == null) {
       return;
     }
-    Utils.copyToClipboard(currentPlayUrl!);
+    Utils.copyToClipboard(playurl!);
     SmartDialog.showToast("已复制播放直链");
   }
 

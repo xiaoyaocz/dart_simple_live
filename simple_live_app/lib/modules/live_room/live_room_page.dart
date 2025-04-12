@@ -226,7 +226,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 style: TextButton.styleFrom(
                   textStyle: const TextStyle(fontSize: 14),
                 ),
-                onPressed: controller.copyUrl,
+                onPressed: controller.copyPlayUrl,
                 icon: const Icon(Remix.file_copy_line),
                 label: const Text("复制播放直链"),
               ),

@@ -167,8 +167,9 @@ jobs:
           ref: dev
       # 设置Flutter环境
       - name: Setup Flutter
-        uses: subosito/flutter-action@f2c4f6686ca8e8d6e6d0f28410eeef506ed66aff
+        uses: subosito/flutter-action@v2
         with:
+          channel: stable
           flutter-version: "3.29.x"
           cache: true
       # 安装依赖

@@ -169,8 +169,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
-          flutter-version: "3.29.x"
+          channel: master
+          flutter-version: "3.29.2"
           cache: true
       # 安装依赖
       - name: Update apt-get

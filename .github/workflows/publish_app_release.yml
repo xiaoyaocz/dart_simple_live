@@ -147,7 +147,10 @@ jobs:
 
   # 打包Linux
   build-linux:
-    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        runners: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runners }}
     permissions:
       contents: write
     steps:
@@ -177,16 +180,19 @@ jobs:
       # 设置flutter_distributor环境
       - name: Install flutter_distributor
         run: dart pub global activate flutter_distributor
-      # build Linux ZIP\DMG
+      # build Linux package
       - name: Build Linux
         run: |
           cd simple_live_app
           flutter_distributor package --platform linux --targets deb,zip --skip-clean
+      - name: Rename the artifact by architecture
+        run: |
+          for f in simple_live_app/build/dist/*/*.{deb,zip}; do mv "$f" "${f%.*}-${{ matrix.runners }}.${f##*.}"; done
       # 上传Linux包至Artifacts
       - name: Upload Linux APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux
+          name: linux-${{ matrix.runners }}
           path: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip

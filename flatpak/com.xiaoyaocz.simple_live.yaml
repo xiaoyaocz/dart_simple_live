@@ -1,0 +1,210 @@
+app-id: com.xiaoyaocz.simple_live
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: simple_live
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    version: '24.08'
+    directory: lib/ffmpeg
+    add-ld-path: .
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/man
+  - /share/doc
+cleanup-commands:
+  - mkdir -p ${FLATPAK_DEST}/lib/ffmpeg
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --socket=pulseaudio
+  - --share=network
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --system-talk-name=org.freedesktop.NetworkManager.IP4Config
+modules:
+  - name: simple_live
+    buildsystem: simple
+    build-commands:
+      # copy lib and data folders
+      - install -d "${FLATPAK_DEST}/lib"
+      - cp -r lib/* "${FLATPAK_DEST}/lib/"
+      - install -d "${FLATPAK_DEST}/data"
+      - cp -r data/* "${FLATPAK_DEST}/data/"
+
+      # copy executable
+      - install -Dm755 simple_live_app "${FLATPAK_DEST}/simple_live_app"
+      - mkdir -p "${FLATPAK_DEST}/bin"
+      - ln -s "${FLATPAK_DEST}/simple_live_app" "${FLATPAK_DEST}/bin/simple_live"
+
+      # copy metadata files
+      - install -Dm644 com.xiaoyaocz.simple_live.desktop "${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop"
+      - install -Dm644 com.xiaoyaocz.simple_live.metainfo.xml "${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml"
+      - install -Dm644 com.xiaoyaocz.simple_live_512.png "${FLATPAK_DEST}/share/icons/hicolor/512x512/apps/${FLATPAK_ID}.png"
+    sources:
+      - type: archive
+        only-arches: [x86_64]
+        strip-components: 0
+        # Link needs to be replaced when this is upstreamed
+        url: https://github.com/s-kk/dart_simple_live/releases/download/v1.7.6/simple_live_app-1.7.5+10705-linux-ubuntu-24.04.zip
+        sha256: 44bb5878d5490099dd46eb2f5c6a50cdb2ab632c06399cfbf0681839c74890d5
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/s-kk/dart_simple_live/releases/latest
+          version-query: '.tag_name | sub(\"v\";\"\")'
+          url-query: '.assets[] | select(.name | match("simple_live_app-.*ubuntu-24.04-arm\\.zip")) | .browser_download_url'
+      - type: archive
+        only-arches: [aarch64]
+        strip-components: 0
+        # Link needs to be replaced when this is upstreamed
+        url: https://github.com/s-kk/dart_simple_live/releases/download/v1.7.6/simple_live_app-1.7.5+10705-linux-ubuntu-24.04-arm.zip
+        sha256: 98cba197ad0b72e34743016887fc07120f7957c772ef4f7107c878a5eff75bcf
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/s-kk/dart_simple_live/releases/latest
+          version-query: '.tag_name | sub(\"v\";\"\")'
+          url-query: '.assets[] | select(.name | match("simple_live_app-.*ubuntu-24.04\\.zip")) | .browser_download_url'
+      - type: file
+        path: com.xiaoyaocz.simple_live.metainfo.xml
+      - type: file
+        path: com.xiaoyaocz.simple_live.desktop
+      - type: file
+        dest-filename: com.xiaoyaocz.simple_live_512.png
+        url: https://raw.githubusercontent.com/s-kk/dart_simple_live/692380b8c44ccaeafb2f9697b224e2617f6abe64/simple_live_app/assets/logo_circle_512.png
+        sha256: d9b4c02f2c0efe6485f6071050fae255b8074aa170950ecc90e74c9514c69f13
+    modules:
+      - name: libmpv
+        cleanup:
+          - /share/applications
+          - /share/bash-completion
+          - /share/icons
+          - /share/zsh
+        buildsystem: meson
+        config-opts:
+          - -Dlibmpv=true
+          - -Dbuild-date=false
+          - -Dalsa=disabled
+          - -Dlua=disabled
+          - -Dcplayer=false
+        sources:
+          - type: archive
+            url: https://github.com/mpv-player/mpv/archive/v0.39.0.tar.gz
+            sha256: 2ca92437affb62c2b559b4419ea4785c70d023590500e8a52e95ea3ab4554683
+            x-checker-data:
+              type: anitya
+              project-id: 5348
+              stable-only: true
+              url-template: https://github.com/mpv-player/mpv/archive/v$version.tar.gz
+              is-important: true
+
+        modules:
+          - name: nv-codec-headers
+            cleanup:
+              - '*'
+            no-autogen: true
+            make-install-args:
+              - PREFIX=/app
+            sources:
+              - type: git
+                url: https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+                tag: n13.0.19.0
+                commit: e844e5b26f46bb77479f063029595293aa8f812d
+                x-checker-data:
+                  type: git
+                  tag-pattern: ^n([\d.]+)$
+
+          - name: libass
+            cleanup:
+              - /lib/*.la
+            config-opts:
+              - --disable-static
+            sources:
+              - type: archive
+                url: https://github.com/libass/libass/releases/download/0.17.3/libass-0.17.3.tar.xz
+                sha256: eae425da50f0015c21f7b3a9c7262a910f0218af469e22e2931462fed3c50959
+                x-checker-data:
+                  type: anitya
+                  project-id: 1560
+                  stable-only: true
+                  url-template: https://github.com/libass/libass/releases/download/$version/libass-$version.tar.xz
+
+          - name: uchardet
+            buildsystem: cmake-ninja
+            config-opts:
+              - -DCMAKE_BUILD_TYPE=Release
+              - -DBUILD_STATIC=0
+            cleanup:
+              - /bin
+              - /lib/cmake
+            sources:
+              - type: archive
+                url: https://www.freedesktop.org/software/uchardet/releases/uchardet-0.0.8.tar.xz
+                sha256: e97a60cfc00a1c147a674b097bb1422abd9fa78a2d9ce3f3fdcc2e78a34ac5f0
+                x-checker-data:
+                  type: anitya
+                  project-id: 9265
+                  stable-only: true
+                  url-template: https://www.freedesktop.org/software/uchardet/releases/uchardet-$version.tar.xz
+
+          - name: rubberband
+            buildsystem: meson
+            config-opts:
+              - -Ddefault_library=shared
+            cleanup:
+              - /bin
+              - /lib/ladspa
+            sources:
+              - type: archive
+                url: https://breakfastquay.com/files/releases/rubberband-4.0.0.tar.bz2
+                sha256: af050313ee63bc18b35b2e064e5dce05b276aaf6d1aa2b8a82ced1fe2f8028e9
+                x-checker-data:
+                  type: anitya
+                  project-id: 4222
+                  stable-only: true
+                  url-template: https://breakfastquay.com/files/releases/rubberband-$version.tar.bz2
+
+          - name: mujs
+            cleanup:
+              - /bin
+              - /lib/libmujs.a
+            no-autogen: true
+            make-args:
+              - release
+              - prefix=/app
+            make-install-args:
+              - prefix=/app
+              - install-shared
+            sources:
+              - type: git
+                url: https://github.com/ccxvii/mujs
+                tag: 1.3.6
+                commit: cc569c5fa9a7a2498177693b5617605c2ff5b260
+                x-checker-data:
+                  type: git
+                  tag-pattern: ^([\d.]+)$
+
+          - name: libplacebo
+            buildsystem: meson
+            sources:
+              - type: git
+                url: https://github.com/haasn/libplacebo.git
+                commit: 1fd3c7bde7b943fe8985c893310b5269a09b46c5
+                x-checker-data:
+                  type: git
+                  tag-pattern: ^v([\d.]+)$
+                tag: v7.349.0
+            modules:
+              - name: glslang
+                buildsystem: cmake-ninja
+                config-opts:
+                  - -DBUILD_SHARED_LIBS=ON
+                cleanup:
+                  - /bin
+                  - /lib/cmake
+                sources:
+                  - type: archive
+                    url: https://github.com/KhronosGroup/glslang/archive/refs/tags/11.12.0.tar.gz
+                    sha256: 7795a97450fecd9779f3d821858fbc2d1a3bf1dd602617d95b685ccbcabc302f

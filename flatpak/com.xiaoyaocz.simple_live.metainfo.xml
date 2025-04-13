@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.xiaoyaocz.simple_live</id>
+
+  <name>Simple Live</name>
+  <summary>Watch live stream in a simple way</summary>
+
+  <developer id="com.xiaoyaocz">
+    <name>xiaoyaocz</name>
+  </developer>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Video</category>
+  </categories>
+
+  <description>
+    <p>Watch live stream in a simple way.</p>
+    <p>
+      <em>NOTE: This app is only available in Simplified Chinese.</em>
+    </p>
+    <p>Simple Live is a cross-platform application that allows you to watch live streams from
+      various platforms, including Huya, Douyu, Bilibili, and Douyin. It's available on Android,
+      iOS, Windows, macOS, Linux, and Android TV.</p>
+  </description>
+
+  <launchable type="desktop-id">com.xiaoyaocz.simple_live.desktop</launchable>
+
+  <url type="homepage">https://github.com/xiaoyaocz/dart_simple_live</url>
+  <url type="bugtracker">https://github.com/xiaoyaocz/dart_simple_live/issues</url>
+  <url type="vcs-browser">https://github.com/xiaoyaocz/dart_simple_live</url>
+
+  <content_rating type="oars-1.1" />
+
+  <screenshots>
+    <screenshot type="default">
+      <image xml:space="preserve">https://raw.githubusercontent.com/xiaoyaocz/dart_simple_live/refs/tags/v1.7.6/assets/screenshot_light.jpg</image>
+      <caption>Simple Live UI (Light)</caption>
+    </screenshot>
+    <screenshot type="default">
+      <image xml:space="preserve">https://raw.githubusercontent.com/xiaoyaocz/dart_simple_live/refs/tags/v1.7.6/assets/screenshot_dark.jpg</image>
+      <caption>Simple Live UI (Dark)</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.7.6" date="2025-02-03" />
+  </releases>
+</component>

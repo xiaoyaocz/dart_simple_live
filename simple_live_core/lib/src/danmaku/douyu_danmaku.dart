@@ -75,9 +75,11 @@ class DouyuDanmaku implements LiveDanmaku {
       var jsonData = sttToJObject(result);
 
       var type = jsonData["type"]?.toString();
+      var fans = jsonData["if"] ?? '0'.toString();
       //斗鱼好像不会返回人气值
       //有些直播间存在阴间弹幕，不知道什么情况
-      if (type == "chatmsg") {
+      //只显示粉丝发言
+      if (type == "chatmsg" && fans == '1') {
         var col = int.tryParse(jsonData["col"].toString()) ?? 0;
         var liveMsg = LiveMessage(
           type: LiveMessageType.chat,

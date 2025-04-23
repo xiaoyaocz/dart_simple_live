@@ -10,29 +10,29 @@ dependencies:
   simple_live_core:
     path: ../simple_live_core
   # 图标
-  cupertino_icons: ^1.0.2
-  remixicon: ^1.2.0 #Remix图标
+  cupertino_icons: ^1.0.8
+  remixicon: ^1.4.1 #Remix图标
 
   # 框架、工具
   archive: ^3.6.1 #文件压缩
-  get: ^4.6.6 #状态管理、路由管理、国际化
+  get: ^4.7.2 #状态管理、路由管理、国际化
   dio: ^5.4.3+1 #网络请求
   hive: 2.2.3 #持久化存储
   hive_flutter: 1.1.0 #持久化存储
   logger: ^2.0.2 #日志
   intl: ^0.19.0 #国际化
   qr_flutter: ^4.1.0 #二维码生成
-  dynamic_color: ^1.6.8 #动态颜色
+  dynamic_color: ^1.7.0 #动态颜色
   path: any
   udp: ^5.0.3 #UDP
-  uuid: ^4.3.3 #UUID
-  synchronized: ^3.1.0+1 #线程安全
+  uuid: ^4.5.1 #UUID
+  synchronized: ^3.3.1 #线程安全
 
   #Widget
   flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
   flutter_easyrefresh: 2.2.2 #下拉刷新、上拉加载
   extended_image: ^8.2.0 #拓展Image,支持缓存
-  flutter_smart_dialog: ^4.9.2 #各种弹窗 Toast/Dialog/Popup
+  flutter_smart_dialog: ^4.9.8+7 #各种弹窗 Toast/Dialog/Popup
   sticky_headers: ^0.3.0+2 #吸顶
   lottie: ^1.4.3 #lottie动画
   ns_danmaku: #弹幕
@@ -50,15 +50,15 @@ dependencies:
   cross_file: ^0.3.4+1 #跨平台文件
   permission_handler: ^11.3.1 #权限处理
   flutter_image_gallery_saver: ^0.0.2 #图片保存到相册
-  screen_brightness: ^0.2.2+1 #亮度控制
+  screen_brightness: ^2.1.2 #亮度控制
   auto_orientation_v2: ^2.3.6 #屏幕方向
-  wakelock_plus: ^1.2.5 #屏幕常亮
-  file_picker: ^8.0.3 #文件选择
+  wakelock_plus: ^1.3.1 #屏幕常亮
+  file_picker: ^10.1.2 #文件选择
   window_manager: ^0.4.3 #窗口管理
   floating: ^6.0.0 #PIP画中画
   flutter_inappwebview: ^6.1.5 #WebView
   connectivity_plus: ^6.0.3 #网络状态
-  flutter_single_instance: ^1.2.3 #应用启动检测
+  flutter_single_instance: ^1.5.0 #应用启动检测
   qr_code_scanner_plus: ^2.0.10+1 #二维码扫描
 
   # 网络相关
@@ -69,9 +69,9 @@ dependencies:
   signalr_netcore: ^1.3.9 #SignalR
 
   # 视频播放
-  media_kit: ^1.1.11 # Primary package.
-  media_kit_video: ^1.2.5 # For video rendering.
-  media_kit_libs_video: ^1.0.5 # Native video dependencies.
+  media_kit: ^1.2.0 # Primary package.
+  media_kit_video: ^1.3.0 # For video rendering.
+  media_kit_libs_video: ^1.0.6 # Native video dependencies.
 
   flutter: 
     sdk: flutter

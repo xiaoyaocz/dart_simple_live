@@ -209,7 +209,7 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   final screenBrightness = ScreenBrightness();
-  final VolumeController volumeController = VolumeController();
+  final VolumeController volumeController = VolumeController.instance;
   final pip = Floating();
   StreamSubscription<PiPStatus>? _pipSubscription;
 

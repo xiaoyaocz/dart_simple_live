@@ -1,7 +1,7 @@
 {
-    "version": "1.2.5",
-    "version_num": 10205,
-    "version_desc": "- 回滚原生播放器更新",
+    "version": "1.2.8",
+    "version_num": 10208,
+    "version_desc": "- 修复虎牙播放失败",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

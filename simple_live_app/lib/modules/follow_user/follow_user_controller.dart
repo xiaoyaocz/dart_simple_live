@@ -5,6 +5,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
@@ -125,8 +126,17 @@ class FollowUserController extends BasePageController<FollowUser> {
   void removeIdFromTag() {}
 
   void removeTag(FollowUserTag tag) {
+    // 将tag下的所有follow设置为全部
+    for(var i in tag.userId){
+      var follow = DBService.instance.followBox.get(i);
+      if(follow != null){
+        follow.tag = "全部";
+        updateItem(follow);
+      }
+    }
     FollowService.instance.delFollowUserTag(tag);
     updateTagList();
+    Log.i('删除tag${tag.tag}');
   }
 
   void addTag(String tag) async {

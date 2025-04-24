@@ -38,7 +38,7 @@ class DouyinSearchController extends BaseController {
     if (Platform.isAndroid || Platform.isIOS) {
       webViewController!.loadUrl(
         urlRequest: URLRequest(
-          url: WebUri(searchUrl),
+          url: Uri.parse(searchUrl),
         ),
       );
     }

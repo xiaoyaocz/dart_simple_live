@@ -41,7 +41,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.x'
+          flutter-version: '3.29.2'
           cache: true
 
       # 打开MAC Desktop支持
@@ -164,7 +164,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.27.x"
+          flutter-version: "3.29.2"
           cache: true
       # 安装依赖
       - name: Update apt-get
@@ -238,7 +238,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.27.x"
+          flutter-version: "3.29.2"
           cache: true
           channel: "stable"
       - name: Enable Flutter Desktop

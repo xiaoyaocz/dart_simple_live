@@ -1,7 +1,7 @@
 name: simple_live_tv_app
 description: A new Flutter project.
 publish_to: 'none'
-version: 1.2.8+10208
+version: 1.2.9+10209
 
 environment:
   sdk: '>=3.1.2 <4.0.0'
@@ -50,12 +50,13 @@ dependencies:
   wakelock_plus: ^1.2.11 #屏幕常亮，media_kit中自带，但似乎不生效
   
   # 视频播放
-  media_kit: ^1.1.11
-  media_kit_video: ^1.2.5
-  media_kit_libs_video: ^1.0.5
+  media_kit: 1.1.11
+  media_kit_video: 1.2.5
+  media_kit_libs_video: 1.0.5
 
 dependency_overrides: 
   fading_edge_scrollview: ^4.1.1
+  screen_brightness: ^2.1.2
 
 dev_dependencies:
   flutter_test:

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
@@ -211,10 +211,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final pip = Floating();
   StreamSubscription<PiPStatus>? _pipSubscription;
 
+  final VolumeController volumeController = VolumeController();
+
   /// 初始化一些系统状态
   void initSystem() async {
     if (Platform.isAndroid || Platform.isIOS) {
-      VolumeController.instance.showSystemUI = false;
+      volumeController.showSystemUI = false;
     }
 
     // 屏幕常亮
@@ -377,7 +379,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       }
 
       if (Platform.isIOS || Platform.isAndroid) {
-        await FlutterImageGallerySaver.saveImage(
+        await ImageGallerySaver.saveImage(
           imageData,
         );
         SmartDialog.showToast("已保存截图至相册");
@@ -525,7 +527,7 @@ mixin PlayerGestureControlMixin
     verticalDragging = true;
     showGestureTip.value = true;
     if (Platform.isAndroid || Platform.isIOS) {
-      _currentVolume = await VolumeController.instance.getVolume();
+      _currentVolume = await volumeController.getVolume();
     }
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       _currentBrightness = await ScreenBrightness.instance.application;
@@ -589,7 +591,7 @@ mixin PlayerGestureControlMixin
 
   Future _realSetVolume(int volume) async {
     Log.logPrint(volume);
-    VolumeController.instance.setVolume(volume / 100);
+    volumeController.setVolume(volume / 100);
   }
 
   void setGestureBrightness(double dy) {

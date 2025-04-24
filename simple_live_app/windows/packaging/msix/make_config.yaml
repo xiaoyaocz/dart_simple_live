@@ -5,3 +5,4 @@ logo_path: assets/logo_400.png
 capabilities: internetClient
 languages: zh-cn
 install_certificate: "false"
+signtool_options: /td SHA256

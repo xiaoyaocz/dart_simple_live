@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ns_danmaku/ns_danmaku.dart';
@@ -207,10 +207,11 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 }
 mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  final screenBrightness = ScreenBrightness();
-  final VolumeController volumeController = VolumeController();
+
   final pip = Floating();
   StreamSubscription<PiPStatus>? _pipSubscription;
+
+  final VolumeController volumeController = VolumeController();
 
   /// 初始化一些系统状态
   void initSystem() async {
@@ -243,7 +244,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       // 亮度重置,桌面平台可能会报错,暂时不处理桌面平台的亮度
       try {
-        await screenBrightness.resetScreenBrightness();
+        await ScreenBrightness.instance.resetApplicationScreenBrightness();
       } catch (e) {
         Log.logPrint(e);
       }
@@ -378,7 +379,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       }
 
       if (Platform.isIOS || Platform.isAndroid) {
-        await FlutterImageGallerySaver.saveImage(
+        await ImageGallerySaver.saveImage(
           imageData,
         );
         SmartDialog.showToast("已保存截图至相册");
@@ -529,7 +530,7 @@ mixin PlayerGestureControlMixin
       _currentVolume = await volumeController.getVolume();
     }
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      _currentBrightness = await screenBrightness.current;
+      _currentBrightness = await ScreenBrightness.instance.application;
     }
   }
 
@@ -602,7 +603,7 @@ mixin PlayerGestureControlMixin
       if (seek < 0) {
         seek = 0;
       }
-      screenBrightness.setScreenBrightness(seek);
+      ScreenBrightness.instance.setApplicationScreenBrightness(seek);
 
       gestureTipText.value = "亮度 ${(seek * 100).toInt()}%";
       Log.logPrint(value);
@@ -613,7 +614,7 @@ mixin PlayerGestureControlMixin
         seek = 1;
       }
 
-      screenBrightness.setScreenBrightness(seek);
+      ScreenBrightness.instance.setApplicationScreenBrightness(seek);
       gestureTipText.value = "亮度 ${(seek * 100).toInt()}%";
       Log.logPrint(value);
     }

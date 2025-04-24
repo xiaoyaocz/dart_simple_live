@@ -67,7 +67,7 @@ class LiveRoomDetail {
       "introduction": introduction,
       "notice": notice,
       "status": status,
-      "data": data,
+      "data": data.toString(),
       "danmakuData": danmakuData.toString(),
       "url": url,
       "isRecord": isRecord,

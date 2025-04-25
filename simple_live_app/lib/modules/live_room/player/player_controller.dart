@@ -525,7 +525,9 @@ mixin PlayerGestureControlMixin
     throttle = DelayedThrottle(200);
 
     verticalDragging = true;
-    showGestureTip.value = true;
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+      showGestureTip.value = true;
+    }
     if (Platform.isAndroid || Platform.isIOS) {
       _currentVolume = await volumeController.getVolume();
     }

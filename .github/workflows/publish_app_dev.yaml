@@ -62,9 +62,13 @@ jobs:
       - name: Install appdmg
         run: npm install -g appdmg
 
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+      # 设置fast-forge环境
+      - name: Install fast-forge
+        run: | 
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
 
       # 打包APK
       - name: Build APK
@@ -110,7 +114,7 @@ jobs:
       - name: Build MacOS
         run: |
           cd simple_live_app
-          flutter_distributor package --platform macos --targets dmg,zip --skip-clean
+          fastforge package --platform macos --targets dmg,zip --skip-clean
       
       # 上传MAC至Artifacts
       - name: Upload MacOS to Artifacts
@@ -152,14 +156,18 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+      # 设置fast-forge环境
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
       # build Linux ZIP\DMG
       - name: Build Linux
         run: |
           cd simple_live_app
-          flutter_distributor package --platform linux --targets deb,zip --skip-clean
+          fastforge package --platform linux --targets deb,zip --skip-clean
       # 上传Linux包至Artifacts
       - name: Upload Linux APP to Artifacts
         uses: actions/upload-artifact@v4
@@ -195,14 +203,18 @@ jobs:
           cd simple_live_app
           flutter clean
           flutter pub get
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+      # 设置fast-forge环境
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
       # build Windows ZIP\MSIX
       - name: Build Windows
         run: |
           cd simple_live_app
-          flutter_distributor package --platform windows --targets msix,zip --skip-clean
+          fastforge package --platform windows --targets msix,zip --skip-clean
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4

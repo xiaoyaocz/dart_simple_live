@@ -43,6 +43,8 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuBottomMargin, 0.0);
     danmuFontWeight.value = LocalStorageService.instance.getValue(
         LocalStorageService.kDanmuFontWeight, FontWeight.normal.index);
+    danmuDisableEmoji.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuDisableEmoji, false);
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
@@ -137,6 +139,9 @@ class AppSettingsController extends GetxController {
 
     updateFollowThreadCount.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
+
+    disableUpdateCheck.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDisableUpdateCheck, false);
 
     initSiteSort();
     initHomeSort();
@@ -300,6 +305,13 @@ class AppSettingsController extends GetxController {
     danmuFontWeight.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kDanmuFontWeight, e);
+  }
+
+  var danmuDisableEmoji = false.obs;
+  void setDanmuDisableEmoji(bool e) {
+    danmuDisableEmoji.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuDisableEmoji, e);
   }
 
   var qualityLevel = 1.obs;
@@ -508,5 +520,12 @@ class AppSettingsController extends GetxController {
     playerForceHttps.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerForceHttps, e);
+  }
+
+  var disableUpdateCheck = false.obs;
+  void setDisableUpdateCheck(bool e) {
+    disableUpdateCheck.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDisableUpdateCheck, e);
   }
 }

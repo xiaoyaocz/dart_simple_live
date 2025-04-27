@@ -33,8 +33,8 @@ class BiliBiliWebLoginController extends BaseController {
 
   Future<bool> logined() async {
     try {
-      var cookies =
-          await cookieManager.getCookies(url: WebUri("https://bilibili.com"));
+      var cookies = await cookieManager.getCookies(
+          url: WebUri("https://bilibili.com"));
       if (cookies.isEmpty) {
         return false;
       }

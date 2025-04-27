@@ -1,10 +1,7 @@
-name: build
+name: Windows_build
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - 'master'
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   # 打包Windows
@@ -21,7 +18,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.29.x"
+          flutter-version: "3.29.2"
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop
@@ -29,14 +26,15 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+      # 设置flutter_fastforge环境
+      - name: Install flutter_fastforge
+        run: dart pub global activate fastforge
       # build Windows ZIP\MSIX
       - name: Build Windows
         run: |
           cd simple_live_app
-          flutter_distributor package --platform windows --targets msix,zip --skip-clean
+          fastforge package --platform windows --targets msix,zip --skip-clean
+          
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4
@@ -45,5 +43,7 @@ jobs:
           path: |
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
+            simple_live_app/build/windows/x64/runner/Release/*
         #完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."
+      

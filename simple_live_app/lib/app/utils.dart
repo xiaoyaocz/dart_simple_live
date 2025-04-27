@@ -12,6 +12,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/requests/common_request.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -370,6 +371,11 @@ class Utils {
 
   static void checkUpdate({bool showMsg = false}) async {
     try {
+      // 判断是否禁用更新检测
+      if (AppSettingsController.instance.disableUpdateCheck.value && !showMsg) {
+        return;
+      }
+      
       int currentVer = Utils.parseVersion(packageInfo.version);
       CommonRequest request = CommonRequest();
       var versionInfo = await request.checkUpdate();

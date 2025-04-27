@@ -84,6 +84,17 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
               ),
               AppStyle.divider,
               Obx(
+                () => SettingsSwitch(
+                  title: "禁用Emoji表情",
+                  subtitle: "过滤弹幕中的Emoji表情",
+                  value: controller.danmuDisableEmoji.value,
+                  onChanged: (e) {
+                    controller.setDanmuDisableEmoji(e);
+                  },
+                ),
+              ),
+              AppStyle.divider,
+              Obx(
                 () => SettingsNumber(
                   title: "显示区域",
                   value: (controller.danmuArea.value * 100).toInt(),

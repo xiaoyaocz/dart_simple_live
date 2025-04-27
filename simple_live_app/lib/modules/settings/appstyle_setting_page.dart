@@ -110,7 +110,7 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
                             .map(
                               (e) => GestureDetector(
                                 onTap: () {
-                                  controller.setStyleColor(e.v);
+                                  controller.setStyleColor(e.value);
                                   Get.forceAppUpdate();
                                 },
                                 child: Container(
@@ -128,10 +128,10 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
                                     () => Center(
                                       child: Icon(
                                         Icons.check,
-                                        color:
-                                            controller.styleColor.value == e.v
-                                                ? Colors.white
-                                                : Colors.transparent,
+                                        color: controller.styleColor.value ==
+                                                e.value
+                                            ? Colors.white
+                                            : Colors.transparent,
                                       ),
                                     ),
                                   ),
@@ -151,14 +151,14 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
   }
 }
 
-extension ColorExt on Color {
-  static int _floatToInt8(double x) {
-    return (x * 255.0).round() & 0xff;
-  }
+// extension ColorExt on Color {
+//   static int _floatToInt8(double x) {
+//     return (x * 255.0).round() & 0xff;
+//   }
 
-  int get v =>
-      _floatToInt8(a) << 24 |
-      _floatToInt8(r) << 16 |
-      _floatToInt8(g) << 8 |
-      _floatToInt8(b) << 0;
-}
+//   int get v =>
+//       _floatToInt8(a) << 24 |
+//       _floatToInt8(r) << 16 |
+//       _floatToInt8(g) << 8 |
+//       _floatToInt8(b) << 0;
+// }

@@ -1,0 +1,57 @@
+# .github/workflows/ios_build.yml
+name: iOS_build
+
+on:
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest # 使用最新的 macOS 虚拟机
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4 # 检出你的代码仓库
+
+      # 设置Flutter
+    - name: Flutter action
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.29.2'
+        cache: true 
+
+    - name: Get Flutter dependencies
+      run: 
+           cd simple_live_app
+           flutter pub get # 下载项目依赖
+           
+   # 设置flutter_distributor环境
+    - name: Install flutter_distributor
+      run: dart pub global activate flutter_distributor
+
+   #打包iOS
+    - name: Build IPA
+      run: |
+         cd simple_live_app
+         flutter build ios --release --no-codesign
+
+   #创建未签名ipa
+    - name: Create IPA
+      run: |
+        cd simple_live_app
+        mkdir build/ios/iphoneos/Payload
+        cp -R build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/Runner.app
+        cd build/ios/iphoneos/
+        zip -q -r ios_no_sign.ipa Payload
+        cd ../../..
+
+    # 上传IPA至Artifacts
+    - name: Upload IPA to Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios
+        path: |
+          simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
+             
+    #完成
+    - run: echo "🍏 This job's status is ${{ job.status }}."

@@ -62,6 +62,9 @@ class LocalStorageService extends GetxService {
   /// 弹幕字重
   static const String kDanmuFontWeight = "DanmuFontWeight";
 
+  /// 弹幕-禁用Emoji表情
+  static const String kDanmuDisableEmoji = "DanmuDisableEmoji";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 
@@ -101,6 +104,9 @@ class LocalStorageService extends GetxService {
 
   /// 播放器强制使用HTTPS
   static const String kPlayerForceHttps = "PlayerForceHttps";
+
+  /// 禁用更新检测
+  static const String kDisableUpdateCheck = "DisableUpdateCheck";
 
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";

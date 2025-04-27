@@ -47,3 +47,5 @@ app.*.map.json
 pubspec.lock
 
 .fvm/
+
+/android/app/.cxx

@@ -131,6 +131,40 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
+              "网络设置",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    value: AppSettingsController.instance.playerForceHttps.value,
+                    title: "强制使用HTTPS",
+                    subtitle: "将HTTP链接替换为HTTPS链接",
+                    onChanged: (e) {
+                      AppSettingsController.instance.setPlayerForceHttps(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    value: AppSettingsController.instance.disableUpdateCheck.value,
+                    title: "禁用更新检测",
+                    subtitle: "禁止应用启动时自动检查更新",
+                    onChanged: (e) {
+                      AppSettingsController.instance.setDisableUpdateCheck(e);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
               "日志记录",
               style: Get.textTheme.titleSmall,
             ),

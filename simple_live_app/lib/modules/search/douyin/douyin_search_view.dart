@@ -53,11 +53,13 @@ class DouyinSearchView extends StatelessWidget {
               onWebViewCreated: controller.onWebViewCreated,
               onLoadStop: controller.onLoadStop,
               onLoadStart: controller.onLoadStart,
-              initialSettings: InAppWebViewSettings(
-                useOnLoadResource: true,
-                userAgent:
-                    "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/118.0.0.0",
-                useShouldOverrideUrlLoading: true,
+              initialOptions: InAppWebViewGroupOptions(
+                crossPlatform: InAppWebViewOptions(
+                  useOnLoadResource: true,
+                  userAgent:
+                      "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/118.0.0.0",
+                  useShouldOverrideUrlLoading: true,
+                ),
               ),
               onCreateWindow: controller.onCreateWindow,
               shouldOverrideUrlLoading:

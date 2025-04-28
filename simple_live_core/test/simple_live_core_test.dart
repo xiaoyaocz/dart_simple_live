@@ -94,11 +94,11 @@ void testSite(LiveSite site) async {
   });
 
   test('getPlayUrls', () async {
-    var urls = await site.getPlayUrls(
+    var url = await site.getPlayUrls(
         detail: roomDetail!, quality: playQualities.first);
-    expect(urls, isNotNull);
-    expect(urls, isNotEmpty);
-    print(urls.join('\n\n'));
+    expect(url, isNotNull);
+    expect(url.urls, isNotEmpty);
+    print(url.urls.join('\n\n'));
   });
 
   test('getDanmaku', () async {

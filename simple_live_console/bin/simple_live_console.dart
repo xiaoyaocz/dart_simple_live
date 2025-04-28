@@ -61,10 +61,10 @@ Future printInfo(String url) async {
     print("正在获取直链...");
     var index = int.tryParse(input) ?? 0;
     if (index > 0) {
-      var urls =
+      var url =
           await site.getPlayUrls(detail: detail, quality: quality[index - 1]);
-      for (int i = 0; i < urls.length; i++) {
-        print("线路${i + 1}:\r\n${urls[i]}");
+      for (int i = 0; i < url.urls.length; i++) {
+        print("线路${i + 1}:\r\n${url.urls[i]}");
       }
     }
   }

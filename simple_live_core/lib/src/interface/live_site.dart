@@ -3,6 +3,7 @@ import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import '../interface/live_danmaku.dart';
 import '../model/live_category_result.dart';
 import '../model/live_message.dart';
+import '../model/live_play_url.dart';
 import '../model/live_room_detail.dart';
 import '../model/live_search_result.dart';
 
@@ -71,9 +72,9 @@ class LiveSite {
   }
 
   /// 读取播放链接
-  Future<List<String>> getPlayUrls(
+  Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail, required LivePlayQuality quality}) {
-    return Future.value(<String>[]);
+    return Future.value(LivePlayUrl(urls: []));
   }
 
   /// 查询直播状态

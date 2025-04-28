@@ -74,6 +74,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   /// 线路数据
   RxList<String> playUrls = RxList<String>();
 
+  Map<String, String>? playHeaders;
+
   /// 当前线路
   var currentLineIndex = -1;
   var currentLineInfo = "".obs;
@@ -169,7 +171,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
     });
   }
-
   // 弹窗逻辑
 
   void refreshRoom() {
@@ -388,11 +389,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentLineIndex = -1;
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
-    if (playUrl.isEmpty) {
+    if (playUrl.urls.isEmpty) {
       SmartDialog.showToast("无法读取播放地址");
       return;
     }
-    playUrls.value = playUrl;
+    playUrls.value = playUrl.urls;
+    playHeaders = playUrl.headers;
     currentLineIndex = 0;
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     //重置错误次数
@@ -410,24 +412,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void setPlayer() async {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
-    Map<String, String> headers = {};
-    if (site.id == Constant.kBiliBili) {
-      headers = {
-        "referer": "https://live.bilibili.com",
-        "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
-      };
-    } else if (site.id == Constant.kHuya) {
-      // from stream-rec url:https://github.com/stream-rec/stream-rec
-      var validTs = 20000308;
-      var realTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      var last8 = realTs % 100000000;
-      var currentTs = last8 > validTs ? last8 : (validTs + realTs ~/ 100);
-      headers = {
-        //"referer": "https://m.huya.com",
-        "user-agent": "HYSDK(Windows, $currentTs)"
-      };
-    }
 
     var playurl = playUrls[currentLineIndex];
     if (AppSettingsController.instance.playerForceHttps.value) {
@@ -437,7 +421,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     player.open(
       Media(
         playurl,
-        httpHeaders: headers,
+        httpHeaders: playHeaders,
       ),
     );
 
@@ -471,7 +455,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   int mediaErrorRetryCount = 0;
-
   @override
   void mediaError(String error) async {
     super.mediaEnd();

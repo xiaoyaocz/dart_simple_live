@@ -84,6 +84,9 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 是否处于全屏状态
   RxBool fullScreenState = false.obs;
 
+  /// 是否处于窗口全屏状态
+  RxBool windowFullScreenState = false.obs;
+
   /// 显示手势Tip
   RxBool showGestureTip = false.obs;
 
@@ -270,6 +273,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   /// 进入全屏
   void enterFullScreen() {
     fullScreenState.value = true;
+    windowFullScreenState.value = false;
     if (Platform.isAndroid || Platform.isIOS) {
       //全屏
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
@@ -293,7 +297,22 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       windowManager.setFullScreen(false);
     }
     fullScreenState.value = false;
+    windowFullScreenState.value = false;
 
+    //danmakuController?.clear();
+  }
+  
+  /// 进入窗口全屏
+  void enterWindowFullScreen() {
+    windowFullScreenState.value = true;
+    fullScreenState.value = false;
+    // 不需要调用系统全屏API，只需要在UI层面处理
+    //danmakuController?.clear();
+  }
+  
+  /// 退出窗口全屏
+  void exitWindowFullScreen() {
+    windowFullScreenState.value = false;
     //danmakuController?.clear();
   }
 

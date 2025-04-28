@@ -6,19 +6,17 @@ on:
 jobs:
   # 打包Windows
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2025
     permissions:
       contents: write
     steps:
       # 签出代码
       - uses: actions/checkout@v4
-        with:
-          ref: master
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.29.2"
+          flutter-version: "3.29.3"
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop

@@ -530,10 +530,10 @@ class DouyinSite implements LiveSite {
   }
 
   @override
-  Future<List<String>> getPlayUrls(
+  Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail,
       required LivePlayQuality quality}) async {
-    return quality.data;
+    return LivePlayUrl(urls: quality.data);
   }
 
   @override

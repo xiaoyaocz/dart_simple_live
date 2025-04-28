@@ -8,6 +8,7 @@ import 'package:simple_live_core/src/interface/live_site.dart';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
+import 'package:simple_live_core/src/model/live_play_url.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
 import 'package:simple_live_core/src/model/live_search_result.dart';
 import 'package:simple_live_core/src/model/live_room_detail.dart';
@@ -183,7 +184,7 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<List<String>> getPlayUrls(
+  Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail,
       required LivePlayQuality quality}) async {
     var ls = <String>[];
@@ -192,7 +193,14 @@ class HuyaSite implements LiveSite {
       var url = await getPlayUrl(line, quality.data["bitRate"]);
       ls.add(url);
     }
-    return ls;
+    //var currentTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return LivePlayUrl(
+      urls: ls,
+      headers: {
+        //"user-agent": "HYSDK(Windows, $currentTs)"
+        "user-agent": "HYSDK(Windows, 20000308)",
+      },
+    );
   }
 
   Future<String> getPlayUrl(HuyaLineModel line, int bitRate) async {

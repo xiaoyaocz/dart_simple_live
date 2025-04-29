@@ -9,6 +9,7 @@ import 'package:simple_live_core/src/interface/live_site.dart';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
+import 'package:simple_live_core/src/model/live_play_url.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
 import 'package:simple_live_core/src/model/live_search_result.dart';
 import 'package:simple_live_core/src/model/live_room_detail.dart';
@@ -150,7 +151,7 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<List<String>> getPlayUrls(
+  Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail,
       required LivePlayQuality quality}) async {
     List<String> urls = [];
@@ -190,7 +191,14 @@ class BiliBiliSite implements LiveSite {
         return -1;
       }
     });
-    return urls;
+    return LivePlayUrl(
+      urls: urls,
+      headers: {
+        "referer": "https://live.bilibili.com",
+        "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+      },
+    );
   }
 
   @override

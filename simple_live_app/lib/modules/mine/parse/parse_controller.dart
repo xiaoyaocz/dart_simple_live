@@ -74,16 +74,16 @@ class ParseController extends GetxController {
         return;
       }
       SmartDialog.showLoading(msg: "");
-      var playUrls =
+      var playUrl =
           await site.liveSite.getPlayUrls(detail: detail, quality: result);
       SmartDialog.dismiss(status: SmartStatus.loading);
       await Get.dialog(SimpleDialog(
         title: const Text("选择线路"),
-        children: playUrls
+        children: playUrl.urls
             .map(
               (e) => ListTile(
                 title: Text(
-                  "线路${playUrls.indexOf(e) + 1}",
+                  "线路${playUrl.urls.indexOf(e) + 1}",
                 ),
                 subtitle: Text(
                   e,

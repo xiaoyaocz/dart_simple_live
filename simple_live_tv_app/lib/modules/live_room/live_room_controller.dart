@@ -51,6 +51,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   /// 线路数据
   RxList<String> playUrls = RxList<String>();
 
+  Map<String, String>? playHeaders;
+
   /// 当前线路
   var currentLineIndex = -1;
   var currentLineInfo = "".obs;
@@ -210,11 +212,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentLineIndex = -1;
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
-    if (playUrl.isEmpty) {
+    if (playUrl.urls.isEmpty) {
       SmartDialog.showToast("无法读取播放地址");
       return;
     }
-    playUrls.value = playUrl;
+    playUrls.value = playUrl.urls;
+    playHeaders = playUrl.headers;
     currentLineIndex = 0;
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     //重置错误次数
@@ -232,27 +235,11 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void setPlayer() async {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
-    Map<String, String> headers = {};
-    if (site.id == Constant.kBiliBili) {
-      headers = {
-        "referer": "https://live.bilibili.com",
-        "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
-      };
-    } else if (site.id == Constant.kHuya) {
-      var currentTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      headers = {
-        // "referer": "https://m.huya.com",
-        // "user-agent":
-        //     "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1 Edg/130.0.0.0"
-        "user-agent": "HYSDK(Windows, $currentTs)"
-      };
-    }
 
     player.open(
       Media(
         playUrls[currentLineIndex],
-        httpHeaders: headers,
+        httpHeaders: playHeaders,
       ),
     );
 

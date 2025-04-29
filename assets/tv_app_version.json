@@ -1,7 +1,7 @@
 {
-    "version": "1.3.0",
-    "version_num": 10300,
-    "version_desc": "- 屏蔽斗鱼机器人弹幕\n- 回滚Flutter版本到3.22\n- 修复哔哩哔哩推荐、分类加载失败",
+    "version": "1.3.2",
+    "version_num": 10302,
+    "version_desc": "- 修复虎牙播放中断 #700 @SlotSun",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

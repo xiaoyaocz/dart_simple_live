@@ -1,7 +1,7 @@
 {
-    "version": "1.8.1",
-    "version_num": 10801,
-    "version_desc": "- 屏蔽斗鱼机器人弹幕\n- 回滚Flutter版本到3.22\n- 修复哔哩哔哩推荐、分类加载失败",
+    "version": "1.8.3",
+    "version_num": 10803,
+    "version_desc": "- 修复虎牙播放中断 #700 @SlotSun\n- 支持直接复制直链 #658 @venkate123\n- 修复PC画面中间出现黑色椭圆点 #695 @SlotSun",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

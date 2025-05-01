@@ -193,12 +193,14 @@ class HuyaSite implements LiveSite {
       var url = await getPlayUrl(line, quality.data["bitRate"]);
       ls.add(url);
     }
-    //var currentTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     return LivePlayUrl(
       urls: ls,
       headers: {
-        //"user-agent": "HYSDK(Windows, $currentTs)"
-        "user-agent": "HYSDK(Windows, 20000308)",
+        // Date: 2025-04-29
+        // UA string from the latest Huya Windows app
+        // THIS UA IS VALID ONLY FOR WUP REQUESTS
+        // The 6070100 part is something that changes, but idk how its computed and its no actually checked
+        "user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6070100&official)_SDK(trans&2.21.0.4784)",
       },
     );
   }

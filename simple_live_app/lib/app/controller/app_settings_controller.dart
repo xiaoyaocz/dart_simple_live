@@ -126,7 +126,7 @@ class AppSettingsController extends GetxController {
 
     audioOutputDriver.value = LocalStorageService.instance.getValue(
       LocalStorageService.kAudioOutputDriver,
-      Platform.isAndroid ? "audiotrack" : "auto",
+      Platform.isAndroid ? "audiotrack" : "",
     );
 
     videoHardwareDecoder.value = LocalStorageService.instance.getValue(

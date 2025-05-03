@@ -33,11 +33,10 @@ mixin PlayerMixin {
       logLevel: AppSettingsController.instance.logEnable.value
           ? MPVLogLevel.info
           : MPVLogLevel.error,
-      // bufferSize:
-      //     // media-kit #549
-      //     AppSettingsController.instance.playerBufferSize.value * 1024 * 1024,
     ),
-  );
+  )..setOptions({
+      'ao': AppSettingsController.instance.audioOutputDriver.value,
+    });
 
   /// 视频控制器
   late final videoController = VideoController(
@@ -59,6 +58,7 @@ mixin PlayerMixin {
               ),
   );
 }
+
 mixin PlayerStateMixin on PlayerMixin {
   ///音量控制条计时器
   Timer? hidevolumeTimer;

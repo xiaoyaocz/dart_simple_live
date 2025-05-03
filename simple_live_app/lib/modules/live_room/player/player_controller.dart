@@ -44,15 +44,13 @@ mixin PlayerMixin {
     player,
     configuration: AppSettingsController.instance.customPlayerOutput.value
         ? VideoControllerConfiguration(
-            ao: AppSettingsController.instance.audioOutputDriver.value,
             vo: AppSettingsController.instance.videoOutputDriver.value,
             hwdec: AppSettingsController.instance.videoHardwareDecoder.value,
           )
         : AppSettingsController.instance.playerCompatMode.value
             ? const VideoControllerConfiguration(
-                ao: 'auto',
-                vo: 'mediacodec_embed'，
-                hwdec: 'mediacodec'，
+                vo: 'mediacodec_embed',
+                hwdec: 'mediacodec',
               )
             : VideoControllerConfiguration(
                 enableHardwareAcceleration:

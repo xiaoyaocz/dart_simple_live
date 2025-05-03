@@ -45,6 +45,7 @@ class OtherSettingsController extends BaseController {
     "coreaudio": "coreaudio (macOS only)",
     "opensles": "opensles (Android only)",
     "audiotrack": "audiotrack (Android only)",
+    "aaudio": "aaudio (Android only)",
     "pcm": "pcm (Cross-platform)",
     "sdl": "sdl (Cross-platform, via SDL library)",
     "openal": "openal (Cross-platform, OpenAL backend)",

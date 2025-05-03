@@ -124,6 +124,11 @@ class AppSettingsController extends GetxController {
       Platform.isAndroid ? "gpu" : "libmpv",
     );
 
+    audioOutputDriver.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kAudioOutputDriver,
+      Platform.isAndroid ? "audiotrack" : "auto",
+    );
+
     videoHardwareDecoder.value = LocalStorageService.instance.getValue(
       LocalStorageService.kVideoHardwareDecoder,
       Platform.isAndroid ? "auto-safe" : "auto",
@@ -473,6 +478,13 @@ class AppSettingsController extends GetxController {
     videoOutputDriver.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kVideoOutputDriver, e);
+  }
+
+  var audioOutputDriver = "".obs;
+  void setAudioOutputDriver(String e) {
+    audioOutputDriver.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kAudioOutputDriver, e);
   }
 
   var videoHardwareDecoder = "".obs;

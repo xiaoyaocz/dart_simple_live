@@ -37,12 +37,14 @@ mixin PlayerMixin {
   );
   /// 初始化播放器并设置 ao 参数
   Future<void> initializePlayer() async {
-    // 设置 ao（音频输出驱动）
-    if (player.platform is NativePlayer) {
-      await (player.platform as dynamic).setProperty(
-        'ao',
-        AppSettingsController.instance.audioOutputDriver.value,
-      );
+    // 设置音频输出驱动
+    if (AppSettingsController.instance.customPlayerOutput.value) {
+      if (player.platform is NativePlayer) {
+        await (player.platform as dynamic).setProperty(
+          'ao',
+          AppSettingsController.instance.audioOutputDriver.value,
+        );
+      }
     }
   }
 

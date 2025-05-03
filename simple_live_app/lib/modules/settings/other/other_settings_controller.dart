@@ -33,7 +33,7 @@ class OtherSettingsController extends BaseController {
 
   var audioOutputDrivers = {
     "null": "null (No audio output)",
-    "auto": "auto",
+    "": "auto",
     "pulse": "pulse (Linux, uses PulseAudio)",
     "pipewire": "pipewire (Linux, via Pulse compatibility or native)",
     "alsa": "alsa (Linux only)",

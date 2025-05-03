@@ -116,6 +116,18 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 AppStyle.divider,
                 Obx(
                   () => SettingsMenu(
+                    title: "音频输出驱动(--ao)",
+                    value:
+                        AppSettingsController.instance.audioOutputDriver.value,
+                    valueMap: controller.audioOutputDrivers,
+                    onChanged: (e) {
+                      AppSettingsController.instance.setAudioOutputDriver(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu(
                     title: "硬件解码器(--hwdec)",
                     value: AppSettingsController
                         .instance.videoHardwareDecoder.value,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ns_danmaku/ns_danmaku.dart';
+import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -156,7 +156,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                     controller.setDanmuFontWeight(e);
                     updateDanmuOption(
                       danmakuController?.option.copyWith(
-                        fontWeight: FontWeight.values[e],
+                        fontWeight: e,
                       ),
                     );
                   },
@@ -174,7 +174,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                     controller.setDanmuSpeed(e.toDouble());
                     updateDanmuOption(
                       danmakuController?.option
-                          .copyWith(duration: e.toDouble()),
+                          .copyWith(duration: e),
                     );
                   },
                 ),
@@ -190,7 +190,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                     controller.setDanmuStrokeWidth(e.toDouble());
                     updateDanmuOption(
                       danmakuController?.option
-                          .copyWith(strokeWidth: e.toDouble()),
+                          .copyWith(showStroke: e>=1),
                     );
                   },
                 ),

@@ -11,7 +11,7 @@ import 'package:get/get.dart';
 import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:ns_danmaku/ns_danmaku.dart';
+import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -45,19 +45,19 @@ mixin PlayerMixin {
     player,
     configuration: AppSettingsController.instance.customPlayerOutput.value
         ? VideoControllerConfiguration(
-            vo: AppSettingsController.instance.videoOutputDriver.value,
-            hwdec: AppSettingsController.instance.videoHardwareDecoder.value,
-          )
+      vo: AppSettingsController.instance.videoOutputDriver.value,
+      hwdec: AppSettingsController.instance.videoHardwareDecoder.value,
+    )
         : AppSettingsController.instance.playerCompatMode.value
-            ? const VideoControllerConfiguration(
-                vo: 'mediacodec_embed',
-                hwdec: 'mediacodec',
-              )
-            : VideoControllerConfiguration(
-                enableHardwareAcceleration:
-                    AppSettingsController.instance.hardwareDecode.value,
-                androidAttachSurfaceAfterVideoParameters: false,
-              ),
+        ? const VideoControllerConfiguration(
+      vo: 'mediacodec_embed',
+      hwdec: 'mediacodec',
+    )
+        : VideoControllerConfiguration(
+      enableHardwareAcceleration:
+      AppSettingsController.instance.hardwareDecode.value,
+      androidAttachSurfaceAfterVideoParameters: false,
+    ),
   );
 }
 mixin PlayerStateMixin on PlayerMixin {
@@ -173,37 +173,28 @@ mixin PlayerStateMixin on PlayerMixin {
 }
 mixin PlayerDanmakuMixin on PlayerStateMixin {
   /// 弹幕控制器
-  DanmakuController? danmakuController;
+  late DanmakuController? danmakuController;
 
   void initDanmakuController(DanmakuController e) {
     danmakuController = e;
-    danmakuController?.updateOption(
-      DanmakuOption(
-        fontSize: AppSettingsController.instance.danmuSize.value,
-        area: AppSettingsController.instance.danmuArea.value,
-        duration: AppSettingsController.instance.danmuSpeed.value,
-        opacity: AppSettingsController.instance.danmuOpacity.value,
-        strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
-        fontWeight: FontWeight
-            .values[AppSettingsController.instance.danmuFontWeight.value],
-      ),
-    );
   }
 
   void updateDanmuOption(DanmakuOption? option) {
-    if (danmakuController == null || option == null) return;
-    danmakuController!.updateOption(option);
+    if (option == null) return;
+    danmakuController?.updateOption(option);
   }
 
   void disposeDanmakuController() {
     danmakuController?.clear();
   }
 
-  void addDanmaku(List<DanmakuItem> items) {
+  void addDanmaku(List<DanmakuContentItem> items) {
     if (!showDanmakuState.value) {
       return;
     }
-    danmakuController?.addItems(items);
+    for (var item in items) {
+      danmakuController?.addDanmaku(item);
+    }
   }
 }
 mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
@@ -353,7 +344,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (Platform.isIOS) {
       var info = await deviceInfo.iosInfo;
       var version = info.systemVersion;
-      var versionInt = int.tryParse(version.split('.').first) ?? 0;
+      var versionInt = int.tryParse(version
+          .split('.')
+          .first) ?? 0;
       return versionInt < 16;
     } else {
       return false;
@@ -388,7 +381,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         var path = await FilePicker.platform.saveFile(
           allowedExtensions: ["jpg"],
           type: FileType.image,
-          fileName: "${DateTime.now().millisecondsSinceEpoch}.jpg",
+          fileName: "${DateTime
+              .now()
+              .millisecondsSinceEpoch}.jpg",
         );
         if (path == null) {
           SmartDialog.showToast("取消保存");
@@ -453,7 +448,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 }
 mixin PlayerGestureControlMixin
-    on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
+on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
   /// 单击显示/隐藏控制器
   void onTap() {
     if (showControlsState.value) {
@@ -477,7 +472,10 @@ mixin PlayerGestureControlMixin
   }
 
   void onHover(PointerHoverEvent event, BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
     if (event.position.dy <= targetPosition ||
         event.position.dy >= targetPosition * 3) {
@@ -687,19 +685,22 @@ class PlayerController extends BaseController
     });
     _widthSubscription = player.stream.width.listen((event) {
       Log.d(
-          'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+          'width:$event  W:${(player.state.width)}  H:${(player.state
+              .height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
     _heightSubscription = player.stream.height.listen((event) {
       Log.d(
-          'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
+          'height:$event  W:${(player.state.width)}  H:${(player.state
+              .height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
-    _escSubscription = EventBus.instance.listen(EventBus.kEscapePressed, (event){
-      exitFull();
-    });
+    _escSubscription =
+        EventBus.instance.listen(EventBus.kEscapePressed, (event) {
+          exitFull();
+        });
   }
 
   void disposeStream() {
@@ -733,7 +734,7 @@ class PlayerController extends BaseController
               Clipboard.setData(
                 ClipboardData(
                   text:
-                      "Resolution\n${player.state.width}x${player.state.height}",
+                  "Resolution\n${player.state.width}x${player.state.height}",
                 ),
               );
             },

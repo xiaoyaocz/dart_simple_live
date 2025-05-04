@@ -36,11 +36,6 @@ dependencies:
   sticky_headers: ^0.3.0+2 #吸顶
   lottie: ^1.4.3 #lottie动画
   canvas_danmaku: ^0.2.7
-  ns_danmaku: #弹幕
-    git: 
-        url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
-        tag: v0.0.9
-
 
   #系统交互
   package_info_plus: ^8.2.1 #包信息

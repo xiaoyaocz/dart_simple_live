@@ -1,10 +1,10 @@
 import 'dart:io';
+import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:ns_danmaku/ns_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -597,11 +597,15 @@ Widget buildControls(
 
 Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
   var padding = MediaQuery.of(videoState.context).padding;
-  controller.danmakuView ??= DanmakuView(
-    key: controller.globalDanmuKey,
+  controller.danmakuView ??= DanmakuScreen  (
     createdController: controller.initDanmakuController,
     option: DanmakuOption(
-      fontSize: 16,
+      fontSize: AppSettingsController.instance.danmuSize.value,
+      area: AppSettingsController.instance.danmuArea.value,
+      duration: AppSettingsController.instance.danmuSpeed.value.toInt(),
+      opacity: AppSettingsController.instance.danmuOpacity.value,
+      showStroke: AppSettingsController.instance.danmuStrokeWidth.value > 0,
+      fontWeight: AppSettingsController.instance.danmuFontWeight.value,
     ),
   );
   return Positioned.fill(

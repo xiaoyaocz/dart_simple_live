@@ -35,6 +35,7 @@ dependencies:
   flutter_smart_dialog: ^4.9.8+7 #各种弹窗 Toast/Dialog/Popup
   sticky_headers: ^0.3.0+2 #吸顶
   lottie: ^1.4.3 #lottie动画
+  canvas_danmaku: ^0.2.7
   ns_danmaku: #弹幕
     git: 
         url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git

@@ -1,7 +1,7 @@
 {
-    "version": "1.7.11",
-    "version_num": 10711,
-    "version_desc": "- 屏蔽斗鱼机器人弹幕\n- 升级Flutter版本到3.29.x \n- 修复哔哩哔哩推荐、分类加载失败 \n- 优化标签功能",
+    "version": "1.7.12",
+    "version_num": 10712,
+    "version_desc": "- 修复虎牙断流 \n- 迁移弹幕库优化弹幕性能 \n- 修复部分bug",
     "prerelease":false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

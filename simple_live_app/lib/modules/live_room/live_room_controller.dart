@@ -570,19 +570,19 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     SmartDialog.showToast("已复制直播间链接");
   }
 
-  /// 获取当前播放URL
-  String? get playurl {
-    if (currentLineIndex < 0 || playUrls.isEmpty || currentLineIndex >= playUrls.length) {
-      return null;
-    }
-    return playUrls[currentLineIndex];
-  }
-
-  void copyPlayUrl() {
-    if (playurl == null) {
+  /// 复制新生成的直播流
+  void copyPlayUrl() async {
+    // 未开播不复制
+    if (!liveStatus.value) {
       return;
     }
-    Utils.copyToClipboard(playurl!);
+    var playUrl = await site.liveSite
+        .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
+    if (playUrl.urls.isEmpty) {
+      SmartDialog.showToast("无法读取播放地址");
+      return;
+    }
+    Utils.copyToClipboard(playUrl.urls.first);
     SmartDialog.showToast("已复制播放直链");
   }
 

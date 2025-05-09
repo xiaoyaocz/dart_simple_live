@@ -194,13 +194,9 @@ class HuyaSite implements LiveSite {
       ls.add(url);
     }
     // from stream-rec url:https://github.com/stream-rec/stream-rec
-    var validTs = 20000308;
-    var sysTs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    var last8 = sysTs % 100000000;
-    var currentTs = last8 > validTs ? last8 : (validTs + sysTs ~/ 100);
     return LivePlayUrl(
       urls: ls,
-      headers: {"user-agent": "HYSDK(Windows, $currentTs)"},
+      headers: {"user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6070100&official)_SDK(trans&2.21.0.4784)"},
     );
   }
 

@@ -124,6 +124,10 @@ class ParseController extends GetxController {
 
     if (url.contains("douyu.com")) {
       var regExp = RegExp(r"douyu\.com/([\d|\w]+)");
+      // 适配 topic_url
+      if(url.contains("topic")){
+        regExp = RegExp(r"[?&]rid=([\d]+)");
+      }
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
       return [id, Sites.allSites[Constant.kDouyu]!];

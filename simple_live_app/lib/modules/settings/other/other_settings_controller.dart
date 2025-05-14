@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -130,30 +132,42 @@ class OtherSettingsController extends BaseController {
 
   void exportConfig() async {
     try {
-      var config = LocalStorageService.instance.settingsBox.toMap();
-      var shield = LocalStorageService.instance.shieldBox.toMap();
+      // 组装数据
       var data = {
         "type": "simple_live",
         "platform": Platform.operatingSystem,
         "version": 1,
         "time": DateTime.now().millisecondsSinceEpoch,
-        "config": config,
-        "shield": shield
+        "config": LocalStorageService.instance.settingsBox.toMap(),
+        "shield": LocalStorageService.instance.shieldBox.toMap(),
       };
 
-      var filePath = await FilePicker.platform.saveFile(
+      var bytes = Uint8List.fromList(utf8.encode(jsonEncode(data)));
+      
+      // FilePicker 直接写入
+      var inlineSave = Platform.isAndroid || Platform.isIOS || kIsWeb;
+
+      var path = await FilePicker.platform.saveFile(
         allowedExtensions: ['json'],
         type: FileType.custom,
         fileName: "simple_live_config.json",
+        bytes: inlineSave ? bytes : null,
       );
-      if (filePath != null) {
-        var file = File(filePath);
-        await file.writeAsString(jsonEncode(data));
-        SmartDialog.showToast("保存成功");
+      
+      if (path == null && !kIsWeb) {
+        SmartDialog.showToast("保存取消");
+        return;
       }
+      
+      // 桌面平台需要手动写入
+      if (!inlineSave && path != null) {
+        await File(path).writeAsBytes(bytes);
+      }
+
+      SmartDialog.showToast("保存成功");
     } catch (e) {
       Log.logPrint(e);
-      SmartDialog.showToast("导入失败:$e");
+      SmartDialog.showToast("导出失败:$e");
     }
   }
 

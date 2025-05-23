@@ -153,6 +153,10 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void updateTagName(FollowUserTag followUserTag, String tag) {
+    // 未操作
+    if (followUserTag.tag == tag) {
+      return;
+    }
     // 避免重名
     if (tagList.any((item) => item.tag == tag)) {
       SmartDialog.showToast("标签名重复，修改失败");

@@ -319,27 +319,19 @@ class FollowUserPage extends GetView<FollowUserController> {
                     return ReorderableDragStartListener(
                       key: ValueKey(item.id),
                       index: index,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                                color: Colors.grey.shade300, width: 1.0),
-                          ),
+                      child: ListTile(
+                        title: Text(item.tag),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () {
+                            controller.removeTag(item);
+                          },
                         ),
-                        child: ListTile(
-                          title: Text(item.tag),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () {
-                              controller.removeTag(item);
-                            },
-                          ),
-                          leading: IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () {
-                              editTagDialog("修改标签", followUserTag: item);
-                            },
-                          ),
+                        leading: IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () {
+                            editTagDialog("修改标签", followUserTag: item);
+                          },
                         ),
                       ),
                     );

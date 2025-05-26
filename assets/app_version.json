@@ -1,7 +1,7 @@
 {
-    "version": "1.7.12",
+    "version": "1.7.13",
     "version_num": 10712,
-    "version_desc": "- 修复虎牙断流 \n- 迁移弹幕库优化弹幕性能 \n- 修复部分bug",
+    "version_desc": "- 修复bili风控问题 \n- 修复部分bug",
     "prerelease":false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

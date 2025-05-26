@@ -436,8 +436,9 @@ class HuyaSite implements LiveSite {
   Future<bool> getLiveStatus({required String roomId}) async {
     var roomInfo = await _getRoomInfo(roomId);
     // 部分主播开回放
+    List<String> keywords = ['回放', '重播', '录播'];
     return roomInfo["roomInfo"]["eLiveStatus"] == 2 &&
-        roomInfo["roomInfo"]["tLiveInfo"]["sRoomName"] != "【回放】欢迎来到我的直播间";
+        keywords.any((key)=> roomInfo["roomInfo"]["tLiveInfo"]["sRoomName"].contains(key));
   }
 
   /// 匿名登录获取uid

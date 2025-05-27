@@ -438,7 +438,7 @@ class HuyaSite implements LiveSite {
     // 部分主播开回放
     List<String> keywords = ['回放', '重播', '录播'];
     return roomInfo["roomInfo"]["eLiveStatus"] == 2 &&
-        keywords.any((key)=> roomInfo["roomInfo"]["tLiveInfo"]["sRoomName"].contains(key));
+        !keywords.any((key)=> roomInfo["roomInfo"]["tLiveInfo"]["sRoomName"].contains(key));
   }
 
   /// 匿名登录获取uid

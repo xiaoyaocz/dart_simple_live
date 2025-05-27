@@ -16,7 +16,7 @@ class CommonRequest {
   /// 检查更新
   Future<VersionModel> checkUpdateGitMirror() async {
     var result = await HttpClient.instance.getJson(
-      "https://raw.gitmirror.com/xiaoyaocz/dart_simple_live/master/assets/app_version.json",
+      "https://github.iill.moe/xiaoyaocz/dart_simple_live/master/assets/app_version.json",
       queryParameters: {
         "ts": DateTime.now().millisecondsSinceEpoch,
       },

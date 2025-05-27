@@ -37,7 +37,7 @@
 
 如果想体验最新功能，可前往[Actions](https://github.com/xiaoyaocz/dart_simple_live/actions)下载自动打包的开发版本
 
-Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)，体验会更好
+Windows建议下载UWP版[聚合直播](https://apps.microsoft.com/detail/9n1twg2g84vd)，体验会更好
 
 
 ## 项目结构

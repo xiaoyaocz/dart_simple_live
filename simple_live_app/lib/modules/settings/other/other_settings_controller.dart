@@ -31,6 +31,28 @@ class OtherSettingsController extends BaseController {
     "mediacodec_embed": "mediacodec_embed (Android only)",
   };
 
+  var audioOutputDrivers = {
+    "null": "null (No audio output)",
+    "pulse": "pulse (Linux, uses PulseAudio)",
+    "pipewire": "pipewire (Linux, via Pulse compatibility or native)",
+    "alsa": "alsa (Linux only)",
+    "oss": "oss (Linux only)",
+    "jack": "jack (Linux/macOS, low-latency audio)",
+    "directsound": "directsound (Windows only)",
+    "wasapi": "wasapi (Windows only)",
+    "winmm": "winmm (Windows only, legacy API)",
+    "audiounit": "audiounit (iOS only)",
+    "coreaudio": "coreaudio (macOS only)",
+    "opensles": "opensles (Android only)",
+    "audiotrack": "audiotrack (Android only)",
+    "aaudio": "aaudio (Android only)",
+    "pcm": "pcm (Cross-platform)",
+    "sdl": "sdl (Cross-platform, via SDL library)",
+    "openal": "openal (Cross-platform, OpenAL backend)",
+    "libao": "libao (Cross-platform, uses libao library)",
+    "auto": "auto (Not available)"
+  };
+
   var hardwareDecoder = {
     "no": "no",
     "auto": "auto",

@@ -52,10 +52,13 @@ Widget buildFullControls(
         buildDanmuView(videoState, controller),
 
         // 左下角SC显示
-        Positioned(
-          left: 24,
-          bottom: 24,
-          child: PlayerSuperChatOverlay(controller: controller),
+        Visibility(
+          visible: !(!Platform.isAndroid && !Platform.isIOS && !controller.fullScreenState.value),
+          child: Positioned(
+            left: 24,
+            bottom: 24,
+            child: PlayerSuperChatOverlay(controller: controller),
+          ),
         ),
 
         Center(
@@ -430,10 +433,13 @@ Widget buildControls(
       buildDanmuView(videoState, controller),
 
       // 左下角SC显示
-      Positioned(
-        left: 24,
-        bottom: 24,
-        child: PlayerSuperChatOverlay(controller: controller),
+      Visibility(
+        visible: !(!Platform.isAndroid && !Platform.isIOS && !controller.fullScreenState.value),
+        child: Positioned(
+          left: 24,
+          bottom: 24,
+          child: PlayerSuperChatOverlay(controller: controller),
+        ),
       ),
 
       // 中间

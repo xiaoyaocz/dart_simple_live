@@ -1,7 +1,7 @@
 {
-    "version": "1.8.6",
+    "version": "1.8.7",
     "version_num": 10806,
-    "version_desc": "- 修复虎牙播放中断 #723 @SlotSun\n- 修复哔哩哔哩加载失败\n- 复制未播放直播流 #728 @SlotSun\n- 支持解析斗鱼topic链接 @SlotSun\n- 修复导出配置错误 @CNOCM\n- 支持自定义音频输出驱动 @ybhgl",
+    "version_desc": "添加了开播时长的显示，现在能够看到bilibili和斗鱼平台主播的开播时长，添加了在bilibili直播间中显示sc",
     "prerelease":false,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

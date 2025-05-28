@@ -138,15 +138,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         ),
         buildUserProfile(context),
         buildMessageArea(),
-        Obx(
-          () => Padding(
-            padding: AppStyle.edgeInsetsH12.copyWith(bottom: AppStyle.bottomBarHeight),
-            child: Text(
-              controller.liveDuration.value,
-              style: const TextStyle(fontSize: 14, color: Colors.white),
-            ),
-          ),
-        ),
+        buildBottomActions(context),
       ],
     );
   }

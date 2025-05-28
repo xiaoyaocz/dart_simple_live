@@ -85,7 +85,31 @@ class FollowUserItem extends StatelessWidget {
               fontSize: 12,
               color: Colors.grey,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
+          if (playing)
+            Padding(
+              padding: AppStyle.edgeInsetsL8,
+              child: Text(
+                "正在观看",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else if (item.liveStatus.value == 2 && item.liveStartTime != null)
+            Padding(
+              padding: AppStyle.edgeInsetsL8,
+              child: Text(
+                '开播了${formatLiveDuration(item.liveStartTime)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
         ],
       ),
       trailing: playing
@@ -117,6 +141,32 @@ class FollowUserItem extends StatelessWidget {
       return "未开播";
     } else {
       return "直播中";
+    }
+  }
+
+  String formatLiveDuration(String? startTimeStampString) {
+    if (startTimeStampString == null || startTimeStampString.isEmpty || startTimeStampString == "0") {
+      return "";
+    }
+    try {
+      int startTimeStamp = int.parse(startTimeStampString);
+      int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      int durationInSeconds = currentTimeStamp - startTimeStamp;
+
+      int hours = durationInSeconds ~/ 3600;
+      int minutes = (durationInSeconds % 3600) ~/ 60;
+
+      String hourText = hours > 0 ? '${hours}小时' : '';
+      String minuteText = minutes > 0 ? '${minutes}分钟' : '';
+
+      if (hours == 0 && minutes == 0) {
+        return "不足1分钟";
+      }
+
+      return '$hourText$minuteText';
+    } catch (e) {
+      print('格式化开播时长出错: $e');
+      return "--小时--分钟";
     }
   }
 }

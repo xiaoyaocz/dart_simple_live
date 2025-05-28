@@ -53,7 +53,7 @@ Widget buildFullControls(
 
         // 左下角SC显示
         Visibility(
-          visible: !(!Platform.isAndroid && !Platform.isIOS && !controller.fullScreenState.value),
+          visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
           child: Positioned(
             left: 24,
             bottom: 24,
@@ -434,7 +434,7 @@ Widget buildControls(
 
       // 左下角SC显示
       Visibility(
-        visible: !(!Platform.isAndroid && !Platform.isIOS && !controller.fullScreenState.value),
+        visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
         child: Positioned(
           left: 24,
           bottom: 24,

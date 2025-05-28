@@ -138,7 +138,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         ),
         buildUserProfile(context),
         buildMessageArea(),
-        buildBottomActions(context),
+        Obx(
+          () => Padding(
+            padding: AppStyle.edgeInsetsH12.copyWith(bottom: AppStyle.bottomBarHeight),
+            child: Text(
+              controller.liveDuration.value,
+              style: const TextStyle(fontSize: 14, color: Colors.white),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -186,6 +194,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 icon: const Icon(Remix.refresh_line),
                 label: const Text("刷新"),
               ),
+              AppStyle.hGap4,
               Obx(
                 () => controller.followed.value
                     ? TextButton.icon(
@@ -233,7 +242,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ],
           ),
         ),
-        //buildBottomActions(context),
       ],
     );
   }

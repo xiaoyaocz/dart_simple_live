@@ -3,18 +3,6 @@ import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'package:simple_live_core/src/danmaku/huya_danmaku.dart';
-import 'package:simple_live_core/src/interface/live_danmaku.dart';
-import 'package:simple_live_core/src/interface/live_site.dart';
-import 'package:simple_live_core/src/model/live_anchor_item.dart';
-import 'package:simple_live_core/src/model/live_category.dart';
-import 'package:simple_live_core/src/model/live_message.dart';
-import 'package:simple_live_core/src/model/live_play_url.dart';
-import 'package:simple_live_core/src/model/live_room_item.dart';
-import 'package:simple_live_core/src/model/live_search_result.dart';
-import 'package:simple_live_core/src/model/live_room_detail.dart';
-import 'package:simple_live_core/src/model/live_play_quality.dart';
-import 'package:simple_live_core/src/model/live_category_result.dart';
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
@@ -24,7 +12,7 @@ class HuyaSite implements LiveSite {
   final String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
   final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui");
-
+  String? playUserAgent;
   @override
   String id = "huya";
 
@@ -186,19 +174,21 @@ class HuyaSite implements LiveSite {
 
   // 每次访问播放虎牙都需要获取一次，不太合理，倾向于在客户端获取保存替换
   Future<String> getHuYaUA() async {
-    var result = await HttpClient.instance.getJson(
-      "https://github.iill.moe/xiaoyaocz/dart_simple_live/master/assets/play_config.json",
-      queryParameters: {
-        "ts": DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    String? ua;
+    if (playUserAgent != null) {
+      return playUserAgent!;
+    }
     try {
-      ua = json.decode(result)['huya']['user_agent'];
+      var result = await HttpClient.instance.getJson(
+        "https://github.iill.moe/xiaoyaocz/dart_simple_live/master/assets/play_config.json",
+        queryParameters: {
+          "ts": DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      playUserAgent = json.decode(result)['huya']['user_agent'];
     } catch (e) {
       CoreLog.error(e);
     }
-    return ua ??
+    return playUserAgent ??
         "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)";
   }
 

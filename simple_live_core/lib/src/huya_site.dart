@@ -196,7 +196,7 @@ class HuyaSite implements LiveSite {
     // from stream-rec url:https://github.com/stream-rec/stream-rec
     return LivePlayUrl(
       urls: ls,
-      headers: {"user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6070100&official)_SDK(trans&2.21.0.4784)"},
+      headers: {"user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)"},
     );
   }
 

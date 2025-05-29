@@ -196,11 +196,11 @@ class HuyaSite implements LiveSite {
     return LivePlayUrl(
       urls: ls,
       headers: {
-        // Date: 2025-04-29
+        // Date: 2025-05-29
         // UA string from the latest Huya Windows app
         // THIS UA IS VALID ONLY FOR WUP REQUESTS
-        // The 6070100 part is something that changes, but idk how its computed and its no actually checked
-        "user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6070100&official)_SDK(trans&2.21.0.4784)",
+        // The 6080100 part is a VERSION_CODE, but idk how its computed and its no actually checked
+        "user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)",
       },
     );
   }

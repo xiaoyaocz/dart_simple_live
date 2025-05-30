@@ -202,6 +202,18 @@ class HuyaSite implements LiveSite {
     } catch (e) {
       CoreLog.error(e);
     }
+    // from biliup
+    // "sdk_platform": "Android, Windows"
+    // "sdk_version": "30000002"
+    // "media_platform": "android"
+    // "media_version": "20000313"
+    // "app_platform": "adr,huya_nftv, pc_exe, webh5"
+    // "app_version": "adr/nftv: LocalVersion or "0.0.0" + hotfix_version, pc_exe: 6080100, ws: 2505091506"
+    // "app_channel": "adr: live, nftv/pc_exe: official, websocket"
+    // "trans_mod_name": "trans"
+    // "trans_mod_version": "nftv: 1.24.99-rel-tv, adr: 2.22.13-rel, win: 2.23.0.4969"
+    // user_agent = "HYSDK($sdk_platform,$sdk_version)"
+    // user_agent = "media_platform,media_version_APP($app_platform&$app_version&$app_channe)_SDK($trans_mod_name&$trans_mod_version)"
     return playHuyaUA ??
         "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)";
   }

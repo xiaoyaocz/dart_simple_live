@@ -19,10 +19,14 @@ import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
 
+import '../simple_live_core.dart';
+
 class HuyaSite implements LiveSite {
   final String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
   final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui");
+
+  String? playHuyaUA;
 
   @override
   String id = "huya";
@@ -183,6 +187,25 @@ class HuyaSite implements LiveSite {
     return Future.value(qualities);
   }
 
+  Future<String> getHuYaUA() async {
+    if (playHuyaUA != null) {
+      return playHuyaUA!;
+    }
+    try {
+      var result = await HttpClient.instance.getJson(
+        "https://cdn.jsdelivr.net/gh/xiaoyaocz/dart_simple_live/master/assets/play_config.json",
+        queryParameters: {
+          "ts": DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      playHuyaUA = json.decode(result)['huya']['user_agent'];
+    } catch (e) {
+      CoreLog.error(e);
+    }
+    return playHuyaUA ??
+        "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)";
+  }
+
   @override
   Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail,
@@ -193,15 +216,12 @@ class HuyaSite implements LiveSite {
       var url = await getPlayUrl(line, quality.data["bitRate"]);
       ls.add(url);
     }
+    // from stream-rec url:https://github.com/stream-rec/stream-rec
+
+    var ua = await getHuYaUA();
     return LivePlayUrl(
       urls: ls,
-      headers: {
-        // Date: 2025-05-29
-        // UA string from the latest Huya Windows app
-        // THIS UA IS VALID ONLY FOR WUP REQUESTS
-        // The 6080100 part is a VERSION_CODE, but idk how its computed and its no actually checked
-        "user-agent": "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)",
-      },
+      headers: {"user-agent": ua},
     );
   }
 
@@ -307,8 +327,7 @@ class HuyaSite implements LiveSite {
       userAvatar: tProfileInfo["sAvatar180"].toString(),
       introduction: tLiveInfo["sIntroduction"].toString(),
       notice: roomInfo["welcomeText"].toString(),
-      status: roomInfo["roomInfo"]["eLiveStatus"] == 2 &&
-          tLiveInfo["sRoomName"] != "【回放】欢迎来到我的直播间",
+      status: roomInfo["roomInfo"]["eLiveStatus"] == 2,
       data: HuyaUrlDataModel(
         url:
             "https:${utf8.decode(base64.decode(roomInfo["roomProfile"]["liveLineUrl"].toString()))}",
@@ -435,10 +454,7 @@ class HuyaSite implements LiveSite {
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     var roomInfo = await _getRoomInfo(roomId);
-    // 部分主播开回放
-    List<String> keywords = ['回放', '重播', '录播'];
-    return roomInfo["roomInfo"]["eLiveStatus"] == 2 &&
-        !keywords.any((key)=> roomInfo["roomInfo"]["tLiveInfo"]["sRoomName"].contains(key));
+    return roomInfo["roomInfo"]["eLiveStatus"] == 2;
   }
 
   /// 匿名登录获取uid
@@ -579,12 +595,23 @@ class HuyaUrlDataModel {
   final String uid;
   List<HuyaLineModel> lines;
   List<HuyaBitRateModel> bitRates;
+
   HuyaUrlDataModel({
     required this.bitRates,
     required this.lines,
     required this.url,
     required this.uid,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "url": url,
+      "uid": uid,
+      "lines": lines.map((e) => e.toString()).toList(),
+      "bitRates": bitRates.map((e) => e.toString()).toList(),
+    });
+  }
 }
 
 enum HuyaLineType {
@@ -610,13 +637,34 @@ class HuyaLineModel {
     required this.cdnType,
     this.bitRate = 0,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "line": line,
+      "cdnType": cdnType,
+      "flvAntiCode": flvAntiCode,
+      "hlsAntiCode": hlsAntiCode,
+      "streamName": streamName,
+      "lineType": lineType.toString(),
+    });
+  }
 }
 
 class HuyaBitRateModel {
   final String name;
   final int bitRate;
+
   HuyaBitRateModel({
     required this.bitRate,
     required this.name,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "name": name,
+      "bitRate": bitRate,
+    });
+  }
 }

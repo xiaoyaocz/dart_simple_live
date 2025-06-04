@@ -152,14 +152,17 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               Expanded(
                 child: buildMediaPlayer(),
               ),
-              SizedBox(
-                width: 300,
-                child: Column(
-                  children: [
-                    buildUserProfile(context),
-                    buildMessageArea(),
-                  ],
-                ),
+              Obx(() => controller.showRightLayout.value 
+                ? Container()
+                : SizedBox(
+                    width: 300,
+                    child: Column(
+                      children: [
+                        buildUserProfile(context),
+                        buildMessageArea()
+                      ],
+                    ),
+                )
               ),
             ],
           ),
@@ -203,6 +206,25 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                         onPressed: controller.followUser,
                         icon: const Icon(Remix.heart_line),
                         label: const Text("关注"),
+                      ),
+              ),
+              Obx(
+                () => controller.showRightLayout.value 
+                    ? TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 14),
+                        ),
+                        onPressed: controller.toggleRightLayout,
+                        icon: const Icon(Remix.rectangle_line),
+                        label: const Text("显示右边栏"),
+                      )
+                    : TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 14),
+                        ),
+                        onPressed: controller.toggleRightLayout,
+                        icon: const Icon(Remix.layout_right_line),
+                        label: const Text("隐藏右边栏"),
                       ),
               ),
               const Expanded(child: Center()),

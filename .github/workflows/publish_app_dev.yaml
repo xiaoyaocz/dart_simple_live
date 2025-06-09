@@ -241,3 +241,4 @@ jobs:
             simple_live_app/build/dist/*/*.zip
         #完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."
+

@@ -91,10 +91,22 @@ class BiliBiliSite implements LiveSite {
   @override
   Future<LiveCategoryResult> getCategoryRooms(LiveSubCategory category,
       {int page = 1}) async {
+    var wWebidUrl =
+        "https://live.bilibili.com/p/eden/area-tags?parentAreaId=${category.parentId}&areaId=${category.id}";
+
+    var wWebidresult = await HttpClient.instance.getText(
+      wWebidUrl,
+      header: await getHeader(),
+    );
+
+    var wWebid = RegExp(r'"access_id"\s*:\s*"([^"]+)"')
+        .firstMatch(wWebidresult)
+        ?.group(1);
+
     const baseUrl =
         "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList";
     var url =
-        "$baseUrl?platform=web&parent_area_id=${category.parentId}&area_id=${category.id}&sort_type=&page=$page";
+        "$baseUrl?platform=web&parent_area_id=${category.parentId}&area_id=${category.id}&sort_type=&page=$page&w_webid=$wWebid";
     var queryParams = await getWbiSign(url);
 
     var result = await HttpClient.instance.getJson(

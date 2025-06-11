@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.7.13+10713
+version: 1.7.14+10714
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -92,9 +92,10 @@ flutter_launcher_icons:
 
 flutter: 
   uses-material-design: true
-  assets: 
+  assets:
     - assets/statement.txt
     - assets/images/
     - assets/icons/
     - assets/lotties/
+    - shorebird.yaml
 

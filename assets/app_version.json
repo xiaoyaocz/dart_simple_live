@@ -1,7 +1,7 @@
 {
-    "version": "1.7.13",
-    "version_num": 10712,
-    "version_desc": "- 修复bili风控问题 \n- 修复部分bug",
+    "version": "1.7.14",
+    "version_num": 10714,
+    "version_desc": "-修复部分bug",
     "prerelease":false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

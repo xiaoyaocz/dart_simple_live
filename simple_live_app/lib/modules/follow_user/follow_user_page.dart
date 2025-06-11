@@ -124,23 +124,27 @@ class FollowUserPage extends GetView<FollowUserController> {
         children: [
           Padding(
             padding: AppStyle.edgeInsetsL8,
-            child: Expanded(
-              child: Obx(
-                    () => SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Wrap(
-                      spacing: 12,
-                      children: controller.tagList.map((option) {
-                        return FilterButton(
-                          text: option.tag,
-                          selected: controller.filterMode.value == option,
-                          onTap: () {
-                            controller.setFilterMode(option);
-                          },
-                        );
-                      }).toList()),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Obx(
+                        () => SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Wrap(
+                          spacing: 12,
+                          children: controller.tagList.map((option) {
+                            return FilterButton(
+                              text: option.tag,
+                              selected: controller.filterMode.value == option,
+                              onTap: () {
+                                controller.setFilterMode(option);
+                              },
+                            );
+                          }).toList()),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
           Expanded(

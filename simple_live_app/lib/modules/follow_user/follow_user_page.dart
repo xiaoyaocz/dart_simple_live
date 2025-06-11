@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
@@ -93,7 +94,7 @@ class FollowUserPage extends GetView<FollowUserController> {
               } else if (value == 3) {
                 FollowService.instance.inputText();
               } else if (value == 4) {
-                manageTagsDialog();
+                showTagsManager();
               }
             },
           ),
@@ -269,69 +270,52 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  void manageTagsDialog() {
-    Get.dialog(
-      AlertDialog(
-        contentPadding: const EdgeInsets.all(16.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        content: Column(
+  void showTagsManager() {
+    Utils.showBottomSheet(
+      title: '标签管理',
+      child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 标题栏
-            Padding(
-              padding: const EdgeInsets.only(left: 22.0, right: 22),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '标签管理',
-                    style: TextStyle(
-                      fontSize: 18,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.add,
-                      color: Colors.black,
-                    ),
-                    onPressed: () {
-                      editTagDialog("添加标签");
-                    },
-                  ),
-                ],
-              ),
+            AppStyle.divider,
+            ListTile(
+              title: const Text("添加标签"),
+              leading: const Icon(Icons.add),
+              onTap: () {
+                editTagDialog("添加标签");
+              },
             ),
-            const Divider(),
+            AppStyle.divider,
             // 列表内容
-            Obx(
-              () => SizedBox(
-                height: 300, // 设置列表高度
-                width: 300,
-                child: ReorderableListView.builder(
+            Expanded(
+              child: Obx(
+                () => ReorderableListView.builder(
                   buildDefaultDragHandles: false,
-                  shrinkWrap: true,
                   itemCount: controller.userTagList.length,
                   itemBuilder: (context, index) {
                     // 偏移
                     FollowUserTag item = controller.userTagList[index];
-                    return ReorderableDragStartListener(
-                      key: ValueKey(item.id),
-                      index: index,
-                      child: ListTile(
-                        title: Text(item.tag),
-                        trailing: IconButton(
+                    return ListTile(
+                        key: ValueKey(item.id),
+                        title: GestureDetector(
+                          child: Text(item.tag),
+                          onLongPress: () {
+                            {
+                              editTagDialog("修改标签", followUserTag: item);
+                            }
+                          },
+                        ),
+                        leading: IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () {
                             controller.removeTag(item);
                           },
                         ),
-                        leading: IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () {
-                            editTagDialog("修改标签", followUserTag: item);
-                          },
+                      trailing: ReorderableDelayedDragStartListener(
+                        index: index,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Icon(Icons.drag_handle),
                         ),
                       ),
                     );
@@ -342,9 +326,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ]),
     );
   }
 

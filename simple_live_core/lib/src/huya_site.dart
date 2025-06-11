@@ -188,20 +188,6 @@ class HuyaSite implements LiveSite {
   }
 
   Future<String> getHuYaUA() async {
-    // if (playHuyaUA != null) {
-    //   return playHuyaUA!;
-    // }
-    // try {
-    //   var result = await HttpClient.instance.getJson(
-    //     "https://cdn.jsdelivr.net/gh/xiaoyaocz/dart_simple_live@master/assets/play_config.json",
-    //     queryParameters: {
-    //       "ts": DateTime.now().millisecondsSinceEpoch,
-    //     },
-    //   );
-    //   playHuyaUA = json.decode(result)['huya']['user_agent'];
-    // } catch (e) {
-    //   CoreLog.error(e);
-    // }
     // from biliup
     // "sdk_platform": "Android, Windows"
     // "sdk_version": "30000002"
@@ -228,7 +214,6 @@ class HuyaSite implements LiveSite {
       ls.add(url);
     }
     // from stream-rec url:https://github.com/stream-rec/stream-rec
-
     var ua = await getHuYaUA();
     return LivePlayUrl(
       urls: ls,

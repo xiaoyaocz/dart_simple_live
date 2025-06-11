@@ -99,54 +99,48 @@ class FollowUserPage extends GetView<FollowUserController> {
             },
           ),
         ],
+        leading: Obx(
+          () => FollowService.instance.updating.value
+              ? const IconButton(
+                  onPressed: null,
+                  icon: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  onPressed: () {
+                    controller.refreshData();
+                  },
+                  icon: const Icon(Icons.refresh),
+                ),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: AppStyle.edgeInsetsL8,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Obx(
+            child: Expanded(
+              child: Obx(
                     () => SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Wrap(
-                          spacing: 12,
-                          children: controller.tagList.map((option) {
-                            return FilterButton(
-                              text: option.tag,
-                              selected: controller.filterMode.value == option,
-                              onTap: () {
-                                controller.setFilterMode(option);
-                              },
-                            );
-                          }).toList()),
-                    ),
-                  ),
-                ),
-                Obx(
-                  () => FollowService.instance.updating.value
-                      ? TextButton.icon(
-                          onPressed: null,
-                          icon: const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          ),
-                          label: const Text("更新状态中"),
-                        )
-                      : TextButton.icon(
-                          onPressed: () {
-                            controller.refreshData();
+                  scrollDirection: Axis.horizontal,
+                  child: Wrap(
+                      spacing: 12,
+                      children: controller.tagList.map((option) {
+                        return FilterButton(
+                          text: option.tag,
+                          selected: controller.filterMode.value == option,
+                          onTap: () {
+                            controller.setFilterMode(option);
                           },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text("刷新"),
-                        ),
+                        );
+                      }).toList()),
                 ),
-              ],
+              ),
             ),
           ),
           Expanded(

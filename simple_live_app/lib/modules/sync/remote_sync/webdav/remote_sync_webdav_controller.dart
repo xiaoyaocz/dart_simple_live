@@ -241,7 +241,7 @@ class RemoteSyncWebDAVController extends BaseController {
       await _recovery(file);
     }
     // 旧版本备份需要迁移
-    MigrationService.instance.migrateDataByVersion();
+    MigrationService.migrateDataByVersion();
     SmartDialog.dismiss();
     SmartDialog.showToast('同步完成');
     DateTime recoverTime =DateTime.now();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,12 +37,9 @@ import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:path/path.dart' as p;
-import 'package:dynamic_color/dynamic_color.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await migrateData();
+  await MigrationService.migrateData();
   await initWindow();
   MediaKit.ensureInitialized();
   await Hive.initFlutter(
@@ -52,7 +50,7 @@ void main() async {
   //初始化服务
   await initServices();
 
-  MigrationService.instance.migrateDataByVersion();
+  MigrationService.migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   //设置状态栏为透明
   SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
@@ -62,47 +60,6 @@ void main() async {
   );
   SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
   runApp(const MyApp());
-}
-
-/// 将Hive数据迁移到Application Support
-Future migrateData() async {
-  if (Platform.isAndroid || Platform.isIOS) {
-    return;
-  }
-  var hiveFileList = [
-    "followuser",
-    //旧版本写错成hostiry了
-    "hostiry",
-    "followusertag",
-    "localstorage",
-    "danmushield",
-  ];
-  try {
-    var newDir = await getApplicationSupportDirectory();
-    var hiveFile = File(p.join(newDir.path, "followuser.hive"));
-    if (await hiveFile.exists()) {
-      return;
-    }
-
-    var oldDir = await getApplicationDocumentsDirectory();
-    for (var element in hiveFileList) {
-      var oldFile = File(p.join(oldDir.path, "$element.hive"));
-      if (await oldFile.exists()) {
-        var fileName = "$element.hive";
-        if (element == "hostiry") {
-          fileName = "history.hive";
-        }
-        await oldFile.copy(p.join(newDir.path, fileName));
-        await oldFile.delete();
-      }
-      var lockFile = File(p.join(oldDir.path, "$element.lock"));
-      if (await lockFile.exists()) {
-        await lockFile.delete();
-      }
-    }
-  } catch (e) {
-    Log.logPrint(e);
-  }
 }
 
 
@@ -152,8 +109,6 @@ Future initServices() async {
   Get.put(FollowService());
 
   Get.put(HistoryService());
-
-  Get.put(MigrationService());
 
   initCoreLog();
 }

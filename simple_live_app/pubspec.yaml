@@ -50,11 +50,11 @@ dependencies:
   auto_orientation_v2: ^2.3.6 #屏幕方向
   wakelock_plus: ^1.3.1 #屏幕常亮
   file_picker: ^10.1.2 #文件选择
-  window_manager: ^0.4.3 #窗口管理
+  window_manager: ^0.5.0 #窗口管理
   floating: ^6.0.0 #PIP画中画
   flutter_inappwebview: ^6.1.5 #WebView
   connectivity_plus: ^6.0.3 #网络状态
-  flutter_single_instance: ^1.5.0 #应用启动检测
+  flutter_single_instance: ^1.5.1 #应用启动检测
   qr_code_scanner_plus: ^2.0.10+1 #二维码扫描
 
   # 网络相关

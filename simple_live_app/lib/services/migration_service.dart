@@ -1,18 +1,59 @@
-import 'package:get/get.dart';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
-class MigrationService extends GetxService {
-  static MigrationService get instance => Get.find<MigrationService>();
+class MigrationService{
+  /// 将Hive数据迁移到Application Support
+  static Future migrateData() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return;
+    }
+    var hiveFileList = [
+      "followuser",
+      //旧版本写错成hostiry了
+      "hostiry",
+      "followusertag",
+      "localstorage",
+      "danmushield",
+    ];
+    try {
+      var newDir = await getApplicationSupportDirectory();
+      var hiveFile = File(p.join(newDir.path, "followuser.hive"));
+      if (await hiveFile.exists()) {
+        return;
+      }
 
-  // 修改webdav同步时间在Hive中的数据格式
+      var oldDir = await getApplicationDocumentsDirectory();
+      for (var element in hiveFileList) {
+        var oldFile = File(p.join(oldDir.path, "$element.hive"));
+        if (await oldFile.exists()) {
+          var fileName = "$element.hive";
+          if (element == "hostiry") {
+            fileName = "history.hive";
+          }
+          await oldFile.copy(p.join(newDir.path, fileName));
+          await oldFile.delete();
+        }
+        var lockFile = File(p.join(oldDir.path, "$element.lock"));
+        if (await lockFile.exists()) {
+          await lockFile.delete();
+        }
+      }
+    } catch (e) {
+      Log.logPrint(e);
+    }
+  }
 
 
   /// 数据迁移根据版本：from 1.7.8
-  void migrateDataByVersion() {
+  static void migrateDataByVersion() {
     int curAppVer = Utils.parseVersion(Utils.packageInfo.version);
     int curDBVer = LocalStorageService.instance.getValue(LocalStorageService.kHiveDbVer, 10708);
     if (curDBVer <= 10708) {

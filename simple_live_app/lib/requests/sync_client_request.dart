@@ -31,6 +31,27 @@ class SyncClientRequest {
     }
   }
 
+  Future<bool> syncTag(
+      SyncClinet client,
+      dynamic body, {
+        bool overlay = false,
+      }) async {
+    var url = "http://${client.address}:${client.port}/sync/tag";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: body,
+      queryParameters: {
+        'overlay': overlay ? '1' : '0',
+      },
+    );
+
+    if (data["status"]) {
+      return true;
+    } else {
+      throw data["message"];
+    }
+  }
+
   Future<bool> syncHistory(
     SyncClinet client,
     dynamic body, {

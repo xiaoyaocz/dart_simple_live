@@ -45,7 +45,6 @@ class RemoteSyncWebDAVController extends BaseController {
   final _userBilibiliAccountJsonName = 'SimpleLive_bilibili_account.json';
   final _userTagsJsonName = 'SimpleLive_Tags.json';
   final _userSettingsJsonName = 'SimpleLive_Settings.json';
-  final _userTagsJsonName = 'SimpleLive_Tags.json';
 
   @override
   void onInit() {
@@ -209,12 +208,6 @@ class RemoteSyncWebDAVController extends BaseController {
           File(join(profile.path, _userBilibiliAccountJsonName));
       await bilibiliAccountJsonFile
           .writeAsString(jsonEncode(userBiliAccountCookieMap));
-      // 用户自定义标签
-      var userTagsList = DBService.instance.getFollowTagList();
-      var dataTagsMap = {
-        'data': userTagsList.map((e) => e.toJson()).toList()
-      };
-      var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
       await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
       // 同步所有设置
       var settingList = LocalStorageService.instance.settingsBox.toMap();

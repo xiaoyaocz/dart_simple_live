@@ -323,6 +323,7 @@ class RemoteSyncWebDAVController extends BaseController {
             var insertedTag = DBService.instance.tagBox.get(tag.id);
             Log.i('Inserted tag: ${insertedTag?.tag}');
           }
+          EventBus.instance.emit(Constant.kUpdateFollow, 0);
           Log.i('已同步用户自定义标签');
         } catch (e) {
           Log.e('同步用户自定义标签失败:$e',StackTrace.current);

@@ -34,7 +34,7 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
                   title: const Text("同步关注列表"),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    controller.syncFollow();
+                    controller.syncFollowAndTag();
                   },
                 ),
                 AppStyle.divider,

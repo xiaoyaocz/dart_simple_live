@@ -27,14 +27,18 @@ class SyncDeviceController extends BaseController {
     return overlay;
   }
 
-  void syncFollow() async {
+  void syncFollowAndTag() async {
     try {
       var overlay = await showOverlayDialog();
       SmartDialog.showLoading(msg: "同步中...");
       var users = DBService.instance.getFollowList();
+      var tags = DBService.instance.getFollowTagList();
       var data = json.encode(users.map((e) => e.toJson()).toList());
+      var dataT = json.encode(tags.map((e) => e.toJson()).toList());
       await request.syncFollow(client, data, overlay: overlay);
-      SmartDialog.showToast("已同步关注列表");
+      // 标签和关注必须同时同步
+      await request.syncTag(client, dataT, overlay: overlay);
+      SmartDialog.showToast("已同步关注列表和标签");
     } catch (e) {
       SmartDialog.showToast("同步失败:$e");
       Log.logPrint(e);

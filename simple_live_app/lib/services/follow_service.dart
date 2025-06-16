@@ -358,6 +358,7 @@ class FollowService extends GetxService {
             "userName": item.userName,
             "face": item.face,
             "addTime": item.addTime.toString(),
+            "tag": item.tag
           },
         )
         .toList();

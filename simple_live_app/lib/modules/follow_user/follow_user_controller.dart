@@ -163,7 +163,8 @@ class FollowUserController extends BasePageController<FollowUser> {
       return;
     }
     final FollowUserTag item = followUserTag.copyWith(tag: tag);
-    DBService.instance.updateFollowTag(item);
+    updateTag(item);
+    SmartDialog.showToast("标签名修改成功");
     updateTagList();
   }
 

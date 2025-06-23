@@ -6,6 +6,9 @@ import 'package:simple_live_app/models/db/history.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/collection.dart';
 
+import '../app/controller/app_settings_controller.dart';
+import '../app/log.dart';
+
 class DBService extends GetxService {
   static DBService get instance => Get.find<DBService>();
   late Box<History> historyBox;
@@ -13,9 +16,11 @@ class DBService extends GetxService {
   late Box<FollowUserTag> tagBox;
   final Uuid uuid = const Uuid();
 
+  late Box<double> volumeBox;
   Future init() async {
     historyBox = await Hive.openBox("History");
     followBox = await Hive.openBox("FollowUser");
+    volumeBox = await Hive.openBox("Volume");
     tagBox = await Hive.openBox("FollowUserTag");
   }
 
@@ -100,5 +105,17 @@ class DBService extends GetxService {
     var his = historyBox.values.toList();
     his.sort((a, b) => b.updateTime.compareTo(a.updateTime));
     return his;
+  }
+
+  Future addOrUpdateVolume(String id,double volume) async {
+    await volumeBox.put(id, volume);
+  }
+  double? getVolume(String id) {
+    if (volumeBox.containsKey(id)) {
+      var d = volumeBox.get(id);
+      Log.d("value:$d");
+      return d;
+    }
+    return 70;
   }
 }

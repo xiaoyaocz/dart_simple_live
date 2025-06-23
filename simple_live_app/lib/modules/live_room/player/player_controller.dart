@@ -664,7 +664,7 @@ class PlayerController extends BaseController
     initSystem();
     initStream();
     //设置音量
-    player.setVolume(AppSettingsController.instance.playerVolume.value);
+    // player.setVolume(AppSettingsController.instance.playerVolume.value);
     super.onInit();
   }
 

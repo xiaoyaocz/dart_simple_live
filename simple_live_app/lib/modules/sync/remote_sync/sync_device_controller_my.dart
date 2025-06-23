@@ -101,12 +101,12 @@ class SyncDeviceControllerMy extends BaseController {
     bool isOverlay = true,
   }) async {
     try {
-      if (!BiliBiliAccountService.instance.logined.value) {
-        if(isOverlay){
-          SmartDialog.showToast("未登录哔哩哔哩");
-        }
-        return;
-      }
+      // if (!BiliBiliAccountService.instance.logined.value) {
+      //   if(isOverlay){
+      //     SmartDialog.showToast("未登录哔哩哔哩");
+      //   }
+      //   return;
+      // }
       if(isOverlay) {
         SmartDialog.showLoading(msg: "同步中...");
       }

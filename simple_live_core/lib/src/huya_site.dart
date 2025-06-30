@@ -188,6 +188,7 @@ class HuyaSite implements LiveSite {
   }
 
   Future<String> getHuYaUA() async {
+    // Date: 2025-06-25
     // from biliup
     // "sdk_platform": "Android, Windows"
     // "sdk_version": "30000002"
@@ -200,7 +201,7 @@ class HuyaSite implements LiveSite {
     // "trans_mod_version": "nftv: 1.24.99-rel-tv, adr: 2.22.13-rel, win: 2.23.0.4969"
     // user_agent = "HYSDK($sdk_platform,$sdk_version)"
     // user_agent = "media_platform,media_version_APP($app_platform&$app_version&$app_channe)_SDK($trans_mod_name&$trans_mod_version)"
-    return "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)";
+    return "HYSDK(Windows, 30000002)_APP(pc_exe&6090003&official)_SDK(trans&2.24.0.5030)";
   }
 
   @override

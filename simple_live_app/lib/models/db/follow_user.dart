@@ -37,6 +37,9 @@ class FollowUser {
   /// 0=未知(加载中) 1=未开播 2=直播中
   Rx<int> liveStatus = 0.obs;
 
+  /// 开播时间戳
+  String? liveStartTime;
+
   factory FollowUser.fromJson(Map<String, dynamic> json) => FollowUser(
         id: json['id'],
         roomId: json['roomId'],

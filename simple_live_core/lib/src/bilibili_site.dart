@@ -253,7 +253,7 @@ class BiliBiliSite implements LiveSite {
 
     //var buvid = await getBuvid();
     // 从 roomInfo 中提取 live_start_time
-    String? liveStartTime = roomInfo["room_info"]["live_start_time"].toString();
+    String? liveStartTime = roomInfo["room_info"]?["live_start_time"]?.toString();
 
     // 计算开播时长并打印到控制台 (参考斗鱼的实现)
     if (liveStartTime != null && liveStartTime.isNotEmpty && liveStartTime != "0") { // 检查是否为0，0可能表示未开播或无此信息

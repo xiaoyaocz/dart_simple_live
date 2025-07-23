@@ -1042,7 +1042,7 @@ ${error?.stackTrace}''');
       // 取消之前的定时器
       _liveDurationTimer?.cancel();
       // 创建新的定时器，每秒更新一次
-      _liveDurationTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _liveDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         int durationInSeconds = currentTimeStamp - startTimeStamp;
 

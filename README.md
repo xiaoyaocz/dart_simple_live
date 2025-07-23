@@ -1,4 +1,4 @@
-
+> ### ⚠ 本项目不提供Release安装包，请自行编译后运行测试。
 
 
 <p align="center">
@@ -31,14 +31,7 @@
 - [x] Windows `BETA`
 - [x] MacOS `BETA`
 - [x] Linux `BETA`
-- [x] Android TV `BETA` [说明](https://github.com/xiaoyaocz/dart_simple_live/issues/338)
-
-请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
-
-如果想体验最新功能，可前往[Actions](https://github.com/xiaoyaocz/dart_simple_live/actions)下载自动打包的开发版本
-
-Windows建议下载UWP版[聚合直播](https://apps.microsoft.com/detail/9n1twg2g84vd)，体验会更好
-
+- [x] Android TV `BETA`
 
 ## 项目结构
 
@@ -46,6 +39,10 @@ Windows建议下载UWP版[聚合直播](https://apps.microsoft.com/detail/9n1twg
 - `simple_live_console` 基于simple_live_core的控制台程序。
 - `simple_live_app` 基于核心库实现的Flutter APP客户端。
 - `simple_live_tv_app` 基于核心库实现的Flutter Android TV客户端。
+
+## 环境
+
+Flutter : `3.22`
 
 ## 参考及引用
 

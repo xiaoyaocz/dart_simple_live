@@ -6,8 +6,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
-import 'package:simple_live_tv_app/app/log.dart';
-import 'package:simple_live_tv_app/requests/common_request.dart';
 
 class Utils {
   static late PackageInfo packageInfo;
@@ -238,31 +236,6 @@ class Utils {
 
   static void hideRightDialog() {
     SmartDialog.dismiss(status: SmartStatus.allCustom);
-  }
-
-  static void checkUpdate({bool showMsg = false}) async {
-    try {
-      int currentVer = Utils.parseVersion(packageInfo.version);
-      CommonRequest request = CommonRequest();
-      var versionInfo = await request.checkUpdate();
-      if (versionInfo.versionNum > currentVer) {
-        await showAlertDialog(
-          "${versionInfo.versionDesc}\n\n请前往项目主页手动下载新版本",
-          title: "发现新版本 ${versionInfo.version}",
-          confirm: "知道了",
-          cancel: "关闭",
-        );
-      } else {
-        if (showMsg) {
-          SmartDialog.showToast("当前已经是最新版本了");
-        }
-      }
-    } catch (e) {
-      Log.logPrint(e);
-      if (showMsg) {
-        SmartDialog.showToast("检查更新失败");
-      }
-    }
   }
 
   static int parseVersion(String version) {

@@ -486,7 +486,7 @@ class SettingsPage extends GetView<SettingsController> {
           focusNode: controller.versionFocusNode,
           title: "版本",
           subtitle: "v${Utils.packageInfo.version}",
-          onTap: controller.checkUpdate,
+          onTap: ()=>{},
         ),
       ],
     );

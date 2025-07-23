@@ -1,7 +1,0 @@
-{
-    "version": "1.8.7",
-    "version_num": 10806,
-    "version_desc": "添加了开播时长的显示，现在能够看到bilibili和斗鱼平台主播的开播时长，添加了在bilibili直播间中显示sc",
-    "prerelease":false,
-    "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
-}

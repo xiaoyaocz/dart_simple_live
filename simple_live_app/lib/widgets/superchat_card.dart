@@ -9,9 +9,11 @@ import 'package:simple_live_core/simple_live_core.dart';
 class SuperChatCard extends StatefulWidget {
   final LiveSuperChatMessage message;
   final Function()? onExpire;
+  final int? customCountdown;
   const SuperChatCard(
     this.message, {
     required this.onExpire,
+    this.customCountdown,
     Key? key,
   }) : super(key: key);
 
@@ -50,6 +52,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
 
   @override
   Widget build(BuildContext context) {
+    final displayCountdown = widget.customCountdown ?? countdown;
     return ClipRRect(
       borderRadius: AppStyle.radius8,
       child: Container(
@@ -92,7 +95,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
                     ),
                   ),
                   Text(
-                    "$countdown",
+                    "$displayCountdown",
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

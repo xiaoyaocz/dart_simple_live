@@ -39,6 +39,10 @@ class LiveRoomDetail {
 
   /// 链接
   final String url;
+
+  /// 显示时间
+  final String? showTime;
+
   LiveRoomDetail({
     required this.roomId,
     required this.title,
@@ -53,6 +57,7 @@ class LiveRoomDetail {
     this.danmakuData,
     required this.url,
     this.isRecord = false,
+    this.showTime,
   });
 
   @override
@@ -71,6 +76,7 @@ class LiveRoomDetail {
       "danmakuData": danmakuData.toString(),
       "url": url,
       "isRecord": isRecord,
+      "showTime": showTime,
     });
   }
 }

@@ -85,9 +85,9 @@ class FollowService extends GetxService {
     followTagList.add(item);
   }
 
-  void delFollowUserTag(FollowUserTag tag) {
+  Future delFollowUserTag(FollowUserTag tag) async{
     followTagList.remove(tag);
-    DBService.instance.deleteFollowTag(tag.id);
+    await DBService.instance.deleteFollowTag(tag.id);
   }
 
   // 获取用户自定义标签列表

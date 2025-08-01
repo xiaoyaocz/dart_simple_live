@@ -329,7 +329,7 @@ class DouyuSite implements LiveSite {
             ?.group(1) ??
         "";
     html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
-
+    // 自部署：https://github.com/SlotSun/simple_live_api
     var result = await HttpClient.instance.postJson(
         "http://alive.nsapps.cn/api/AllLive/DouyuSign",
         data: {"html": html, "rid": rid});

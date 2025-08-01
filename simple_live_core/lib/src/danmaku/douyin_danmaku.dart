@@ -203,10 +203,12 @@ class DouyinDanmaku implements LiveDanmaku {
   /// - [uniqueId] 用户唯一ID, 例如：7273033021933946427
   ///
   /// 服务端代码：https://github.com/lovelyyoshino/douyin_python，请自行部署后使用
+  /// 自部署 https://github.com/SlotSun/simple_live_api
   Future<String> getSignature(String roomId, String uniqueId) async {
     try {
       var signResult = await http.HttpClient.instance.postJson(
         "https://dy.nsapps.cn/signature",
+        // "http://localhost:3000/douyin/sign",
         queryParameters: {},
         header: {"Content-Type": "application/json"},
         data: {"roomId": roomId, "uniqueId": uniqueId},

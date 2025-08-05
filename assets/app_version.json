@@ -1,7 +1,7 @@
 {
-    "version": "1.7.14",
-    "version_num": 10714,
-    "version_desc": "-修复部分bug",
-    "prerelease":false,
+    "version": "1.7.15",
+    "version_num": 10715,
+    "version_desc": "- fix douyin and huya \n- use flutter_js get sign instead api \n- fix some bug \n- ensure availability on Android and Windows",
+    "prerelease":true,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

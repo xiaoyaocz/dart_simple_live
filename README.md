@@ -26,12 +26,14 @@
 
 ## APP支持平台
 
-- [x] Android
-- [x] iOS
-- [x] Windows `BETA`
-- [x] MacOS `BETA`
-- [x] Linux `BETA`
-- [x] Android TV `BETA` [说明](https://github.com/xiaoyaocz/dart_simple_live/issues/338)
+- [x] Android 
+- [x] iOS `自测`
+- [x] Windows 
+- [x] MacOS `自测`
+- [x] Linux `自测`
+- [x] Android TV `请自行打包` [说明](https://github.com/SlotSun/dart_simple_live/issues/4)
+
+只保证Android和Windows可用性
 
 请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
 
@@ -47,13 +49,15 @@ Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1
 - `simple_live_app` 基于核心库实现的Flutter APP客户端。
 - `simple_live_tv_app` 基于核心库实现的Flutter Android TV客户端。
 
+## 环境
+
+flutter 3.32.0
+
 ## 参考及引用
 
 [AllLive](https://github.com/xiaoyaocz/AllLive) `本项目的C#版，有兴趣可以看看`
 
 [dart_tars_protocol](https://github.com/xiaoyaocz/dart_tars_protocol.git)
-
-[wbt5/real-url](https://github.com/wbt5/real-url)
 
 [lovelyyoshino/Bilibili-Live-API](https://github.com/lovelyyoshino/Bilibili-Live-API/blob/master/API.WebSocket.md)
 
@@ -66,6 +70,10 @@ Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1
 [YunzhiYike/douyin-live](https://github.com/YunzhiYike/douyin-live)
 
 [5ime/Tiktok_Signature](https://github.com/5ime/Tiktok_Signature)
+
+[biliup](https://github.com/biliup/biliup)
+
+[stream-rec](https://github.com/stream-rec/stream-rec)
 
 ## 声明
 

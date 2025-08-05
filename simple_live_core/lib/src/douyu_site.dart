@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter_js/flutter_js.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
+import 'package:simple_live_core/src/common/js_engine.dart';
 import 'package:simple_live_core/src/danmaku/douyu_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
@@ -329,15 +334,28 @@ class DouyuSite implements LiveSite {
             ?.group(1) ??
         "";
     html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
-    // 自部署：https://github.com/SlotSun/simple_live_api
-    var result = await HttpClient.instance.postJson(
-        "http://alive.nsapps.cn/api/AllLive/DouyuSign",
-        data: {"html": html, "rid": rid});
 
-    if (result["code"] == 0) {
-      return result["data"].toString();
+    try{
+      var did = '10000000000000000000000000001501';
+      JsEngine.init();
+      JsEvalResult jsEvalResult = await JsEngine.jsRuntime.evaluate("$html;ub98484234();");
+      var res = jsEvalResult.stringResult;
+      String t10 = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+      RegExp vReg = RegExp(r'v=(\d+)');
+      Match? vMatch = vReg.firstMatch(res);
+      String? v = vMatch?.group(1);
+      String rb = md5.convert(utf8.encode(rid + did + t10 + (v ?? ""))).toString();
+      String jsSign = res
+          .replaceAll(RegExp(r'return rt;}\);?'), 'return rt;}')
+          .replaceAll('(function (', 'function sign(')
+          .replaceAll('CryptoJS.MD5(cb).toString()', '"$rb"');
+      final params = JsEngine.jsRuntime.evaluate("$jsSign;sign($rid,'$did',$t10);").stringResult;
+      return params;
+    }catch(e){
+      CoreLog.error(e);
+      return "";
     }
-    return "";
+    // 自部署：https://github.com/SlotSun/simple_live_api
   }
 
   int parseHotNum(String hn) {

@@ -5,6 +5,14 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 
+mixin DouyinRequestParams{
+  static const String kDefaultUserAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0";
+  static const AID_VALUE = "6383";
+  static const VERSION_CODE_VALUE = "180800";
+  static const SDK_VERSION = "1.0.14-beta.0";
+}
+
 class DouyinSite implements LiveSite {
   @override
   String id = "douyin";
@@ -15,8 +23,6 @@ class DouyinSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => DouyinDanmaku();
 
-  static const String kDefaultUserAgent =
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0";
 
   static const String kDefaultReferer = "https://live.douyin.com";
 
@@ -25,7 +31,7 @@ class DouyinSite implements LiveSite {
   Map<String, dynamic> headers = {
     "Authority": kDefaultAuthority,
     "Referer": kDefaultReferer,
-    "User-Agent": kDefaultUserAgent,
+    "User-Agent": DouyinRequestParams.kDefaultUserAgent,
   };
 
   Future<Map<String, dynamic>> getRequestHeaders() async {
@@ -393,7 +399,7 @@ class DouyinSite implements LiveSite {
         "Authority": kDefaultAuthority,
         "Referer": kDefaultReferer,
         "Cookie": dyCookie,
-        "User-Agent": kDefaultUserAgent,
+        "User-Agent": DouyinRequestParams.kDefaultUserAgent,
       },
     );
 
@@ -610,7 +616,7 @@ class DouyinSite implements LiveSite {
         'sec-fetch-dest': 'empty',
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin',
-        'user-agent': kDefaultUserAgent,
+        'user-agent': DouyinRequestParams.kDefaultUserAgent,
       },
     );
     if (result == "" || result == 'blocked') {
@@ -683,7 +689,7 @@ class DouyinSite implements LiveSite {
         "https://dy.nsapps.cn/abogus",
         queryParameters: {},
         header: {"Content-Type": "application/json"},
-        data: {"url": url, "userAgent": kDefaultUserAgent},
+        data: {"url": url, "userAgent": DouyinRequestParams.kDefaultUserAgent},
       );
       return signResult["data"]["url"];
     } catch (e) {

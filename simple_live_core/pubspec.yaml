@@ -1,12 +1,14 @@
 name: simple_live_core
-version: 1.0.3
+version: 1.0.4
 description: "聚合直播核心库"
 repository: https://github.com/xiaoyaocz/dart_simple_live
 publish_to: "none"
 environment: 
   sdk: '>=3.0.5 <4.0.0'
 
-dependencies: 
+dependencies:
+  flutter:
+    sdk: flutter
   dio: ^5.5.0+1
   logger: ^2.4.0
   web_socket_channel: ^3.0.1
@@ -17,8 +19,12 @@ dependencies:
   tars_dart:
     path: ./packages/tars_dart
   fixnum: ^1.1.0
+  flutter_js: ^0.8.5
 
 dev_dependencies: 
   lints: ^2.0.0
   test: ^1.21.0
 
+flutter:
+  assets:
+    - assets/js/douyin-webmssdk.js

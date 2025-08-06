@@ -103,6 +103,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   var loadError = false.obs;
   Error? error;
 
+  // 开播时长状态变量
+  var liveDuration = "00:00:00".obs;
+  Timer? _liveDurationTimer;
+
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
@@ -278,6 +282,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     try {
       SmartDialog.showLoading(msg: "");
       loadError.value = false;
+      error = null;
+      update();
       addSysMsg("正在读取直播间信息");
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
 
@@ -322,6 +328,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       addSysMsg("开始连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
+      startLiveDurationTimer(); // 启动开播时长定时器
     } catch (e) {
       Log.logPrint(e);
       //SmartDialog.showToast(e.toString());
@@ -1021,6 +1028,37 @@ ${error?.stackTrace}''');
     }
   }
 
+  
+  // 用于启动开播时长计算和更新的函数
+  void startLiveDurationTimer() {
+    // 如果不是直播状态或者 showTime 为空，则不启动定时器
+    if (!(detail.value?.status ?? false) || detail.value?.showTime == null) {
+      liveDuration.value = "00:00:00"; // 未开播时显示 00:00:00
+      _liveDurationTimer?.cancel();
+      return;
+    }
+
+    try {
+      int startTimeStamp = int.parse(detail.value!.showTime!);
+      // 取消之前的定时器
+      _liveDurationTimer?.cancel();
+      // 创建新的定时器，每秒更新一次
+      _liveDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        int durationInSeconds = currentTimeStamp - startTimeStamp;
+
+        int hours = durationInSeconds ~/ 3600;
+        int minutes = (durationInSeconds % 3600) ~/ 60;
+        int seconds = durationInSeconds % 60;
+
+        String formattedDuration = '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+        liveDuration.value = formattedDuration;
+      });
+    } catch (e) {
+      liveDuration.value = "--:--:--"; // 错误时显示 --:--:--
+    }
+  }
+
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -1029,6 +1067,7 @@ ${error?.stackTrace}''');
 
     liveDanmaku.stop();
     danmakuController = null;
+    _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
     super.onClose();
   }
 }

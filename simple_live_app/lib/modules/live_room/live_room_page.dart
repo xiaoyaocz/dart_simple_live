@@ -186,6 +186,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 icon: const Icon(Remix.refresh_line),
                 label: const Text("刷新"),
               ),
+              AppStyle.hGap4,
               Obx(
                 () => controller.followed.value
                     ? TextButton.icon(

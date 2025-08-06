@@ -184,6 +184,16 @@ class DouyuSite implements LiveSite {
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
     Map roomInfo = await _getRoomInfo(roomId);
 
+    Map h5RoomInfo = await HttpClient.instance.getJson(
+        "https://www.douyu.com/swf_api/h5room/$roomId",
+        queryParameters: {},
+        header: {
+          'referer': 'https://www.douyu.com/$roomId',
+          'user-agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
+        });
+    String? showTime = h5RoomInfo["data"]?["show_time"]?.toString();
+
     var jsEncResult = await HttpClient.instance.getText(
         "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId",
         queryParameters: {},
@@ -193,6 +203,24 @@ class DouyuSite implements LiveSite {
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
         });
     var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
+
+    if (showTime != null && showTime.isNotEmpty) {
+      try {
+        int startTimeStamp = int.parse(showTime);
+        int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        int durationInSeconds = currentTimeStamp - startTimeStamp;
+
+        int hours = durationInSeconds ~/ 3600;
+        int minutes = (durationInSeconds % 3600) ~/ 60;
+        int seconds = durationInSeconds % 60;
+
+        String formattedDuration =
+            '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+        print('斗鱼直播间 $roomId 开播时长: $formattedDuration');
+      } catch (e) {
+        print('计算开播时长出错: $e');
+      }
+    }
 
     return LiveRoomDetail(
       cover: roomInfo["room_pic"].toString(),
@@ -208,6 +236,7 @@ class DouyuSite implements LiveSite {
       data: await getPlayArgs(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
       isRecord: roomInfo["videoLoop"] == 1,
+      showTime: showTime,
     );
   }
 

@@ -1,7 +1,0 @@
-{
-    "version": "1.8.6",
-    "version_num": 10806,
-    "version_desc": "- 修复虎牙播放中断 #723 @SlotSun\n- 修复哔哩哔哩加载失败\n- 复制未播放直播流 #728 @SlotSun\n- 支持解析斗鱼topic链接 @SlotSun\n- 修复导出配置错误 @CNOCM\n- 支持自定义音频输出驱动 @ybhgl",
-    "prerelease":false,
-    "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
-}

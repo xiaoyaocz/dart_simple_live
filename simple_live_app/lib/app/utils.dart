@@ -12,8 +12,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/log.dart';
-import 'package:simple_live_app/requests/common_request.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 typedef TextValidate = bool Function(String text);
 
@@ -368,68 +366,6 @@ class Utils {
     return result;
   }
 
-  static void checkUpdate({bool showMsg = false}) async {
-    try {
-      int currentVer = Utils.parseVersion(packageInfo.version);
-      CommonRequest request = CommonRequest();
-      var versionInfo = await request.checkUpdate();
-      if (versionInfo.versionNum > currentVer) {
-        Get.dialog(
-          AlertDialog(
-            title: Text(
-              "发现新版本 ${versionInfo.version}",
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
-            ),
-            content: Text(
-              versionInfo.versionDesc,
-              style: const TextStyle(fontSize: 14, height: 1.4),
-            ),
-            actionsPadding: AppStyle.edgeInsetsH12,
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () {
-                        Get.back();
-                      },
-                      child: const Text("取消"),
-                    ),
-                  ),
-                  AppStyle.hGap12,
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                      ),
-                      onPressed: () {
-                        launchUrlString(
-                          versionInfo.downloadUrl,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
-                      child: const Text("更新"),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      } else {
-        if (showMsg) {
-          SmartDialog.showToast("当前已经是最新版本了");
-        }
-      }
-    } catch (e) {
-      Log.logPrint(e);
-      if (showMsg) {
-        SmartDialog.showToast("检查更新失败");
-      }
-    }
-  }
 
   static int parseVersion(String version) {
     var sp = version.split('.');

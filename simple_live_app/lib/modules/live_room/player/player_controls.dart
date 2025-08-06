@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -16,6 +15,9 @@ import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:simple_live_app/widgets/superchat_card.dart';
+import 'dart:async';
+import 'package:simple_live_core/simple_live_core.dart';
 
 Widget playerControls(
   VideoState videoState,
@@ -47,6 +49,16 @@ Widget buildFullControls(
       children: [
         Container(),
         buildDanmuView(videoState, controller),
+
+        // 左下角SC显示
+        Visibility(
+          visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
+          child: Positioned(
+            left: 24,
+            bottom: 24,
+            child: PlayerSuperChatOverlay(controller: controller),
+          ),
+        ),
 
         Center(
           child: // 中间
@@ -269,6 +281,15 @@ Widget buildFullControls(
                       color: Colors.white,
                     ),
                   ),
+                  Obx(
+                    () => Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        controller.liveDuration.value,
+                        style: const TextStyle(fontSize: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
                   const Expanded(child: Center()),
                   Visibility(
                     visible: !Platform.isAndroid && !Platform.isIOS,
@@ -409,6 +430,17 @@ Widget buildControls(
     children: [
       Container(),
       buildDanmuView(videoState, controller),
+
+      // 左下角SC显示
+      Visibility(
+        visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
+        child: Positioned(
+          left: 24,
+          bottom: 24,
+          child: PlayerSuperChatOverlay(controller: controller),
+        ),
+      ),
+
       // 中间
       Center(
         child: StreamBuilder(
@@ -500,6 +532,15 @@ Widget buildControls(
                     AssetImage('assets/icons/icon_danmaku_setting.png'),
                     size: 24,
                     color: Colors.white,
+                  ),
+                ),
+                Obx(
+                  () => Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Text(
+                      controller.liveDuration.value,
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                    ),
                   ),
                 ),
                 const Expanded(child: Center()),
@@ -860,4 +901,140 @@ void showFollowUser(LiveRoomController controller) {
       ),
     ),
   );
+}
+
+class PlayerSuperChatCard extends StatefulWidget {
+  final LiveSuperChatMessage message;
+  final VoidCallback onExpire;
+  final int duration;
+  const PlayerSuperChatCard({required this.message, required this.onExpire, required this.duration, Key? key}) : super(key: key);
+  @override
+  State<PlayerSuperChatCard> createState() => _PlayerSuperChatCardState();
+}
+
+class _PlayerSuperChatCardState extends State<PlayerSuperChatCard> {
+  late Timer timer;
+  late int countdown;
+  @override
+  void initState() {
+    super.initState();
+    countdown = widget.duration;
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (countdown <= 1) {
+        widget.onExpire();
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        countdown -= 1;
+      });
+    });
+  }
+  @override
+  void dispose() {
+    timer.cancel();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.65,
+      child: SuperChatCard(
+        widget.message,
+        onExpire: () {},
+        customCountdown: countdown,
+      ),
+    );
+  }
+}
+
+class LocalDisplaySC {
+  final LiveSuperChatMessage sc;
+  final DateTime expireAt;
+  final int duration;
+  LocalDisplaySC(this.sc, this.expireAt, this.duration);
+}
+
+class PlayerSuperChatOverlay extends StatefulWidget {
+  final LiveRoomController controller;
+  const PlayerSuperChatOverlay({required this.controller, Key? key}) : super(key: key);
+  @override
+  State<PlayerSuperChatOverlay> createState() => _PlayerSuperChatOverlayState();
+}
+
+class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
+  final List<LocalDisplaySC> _displayed = [];
+  final Map<LocalDisplaySC, Timer> _timers = {};
+  late Worker _worker;
+
+  void _addSC(LiveSuperChatMessage sc, {int? customSeconds}) {
+    if (_displayed.any((e) => e.sc == sc)) return;
+    int showSeconds = customSeconds ?? 15;
+    final expireAt = DateTime.now().add(Duration(seconds: showSeconds));
+    final localSC = LocalDisplaySC(sc, expireAt, showSeconds);
+    _displayed.add(localSC);
+    _timers[localSC] = Timer(Duration(seconds: showSeconds), () {
+      setState(() {
+        _displayed.remove(localSC);
+        _timers.remove(localSC)?.cancel();
+      });
+    });
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // 首次进房时同步已有SC
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (var sc in widget.controller.superChats) {
+      int remain = (sc.endTime.millisecondsSinceEpoch - now) ~/ 1000;
+      if (remain > 0) {
+        _addSC(sc, customSeconds: remain < 15 ? remain : 15);
+      }
+    }
+    // 监听SC列表变化
+    _worker = ever<List<LiveSuperChatMessage>>(widget.controller.superChats, (list) {
+      // 新增
+      for (var sc in list) {
+        if (!_displayed.any((e) => e.sc == sc)) {
+          _addSC(sc);
+        }
+      }
+      // 移除
+      _displayed.removeWhere((e) => !list.contains(e.sc));
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _worker.dispose();
+    for (var t in _timers.values) {
+      t.cancel();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = _displayed.toList()..sort((a, b) => a.sc.endTime.compareTo(b.sc.endTime));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var localSC in sorted)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SizedBox(
+              width: 240,
+              child: PlayerSuperChatCard(
+                message: localSC.sc,
+                onExpire: () {},
+                duration: localSC.duration,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

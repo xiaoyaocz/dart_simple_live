@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.8.6+10806
+version: 1.9.1+10901
 publish_to: none
 description: "Simple Live APP"
 environment: 
@@ -20,7 +20,7 @@ dependencies:
   logger: ^2.0.2 #日志
   intl: ^0.19.0 #国际化
   qr_flutter: ^4.1.0 #二维码生成
-  dynamic_color: ^1.6.8 #动态颜色
+  dynamic_color: 1.6.8 #动态颜色
   path: any
   udp: ^5.0.3 #UDP
   uuid: ^4.3.3 #UUID

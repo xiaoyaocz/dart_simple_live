@@ -256,24 +256,6 @@ class MinePage extends StatelessWidget {
                     );
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Remix.upload_2_line),
-                  title: const Text("检查更新"),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text("Ver ${Utils.packageInfo.version}"),
-                      AppStyle.hGap4,
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey,
-                      ),
-                    ],
-                  ),
-                  onTap: () {
-                    Utils.checkUpdate(showMsg: true);
-                  },
-                ),
               ],
             ),
           ],

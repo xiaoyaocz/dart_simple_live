@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:get/get.dart';
 
 import 'package:simple_live_tv_app/app/controller/base_controller.dart';
-import 'package:simple_live_tv_app/app/utils.dart';
 
 import 'package:simple_live_tv_app/routes/route_path.dart';
 
@@ -13,7 +12,6 @@ class HomeController extends BaseController {
   @override
   void onInit() {
     initTimer();
-    Utils.checkUpdate();
     super.onInit();
   }
 

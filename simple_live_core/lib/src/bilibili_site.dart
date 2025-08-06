@@ -35,6 +35,7 @@ class BiliBiliSite implements LiveSite {
 
   String buvid3 = "";
   String buvid4 = "";
+  String accessId = "";
   Future<Map<String, String>> getHeader() async {
     if (buvid3.isEmpty) {
       var buvidInfo = await getBuvid();
@@ -93,8 +94,10 @@ class BiliBiliSite implements LiveSite {
       {int page = 1}) async {
     const baseUrl =
         "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList";
+
     var url =
-        "$baseUrl?platform=web&parent_area_id=${category.parentId}&area_id=${category.id}&sort_type=&page=$page";
+        "$baseUrl?platform=web&parent_area_id=${category.parentId}&area_id=${category.id}&sort_type=&page=$page&w_webid=${await getAccessId()}";
+
     var queryParams = await getWbiSign(url);
 
     var result = await HttpClient.instance.getJson(
@@ -206,7 +209,9 @@ class BiliBiliSite implements LiveSite {
     const baseUrl =
         "https://api.live.bilibili.com/xlive/web-interface/v1/second/getListByArea";
     var url = "$baseUrl?platform=web&sort=online&page_size=30&page=$page";
+
     var queryParams = await getWbiSign(url);
+
     var result = await HttpClient.instance.getJson(
       baseUrl,
       queryParameters: queryParams,
@@ -247,6 +252,28 @@ class BiliBiliSite implements LiveSite {
         .toList();
 
     //var buvid = await getBuvid();
+    // 从 roomInfo 中提取 live_start_time
+    String? liveStartTime = roomInfo["room_info"]?["live_start_time"]?.toString();
+
+    // 计算开播时长并打印到控制台 (参考斗鱼的实现)
+    if (liveStartTime != null && liveStartTime.isNotEmpty && liveStartTime != "0") { // 检查是否为0，0可能表示未开播或无此信息
+      try {
+        int startTimeStamp = int.parse(liveStartTime);
+        int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        int durationInSeconds = currentTimeStamp - startTimeStamp;
+
+        int hours = durationInSeconds ~/ 3600;
+        int minutes = (durationInSeconds % 3600) ~/ 60;
+        int seconds = durationInSeconds % 60;
+
+        String formattedDuration = '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+        print('Bilibili直播间 $roomId 开播时长: $formattedDuration');
+      } catch (e) {
+        print('计算 Bilibili 开播时长出错: $e');
+      }
+    }
+
+
     return LiveRoomDetail(
       roomId: realRoomId,
       title: roomInfo["room_info"]["title"].toString(),
@@ -268,6 +295,7 @@ class BiliBiliSite implements LiveSite {
         buvid: buvid3,
         cookie: cookie,
       ),
+      showTime: liveStartTime, // 将 liveStartTime 赋值给 showTime 字段
     );
   }
 
@@ -280,6 +308,7 @@ class BiliBiliSite implements LiveSite {
       queryParameters: queryParams,
       header: await getHeader(),
     );
+    print("【B站接口返回】roomId=$roomId, result=$result");
     return result["data"];
   }
 
@@ -554,5 +583,24 @@ class BiliBiliSite implements LiveSite {
     var wbiSign = md5.convert(utf8.encode("$query$mixinKey")).toString();
     queryParams["w_rid"] = wbiSign;
     return queryParams;
+  }
+
+  Future<String> getAccessId() async {
+    if (accessId.isNotEmpty) {
+      return accessId;
+    }
+
+    // 获取 access_id
+    var resp = await HttpClient.instance.getText(
+      "https://live.bilibili.com/lol",
+      queryParameters: {},
+      header: await getHeader(),
+    );
+    var id = RegExp(r'"access_id":"(.*?)"')
+        .firstMatch(resp)
+        ?.group(1)
+        ?.replaceAll("\\", "");
+    accessId = id ?? "";
+    return accessId;
   }
 }

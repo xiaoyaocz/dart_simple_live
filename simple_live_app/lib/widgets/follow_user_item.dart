@@ -11,11 +11,13 @@ class FollowUserItem extends StatelessWidget {
   final FollowUser item;
   final Function()? onRemove;
   final Function()? onTap;
+  final Function()? onLongPress;
   final bool playing;
   const FollowUserItem({
     required this.item,
     this.onRemove,
     this.onTap,
+    this.onLongPress,
     this.playing = false,
     Key? key,
   }) : super(key: key);
@@ -38,7 +40,7 @@ class FollowUserItem extends StatelessWidget {
             WidgetSpan(
               alignment: ui.PlaceholderAlignment.middle,
               child: Obx(
-                () => Offstage(
+                    () => Offstage(
                   offstage: item.liveStatus.value == 0,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -61,7 +63,7 @@ class FollowUserItem extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                           color:
-                              item.liveStatus.value == 2 ? null : Colors.grey,
+                          item.liveStatus.value == 2 ? null : Colors.grey,
                         ),
                       ),
                     ],
@@ -72,7 +74,8 @@ class FollowUserItem extends StatelessWidget {
           ],
         ),
       ),
-      subtitle: Row(
+      subtitle: Wrap(
+        runSpacing: 1.0,
         children: [
           Image.asset(
             site.logo,
@@ -85,6 +88,16 @@ class FollowUserItem extends StatelessWidget {
               fontSize: 12,
               color: Colors.grey,
             ),
+          ),
+          AppStyle.hGap4,
+          Text(
+            item.tag.length > 8 ? '${item.tag.substring(0, 8)}...' : item.tag,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -106,7 +119,7 @@ class FollowUserItem extends StatelessWidget {
                   icon: const Icon(Remix.dislike_line),
                 )),
       onTap: onTap,
-      onLongPress: onRemove,
+      onLongPress: onLongPress,
     );
   }
 

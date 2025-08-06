@@ -1,0 +1,7 @@
+{
+    "version": "1.3.5",
+    "version_num": 10305,
+    "version_desc": "- 修复虎牙播放中断 #723 @SlotSun\n- 修复哔哩哔哩加载失败",
+    "prerelease":true,
+    "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
+}

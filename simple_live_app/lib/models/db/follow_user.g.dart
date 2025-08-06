@@ -23,13 +23,14 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       userName: fields[3] as String,
       face: fields[4] as String,
       addTime: fields[5] as DateTime,
+      tag: fields[6] ?? "全部",
     );
   }
 
   @override
   void write(BinaryWriter writer, FollowUser obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       ..writeByte(4)
       ..write(obj.face)
       ..writeByte(5)
-      ..write(obj.addTime);
+      ..write(obj.addTime)
+      ..writeByte(6)
+      ..write(obj.tag);
   }
 
   @override

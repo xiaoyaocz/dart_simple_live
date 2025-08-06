@@ -416,6 +416,7 @@ class DouyinSite implements LiveSite {
     var requestHeader = await getRequestHeaders();
     var result = await HttpClient.instance.getJson(
       "https://live.douyin.com/webcast/room/web/enter/",
+      //2025-08-02 dy_server checks the existence of the parameter "a_bogus" but doesn't check its value
       queryParameters: {
         "aid": 6383,
         "app_name": "douyin_web",
@@ -433,7 +434,8 @@ class DouyinSite implements LiveSite {
         "browser_language": "zh-CN",
         "browser_platform": "Win32",
         "browser_name": "Edge",
-        "browser_version": "125.0.0.0"
+        "browser_version": "125.0.0.0",
+        "a_bogus": "0"
       },
       header: requestHeader,
     );

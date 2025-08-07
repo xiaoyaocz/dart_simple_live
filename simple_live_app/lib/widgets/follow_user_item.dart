@@ -40,7 +40,7 @@ class FollowUserItem extends StatelessWidget {
             WidgetSpan(
               alignment: ui.PlaceholderAlignment.middle,
               child: Obx(
-                    () => Offstage(
+                () => Offstage(
                   offstage: item.liveStatus.value == 0,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -63,7 +63,7 @@ class FollowUserItem extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.normal,
                           color:
-                          item.liveStatus.value == 2 ? null : Colors.grey,
+                              item.liveStatus.value == 2 ? null : Colors.grey,
                         ),
                       ),
                     ],
@@ -88,17 +88,31 @@ class FollowUserItem extends StatelessWidget {
               fontSize: 12,
               color: Colors.grey,
             ),
-          ),
-          AppStyle.hGap4,
-          Text(
-            item.tag.length > 8 ? '${item.tag.substring(0, 8)}...' : item.tag,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          if (playing)
+            Padding(
+              padding: AppStyle.edgeInsetsL8,
+              child: Text(
+                "正在观看",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else if (item.liveStatus.value == 2 && item.liveStartTime != null)
+            Padding(
+              padding: AppStyle.edgeInsetsL8,
+              child: Text(
+                '开播了${formatLiveDuration(item.liveStartTime)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
         ],
       ),
       trailing: playing
@@ -130,6 +144,34 @@ class FollowUserItem extends StatelessWidget {
       return "未开播";
     } else {
       return "直播中";
+    }
+  }
+
+  String formatLiveDuration(String? startTimeStampString) {
+    if (startTimeStampString == null ||
+        startTimeStampString.isEmpty ||
+        startTimeStampString == "0") {
+      return "";
+    }
+    try {
+      int startTimeStamp = int.parse(startTimeStampString);
+      int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      int durationInSeconds = currentTimeStamp - startTimeStamp;
+
+      int hours = durationInSeconds ~/ 3600;
+      int minutes = (durationInSeconds % 3600) ~/ 60;
+
+      String hourText = hours > 0 ? '${hours}小时' : '';
+      String minuteText = minutes > 0 ? '${minutes}分钟' : '';
+
+      if (hours == 0 && minutes == 0) {
+        return "不足1分钟";
+      }
+
+      return '$hourText$minuteText';
+    } catch (e) {
+      print('格式化开播时长出错: $e');
+      return "--小时--分钟";
     }
   }
 }

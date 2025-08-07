@@ -181,10 +181,20 @@ class FollowService extends GetxService {
   Future updateLiveStatus(FollowUser item) async {
     try {
       var site = Sites.allSites[item.siteId]!;
-      item.liveStatus.value =
-          (await site.liveSite.getLiveStatus(roomId: item.roomId)) ? 2 : 1;
+      // 先只查状态
+      var isLiving = await site.liveSite.getLiveStatus(roomId: item.roomId);
+      item.liveStatus.value = isLiving ? 2 : 1;
+      if (item.liveStatus.value == 2) {
+        // 只有正在直播时才查详细信息
+        var detail = await site.liveSite.getRoomDetail(roomId: item.roomId);
+        item.liveStartTime = detail.showTime;
+      } else {
+        item.liveStartTime = null;
+      }
     } catch (e) {
       Log.logPrint(e);
+      item.liveStatus.value = 0;
+      item.liveStartTime = null;
     } finally {
       updatedCount++;
       if (updatedCount >= followList.length) {

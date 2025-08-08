@@ -102,6 +102,12 @@ class FollowUserController extends BasePageController<FollowUser> {
     if (!result) {
       return;
     }
+    // 取消关注同时删除标签内的 userId
+    if(item.tag != "全部"){
+      var tag = tagList.firstWhere((tag) => tag.tag == item.tag);
+      tag.userId.remove(item.id);
+      updateTag(tag);
+    }
     await DBService.instance.followBox.delete(item.id);
     refreshData();
   }

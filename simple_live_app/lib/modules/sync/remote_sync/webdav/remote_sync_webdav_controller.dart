@@ -263,7 +263,6 @@ class RemoteSyncWebDAVController extends BaseController {
             var user = FollowUser.fromJson(item);
             await DBService.instance.followBox.put(user.id, user);
           }
-          EventBus.instance.emit(Constant.kUpdateFollow, 0);
           Log.i('已同步关注用户列表');
         } catch (e) {
           Log.e('同步关注用户列表失败: $e', StackTrace.current);
@@ -299,21 +298,6 @@ class RemoteSyncWebDAVController extends BaseController {
         } catch (e) {
           Log.e('同步哔哩哔哩账号失败：$e',StackTrace.current);
         }
-      } else if (file.name == _userTagsJsonName) {
-        try {
-          // 清空本地标签列表
-          await DBService.instance.tagBox.clear();
-          for (var item in jsonData) {
-            var tag = FollowUserTag.fromJson(item);
-            await DBService.instance.tagBox.put(tag.id, tag);
-            // 插入之后验证
-            var insertedTag = DBService.instance.tagBox.get(tag.id);
-            Log.i('Inserted tag: ${insertedTag?.tag}');
-          }
-          Log.i('已同步用户自定义标签');
-        } catch (e) {
-          Log.e('同步用户自定义标签失败:$e',StackTrace.current);
-        }
       } else if (file.name == _userSettingsJsonName) {
         try{
           await LocalStorageService.instance.settingsBox.clear();
@@ -335,6 +319,8 @@ class RemoteSyncWebDAVController extends BaseController {
             Log.i('Inserted tag: ${insertedTag?.tag}');
           }
           Log.i('已同步用户自定义标签');
+          // 确保tag同步完成后，更新关注列表
+          EventBus.instance.emit(Constant.kUpdateFollow, 0);
         } catch (e) {
           Log.e('同步用户自定义标签失败:$e',StackTrace.current);
         }

@@ -338,7 +338,7 @@ class DouyuSite implements LiveSite {
     try{
       var did = '10000000000000000000000000001501';
       JsEngine.init();
-      JsEvalResult jsEvalResult = await JsEngine.jsRuntime.evaluate("$html;ub98484234();");
+      JsEvalResult jsEvalResult = JsEngine.jsRuntime.evaluate("$html;ub98484234();");
       var res = jsEvalResult.stringResult;
       String t10 = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
       RegExp vReg = RegExp(r'v=(\d+)');

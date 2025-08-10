@@ -235,6 +235,8 @@ class DouyinDanmaku implements LiveDanmaku {
     } catch (e) {
       CoreLog.error(e);
       return "";
+    } finally {
+      JsEngine.dispose();
     }
   }
 }

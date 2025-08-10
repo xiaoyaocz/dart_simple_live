@@ -19,4 +19,8 @@ class JsEngine {
     final jsCode = await rootBundle.loadString(path);
     jsRuntime.evaluate(jsCode);
   }
+
+  static void dispose() {
+    _jsRuntime?.dispose();
+  }
 }

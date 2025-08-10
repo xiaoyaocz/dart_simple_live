@@ -1,26 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_js/flutter_js.dart';
+import 'package:html_unescape/html_unescape.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/common/js_engine.dart';
-import 'package:simple_live_core/src/danmaku/douyu_danmaku.dart';
-import 'package:simple_live_core/src/interface/live_danmaku.dart';
-import 'package:simple_live_core/src/interface/live_site.dart';
-import 'package:simple_live_core/src/model/live_anchor_item.dart';
-import 'package:simple_live_core/src/model/live_category.dart';
-import 'package:simple_live_core/src/model/live_message.dart';
-import 'package:simple_live_core/src/model/live_play_url.dart';
-import 'package:simple_live_core/src/model/live_room_item.dart';
-import 'package:simple_live_core/src/model/live_search_result.dart';
-import 'package:simple_live_core/src/model/live_room_detail.dart';
-import 'package:simple_live_core/src/model/live_play_quality.dart';
-import 'package:simple_live_core/src/model/live_category_result.dart';
-import 'package:html_unescape/html_unescape.dart';
 
 class DouyuSite implements LiveSite {
   @override
@@ -354,6 +341,8 @@ class DouyuSite implements LiveSite {
     }catch(e){
       CoreLog.error(e);
       return "";
+    } finally{
+      JsEngine.dispose();
     }
     // 自部署：https://github.com/SlotSun/simple_live_api
   }

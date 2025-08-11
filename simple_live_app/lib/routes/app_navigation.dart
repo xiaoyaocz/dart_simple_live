@@ -12,6 +12,7 @@ import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_app/models/db/follow_user.dart';
 
 /// APP页面跳转封装
 /// * 需要参数的页面都应使用此类
@@ -74,5 +75,10 @@ class AppNavigator {
         "info": info,
       },
     );
+  }
+
+  /// 跳转至关注用户信息详情
+  static void toFollowInfo(FollowUser follow) {
+    Get.toNamed(RoutePath.kFollowInfo, arguments: follow);
   }
 }

@@ -128,7 +128,7 @@ class FollowUserPage extends GetView<FollowUserController> {
               children: [
                 Expanded(
                   child: Obx(
-                        () => SingleChildScrollView(
+                    () => SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Wrap(
                           spacing: 12,
@@ -167,7 +167,32 @@ class FollowUserPage extends GetView<FollowUserController> {
                         site: site, roomId: item.roomId);
                   },
                   onLongPress: () {
-                    setFollowTagDialog(item);
+                    // 长按弹出操作：设置标签或查看详情
+                    Get.bottomSheet(
+                      SafeArea(
+                        child: Wrap(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Remix.price_tag_3_line),
+                              title: const Text('设置标签'),
+                              onTap: () {
+                                Get.back();
+                                setFollowTagDialog(item);
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Remix.information_line),
+                              title: const Text('查看详情'),
+                              onTap: () {
+                                Get.back();
+                                AppNavigator.toFollowInfo(item);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      backgroundColor: Theme.of(context).cardColor,
+                    );
                   },
                 );
               },
@@ -294,21 +319,21 @@ class FollowUserPage extends GetView<FollowUserController> {
                     // 偏移
                     FollowUserTag item = controller.userTagList[index];
                     return ListTile(
-                        key: ValueKey(item.id),
-                        title: GestureDetector(
-                          child: Text(item.tag),
-                          onLongPress: () {
-                            {
-                              editTagDialog("修改标签", followUserTag: item);
-                            }
-                          },
-                        ),
-                        leading: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            controller.removeTag(item);
-                          },
-                        ),
+                      key: ValueKey(item.id),
+                      title: GestureDetector(
+                        child: Text(item.tag),
+                        onLongPress: () {
+                          {
+                            editTagDialog("修改标签", followUserTag: item);
+                          }
+                        },
+                      ),
+                      leading: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          controller.removeTag(item);
+                        },
+                      ),
                       trailing: ReorderableDelayedDragStartListener(
                         index: index,
                         child: const Padding(

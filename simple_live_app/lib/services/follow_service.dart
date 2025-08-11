@@ -85,7 +85,7 @@ class FollowService extends GetxService {
     followTagList.add(item);
   }
 
-  Future delFollowUserTag(FollowUserTag tag) async{
+  Future delFollowUserTag(FollowUserTag tag) async {
     followTagList.remove(tag);
     await DBService.instance.deleteFollowTag(tag.id);
   }
@@ -94,6 +94,54 @@ class FollowService extends GetxService {
   void getAllTagList() {
     var list = DBService.instance.getFollowTagList();
     followTagList.assignAll(list);
+  }
+
+  /// 获取包含“全部”的标签选项列表
+  List<FollowUserTag> getTagOptionsWithAll() {
+    return [
+      FollowUserTag(id: '0', tag: '全部', userId: []),
+      ...followTagList,
+    ];
+  }
+
+  /// 为关注项设置标签（统一逻辑）
+  void setItemTag(FollowUser item, FollowUserTag targetTag) {
+    // 当前标签对象（可能为“全部”且不在 followTagList 中）
+    FollowUserTag? currentTag;
+    if (item.tag != '全部') {
+      for (final t in followTagList) {
+        if (t.tag == item.tag) {
+          currentTag = t;
+          break;
+        }
+      }
+    }
+
+    // 从旧标签移除
+    if (currentTag != null) {
+      currentTag.userId.remove(item.id);
+      DBService.instance.updateFollowTag(currentTag);
+    }
+
+    // 添加到新标签（跳过“全部”）
+    if (targetTag.tag != '全部') {
+      // targetTag来源于UI选项，需定位真实对象
+      FollowUserTag? tar;
+      for (final t in followTagList) {
+        if (t.tag == targetTag.tag) {
+          tar = t;
+          break;
+        }
+      }
+      if (tar != null) {
+        tar.userId.addIf(!tar.userId.contains(item.id), item.id);
+        DBService.instance.updateFollowTag(tar);
+      }
+    }
+
+    // 更新FollowUser本身
+    item.tag = targetTag.tag;
+    addFollow(item);
   }
 
   void filterDataByTag(FollowUserTag tag) {
@@ -140,9 +188,10 @@ class FollowService extends GetxService {
   }
 
   // 更新关注的历史记录
-  void updateFollow(History history){
-    var follow = followList.where((follow)=>follow.id == history.id).firstOrNull;
-    if(follow == null){
+  void updateFollow(History history) {
+    var follow =
+        followList.where((follow) => follow.id == history.id).firstOrNull;
+    if (follow == null) {
       return;
     } else {
       follow.watchDuration = history.watchDuration;
@@ -229,12 +278,16 @@ class FollowService extends GetxService {
   }
 
   void filterData() {
-    followList.sort((a, b) {
-      if(a.liveStatus.value != b.liveStatus.value){
-        return b.liveStatus.value.compareTo(a.liveStatus.value);
-      }
-      return b.watchDuration!.toDuration().compareTo(a.watchDuration!.toDuration());
-    },);
+    followList.sort(
+      (a, b) {
+        if (a.liveStatus.value != b.liveStatus.value) {
+          return b.liveStatus.value.compareTo(a.liveStatus.value);
+        }
+        return b.watchDuration!
+            .toDuration()
+            .compareTo(a.watchDuration!.toDuration());
+      },
+    );
     liveList.assignAll(followList.where((x) => x.liveStatus.value == 2));
     notLiveList.assignAll(followList.where((x) => x.liveStatus.value == 1));
     _updatedListController.add(0);

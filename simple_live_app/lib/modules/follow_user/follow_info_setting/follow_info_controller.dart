@@ -41,13 +41,8 @@ class FollowInfoController extends BasePageController<FollowUser> {
   }
 
   void _initTagOptions() {
-    // 第一项固定为“全部”，其余来自用户自定义标签
-    final List<FollowUserTag> userTags =
-        FollowService.instance.followTagList.toList();
-    final List<FollowUserTag> options = [
-      FollowUserTag(id: '0', tag: '全部', userId: []),
-      ...userTags,
-    ];
+    final List<FollowUserTag> options =
+        FollowService.instance.getTagOptionsWithAll();
     tagOptions.assignAll(options);
 
     // 设置选中项
@@ -79,40 +74,9 @@ class FollowInfoController extends BasePageController<FollowUser> {
   void changeTag(FollowUserTag newTag) {
     final current = followUser.value;
     if (current == null) return;
-
-    // 更新标签归属列表
-    try {
-      final FollowUserTag targetTag = newTag;
-      FollowUserTag? currentTag;
-      for (final t in tagOptions) {
-        if (t.tag == current.tag) {
-          currentTag = t;
-          break;
-        }
-      }
-
-      if (currentTag != null) {
-        currentTag.userId.remove(current.id);
-        _updateTagIfNeeded(currentTag);
-      }
-
-      targetTag.userId
-          .addIf(!targetTag.userId.contains(current.id), current.id);
-      _updateTagIfNeeded(targetTag);
-
-      // 更新 FollowUser 的 tag
-      current.tag = targetTag.tag;
-      FollowService.instance.addFollow(current);
-
-      // 更新本页 UI
-      selectedTag.value = targetTag;
-      followUser.refresh();
-    } catch (_) {}
-  }
-
-  void _updateTagIfNeeded(FollowUserTag tag) {
-    if (tag.tag == '全部') return;
-    FollowService.instance.updateFollowUserTag(tag);
+    FollowService.instance.setItemTag(current, newTag);
+    selectedTag.value = newTag;
+    followUser.refresh();
   }
 
   Future<void> pasteFromClipboard() async {

@@ -64,6 +64,7 @@ class DouyinAccountService extends GetxService {
     LocalStorageService.instance
         .setValue(LocalStorageService.kDouyinCookie, "");
     logined.value = false;
+    name.value = "未登录";
     _setSite();
   }
 }

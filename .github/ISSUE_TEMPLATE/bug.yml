@@ -1,17 +1,19 @@
 name: BUG报告
 title: "[BUG] 请填写简短易读的标题"
 description: "使用过程中遇到了BUG"
-assignees: xiaoyaocz
+assignees: SlotSun
 labels:
   - "bug"
 body:
   - type: checkboxes
     id: terms
     attributes:
-      label: 非重复的Issue
-      description: 先去Issues列表中查找下是否存在相似的Issue，如果有了就不要重复发了
+      label: 提交前确认
+      description: 在提交前，请确认以下内容
       options:
-        - label: 已确认没有相似的Issue
+        - label: 先去Issues列表中查找下是否存在相似的Issue，如果有了就不要重复发了
+          required: true
+        - label: 我正在使用最新版本的 simple-live
           required: true
 
   - type: textarea
@@ -49,25 +51,17 @@ body:
       placeholder: |
         可以在[其他设置]-[开启日志记录]后获取日志文件
  
-  - type: input
-    id: version
-    attributes:
-      label: 版本号
-      description: 请填写你使用的APP版本号
-      placeholder: ex. 1.0.1
-    validations:
-      required: true
- 
   - type: dropdown
     id: release-type
     validations:
       required: true
     attributes:
-      label: 使用版本
+      label: 使用版本来源
       description: 使用的是什么版本，从哪里下载的
       options:
         - 正式版(Releases)
         - 开发版(Actions)
+        - 上游仓库(xiaoyaocz)
       default: 0
 
   - type: dropdown

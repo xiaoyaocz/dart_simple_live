@@ -1,7 +1,7 @@
 name: 功能请求
 title: "[Feature] 请填写简短易读的标题"
 description: "请求开发新的功能/优化某项功能"
-assignees: xiaoyaocz
+assignees: SlotSun
 labels:
   - "enhancement"
 body:

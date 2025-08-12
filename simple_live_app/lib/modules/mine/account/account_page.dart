@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/mine/account/account_controller.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
+import 'package:simple_live_app/services/douyin_account_service.dart';
 
 class AccountPage extends GetView<AccountController> {
   const AccountPage({Key? key}) : super(key: key);
@@ -59,16 +60,20 @@ class AccountPage extends GetView<AccountController> {
             enabled: false,
             trailing: const Icon(Icons.chevron_right),
           ),
-          ListTile(
-            leading: Image.asset(
-              'assets/images/douyin.png',
-              width: 36,
-              height: 36,
+          Obx(
+            () => ListTile(
+              leading: Image.asset(
+                'assets/images/douyin.png',
+                width: 36,
+                height: 36,
+              ),
+              title: const Text("抖音直播"),
+              subtitle: Text(DouyinAccountService.instance.name.value),
+              trailing: DouyinAccountService.instance.logined.value
+                  ? const Icon(Icons.logout)
+                  : const Icon(Icons.chevron_right),
+              onTap: controller.douyinTap,
             ),
-            title: const Text("抖音直播"),
-            subtitle: const Text("无需登录"),
-            enabled: false,
-            trailing: const Icon(Icons.chevron_right),
           ),
         ],
       ),

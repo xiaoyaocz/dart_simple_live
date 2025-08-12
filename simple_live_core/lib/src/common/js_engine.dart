@@ -15,6 +15,10 @@ class JsEngine {
     return jsRuntime.evaluateAsync(code);
   }
 
+  static JsEvalResult evaluate(String code) {
+    return jsRuntime.evaluate(code);
+  }
+
   static Future<void> loadJSFile(String path) async {
     final jsCode = await rootBundle.loadString(path);
     jsRuntime.evaluate(jsCode);

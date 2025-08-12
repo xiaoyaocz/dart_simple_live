@@ -5,7 +5,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 
-mixin DouyinRequestParams{
+mixin DouyinRequestParams {
   static const String kDefaultUserAgent =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0";
   static const AID_VALUE = "6383";
@@ -22,7 +22,6 @@ class DouyinSite implements LiveSite {
 
   @override
   LiveDanmaku getDanmaku() => DouyinDanmaku();
-
 
   static const String kDefaultReferer = "https://live.douyin.com";
 
@@ -52,6 +51,36 @@ class DouyinSite implements LiveSite {
       CoreLog.error(e);
       return headers;
     }
+  }
+
+  /// 通过 Cookie 获取当前登录用户信息
+  /// 成功返回 data(Map)，失败返回空 Map
+  Future<Map<String, dynamic>> getUserInfoByCookie(String cookie) async {
+    try {
+      final url = "https://live.douyin.com/webcast/user/me/";
+      final result = await HttpClient.instance.getJson(
+        url,
+        queryParameters: {
+          "aid": DouyinRequestParams.AID_VALUE,
+        },
+        header: {
+          "user-agent": DouyinRequestParams.kDefaultUserAgent,
+          'accept': 'application/json, text/plain, */*',
+          'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          "Cookie": cookie,
+        },
+      );
+      if (result is Map<String, dynamic>) {
+        final data = result["data"];
+        if (data is Map<String, dynamic>) {
+          return data;
+        }
+      }
+      return {};
+    } catch (e) {
+      CoreLog.error(e);
+    }
+    return {};
   }
 
   @override

@@ -93,6 +93,8 @@ class AccountController extends GetxController {
       );
       if (cookie == null || cookie.isEmpty) return;
       DouyinAccountService.instance.setCookie(cookie);
+      // 检查输入的cookie是否有效
+      await DouyinAccountService.instance.loadUserInfo();
     }
   }
 }

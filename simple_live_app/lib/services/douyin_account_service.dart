@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
@@ -56,15 +59,18 @@ class DouyinAccountService extends GetxService {
     this.cookie = cookie;
     LocalStorageService.instance
         .setValue(LocalStorageService.kDouyinCookie, cookie);
-    _setSite();
   }
 
-  void logout() {
+  void logout() async {
     cookie = "";
     LocalStorageService.instance
         .setValue(LocalStorageService.kDouyinCookie, "");
     logined.value = false;
     name.value = "未登录";
     _setSite();
+    if (Platform.isAndroid || Platform.isIOS) {
+      CookieManager cookieManager = CookieManager.instance();
+      await cookieManager.deleteAllCookies();
+    }
   }
 }

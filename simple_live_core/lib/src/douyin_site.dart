@@ -141,7 +141,7 @@ class DouyinSite implements LiveSite {
     var partitionId = ids[0];
     var partitionType = ids[1];
     var result = await HttpClient.instance.getJson(
-      "https://live.douyin.com/webcast/web/partition/detail/room/",
+      "https://live.douyin.com/webcast/web/partition/detail/room/v2/",
       queryParameters: {
         "aid": 6383,
         "app_name": "douyin_web",
@@ -176,30 +176,30 @@ class DouyinSite implements LiveSite {
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
     var result = await HttpClient.instance.getJson(
-      "https://live.douyin.com/webcast/web/partition/detail/room/",
+      "https://live.douyin.com/webcast/feed/",
       queryParameters: {
-        "aid": 6383,
+        "aid": "6383",
         "app_name": "douyin_web",
-        "live_id": 1,
-        "device_platform": "web",
-        "count": 15,
-        "offset": (page - 1) * 15,
-        "partition": 720,
-        "partition_type": 1,
+        "need_map": "1",
+        "is_draw": "1",
+        "inner_from_drawer": "0",
+        "enter_source": "web_homepage_hot_web_live_card",
+        "source_key": "web_homepage_hot_web_live_card"
       },
       header: await getRequestHeaders(),
     );
 
-    var hasMore = (result["data"]["data"] as List).length >= 15;
+    var hasMore = (result["data"] as List).length >= 15;
     var items = <LiveRoomItem>[];
-    for (var item in result["data"]["data"]) {
+    for (var i in result["data"]) {
+      var item = i['data'];
       var roomItem = LiveRoomItem(
-        roomId: item["web_rid"],
-        title: item["room"]["title"].toString(),
-        cover: item["room"]["cover"]["url_list"][0].toString(),
-        userName: item["room"]["owner"]["nickname"].toString(),
+        roomId: item["owner"]["web_rid"],
+        title: item["title"].toString(),
+        cover: item["cover"]["url_list"][0].toString(),
+        userName: item["owner"]["nickname"].toString(),
         online: int.tryParse(
-                item["room"]["room_view_stats"]["display_value"].toString()) ??
+                item["room_view_stats"]["display_value"].toString()) ??
             0,
       );
       items.add(roomItem);

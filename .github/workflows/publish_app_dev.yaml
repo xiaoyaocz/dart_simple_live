@@ -70,6 +70,12 @@ jobs:
           dart pub global activate melos
           melos run activate
 
+      # 设置 xcode-version
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       # 打包APK
       - name: Build APK
         run: |

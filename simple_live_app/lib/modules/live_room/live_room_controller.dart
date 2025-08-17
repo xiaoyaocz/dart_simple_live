@@ -317,6 +317,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       getSuperChatMessage();
 
       addHistory();
+      // 确认房间关注状态
+      followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status || detail.value!.isRecord;
       if (liveStatus.value) {

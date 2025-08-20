@@ -92,12 +92,11 @@ class DouyinDanmaku implements LiveDanmaku {
 
     var url = "$uri&signature=$sign";
     var backupUrl = url.replaceAll("webcast3-ws-web-lq", "webcast5-ws-web-lf");
-    print(url);
     webScoketUtils = WebScoketUtils(
       url: url,
       backupUrl: backupUrl,
       headers: {
-        "User-Agnet": DouyinRequestParams.kDefaultUserAgent,
+        "User-Agent": DouyinRequestParams.kDefaultUserAgent,
         "Cookie": danmakuArgs.cookie,
         "Origin": "https://live.douyin.com"
       },
@@ -230,7 +229,8 @@ class DouyinDanmaku implements LiveDanmaku {
           .map((entry) => '${entry.key}=${entry.value}')
           .join(',');
       var md5SigParam = md5.convert(utf8.encode(sigParam)).toString();
-      JsEvalResult jsEvalResult = JsEngine.jsRuntime.evaluate("get_sign('$md5SigParam')");
+      JsEvalResult jsEvalResult =
+          await JsEngine.evaluateAsync("get_sign('$md5SigParam')"); // 异步执行
       return jsEvalResult.stringResult;
     } catch (e) {
       CoreLog.error(e);

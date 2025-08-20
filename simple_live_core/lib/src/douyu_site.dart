@@ -325,7 +325,8 @@ class DouyuSite implements LiveSite {
     try{
       var did = '10000000000000000000000000001501';
       JsEngine.init();
-      JsEvalResult jsEvalResult = JsEngine.jsRuntime.evaluate("$html;ub98484234();");
+      JsEvalResult jsEvalResult =
+          await JsEngine.evaluateAsync("$html;ub98484234();");
       var res = jsEvalResult.stringResult;
       String t10 = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
       RegExp vReg = RegExp(r'v=(\d+)');
@@ -336,9 +337,12 @@ class DouyuSite implements LiveSite {
           .replaceAll(RegExp(r'return rt;}\);?'), 'return rt;}')
           .replaceAll('(function (', 'function sign(')
           .replaceAll('CryptoJS.MD5(cb).toString()', '"$rb"');
-      final params = JsEngine.jsRuntime.evaluate("$jsSign;sign($rid,'$did',$t10);").stringResult;
-      return params;
-    }catch(e){
+
+      final params =
+          await JsEngine.evaluateAsync("$jsSign;sign($rid,'$did',$t10);");
+
+      return params.stringResult;
+    } catch (e) {
       CoreLog.error(e);
       return "";
     } finally{

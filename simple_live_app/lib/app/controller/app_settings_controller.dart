@@ -123,7 +123,7 @@ class AppSettingsController extends GetxController {
 
     videoOutputDriver.value = LocalStorageService.instance.getValue(
       LocalStorageService.kVideoOutputDriver,
-      Platform.isAndroid ? "gpu" : "libmpv",
+      Platform.isAndroid ? "mediacodec_embed" : "libmpv",
     );
 
     audioOutputDriver.value = LocalStorageService.instance.getValue(
@@ -133,7 +133,7 @@ class AppSettingsController extends GetxController {
 
     videoHardwareDecoder.value = LocalStorageService.instance.getValue(
       LocalStorageService.kVideoHardwareDecoder,
-      Platform.isAndroid ? "auto-safe" : "auto",
+      Platform.isAndroid ? "mediacodec" : "auto",
     );
 
     autoUpdateFollowEnable.value = LocalStorageService.instance

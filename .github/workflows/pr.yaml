@@ -1,0 +1,141 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build-mac-ios-android:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Restore packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install appdmg
+        run: npm install -g appdmg
+
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build APK
+        run: |
+          cd simple_live_app
+          flutter build apk
+
+      - name: Build IPA
+        run: |
+          cd simple_live_app
+          flutter build ios --no-codesign
+
+      - name: Build MacOS
+        run: |
+          cd simple_live_app
+          fastforge package --platform macos --targets dmg,zip --skip-clean
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.0"
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev mpv libasound2-dev
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
+
+      - name: Build Linux
+        run: |
+          cd simple_live_app
+          fastforge package --platform linux --targets deb,zip --skip-clean
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.0"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter clean
+          flutter pub get
+
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
+
+      - name: Build Windows
+        run: |
+          cd simple_live_app
+          fastforge package --platform windows --targets msix,zip --skip-clean

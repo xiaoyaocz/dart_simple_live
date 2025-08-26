@@ -103,6 +103,7 @@ https://b23.tv/xxxxx
 https://www.huya.com/xxxxx
 斗鱼直播：
 https://www.douyu.com/xxxxx
+https://www.douyu.com/topic/xxxx
 抖音直播：
 https://v.douyin.com/xxxxx
 https://live.douyin.com/xxxxx

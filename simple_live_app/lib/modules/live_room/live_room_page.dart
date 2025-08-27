@@ -234,7 +234,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ],
           ),
         ),
-        //buildBottomActions(context),
       ],
     );
   }

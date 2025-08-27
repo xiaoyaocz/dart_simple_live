@@ -78,6 +78,7 @@ dependencies:
 
 dependency_overrides: 
   screen_brightness: ^2.1.2
+  screen_brightness_android: 2.1.2
 
 dev_dependencies: 
   flutter_lints: ^2.0.0

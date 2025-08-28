@@ -6,7 +6,7 @@ on:
     tags:
       - "v*"
 jobs:
-  build-mac-ios-android:
+  build-android:
     runs-on: macos-latest
     permissions:
       contents: write
@@ -44,23 +44,11 @@ jobs:
           flutter-version: '3.32.0'
           cache: true
 
-      # 打开MAC Desktop支持
-      - name: Enable Flutter Desktop
-        run: flutter config --enable-macos-desktop
-
       #更新Flutter的packages
       - name: Restore packages
         run: |
           cd simple_live_app
           flutter pub get
-
-      # 安装appdmg npm install -g appdmg
-      - name: Install appdmg
-        run: npm install -g appdmg
-
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
 
       #打包APK
       - name: Build APK
@@ -77,45 +65,6 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-
-      #打包iOS
-      - name: Build IPA
-        run: |
-          cd simple_live_app
-          flutter build ios --release --no-codesign
-
-      #创建未签名ipa
-      - name: Create IPA
-        run: |
-          cd simple_live_app
-          mkdir build/ios/iphoneos/Payload
-          cp -R build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/Runner.app
-          cd build/ios/iphoneos/
-          zip -q -r ios_no_sign.ipa Payload
-          cd ../../..
-
-      #上传IPA至Artifacts
-      - name: Upload IPA to Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios
-          path: |
-            simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
-
-      # 打包MAC
-      - name: Build MacOS
-        run: |
-          cd simple_live_app
-          flutter_distributor package --platform macos --targets dmg,zip --skip-clean
-
-      # 上传MAC至Artifacts
-      - name: Upload MacOS to Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mac
-          path: |
-            simple_live_app/build/dist/*/*.dmg
-            simple_live_app/build/dist/*/*.zip
 
       #读取版本信息
       - name: Read version
@@ -140,9 +89,6 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
-            simple_live_app/build/dist/*/*.dmg
-            simple_live_app/build/dist/*/*.zip
       #完成
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
@@ -179,14 +125,18 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+      # 设置fast-forge环境
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
       # build Linux ZIP\DMG
       - name: Build Linux
         run: |
           cd simple_live_app
-          flutter_distributor package --platform linux --targets deb,zip --skip-clean
+          fastforge package --platform linux --targets deb,zip --skip-clean
       # 上传Linux包至Artifacts
       - name: Upload Linux APP to Artifacts
         uses: actions/upload-artifact@v4
@@ -247,14 +197,18 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
-      # 设置flutter_distributor环境
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
+      # 设置fast-forge环境
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
       # build Windows ZIP\MSIX
       - name: Build Windows
         run: |
           cd simple_live_app
-          flutter_distributor package --platform windows --targets msix,zip --skip-clean
+          fastforge package --platform windows --targets msix,zip --skip-clean
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4

@@ -1,7 +1,7 @@
 {
-    "version": "1.7.15",
-    "version_num": 10715,
-    "version_desc": "- fix douyin and huya \n- use flutter_js get sign instead api \n- fix some bug \n- ensure availability on Android and Windows",
-    "prerelease":true,
+    "version": "1.7.16",
+    "version_num": 10716,
+    "version_desc": "- chore: 调整webdav的逻辑\n- fix: 修复直播间关注状态更新问题\n- fix(douyin-site): 修复接口\n- feat(account): 添加cookie有效性检查与登出时清除cookie\n- feat: 允许用户手动添加抖音cookie\n- fix(player): 全屏切换 @GH4NG\n- feat: 实现关注用户信息设置与迁移功能 \n- fix：其他一些小的逻辑优化和代码优化 \n tips: ios和macos用户请到dev-ios分支更新或者下载上游仓库版本",
+    "prerelease":false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

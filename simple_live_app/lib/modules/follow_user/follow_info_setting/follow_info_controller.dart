@@ -11,6 +11,7 @@ import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class FollowInfoController extends BasePageController<FollowUser> {
   final Rxn<FollowUser> followUser = Rxn<FollowUser>();
@@ -103,8 +104,10 @@ class FollowInfoController extends BasePageController<FollowUser> {
     final current = followUser.value;
     if (current == null) return;
 
-    if (current.siteId == newSite.id && current.roomId == newRoomId) {
-      SmartDialog.showToast('与当前信息相同，无需迁移');
+    // 防呆
+    bool contain = DBService.instance.getFollowExist("${newSite.id}_$newRoomId");
+    if (contain == true) {
+      SmartDialog.showToast('目标主播已关注，无需迁移');
       return;
     }
 
@@ -138,17 +141,27 @@ class FollowInfoController extends BasePageController<FollowUser> {
     SmartDialog.showToast('迁移成功');
   }
 
+  @override
+  Future<void> refreshData() async{
+    pageLoadding.value = true;
+    var site = Sites.allSites[followUser.value?.siteId]!;
+    await _migrateTo(site, followUser.value!.roomId);
+    pageLoadding.value = false;
+    SmartDialog.showToast('已刷新用户信息');
+  }
+
   Future<void> _migrateTo(Site targetSite, String targetRoomId) async {
     final current = followUser.value;
     if (current == null) return;
-
+    // 获取目标直播间详细信息 用于更新主播名和头像
+    LiveRoomDetail detail = await targetSite.liveSite.getRoomDetail(roomId: targetRoomId);
     // 复制并更新关键信息
     final FollowUser newFollow = FollowUser(
       id: '${targetSite.id}_$targetRoomId',
       roomId: targetRoomId,
       siteId: targetSite.id,
-      userName: current.userName,
-      face: current.face,
+      userName: detail.userName,
+      face: detail.userAvatar,
       addTime: current.addTime,
       watchDuration: current.watchDuration,
       tag: current.tag,
@@ -164,9 +177,9 @@ class FollowInfoController extends BasePageController<FollowUser> {
         }
       }
       if (tagObj != null) {
+        // 自刷新和迁移逻辑一致：删旧增新
         tagObj.userId.remove(current.id);
-        tagObj.userId
-            .addIf(!tagObj.userId.contains(newFollow.id), newFollow.id);
+        tagObj.userId.add( newFollow.id);
         FollowService.instance.updateFollowUserTag(tagObj);
       }
     }

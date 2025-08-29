@@ -14,6 +14,27 @@ class FolloInfoPage extends GetView<FollowInfoController> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("关注信息设置"),
+        actions: [
+          Obx(
+            () => controller.pageLoadding.value
+                ? const IconButton(
+                    onPressed: null,
+                    icon: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    onPressed: () {
+                      controller.refreshData();
+                    },
+                    icon: const Icon(Icons.refresh),
+                  ),
+          ),
+        ],
       ),
       body: Obx(() {
         final follow = controller.followUser.value;

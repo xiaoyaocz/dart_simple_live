@@ -1,11 +1,11 @@
 name: simple_live_app
-version: 1.9.1+10901
+version: 1.9.2+10902
 publish_to: none
 description: "Simple Live APP"
-environment: 
-  sdk: '>=3.0.5 <4.0.0'
+environment:
+  sdk: ">=3.0.5 <4.0.0"
 
-dependencies: 
+dependencies:
   simple_live_core:
     path: ../simple_live_core
   # 图标
@@ -35,10 +35,9 @@ dependencies:
   sticky_headers: ^0.3.0+2 #吸顶
   lottie: ^1.4.3 #lottie动画
   ns_danmaku: #弹幕
-    git: 
-        url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
-        tag: v0.0.9
-
+    git:
+      url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
+      tag: v0.0.9
 
   #系统交互
   package_info_plus: ^8.3.0 #包信息
@@ -59,9 +58,9 @@ dependencies:
   connectivity_plus: ^6.1.3 #网络状态
   qr_code_scanner: ^1.0.1 #二维码扫描
   volume_controller: ^2.0.7 #音量控制
-  
+
   # 网络相关
-  shelf: ^1.4.1 
+  shelf: ^1.4.1
   shelf_router: ^1.1.4
   network_info_plus: ^6.1.3
   signalr_netcore: ^1.3.9 #SignalR
@@ -71,20 +70,21 @@ dependencies:
   media_kit_video: 1.2.5
   media_kit_libs_video: 1.0.5
 
-  flutter: 
+  flutter:
     sdk: flutter
-  flutter_localizations: 
+  flutter_localizations:
     sdk: flutter
 
-dependency_overrides: 
+dependency_overrides:
   screen_brightness: ^2.1.2
+  screen_brightness_android: 2.1.2
 
-dev_dependencies: 
+dev_dependencies:
   flutter_lints: ^2.0.0
   build_runner: ^2.3.3
   hive_generator: ^2.0.0
   flutter_launcher_icons: ^0.13.1
-  flutter_test: 
+  flutter_test:
     sdk: flutter
 
 flutter_launcher_icons:
@@ -95,11 +95,10 @@ flutter_launcher_icons:
   macos:
     generate: true
 
-flutter: 
+flutter:
   uses-material-design: true
-  assets: 
+  assets:
     - assets/statement.txt
     - assets/images/
     - assets/icons/
     - assets/lotties/
-

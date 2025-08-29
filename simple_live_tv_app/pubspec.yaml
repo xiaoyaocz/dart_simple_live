@@ -1,10 +1,10 @@
 name: simple_live_tv_app
 description: A new Flutter project.
-publish_to: 'none'
-version: 1.3.9+10309
+publish_to: "none"
+version: 1.4.1+10401
 
 environment:
-  sdk: '>=3.1.2 <4.0.0'
+  sdk: ">=3.1.2 <4.0.0"
 
 dependencies:
   flutter:
@@ -35,26 +35,26 @@ dependencies:
   qr_flutter: ^4.1.0 #二维码
   sticky_headers: ^0.3.0+2 #吸顶
   ns_danmaku: #弹幕
-    git: 
-        url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
-        tag: v0.0.9
+    git:
+      url: https://github.com/xiaoyaocz/flutter_ns_danmaku.git
+      tag: v0.0.9
 
   #系统交互
   package_info_plus: ^8.0.0 #包信息
   url_launcher: ^6.2.5 #打开链接
   network_info_plus: ^4.1.0+1
-  shelf: ^1.4.1 
-  shelf_router: ^1.1.4 
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
   udp: ^5.0.3 #UDP
   device_info_plus: ^9.1.2 #设备信息
   wakelock_plus: ^1.2.11 #屏幕常亮，media_kit中自带，但似乎不生效
-  
+
   # 视频播放
   media_kit: 1.1.11
   media_kit_video: 1.2.5
   media_kit_libs_video: 1.0.5
 
-dependency_overrides: 
+dependency_overrides:
   fading_edge_scrollview: ^4.1.1
   screen_brightness: ^2.1.2
 
@@ -66,7 +66,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets: 
+  assets:
     - assets/statement.txt
     - assets/images/
     - assets/icons/

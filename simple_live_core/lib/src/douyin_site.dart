@@ -105,19 +105,35 @@ class DouyinSite implements LiveSite {
     var ids = category.id.split(',');
     var partitionId = ids[0];
     var partitionType = ids[1];
+
+    String serverUrl =
+        "https://live.douyin.com/webcast/web/partition/detail/room/v2/";
+    var uri = Uri.parse(serverUrl)
+        .replace(scheme: "https", port: 443, queryParameters: {
+      "aid": '6383',
+      "app_name": "douyin_web",
+      "live_id": '1',
+      "device_platform": "web",
+      "language": "zh-CN",
+      "enter_from": "link_share",
+      "cookie_enabled": "true",
+      "screen_width": "1980",
+      "screen_height": "1080",
+      "browser_language": "zh-CN",
+      "browser_platform": "Win32",
+      "browser_name": "Edge",
+      "browser_version": "125.0.0.0",
+      "browser_online": "true",
+      "count": '15',
+      "offset": ((page - 1) * 15).toString(),
+      "partition": partitionId,
+      "partition_type": partitionType,
+      "req_from": '2'
+    });
+    var requestUrl = await getAbogusUrl(uri.toString());
+
     var result = await HttpClient.instance.getJson(
-      "https://live.douyin.com/webcast/web/partition/detail/room/",
-      queryParameters: {
-        "aid": 6383,
-        "app_name": "douyin_web",
-        "live_id": 1,
-        "device_platform": "web",
-        "count": 15,
-        "offset": (page - 1) * 15,
-        "partition": partitionId,
-        "partition_type": partitionType,
-        "req_from": 2
-      },
+      requestUrl,
       header: await getRequestHeaders(),
     );
 
@@ -140,18 +156,34 @@ class DouyinSite implements LiveSite {
 
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
+    String serverUrl =
+        "https://live.douyin.com/webcast/web/partition/detail/room/v2/";
+    var uri = Uri.parse(serverUrl)
+        .replace(scheme: "https", port: 443, queryParameters: {
+      "aid": '6383',
+      "app_name": "douyin_web",
+      "live_id": '1',
+      "device_platform": "web",
+      "language": "zh-CN",
+      "enter_from": "link_share",
+      "cookie_enabled": "true",
+      "screen_width": "1980",
+      "screen_height": "1080",
+      "browser_language": "zh-CN",
+      "browser_platform": "Win32",
+      "browser_name": "Edge",
+      "browser_version": "125.0.0.0",
+      "browser_online": "true",
+      "count": '15',
+      "offset": ((page - 1) * 15).toString(),
+      "partition": '720',
+      "partition_type": '1',
+      "req_from": '2'
+    });
+    var requestUrl = await getAbogusUrl(uri.toString());
+
     var result = await HttpClient.instance.getJson(
-      "https://live.douyin.com/webcast/web/partition/detail/room/",
-      queryParameters: {
-        "aid": 6383,
-        "app_name": "douyin_web",
-        "live_id": 1,
-        "device_platform": "web",
-        "count": 15,
-        "offset": (page - 1) * 15,
-        "partition": 720,
-        "partition_type": 1,
-      },
+      requestUrl,
       header: await getRequestHeaders(),
     );
 
@@ -413,30 +445,32 @@ class DouyinSite implements LiveSite {
   /// 通过webRid获取直播间Web信息
   /// - [webRid] 直播间RID
   Future<Map> _getRoomDataByApi(String webRid) async {
+    String serverUrl = "https://live.douyin.com/webcast/room/web/enter/";
+    var uri = Uri.parse(serverUrl)
+        .replace(scheme: "https", port: 443, queryParameters: {
+      "aid": '6383',
+      "app_name": "douyin_web",
+      "live_id": '1',
+      "device_platform": "web",
+      "enter_from": "web_live",
+      "web_rid": webRid,
+      "room_id_str": "",
+      "enter_source": "",
+      "Room-Enter-User-Login-Ab": '0',
+      "is_need_double_stream": 'false',
+      "cookie_enabled": 'true',
+      "screen_width": '1980',
+      "screen_height": '1080',
+      "browser_language": "zh-CN",
+      "browser_platform": "Win32",
+      "browser_name": "Edge",
+      "browser_version": "125.0.0.0"
+    });
+    var requestUrl = await getAbogusUrl(uri.toString());
+
     var requestHeader = await getRequestHeaders();
     var result = await HttpClient.instance.getJson(
-      "https://live.douyin.com/webcast/room/web/enter/",
-      //2025-08-02 dy_server checks the existence of the parameter "a_bogus" but doesn't check its value
-      queryParameters: {
-        "aid": 6383,
-        "app_name": "douyin_web",
-        "live_id": 1,
-        "device_platform": "web",
-        "enter_from": "web_live",
-        "web_rid": webRid,
-        "room_id_str": "",
-        "enter_source": "",
-        "Room-Enter-User-Login-Ab": 0,
-        "is_need_double_stream": false,
-        "cookie_enabled": true,
-        "screen_width": 1980,
-        "screen_height": 1080,
-        "browser_language": "zh-CN",
-        "browser_platform": "Win32",
-        "browser_name": "Edge",
-        "browser_version": "125.0.0.0",
-        "a_bogus": "0"
-      },
+      requestUrl,
       header: requestHeader,
     );
 

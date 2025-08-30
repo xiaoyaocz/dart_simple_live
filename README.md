@@ -35,9 +35,9 @@
 
 只保证Android和Windows可用性
 
-请到[Releases](https://github.com/xiaoyaocz/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
+请到[Releases](https://github.com/slotsun/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
 
-如果想体验最新功能，可前往[Actions](https://github.com/xiaoyaocz/dart_simple_live/actions)下载自动打包的开发版本
+如果想体验最新功能，可前往[Actions](https://github.com/slotsun/dart_simple_live/actions)下载自动打包的开发版本
 
 Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1TWG2G84VD)，体验会更好
 
@@ -66,8 +66,6 @@ flutter 3.32.0
 [BacooTang/huya-danmu](https://github.com/BacooTang/huya-danmu)
 
 [TarsCloud/Tars](https://github.com/TarsCloud/Tars)
-
-[YunzhiYike/douyin-live](https://github.com/YunzhiYike/douyin-live)
 
 [5ime/Tiktok_Signature](https://github.com/5ime/Tiktok_Signature)
 

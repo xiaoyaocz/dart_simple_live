@@ -1,16 +1,14 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:simple_live_app/app/constant.dart';
-import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/url_parse.dart';
 import 'package:simple_live_app/models/db/follow_user.dart' show FollowUser;
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
-import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class FollowInfoController extends BasePageController<FollowUser> {
@@ -93,7 +91,7 @@ class FollowInfoController extends BasePageController<FollowUser> {
       SmartDialog.showToast('链接不能为空');
       return;
     }
-    final result = await _parse(url);
+    final result = await UrlParse.instance.parse(url);
     if (result.isEmpty || result.first == '') {
       SmartDialog.showToast('无法解析此链接');
       return;
@@ -192,71 +190,5 @@ class FollowInfoController extends BasePageController<FollowUser> {
     await FollowService.instance.loadData(updateStatus: false);
     followUser.value = newFollow;
     _initMigrationSites();
-  }
-
-  // 解析逻辑：与工具页保持一致
-  Future<List> _parse(String url) async {
-    var id = '';
-    if (url.contains('bilibili.com')) {
-      var regExp = RegExp(r'bilibili\.com/([\d|\w]+)');
-      id = regExp.firstMatch(url)?.group(1) ?? '';
-      return [id, Sites.allSites[Constant.kBiliBili]!];
-    }
-
-    if (url.contains('b23.tv')) {
-      var btvReg = RegExp(r'https?:\/\/b23.tv\/[0-9a-z-A-Z]+');
-      var u = btvReg.firstMatch(url)?.group(0) ?? '';
-      var location = await _getLocation(u);
-      return await _parse(location);
-    }
-
-    if (url.contains('douyu.com')) {
-      var regExp = RegExp(r'douyu\.com/([\d|\w]+)');
-      if (url.contains('topic')) {
-        regExp = RegExp(r'[?&]rid=([\d]+)');
-      }
-      id = regExp.firstMatch(url)?.group(1) ?? '';
-      return [id, Sites.allSites[Constant.kDouyu]!];
-    }
-    if (url.contains('huya.com')) {
-      var regExp = RegExp(r'huya\.com/([\d|\w]+)');
-      id = regExp.firstMatch(url)?.group(1) ?? '';
-      return [id, Sites.allSites[Constant.kHuya]!];
-    }
-    if (url.contains('live.douyin.com')) {
-      var regExp = RegExp(r'live\.douyin\.com/([\d|\w]+)');
-      id = regExp.firstMatch(url)?.group(1) ?? '';
-      return [id, Sites.allSites[Constant.kDouyin]!];
-    }
-    if (url.contains('webcast.amemv.com')) {
-      var regExp = RegExp(r'reflow/(\d+)');
-      id = regExp.firstMatch(url)?.group(1) ?? '';
-      return [id, Sites.allSites[Constant.kDouyin]!];
-    }
-    if (url.contains('v.douyin.com')) {
-      var regExp = RegExp(r'http.?://v.douyin.com/[\d\w]+/');
-      var u = regExp.firstMatch(url)?.group(0) ?? '';
-      var location = await _getLocation(u);
-      return await _parse(location);
-    }
-
-    return [];
-  }
-
-  Future<String> _getLocation(String url) async {
-    try {
-      if (url.isEmpty) return '';
-      await Dio().get(url, options: Options(followRedirects: false));
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 302) {
-        var redirectUrl = e.response?.headers.value('Location');
-        if (redirectUrl != null) {
-          return redirectUrl;
-        }
-      }
-    } catch (e) {
-      Log.logPrint(e);
-    }
-    return '';
   }
 }

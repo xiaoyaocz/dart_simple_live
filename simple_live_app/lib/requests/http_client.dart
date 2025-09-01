@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:simple_live_app/requests/custom_log_interceptor.dart';
 import 'package:simple_live_app/requests/http_error.dart';
@@ -189,6 +191,55 @@ class HttpClient {
         return e.response!;
       } else {
         throw HttpError("发送HEAD请求失败");
+      }
+    }
+  }
+
+  /// DOWNLOAD 文件
+  /// * [url] 下载链接
+  /// * [savePath] 保存路径
+  /// * [header] 可选请求头
+  /// * [cancel] 任务取消Token
+  /// * [onProgress] 下载进度 0~1
+  Future<File> download(
+      String url,
+      String savePath, {
+        Map<String, dynamic>? header,
+        CancelToken? cancel,
+        Function(int value, int progress)? onReceiveProgress,
+      }) async {
+    header ??= {};
+    final tempPath = "$savePath.part";
+    final tempFile = File(tempPath);
+
+    try {
+      if (!await tempFile.exists()) {
+        await tempFile.create(recursive: true);
+      }
+      final response = await dio.download(
+        url,
+        tempPath,
+        cancelToken: cancel,
+        onReceiveProgress: onReceiveProgress,
+        options: Options(
+          headers: header,
+        ),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 206) {
+        // 下载完成重命名临时文件
+        return await tempFile.rename(savePath);
+      } else {
+        throw HttpError("下载失败", statusCode: response.statusCode ?? 0);
+      }
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        throw HttpError("下载已取消");
+      } else if (e.type == DioExceptionType.badResponse) {
+        throw HttpError(e.message ?? "",
+            statusCode: e.response?.statusCode ?? 0);
+      } else {
+        throw HttpError("下载请求失败");
       }
     }
   }

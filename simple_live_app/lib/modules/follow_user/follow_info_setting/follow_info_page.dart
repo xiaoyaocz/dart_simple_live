@@ -96,7 +96,7 @@ class FolloInfoPage extends GetView<FollowInfoController> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            AppStyle.divider,
             // 标签设置：底部弹出选择
             Padding(
               padding: AppStyle.edgeInsetsA12,
@@ -120,7 +120,7 @@ class FolloInfoPage extends GetView<FollowInfoController> {
                 );
               }),
             ),
-            const Divider(height: 1),
+            AppStyle.divider,
             // 平台迁移：输入链接解析
             Padding(
               padding: AppStyle.edgeInsetsA12,
@@ -134,7 +134,7 @@ class FolloInfoPage extends GetView<FollowInfoController> {
                       Text('平台迁移（输入直播链接进行解析）'),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  AppStyle.vGap8,
                   Row(
                     children: [
                       Expanded(
@@ -152,7 +152,7 @@ class FolloInfoPage extends GetView<FollowInfoController> {
                           onSubmitted: (_) => controller.parseAndMigrate(),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      AppStyle.vGap8,
                       IconButton(
                         tooltip: '粘贴',
                         onPressed: controller.pasteFromClipboard,
@@ -165,7 +165,7 @@ class FolloInfoPage extends GetView<FollowInfoController> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  AppStyle.vGap12,
                   Text(
                     "other todo ...",
                     style: TextStyle(color: Colors.grey),

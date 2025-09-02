@@ -1,4 +1,4 @@
-name: app-build-action-dev
+name: app-build-action-dev-FuKe
 
 on:
   workflow_dispatch:
@@ -33,7 +33,6 @@ jobs:
           echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
-
       # 设置JAVA环境
       - uses: actions/setup-java@v4
         with:
@@ -57,7 +56,6 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
-
       # 安装appdmg npm install -g appdmg
       - name: Install appdmg
         run: npm install -g appdmg
@@ -71,7 +69,6 @@ jobs:
         run: |
           cd simple_live_app
           flutter build apk --release --split-per-abi
-
       #上传Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
@@ -81,7 +78,6 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-
       # TV APK签名设置
       - name: Download Android TV keystore
         id: android_tv_keystore
@@ -95,7 +91,6 @@ jobs:
           echo "storePassword=${{ secrets.TV_STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
           echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
           echo "keyAlias=${{ secrets.TV_KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
-
       #打包 Android TV APK
       - name: Build TV APK
         run: |
@@ -110,13 +105,11 @@ jobs:
             simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-
       #打包iOS
       - name: Build IPA
         run: |
           cd simple_live_app
           flutter build ios --release --no-codesign
-
       #创建未签名ipa
       - name: Create IPA
         run: |
@@ -126,7 +119,6 @@ jobs:
           cd build/ios/iphoneos/
           zip -q -r ios_no_sign.ipa Payload
           cd ../../..
-
       # 上传IPA至Artifacts
       - name: Upload IPA to Artifacts
         uses: actions/upload-artifact@v4
@@ -134,7 +126,6 @@ jobs:
           name: ios
           path: |
             simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
-
       # 打包MAC
       - name: Build MacOS
         run: |
@@ -197,7 +188,6 @@ jobs:
           path: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
-
         #完成
       - run: echo "🍏 Linux job's status is ${{ job.status }}."
 

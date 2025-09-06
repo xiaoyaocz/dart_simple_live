@@ -253,7 +253,7 @@ class AppPages {
     // 关注用户-信息详情
     GetPage(
       name: RoutePath.kFollowInfo,
-      page: () => const FolloInfoPage(),
+      page: () => const FollowInfoPage(),
       bindings: [
         BindingsBuilder.put(() => FollowInfoController()),
       ],

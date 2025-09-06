@@ -449,6 +449,7 @@ class FollowService extends GetxService {
             "roomId": item.roomId,
             "userName": item.userName,
             "face": item.face,
+            "watchDuration": item.watchDuration,
             "addTime": item.addTime.toString(),
             "tag": item.tag
           },

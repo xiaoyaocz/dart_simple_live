@@ -211,7 +211,6 @@ class FollowUserPage extends GetView<FollowUserController> {
                 IconButton(
                   icon: const Icon(
                     Icons.check,
-                    color: Colors.black,
                   ),
                   onPressed: () {
                     controller.setItemTag(item, checkTag.value);

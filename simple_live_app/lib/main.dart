@@ -34,6 +34,7 @@ import 'package:simple_live_app/services/history_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/migration_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
+import 'package:simple_live_app/services/window_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
@@ -41,7 +42,6 @@ import 'package:window_manager/window_manager.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await MigrationService.migrateData();
-  await initWindow();
   MediaKit.ensureInitialized();
   await Hive.initFlutter(
     (!Platform.isAndroid && !Platform.isIOS)
@@ -50,6 +50,7 @@ void main() async {
   );
   //初始化服务
   await initServices();
+  await initWindow();
 
   MigrationService.migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -77,15 +78,9 @@ Future initWindow() async {
     }
     exit(0);
   }
-  WindowOptions windowOptions = const WindowOptions(
-    minimumSize: Size(280, 280),
-    center: true,
-    title: "Simple Live",
-  );
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+
+  WindowService.instance.init();
+
 }
 
 Future initServices() async {
@@ -111,6 +106,8 @@ Future initServices() async {
   Get.put(FollowService());
 
   Get.put(HistoryService());
+
+  Get.put(WindowService());
 
   initCoreLog();
 }

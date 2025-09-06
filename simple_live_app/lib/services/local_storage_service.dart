@@ -165,6 +165,15 @@ class LocalStorageService extends GetxService {
   /// WebDAV_最后一次备份时间
   static const String kWebDAVLastRecoverTime = "kWebDAVLastRecoverTime";
 
+  /// windows窗口size
+  static const String kWindowX = "WindowX";
+
+  static const String kWindowY = "WindowY";
+
+  static const String kWindowWidth = "WindowWidth";
+
+  static const String kWindowHeight = "WindowHeight";
+
   /// 数据库版本
   static const String kHiveDbVer = "kHiveDbVer";
 
@@ -199,5 +208,9 @@ class LocalStorageService extends GetxService {
   Future removeValue<T>(dynamic key) async {
     Log.d("Remove LocalStorage：$key");
     return await settingsBox.delete(key);
+  }
+
+  Future flush() async {
+    return await settingsBox.flush();
   }
 }

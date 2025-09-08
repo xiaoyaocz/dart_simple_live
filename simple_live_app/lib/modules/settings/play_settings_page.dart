@@ -145,6 +145,16 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     ),
                   ),
                 ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    title: "播放器中显示SC",
+                    value: controller.playershowSuperChat.value,
+                    onChanged: (e) {
+                      controller.setPlayerShowSuperChat(e);
+                    },
+                  ),
+                ),
               ],
             ),
           ),

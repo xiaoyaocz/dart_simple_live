@@ -51,12 +51,16 @@ Widget buildFullControls(
         buildDanmuView(videoState, controller),
 
         // 左下角SC显示
-        Visibility(
-          visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
-          child: Positioned(
-            left: 24,
-            bottom: 24,
-            child: PlayerSuperChatOverlay(controller: controller),
+        Obx(
+          () => Visibility(
+            visible: AppSettingsController.instance.playershowSuperChat.value &&
+                ((!Platform.isAndroid && !Platform.isIOS) ||
+                    controller.fullScreenState.value),
+            child: Positioned(
+              left: 24,
+              bottom: 24,
+              child: PlayerSuperChatOverlay(controller: controller),
+            ),
           ),
         ),
 
@@ -286,7 +290,8 @@ Widget buildFullControls(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: Text(
                         controller.liveDuration.value,
-                        style: const TextStyle(fontSize: 14, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 14, color: Colors.white),
                       ),
                     ),
                   ),
@@ -432,12 +437,16 @@ Widget buildControls(
       buildDanmuView(videoState, controller),
 
       // 左下角SC显示
-      Visibility(
-        visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
-        child: Positioned(
-          left: 24,
-          bottom: 24,
-          child: PlayerSuperChatOverlay(controller: controller),
+      Obx(
+        () => Visibility(
+          visible: AppSettingsController.instance.playershowSuperChat.value &&
+              ((!Platform.isAndroid && !Platform.isIOS) ||
+                  controller.fullScreenState.value),
+          child: Positioned(
+            left: 24,
+            bottom: 24,
+            child: PlayerSuperChatOverlay(controller: controller),
+          ),
         ),
       ),
 
@@ -907,7 +916,12 @@ class PlayerSuperChatCard extends StatefulWidget {
   final LiveSuperChatMessage message;
   final VoidCallback onExpire;
   final int duration;
-  const PlayerSuperChatCard({required this.message, required this.onExpire, required this.duration, Key? key}) : super(key: key);
+  const PlayerSuperChatCard(
+      {required this.message,
+      required this.onExpire,
+      required this.duration,
+      Key? key})
+      : super(key: key);
   @override
   State<PlayerSuperChatCard> createState() => _PlayerSuperChatCardState();
 }
@@ -930,11 +944,13 @@ class _PlayerSuperChatCardState extends State<PlayerSuperChatCard> {
       });
     });
   }
+
   @override
   void dispose() {
     timer.cancel();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
@@ -957,7 +973,8 @@ class LocalDisplaySC {
 
 class PlayerSuperChatOverlay extends StatefulWidget {
   final LiveRoomController controller;
-  const PlayerSuperChatOverlay({required this.controller, Key? key}) : super(key: key);
+  const PlayerSuperChatOverlay({required this.controller, Key? key})
+      : super(key: key);
   @override
   State<PlayerSuperChatOverlay> createState() => _PlayerSuperChatOverlayState();
 }
@@ -994,7 +1011,8 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
       }
     }
     // 监听SC列表变化
-    _worker = ever<List<LiveSuperChatMessage>>(widget.controller.superChats, (list) {
+    _worker =
+        ever<List<LiveSuperChatMessage>>(widget.controller.superChats, (list) {
       // 新增
       for (var sc in list) {
         if (!_displayed.any((e) => e.sc == sc)) {
@@ -1018,7 +1036,8 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = _displayed.toList()..sort((a, b) => a.sc.endTime.compareTo(b.sc.endTime));
+    final sorted = _displayed.toList()
+      ..sort((a, b) => a.sc.endTime.compareTo(b.sc.endTime));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

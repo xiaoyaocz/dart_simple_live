@@ -126,7 +126,17 @@ class AppSettingsController extends GetxController {
 
     audioOutputDriver.value = LocalStorageService.instance.getValue(
       LocalStorageService.kAudioOutputDriver,
-      Platform.isAndroid ? "audiotrack" : Platform.isLinux ? "pulse" : Platform.isWindows ? "wasapi" : Platform.isIOS ? "audiounit" : Platform.isMacOS ? "coreaudio" : "sdl",
+      Platform.isAndroid
+          ? "audiotrack"
+          : Platform.isLinux
+              ? "pulse"
+              : Platform.isWindows
+                  ? "wasapi"
+                  : Platform.isIOS
+                      ? "audiounit"
+                      : Platform.isMacOS
+                          ? "coreaudio"
+                          : "sdl",
     );
 
     videoHardwareDecoder.value = LocalStorageService.instance.getValue(
@@ -368,6 +378,13 @@ class AppSettingsController extends GetxController {
     autoFullScreen.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kAutoFullScreen, e);
+  }
+
+  var playershowSuperChat = true.obs;
+  void setPlayerShowSuperChat(bool e) {
+    playershowSuperChat.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerShowSuperChat, e);
   }
 
   RxSet<String> shieldList = <String>{}.obs;

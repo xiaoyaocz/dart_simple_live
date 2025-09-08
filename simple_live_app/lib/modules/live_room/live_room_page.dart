@@ -676,6 +676,17 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   },
                 ),
               ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsSwitch(
+                  title: "播放器中显示SC",
+                  value:
+                      AppSettingsController.instance.playershowSuperChat.value,
+                  onChanged: (e) {
+                    AppSettingsController.instance.setPlayerShowSuperChat(e);
+                  },
+                ),
+              ),
             ],
           ),
         ),

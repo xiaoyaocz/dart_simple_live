@@ -141,6 +141,9 @@ class LocalStorageService extends GetxService {
   /// 音频输出驱动
   static const String kAudioOutputDriver = "AudioOutputDriver";
 
+  /// 视频硬件解码器
+  static const String kVideoDoubleBuffering = "VideoDoubleBuffering";
+
   /// 开启自动更新关注
   static const String kAutoUpdateFollowEnable = "AutoUpdateFollowEnable";
 

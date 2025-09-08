@@ -137,6 +137,16 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                     },
                   ),
                 ),
+                Obx(
+                  () => SettingsSwitch(
+                    value: AppSettingsController
+                        .instance.videoDoubleBuffering.value,
+                    title: "自定义开启双重缓存",
+                    onChanged: (e) {
+                      AppSettingsController.instance.setVideoDoubleBuffering(e);
+                    },
+                  ),
+                ),
               ],
             ),
           ),

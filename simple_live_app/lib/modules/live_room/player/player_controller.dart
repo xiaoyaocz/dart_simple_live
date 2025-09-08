@@ -12,6 +12,7 @@ import 'package:flutter_image_gallery_saver/flutter_image_gallery_saver.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -38,14 +39,18 @@ mixin PlayerMixin {
   );
   /// 初始化播放器并设置 ao 参数
   Future<void> initializePlayer() async {
+    var pp = player.platform as NativePlayer;
+    // 在所有平台上正确启用双重缓存
+    if(AppSettingsController.instance.videoDoubleBuffering.value) {
+      final directory = await getTemporaryDirectory();
+      await pp.setProperty("demuxer-cache-dir", directory.path);
+    }
     // 设置音频输出驱动
     if (AppSettingsController.instance.customPlayerOutput.value) {
-      if (player.platform is NativePlayer) {
-        await (player.platform as dynamic).setProperty(
-          'ao',
-          AppSettingsController.instance.audioOutputDriver.value,
-        );
-      }
+      await pp.setProperty(
+        'ao',
+        AppSettingsController.instance.audioOutputDriver.value,
+      );
     }
   }
 

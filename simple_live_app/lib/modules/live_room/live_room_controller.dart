@@ -420,15 +420,15 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       playurl = playurl.replaceAll("http://", "https://");
     }
 
- // 初始化播放器并设置 ao 参数
-  await initializePlayer();
+    // 初始化播放器并设置 ao 参数
+    await initializePlayer();
 
-  await player.open(
-    Media(
-      playurl,
-      httpHeaders: playHeaders,
-    ),
-  );
+    await player.open(
+      Media(
+        playurl,
+        httpHeaders: playHeaders,
+      ),
+    );
     Log.d("播放链接\r\n：$playurl");
   }
 

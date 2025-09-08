@@ -4,7 +4,7 @@ publish_to: none
 description: "Simple Live APP"
 environment: 
   sdk: '>=3.0.5 <4.0.0'
-  flutter: 3.32.0
+  flutter: 3.32.8
 
 dependencies: 
   simple_live_core:
@@ -22,7 +22,7 @@ dependencies:
   logger: ^2.0.2 #日志
   intl: ^0.20.2 #国际化
   qr_flutter: ^4.1.0 #二维码生成
-  dynamic_color: ^1.7.0 #动态颜色
+  dynamic_color: ^1.8.1 #动态颜色
   path: any
   udp: ^5.0.3 #UDP
   uuid: ^4.5.1 #UUID

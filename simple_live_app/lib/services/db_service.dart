@@ -6,6 +6,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:uuid/uuid.dart';
+import 'package:collection/collection.dart';
 
 class DBService extends GetxService {
   static DBService get instance => Get.find<DBService>();
@@ -56,7 +57,7 @@ class DBService extends GetxService {
   }
 
   FollowUserTag? getFollowTag(String tag){
-    return tagBox.get(tag);
+    return tagBox.values.firstWhereOrNull((item) => item.tag == tag);
   }
 
   // 判断tag名称是否重复

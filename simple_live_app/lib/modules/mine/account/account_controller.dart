@@ -89,7 +89,7 @@ class AccountController extends GetxController {
       final cookie = await Utils.showEditTextDialog(
         "",
         title: "请输入抖音Cookie",
-        hintText: "ttwid=...; __ac_nonce=...; msToken=...",
+        hintText: "__ac_nonce=...;__ac_signature=...;sessionid=...;",
       );
       if (cookie == null || cookie.isEmpty) return;
       DouyinAccountService.instance.setCookie(cookie);

@@ -3,11 +3,13 @@ import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'package:simple_live_core/src/common/js_engine.dart';
+
+import 'abogus.dart';
+import 'douyinRequestParams.dart';
 
 class DouyinUtils {
 // 根据传入长度产生随机字符串
-  static String getMSToken({int randomLength = 107}) {
+  static String getMSToken({int randomLength = 184}) {
     var baseStr =
         'ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789=';
     var sb = StringBuffer();
@@ -18,22 +20,26 @@ class DouyinUtils {
     return sb.toString();
   }
 
-  static Future<String> getAbogus(
-      {required String reqUrl, required String userAgent}) async {
-    try {
-      JsEngine.init();
-      await JsEngine.loadJSFile(
-          "packages/simple_live_core/assets/js/a_bogus.js");
-      String abogus =
-          JsEngine.evaluate("generate_a_bogus('$reqUrl','$userAgent')")
-              .stringResult;
-      return abogus;
-    } catch (e) {
-      CoreLog.error(e);
-    } finally {
-      JsEngine.dispose();
+  static buildRequestUrl(String baseUrl, Map<String, dynamic> params) {
+    var abogus = ABogus(userAgent: DouyinRequestParams.kDefaultUserAgent);
+    var parsedUrl = Uri.parse(baseUrl);
+    var exParams = params;
+    exParams['aid'] = "6383";
+    exParams['compress'] = "gzip";
+    exParams['device_platform'] = "web";
+    exParams['browser_language'] = "zh-CN";
+    exParams['browser_platform'] = "Win32";
+    exParams['browser_name'] = "Edge";
+    exParams['browser_version'] = "125.0.0.0";
+    if (!exParams.containsKey('msToken')) {
+      exParams['msToken'] = getMSToken();
     }
-    return "";
+    var newQueryStr = Uri(queryParameters: exParams).query;
+    var signedQueryStr = abogus.generateAbogus(newQueryStr, body: "").first;
+    final newUrl = parsedUrl.replace(
+      query: signedQueryStr,
+    );
+    return newUrl.toString();
   }
 
   Future<Map<String, String>> get_ttwid_webid({required String req_url}) async {

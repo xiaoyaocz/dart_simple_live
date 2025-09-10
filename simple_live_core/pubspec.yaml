@@ -20,6 +20,7 @@ dependencies:
     path: ./packages/tars_dart
   fixnum: ^1.1.0
   flutter_js: ^0.8.5
+  dart_sm: ^0.1.5
 
 dev_dependencies: 
   lints: ^2.0.0

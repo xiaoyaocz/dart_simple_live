@@ -1,7 +1,7 @@
 {
-    "version": "1.7.17",
-    "version_num": 10717,
-    "version_desc": "- feat(player):开启双重缓存降低内存占用 \n- feat(window): 记忆窗口大小\n- feat(follow_info): 手动刷新关注信息\n- fix(windows): windows关闭时发成崩溃 \n- fix(tabs): flutter 3.32.0会导致部分手机白屏 \n - fix(tag): tag设计导致的一系列错误 \n- fix：其他一些小的逻辑优化和代码优化 \n - tips: ios和macos用户请到dev-ios分支更新或者下载上游仓库版本",
+    "version": "1.7.18",
+    "version_num": 10718,
+    "version_desc": "-fix: douyin \n- refactor：其他一些小的逻辑优化和代码优化 \n - tips: ios和macos用户请到dev-ios分支更新或者下载上游仓库版本",
     "prerelease":true,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

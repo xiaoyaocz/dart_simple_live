@@ -59,7 +59,7 @@ class FollowService extends GetxService {
   void onInit() {
     subscription = EventBus.instance.listen(Constant.kUpdateFollow, (data) {
       if (data is History) {
-        updateFollow(data);
+        updateFollowHistory(data);
       } else {
         loadData(updateStatus: false);
       }
@@ -68,8 +68,24 @@ class FollowService extends GetxService {
     super.onInit();
   }
 
-  void updateFollowUserTag(FollowUserTag tag) {
-    DBService.instance.updateFollowTag(tag);
+  void updateTagName(FollowUserTag followUserTag, String newTagName){
+    final FollowUserTag newTag = followUserTag.copyWith(tag: newTagName);
+    updateFollowUserTag(newTag);
+    // update item's tag when update tagName
+    for (var i in newTag.userId) {
+      var follow = DBService.instance.followBox.get(i);
+      if (follow != null) {
+        follow.tag = newTagName;
+        addFollow(follow);
+      }
+    }
+  }
+
+  Future<void> updateFollowUserTag(FollowUserTag tag) async{
+    if (tag.tag == '全部') {
+      return;
+    }
+    await DBService.instance.updateFollowTag(tag);
     // 查找并修改
     var index = followTagList.indexWhere((oTag) => oTag.id == tag.id);
     followTagList[index] = tag;
@@ -85,7 +101,15 @@ class FollowService extends GetxService {
     followTagList.add(item);
   }
 
-  Future delFollowUserTag(FollowUserTag tag) async {
+  Future removeFollowUserTag(FollowUserTag tag) async {
+    // 将tag下的所有follow设置为全部
+    for (var i in tag.userId) {
+      var follow = DBService.instance.followBox.get(i);
+      if (follow != null) {
+        follow.tag = "全部";
+        FollowService.instance.addFollow(follow);
+      }
+    }
     followTagList.remove(tag);
     await DBService.instance.deleteFollowTag(tag.id);
   }
@@ -105,7 +129,7 @@ class FollowService extends GetxService {
   }
 
   /// 为关注项设置标签（统一逻辑）
-  void setItemTag(FollowUser item, FollowUserTag targetTag) {
+  void setFollowTag(FollowUser item, FollowUserTag targetTag) {
     // 当前标签对象（可能为“全部”且不在 followTagList 中）
     FollowUserTag? currentTag;
     if (item.tag != '全部') {
@@ -177,18 +201,22 @@ class FollowService extends GetxService {
     );
   }
 
+  void updateFollowTagOrder(List<FollowUserTag> userTagList) {
+    DBService.instance.updateFollowTagOrder(userTagList);
+  }
+
   // 添加关注
   void addFollow(FollowUser follow) {
     DBService.instance.addFollow(follow);
   }
 
   // 取消关注
-  void removeFollowUser(String id) {
-    DBService.instance.deleteFollow(id);
+  Future<void> removeFollowUser(String id) async {
+    await DBService.instance.deleteFollow(id);
   }
 
   // 更新关注的历史记录
-  void updateFollow(History history) {
+  void updateFollowHistory(History history) {
     var follow =
         followList.where((follow) => follow.id == history.id).firstOrNull;
     if (follow == null) {

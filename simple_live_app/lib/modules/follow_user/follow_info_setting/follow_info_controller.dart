@@ -73,7 +73,7 @@ class FollowInfoController extends BasePageController<FollowUser> {
   void changeTag(FollowUserTag newTag) {
     final current = followUser.value;
     if (current == null) return;
-    FollowService.instance.setItemTag(current, newTag);
+    FollowService.instance.setFollowTag(current, newTag);
     selectedTag.value = newTag;
     followUser.refresh();
   }
@@ -164,7 +164,7 @@ class FollowInfoController extends BasePageController<FollowUser> {
       watchDuration: current.watchDuration,
       tag: current.tag,
     );
-
+    newFollow.liveStatus.value = current.liveStatus.value;
     // 更新标签归属
     if (current.tag != '全部') {
       FollowUserTag? tagObj;

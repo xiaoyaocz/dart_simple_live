@@ -9,7 +9,6 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
-import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 
 class FollowUserController extends BasePageController<FollowUser> {
@@ -96,58 +95,44 @@ class FollowUserController extends BasePageController<FollowUser> {
     filterData();
   }
 
-  void removeItem(FollowUser item) async {
+  void removeFollow(FollowUser follow) async {
     var result =
-        await Utils.showAlertDialog("确定要取消关注${item.userName}吗?", title: "取消关注");
+        await Utils.showAlertDialog("确定要取消关注${follow.userName}吗?", title: "取消关注");
     if (!result) {
       return;
     }
     // 取消关注同时删除标签内的 userId
-    if (item.tag != "全部") {
-      var tag = tagList.firstWhere((tag) => tag.tag == item.tag);
-      tag.userId.remove(item.id);
+    if (follow.tag != "全部") {
+      var tag = tagList.firstWhere((tag) => tag.tag == follow.tag);
+      tag.userId.remove(follow.id);
       updateTag(tag);
     }
-    await DBService.instance.followBox.delete(item.id);
+    await FollowService.instance.removeFollowUser(follow.id);
     refreshData();
   }
 
-  void updateItem(FollowUser item) {
-    FollowService.instance.addFollow(item);
+  void updateFollow(FollowUser follow) {
+    FollowService.instance.addFollow(follow);
   }
 
-  void setItemTag(FollowUser item, FollowUserTag targetTag) {
-    FollowService.instance.setItemTag(item, targetTag);
+  void setFollowTag(FollowUser follow, FollowUserTag targetTag) {
+    FollowService.instance.setFollowTag(follow, targetTag);
     filterData();
   }
 
-  void removeIdFromTag() {}
-
   Future removeTag(FollowUserTag tag) async {
-    // 将tag下的所有follow设置为全部
-    for (var i in tag.userId) {
-      var follow = DBService.instance.followBox.get(i);
-      if (follow != null) {
-        follow.tag = "全部";
-        updateItem(follow);
-      }
-    }
-    await FollowService.instance.delFollowUserTag(tag);
+    await FollowService.instance.removeFollowUserTag(tag);
     updateTagList();
     Log.i('删除tag${tag.tag}');
   }
 
   void addTag(String tag) async {
-    FollowService.instance
-        .addFollowUserTag(tag)
-        .then((value) => updateTagList());
+    await FollowService.instance.addFollowUserTag(tag);
+    updateTagList();
   }
 
-  void updateTag(FollowUserTag followUserTag) {
-    if (followUserTag.tag == '全部') {
-      return;
-    }
-    FollowService.instance.updateFollowUserTag(followUserTag);
+  Future<void> updateTag(FollowUserTag followUserTag) async {
+    await FollowService.instance.updateFollowUserTag(followUserTag);
   }
 
   void updateTagName(FollowUserTag followUserTag, String newTagName) {
@@ -160,16 +145,7 @@ class FollowUserController extends BasePageController<FollowUser> {
       SmartDialog.showToast("标签名重复，修改失败");
       return;
     }
-    final FollowUserTag newTag = followUserTag.copyWith(tag: newTagName);
-    updateTag(newTag);
-    // update item's tag when update tagName
-    for (var i in newTag.userId) {
-      var follow = DBService.instance.followBox.get(i);
-      if (follow != null) {
-        follow.tag = newTagName;
-        updateItem(follow);
-      }
-    }
+    FollowService.instance.updateTagName(followUserTag, newTagName);
     SmartDialog.showToast("标签名修改成功");
     updateTagList();
   }
@@ -180,7 +156,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     userTagList.insert(newIndex, item);
     tagList.value = tagList.take(3).toList();
     tagList.addAll(userTagList);
-    DBService.instance.updateFollowTagOrder(userTagList);
+    FollowService.instance.updateFollowTagOrder(userTagList);
   }
 
   @override

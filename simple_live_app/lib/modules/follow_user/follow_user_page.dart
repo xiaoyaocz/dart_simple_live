@@ -160,7 +160,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                 return FollowUserItem(
                   item: item,
                   onRemove: () {
-                    controller.removeItem(item);
+                    controller.removeFollow(item);
                   },
                   onTap: () {
                     AppNavigator.toLiveRoomDetail(
@@ -203,7 +203,7 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  void setFollowTagDialog(FollowUser item) {
+  void setFollowTagDialog(FollowUser follow) {
     /// 控制单选ui
     List<FollowUserTag> copiedList = [
       controller.tagList.first,
@@ -238,7 +238,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                     Icons.check,
                   ),
                   onPressed: () {
-                    controller.setItemTag(item, checkTag.value);
+                    controller.setFollowTag(follow, checkTag.value);
                     Get.back();
                   },
                 ),

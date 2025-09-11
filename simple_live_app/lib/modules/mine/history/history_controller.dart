@@ -9,7 +9,7 @@ class HistoryController extends BasePageController<History> {
     if (page > 1) {
       return Future.value([]);
     }
-    return Future.value(DBService.instance.getHistores());
+    return Future.value(DBService.instance.getHistories());
   }
 
   void clean() async {

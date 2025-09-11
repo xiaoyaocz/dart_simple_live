@@ -7,7 +7,6 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/url_parse.dart';
 import 'package:simple_live_app/models/db/follow_user.dart' show FollowUser;
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
-import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -103,7 +102,7 @@ class FollowInfoController extends BasePageController<FollowUser> {
     if (current == null) return;
 
     // 防呆
-    bool contain = DBService.instance.getFollowExist("${newSite.id}_$newRoomId");
+    bool contain = FollowService.instance.getFollowExist("${newSite.id}_$newRoomId");
     if (contain == true) {
       SmartDialog.showToast('目标主播已关注，无需迁移');
       return;
@@ -183,7 +182,7 @@ class FollowInfoController extends BasePageController<FollowUser> {
     }
 
     // 替换关注
-    DBService.instance.deleteFollow(current.id);
+    FollowService.instance.removeFollowUser(current.id);
     FollowService.instance.addFollow(newFollow);
 
     // 刷新本地数据并更新UI

@@ -244,7 +244,7 @@ class RemoteSyncRoomController extends BaseController {
       }
       var overlay = await showOverlayDialog();
       SmartDialog.showLoading(msg: "发送中...");
-      var histores = DBService.instance.getHistores();
+      var histores = DBService.instance.getHistories();
       var data = json.encode(histores.map((e) => e.toJson()).toList());
       var resp = await signalR.sendContent(
         roomName: currentRoomId.value,

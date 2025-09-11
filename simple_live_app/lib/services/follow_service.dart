@@ -215,6 +215,11 @@ class FollowService extends GetxService {
     await DBService.instance.deleteFollow(id);
   }
 
+  // 判断关注是否存在
+  bool getFollowExist(String id){
+    return DBService.instance.getFollowExist(id);
+  }
+
   // 更新关注的历史记录
   void updateFollowHistory(History history) {
     var follow =

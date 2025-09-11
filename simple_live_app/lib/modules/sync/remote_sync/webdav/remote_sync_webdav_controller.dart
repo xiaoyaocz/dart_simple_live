@@ -186,7 +186,7 @@ class RemoteSyncWebDAVController extends BaseController {
       var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
       await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
       // histories
-      var userHistoriesList = DBService.instance.getHistores();
+      var userHistoriesList = DBService.instance.getHistories();
       var dataHistoriesMap = {
         'data': userHistoriesList.map((e) => e.toJson()).toList()
       };

@@ -51,7 +51,7 @@ class SyncDeviceController extends BaseController {
     try {
       var overlay = await showOverlayDialog();
       SmartDialog.showLoading(msg: "同步中...");
-      var histores = DBService.instance.getHistores();
+      var histores = DBService.instance.getHistories();
       var data = json.encode(histores.map((e) => e.toJson()).toList());
       await request.syncHistory(client, data, overlay: overlay);
       SmartDialog.showToast("已同步历史记录");

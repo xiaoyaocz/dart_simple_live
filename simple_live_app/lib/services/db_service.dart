@@ -60,6 +60,7 @@ class DBService extends GetxService {
     return tagBox.values.firstWhereOrNull((item) => item.tag == tag);
   }
 
+
   // 判断tag名称是否重复
   bool getFollowTagExistByTag(String tag){
     return tagBox.values.any((item) => item.tag == tag);
@@ -92,7 +93,7 @@ class DBService extends GetxService {
     await historyBox.put(history.id, history);
   }
 
-  List<History> getHistores() {
+  List<History> getHistories() {
     var his = historyBox.values.toList();
     his.sort((a, b) => b.updateTime.compareTo(a.updateTime));
     return his;

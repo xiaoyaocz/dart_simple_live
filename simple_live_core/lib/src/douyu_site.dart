@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter_js/flutter_js.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
@@ -322,30 +321,27 @@ class DouyuSite implements LiveSite {
         "";
     html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
 
-    try{
+    try {
       var did = '10000000000000000000000000001501';
       JsEngine.init();
-      JsEvalResult jsEvalResult =
-          await JsEngine.evaluateAsync("$html;ub98484234();");
-      var res = jsEvalResult.stringResult;
+      var jsEvalResult = JsEngine.evaluate("$html;ub98484234();");
+      var res = jsEvalResult.toString();
       String t10 = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
       RegExp vReg = RegExp(r'v=(\d+)');
       Match? vMatch = vReg.firstMatch(res);
       String? v = vMatch?.group(1);
-      String rb = md5.convert(utf8.encode(rid + did + t10 + (v ?? ""))).toString();
+      String rb =
+          md5.convert(utf8.encode(rid + did + t10 + (v ?? ""))).toString();
       String jsSign = res
           .replaceAll(RegExp(r'return rt;}\);?'), 'return rt;}')
           .replaceAll('(function (', 'function sign(')
           .replaceAll('CryptoJS.MD5(cb).toString()', '"$rb"');
-
-      final params =
-          await JsEngine.evaluateAsync("$jsSign;sign($rid,'$did',$t10);");
-
-      return params.stringResult;
+      var params = JsEngine.evaluate("$jsSign;sign($rid,'$did',$t10);");
+      return params.toString();
     } catch (e) {
       CoreLog.error(e);
       return "";
-    } finally{
+    } finally {
       JsEngine.dispose();
     }
     // 自部署：https://github.com/SlotSun/simple_live_api

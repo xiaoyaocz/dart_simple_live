@@ -6,7 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   dynamic_color
   flutter_inappwebview_windows
-  flutter_js
+  flutter_qjs
   media_kit_libs_windows_video
   media_kit_video
   permission_handler_windows

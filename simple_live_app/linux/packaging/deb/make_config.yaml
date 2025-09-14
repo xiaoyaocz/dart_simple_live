@@ -1,5 +1,5 @@
-display_name: Simple-Live
-package_name: simple-live
+display_name: Simplelive
+package_name: simplelive
 maintainer:
   name: xiaoyaocz
   email: xiaoyaocz@52uwp.com
@@ -7,14 +7,21 @@ priority: optional
 section: x11
 installed_size: 24400
 essential: false
-icon: assets/logo.png
+icon: assets/images/logo.png
+
+generic_name: Livestream Player
 
 keywords:
-  - Simple Live
-
-generic_name: Simple-Live
+  - Livestream
+  - Video
 
 categories:
-  - Media
+  - AudioVideo
+  - Audio
+  - Video
+  - Network
 
 startup_notify: true
+
+dependencies:
+  - libmpv2

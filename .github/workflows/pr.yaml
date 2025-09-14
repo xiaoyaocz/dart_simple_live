@@ -25,7 +25,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.32.8'
           cache: true
 
       - name: Enable Flutter Desktop
@@ -67,7 +67,14 @@ jobs:
           fastforge package --platform macos --targets dmg,zip --skip-clean
 
   build-linux:
-    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout PR code
         uses: actions/checkout@v4
@@ -77,8 +84,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.0"
-          cache: true
+          flutter-version: "3.32.8"
+          channel: master
 
       - name: Install Dependencies
         run: |
@@ -104,6 +111,9 @@ jobs:
         run: |
           cd simple_live_app
           fastforge package --platform linux --targets deb,zip --skip-clean
+          cd build/dist/*
+          mv simple_live_app-*-linux.deb simplelive-${{ matrix.arch }}-linux.deb
+          mv simple_live_app-*-linux.zip simplelive-${{ matrix.arch }}-linux.zip
 
   build-windows:
     runs-on: windows-latest
@@ -116,7 +126,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.0"
+          flutter-version: "3.32.8"
           cache: true
 
       - name: Enable Flutter Desktop

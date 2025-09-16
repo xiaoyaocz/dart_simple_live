@@ -27,6 +27,14 @@ class DouyuSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => DouyuDanmaku();
 
+  Future<String> Function(String, String) getDouyuSign = (html, rid) async {
+    return "";
+  };
+
+  void setDouyuSignFunction(Future<String> Function(String, String) func) {
+    getDouyuSign = func;
+  }
+
   @override
   Future<List<LiveCategory>> getCategores() async {
     List<LiveCategory> categories = [];
@@ -233,7 +241,7 @@ class DouyuSite implements LiveSite {
       notice: "",
       status: roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1,
       danmakuData: roomInfo["room_id"].toString(),
-      data: await getPlayArgs(crptext, roomInfo["room_id"].toString()),
+      data: await getDouyuSign(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
       isRecord: roomInfo["videoLoop"] == 1,
       showTime: showTime,
@@ -349,25 +357,25 @@ class DouyuSite implements LiveSite {
     return roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1;
   }
 
-  Future<String> getPlayArgs(String html, String rid) async {
-    //取加密的js
-    html = RegExp(
-                r"(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function",
-                multiLine: true)
-            .firstMatch(html)
-            ?.group(1) ??
-        "";
-    html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
-    // TODO: 改为本地实现
-    var result = await HttpClient.instance.postJson(
-        "http://alive.nsapps.cn/api/AllLive/DouyuSign",
-        data: {"html": html, "rid": rid});
+  // Future<String> getPlayArgs(String html, String rid) async {
+  //   //取加密的js
+  //   html = RegExp(
+  //               r"(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function",
+  //               multiLine: true)
+  //           .firstMatch(html)
+  //           ?.group(1) ??
+  //       "";
+  //   html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
+  //   // TODO: 改为本地实现
+  //   var result = await HttpClient.instance.postJson(
+  //       "http://alive.nsapps.cn/api/AllLive/DouyuSign",
+  //       data: {"html": html, "rid": rid});
 
-    if (result["code"] == 0) {
-      return result["data"].toString();
-    }
-    return "";
-  }
+  //   if (result["code"] == 0) {
+  //     return result["data"].toString();
+  //   }
+  //   return "";
+  // }
 
   int parseHotNum(String hn) {
     try {

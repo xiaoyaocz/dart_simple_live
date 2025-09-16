@@ -26,6 +26,7 @@ dependencies:
   uuid: ^4.3.3 #UUID
   webdav_client: ^1.2.2 # WebDAV
   archive: ^3.6.1 #文件压缩
+  crypto: ^3.0.6
 
   #Widget
   flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
@@ -58,6 +59,7 @@ dependencies:
   connectivity_plus: ^6.1.3 #网络状态
   qr_code_scanner: ^1.0.1 #二维码扫描
   volume_controller: ^2.0.7 #音量控制
+  flutter_js: ^0.8.5
 
   # 网络相关
   shelf: ^1.4.1
@@ -102,3 +104,4 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/lotties/
+    - assets/scripts/

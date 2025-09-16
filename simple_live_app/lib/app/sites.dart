@@ -1,5 +1,6 @@
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sign/douyu.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class Sites {
@@ -14,7 +15,7 @@ class Sites {
       id: Constant.kDouyu,
       logo: "assets/images/douyu.png",
       name: "斗鱼直播",
-      liveSite: DouyuSite(),
+      liveSite: DouyuSite()..setDouyuSignFunction(DouyuSign.getSign),
     ),
     Constant.kHuya: Site(
       id: Constant.kHuya,

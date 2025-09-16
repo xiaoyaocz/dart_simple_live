@@ -28,7 +28,8 @@ class DouyuSite implements LiveSite {
   LiveDanmaku getDanmaku() => DouyuDanmaku();
 
   Future<String> Function(String, String) getDouyuSign = (html, rid) async {
-    return "";
+    throw Exception(
+        "You must call setDouyuSignFunction to set the function first");
   };
 
   void setDouyuSignFunction(Future<String> Function(String, String) func) {
@@ -356,26 +357,6 @@ class DouyuSite implements LiveSite {
     var roomInfo = await _getRoomInfo(roomId);
     return roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1;
   }
-
-  // Future<String> getPlayArgs(String html, String rid) async {
-  //   //取加密的js
-  //   html = RegExp(
-  //               r"(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function",
-  //               multiLine: true)
-  //           .firstMatch(html)
-  //           ?.group(1) ??
-  //       "";
-  //   html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
-  //   // TODO: 改为本地实现
-  //   var result = await HttpClient.instance.postJson(
-  //       "http://alive.nsapps.cn/api/AllLive/DouyuSign",
-  //       data: {"html": html, "rid": rid});
-
-  //   if (result["code"] == 0) {
-  //     return result["data"].toString();
-  //   }
-  //   return "";
-  // }
 
   int parseHotNum(String hn) {
     try {

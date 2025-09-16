@@ -379,18 +379,16 @@ class FollowService extends GetxService {
     var data = jsonDecode(content);
 
     for (var item in data) {
-      var user = FollowUser.fromJson(item);
+      var follow = FollowUser.fromJson(item);
       // 导入关注列表同时导入标签列表 此方法可优化为所有导入逻辑
-      if (user.tag != "全部") {
-        if (!DBService.instance.getFollowTagExistByTag(user.tag)) {
-          DBService.instance.addFollowTag(user.tag);
-        } else {
-          var tag = DBService.instance.getFollowTag(user.tag);
-          tag!.userId.add(item.id);
-          DBService.instance.updateFollowTag(tag);
-        }
+      if (follow.tag != "全部") {
+        // logic: 尝试添加，存在则返回已存在的对象
+        var tag = await DBService.instance.addFollowTag(follow.tag);
+        // 更新tag
+        tag.userId.addIf(!tag.userId.contains(follow.id), follow.id);
+        await DBService.instance.updateFollowTag(tag);
       }
-      await DBService.instance.followBox.put(user.id, user);
+      await DBService.instance.addFollow(follow);
     }
   }
 

@@ -205,6 +205,7 @@ class DouyinDanmaku implements LiveDanmaku {
   /// 服务端代码：https://github.com/lovelyyoshino/douyin_python，请自行部署后使用
   Future<String> getSignature(String roomId, String uniqueId) async {
     try {
+      // TODO: 改为本地实现
       var signResult = await http.HttpClient.instance.postJson(
         "https://dy.nsapps.cn/signature",
         queryParameters: {},

@@ -358,7 +358,7 @@ class DouyuSite implements LiveSite {
             ?.group(1) ??
         "";
     html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
-
+    // TODO: 改为本地实现
     var result = await HttpClient.instance.postJson(
         "http://alive.nsapps.cn/api/AllLive/DouyuSign",
         data: {"html": html, "rid": rid});

@@ -714,6 +714,7 @@ class DouyinSite implements LiveSite {
   /// 服务端代码：https://github.com/dengmin/a-bogus，请自行部署后使用
   Future<String> getAbogusUrl(String url) async {
     try {
+      // TODO: 改为本地实现
       var signResult = await HttpClient.instance.postJson(
         "https://dy.nsapps.cn/abogus",
         queryParameters: {},

@@ -1,5 +1,6 @@
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sign/douyin.dart';
 import 'package:simple_live_app/app/sign/douyu.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -27,7 +28,9 @@ class Sites {
       id: Constant.kDouyin,
       logo: "assets/images/douyin.png",
       name: "抖音直播",
-      liveSite: DouyinSite(),
+      liveSite: DouyinSite()
+        ..setAbogusUrlFunction(DouyinSign.getAbogusUrl)
+        ..setSignatureFunction(DouyinSign.getSignature),
     ),
   };
 

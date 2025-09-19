@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/modules/follow_user/follow_app_setting/follow_app_settings_controller.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
-class FollowSettingsPage extends GetView<AppSettingsController> {
+class FollowSettingsPage extends GetView<FollowAppSettingsController> {
   const FollowSettingsPage({super.key});
 
   @override
@@ -24,28 +24,28 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
             child: Column(
               children: [
                 Obx(
-                  () => SettingsSwitch(
-                    value: controller.autoUpdateFollowEnable.value,
+                      () => SettingsSwitch(
+                    value: controller.appC.autoUpdateFollowEnable.value,
                     title: "自动更新关注直播状态",
                     onChanged: (e) {
-                      controller.setAutoUpdateFollowEnable(e);
+                      controller.appC.setAutoUpdateFollowEnable(e);
                       FollowService.instance.initTimer();
                     },
                   ),
                 ),
                 Obx(
-                  () => Visibility(
-                    visible: controller.autoUpdateFollowEnable.value,
+                      () => Visibility(
+                    visible: controller.appC.autoUpdateFollowEnable.value,
                     child: AppStyle.divider,
                   ),
                 ),
                 Obx(
-                  () => Visibility(
-                    visible: controller.autoUpdateFollowEnable.value,
+                      () => Visibility(
+                    visible: controller.appC.autoUpdateFollowEnable.value,
                     child: SettingsAction(
                       title: "自动更新间隔",
                       value:
-                          "${controller.autoUpdateFollowDuration.value ~/ 60}小时${controller.autoUpdateFollowDuration.value % 60}分钟",
+                      "${controller.appC.autoUpdateFollowDuration.value ~/ 60}小时${controller.appC.autoUpdateFollowDuration.value % 60}分钟",
                       onTap: () {
                         setTimer(context);
                       },
@@ -54,14 +54,14 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
                 ),
                 AppStyle.divider,
                 Obx(
-                  () => SettingsNumber(
-                    value: controller.updateFollowThreadCount.value,
+                      () => SettingsNumber(
+                    value: controller.appC.updateFollowThreadCount.value,
                     title: "更新线程数",
                     subtitle: "多线程可以能更快的完成加载，但可能会因为请求太频繁导致读取状态失败",
                     min: 1,
                     max: 12,
                     onChanged: (e) {
-                      controller.setUpdateFollowThreadCount(e);
+                      controller.appC.setUpdateFollowThreadCount(e);
                     },
                   ),
                 ),
@@ -77,8 +77,8 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
     var value = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(
-        hour: controller.autoUpdateFollowDuration.value ~/ 60,
-        minute: controller.autoUpdateFollowDuration.value % 60,
+        hour: controller.appC.autoUpdateFollowDuration.value ~/ 60,
+        minute: controller.appC.autoUpdateFollowDuration.value % 60,
       ),
       initialEntryMode: TimePickerEntryMode.inputOnly,
       builder: (_, child) {
@@ -94,7 +94,7 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
       return;
     }
     var duration = Duration(hours: value.hour, minutes: value.minute);
-    controller.setAutoUpdateFollowDuration(duration.inMinutes);
+    controller.appC.setAutoUpdateFollowDuration(duration.inMinutes);
     FollowService.instance.initTimer();
   }
 }

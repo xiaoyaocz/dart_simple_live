@@ -8,6 +8,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
@@ -76,9 +77,9 @@ class FollowUserPage extends GetView<FollowUserController> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Remix.price_tag_line),
+                      Icon(Remix.heart_line),
                       AppStyle.hGap12,
-                      Text("标签管理"),
+                      Text("关注设置"),
                     ],
                   ),
                 ),
@@ -94,7 +95,7 @@ class FollowUserPage extends GetView<FollowUserController> {
               } else if (value == 3) {
                 FollowService.instance.inputText();
               } else if (value == 4) {
-                showTagsManager();
+                Get.toNamed(RoutePath.kSettingsFollow);
               }
             },
           ),

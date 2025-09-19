@@ -1,10 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/modules/follow_user/follow_app_setting/follow_app_settings_controller.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/settings/settings_menu_check.dart';
 import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
@@ -53,13 +55,24 @@ class FollowSettingsPage extends GetView<FollowAppSettingsController> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SettingsAction(
-                      title: "筛选条件设置：Todo",
-                    ),
-                    SettingsAction(
-                      title: "筛选关注",
-                      onTap: controller.cleanFollow,
-                    ),
+                    // todo：筛选条件设置
+                    // SettingsAction(
+                    //   title: "筛选条件设置",
+                    // ),
+                    SettingsMenuCheck<FollowUser>(
+                      title: '选择要清理的用户',
+                      confirmText: '清理',
+                      itemToString: (user) => user.userName, // 告诉组件如何显示用户名
+
+                      // 这里传入您自己的筛选函数
+                      itemsProvider: () async {
+                        return controller.buildAutoCleanPool();
+                      },
+                      // 用户点击“清理”按钮后的回调
+                      onConfirm: (List<FollowUser> selectedUsers) {
+                        controller.cleanFollow(selectedUsers);
+                      },
+                    )
                   ],
                 ),
               ),

@@ -6,14 +6,14 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/duration2strUtils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
+import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 
 class FollowAppSettingsController extends BaseController {
   final appC = Get.find<AppSettingsController>();
-  // 清理池
-  RxList<FollowUser> cleanPoll = <FollowUser>[].obs;
   // 用户自定义标签
   RxList<FollowUserTag> userTagList = <FollowUserTag>[].obs;
 
@@ -206,10 +206,45 @@ class FollowAppSettingsController extends BaseController {
   }
 
   // todo:关注清理功能
-  void cleanFollow() {
-    if (cleanPoll.isEmpty) {
+  Future<void> cleanFollow(List<FollowUser> cleanPool) async {
+    if (cleanPool.isEmpty) {
       SmartDialog.showToast("没有需要清理的用户");
       return;
     }
+    SmartDialog.showLoading(msg: "清理中");
+    for (var follow in cleanPool) {
+      // 取消关注同时删除标签内的 userId
+      if (follow.tag != "全部") {
+        var tag = userTagList.firstWhere((tag) => tag.tag == follow.tag);
+        tag.userId.remove(follow.id);
+        await updateTag(tag);
+      }
+      await FollowService.instance.removeFollowUser(follow.id);
+    }
+    SmartDialog.dismiss();
+    SmartDialog.showToast("清理完成");
   }
+
+  List<FollowUser> buildAutoCleanPool() {
+    var followList = FollowService.instance.followList;
+    var histories = DBService.instance.getHistories();
+    if (histories.isEmpty || followList.isEmpty) return [];
+    // 筛选出历史记录里已关注的
+    final followedIds = followList.map((follow) => follow.id).toSet(); // set性能略优
+    final followedHistories =
+        histories.where((history) => followedIds.contains(history.id)).toList();
+    if (followedHistories.isEmpty) return [];
+    final oldestFollowedHistories = followedHistories.length > 20
+        ? followedHistories.sublist(followedHistories.length - 20)
+        : followedHistories;
+
+    final shortWatchHistories = oldestFollowedHistories
+        .where((history) => history.watchDuration!.toDuration().inSeconds < 3600);
+    final uidsToClean =
+        shortWatchHistories.map((history) => history.id).toSet();
+    final autoCleanPool =
+        followList.where((follow) => uidsToClean.contains(follow.id)).toList();
+    return autoCleanPool;
+  }
+
 }

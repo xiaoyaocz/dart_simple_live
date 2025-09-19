@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
-import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
@@ -132,8 +131,9 @@ class FollowUserPage extends GetView<FollowUserController> {
                     () => SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Wrap(
-                          spacing: 12,
-                          children: controller.tagList.map((option) {
+                        spacing: 12,
+                        children: controller.tagList.map(
+                          (option) {
                             return FilterButton(
                               text: option.tag,
                               selected: controller.filterMode.value == option,
@@ -141,7 +141,9 @@ class FollowUserPage extends GetView<FollowUserController> {
                                 controller.setFilterMode(option);
                               },
                             );
-                          }).toList()),
+                          },
+                        ).toList(),
+                      ),
                     ),
                   ),
                 ),
@@ -288,141 +290,6 @@ class FollowUserPage extends GetView<FollowUserController> {
               },
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void showTagsManager() {
-    Utils.showBottomSheet(
-      title: '标签管理',
-      child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppStyle.divider,
-            ListTile(
-              title: const Text("添加标签"),
-              leading: const Icon(Icons.add),
-              onTap: () {
-                editTagDialog("添加标签");
-              },
-            ),
-            AppStyle.divider,
-            // 列表内容
-            Expanded(
-              child: Obx(
-                () => ReorderableListView.builder(
-                  buildDefaultDragHandles: false,
-                  itemCount: controller.userTagList.length,
-                  itemBuilder: (context, index) {
-                    // 偏移
-                    FollowUserTag item = controller.userTagList[index];
-                    return ListTile(
-                      key: ValueKey(item.id),
-                      title: GestureDetector(
-                        child: Text(item.tag),
-                        onLongPress: () {
-                          {
-                            editTagDialog("修改标签", followUserTag: item);
-                          }
-                        },
-                      ),
-                      leading: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          controller.removeTag(item);
-                        },
-                      ),
-                      trailing: ReorderableDelayedDragStartListener(
-                        index: index,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12.0),
-                          child: Icon(Icons.drag_handle),
-                        ),
-                      ),
-                    );
-                  },
-                  onReorder: (int oldIndex, int newIndex) {
-                    controller.updateTagOrder(oldIndex, newIndex);
-                  },
-                ),
-              ),
-            ),
-          ]),
-    );
-  }
-
-  void editTagDialog(String title, {FollowUserTag? followUserTag}) {
-    final TextEditingController tagEditController =
-        TextEditingController(text: followUserTag?.tag);
-    bool upMode = title == "添加标签" ? true : false;
-    Get.dialog(
-      AlertDialog(
-        contentPadding: const EdgeInsets.all(16.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        content: SingleChildScrollView(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(Get.context!).viewInsets.bottom),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                ),
-              ),
-              TextField(
-                controller: tagEditController,
-                minLines: 1,
-                maxLines: 1,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  contentPadding: AppStyle.edgeInsetsA12,
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Colors.grey.withValues(alpha: .2),
-                    ),
-                  ),
-                ),
-                onSubmitted: (tag) {
-                  upMode
-                      ? controller.addTag(tagEditController.text)
-                      : controller.updateTagName(
-                          followUserTag!, tagEditController.text);
-                  Get.back();
-                },
-              ),
-              Container(
-                margin: AppStyle.edgeInsetsB4,
-                width: double.infinity,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Get.back();
-                      },
-                      child: const Text('否'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        upMode
-                            ? controller.addTag(tagEditController.text)
-                            : controller.updateTagName(
-                                followUserTag!, tagEditController.text);
-                        Get.back();
-                      },
-                      child: const Text('是'),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
         ),
       ),
     );

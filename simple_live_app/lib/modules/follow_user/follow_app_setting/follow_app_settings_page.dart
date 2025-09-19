@@ -20,53 +20,84 @@ class FollowSettingsPage extends GetView<FollowAppSettingsController> {
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
-          SettingsCard(
-            child: Column(
-              children: [
-                Obx(
-                      () => SettingsSwitch(
-                    value: controller.appC.autoUpdateFollowEnable.value,
-                    title: "自动更新关注直播状态",
-                    onChanged: (e) {
-                      controller.appC.setAutoUpdateFollowEnable(e);
-                      FollowService.instance.initTimer();
-                    },
-                  ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
+                child: Text(
+                  "标签管理",
+                  style: Get.textTheme.titleSmall,
                 ),
-                Obx(
-                      () => Visibility(
-                    visible: controller.appC.autoUpdateFollowEnable.value,
-                    child: AppStyle.divider,
-                  ),
-                ),
-                Obx(
-                      () => Visibility(
-                    visible: controller.appC.autoUpdateFollowEnable.value,
-                    child: SettingsAction(
-                      title: "自动更新间隔",
-                      value:
-                      "${controller.appC.autoUpdateFollowDuration.value ~/ 60}小时${controller.appC.autoUpdateFollowDuration.value % 60}分钟",
-                      onTap: () {
-                        setTimer(context);
-                      },
+              ),
+              SettingsCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SettingsAction(
+                      title: "标签管理",
+                      onTap: controller.showTagsManager,
                     ),
-                  ),
+                  ],
                 ),
-                AppStyle.divider,
-                Obx(
+              ),
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+                child: Text(
+                  "自动更新设置",
+                  style: Get.textTheme.titleSmall,
+                ),
+              ),
+              SettingsCard(
+                child: Column(
+                  children: [
+                    Obx(
+                      () => SettingsSwitch(
+                        value: controller.appC.autoUpdateFollowEnable.value,
+                        title: "自动更新关注直播状态",
+                        onChanged: (e) {
+                          controller.appC.setAutoUpdateFollowEnable(e);
+                          FollowService.instance.initTimer();
+                        },
+                      ),
+                    ),
+                    Obx(
+                      () => Visibility(
+                        visible: controller.appC.autoUpdateFollowEnable.value,
+                        child: AppStyle.divider,
+                      ),
+                    ),
+                    Obx(
+                      () => Visibility(
+                        visible: controller.appC.autoUpdateFollowEnable.value,
+                        child: SettingsAction(
+                          title: "自动更新间隔",
+                          value:
+                              "${controller.appC.autoUpdateFollowDuration.value ~/ 60}小时${controller.appC.autoUpdateFollowDuration.value % 60}分钟",
+                          onTap: () {
+                            setTimer(context);
+                          },
+                        ),
+                      ),
+                    ),
+                    AppStyle.divider,
+                    Obx(
                       () => SettingsNumber(
-                    value: controller.appC.updateFollowThreadCount.value,
-                    title: "更新线程数",
-                    subtitle: "多线程可以能更快的完成加载，但可能会因为请求太频繁导致读取状态失败",
-                    min: 1,
-                    max: 12,
-                    onChanged: (e) {
-                      controller.appC.setUpdateFollowThreadCount(e);
-                    },
-                  ),
+                        value: controller.appC.updateFollowThreadCount.value,
+                        title: "更新线程数",
+                        subtitle: "多线程可以能更快的完成加载，但可能会因为请求太频繁导致读取状态失败",
+                        min: 1,
+                        max: 12,
+                        onChanged: (e) {
+                          controller.appC.setUpdateFollowThreadCount(e);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

@@ -120,43 +120,8 @@ class FollowUserController extends BasePageController<FollowUser> {
     filterData();
   }
 
-  Future removeTag(FollowUserTag tag) async {
-    await FollowService.instance.removeFollowUserTag(tag);
-    updateTagList();
-    Log.i('删除tag${tag.tag}');
-  }
-
-  void addTag(String tag) async {
-    await FollowService.instance.addFollowUserTag(tag);
-    updateTagList();
-  }
-
   Future<void> updateTag(FollowUserTag followUserTag) async {
     await FollowService.instance.updateFollowUserTag(followUserTag);
-  }
-
-  void updateTagName(FollowUserTag followUserTag, String newTagName) {
-    // 未操作
-    if (followUserTag.tag == newTagName) {
-      return;
-    }
-    // 避免重名
-    if (tagList.any((item) => item.tag == newTagName)) {
-      SmartDialog.showToast("标签名重复，修改失败");
-      return;
-    }
-    FollowService.instance.updateTagName(followUserTag, newTagName);
-    SmartDialog.showToast("标签名修改成功");
-    updateTagList();
-  }
-
-  void updateTagOrder(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1; // 处理索引调整
-    final item = userTagList.removeAt(oldIndex);
-    userTagList.insert(newIndex, item);
-    tagList.value = tagList.take(3).toList();
-    tagList.addAll(userTagList);
-    FollowService.instance.updateFollowTagOrder(userTagList);
   }
 
   @override

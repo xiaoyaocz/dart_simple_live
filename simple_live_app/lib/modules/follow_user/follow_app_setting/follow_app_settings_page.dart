@@ -45,6 +45,27 @@ class FollowSettingsPage extends GetView<FollowAppSettingsController> {
               Padding(
                 padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
                 child: Text(
+                  "关注清理功能",
+                  style: Get.textTheme.titleSmall,
+                ),
+              ),
+              SettingsCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SettingsAction(
+                      title: "筛选条件设置：Todo",
+                    ),
+                    SettingsAction(
+                      title: "筛选关注",
+                      onTap: controller.cleanFollow,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+                child: Text(
                   "自动更新设置",
                   style: Get.textTheme.titleSmall,
                 ),

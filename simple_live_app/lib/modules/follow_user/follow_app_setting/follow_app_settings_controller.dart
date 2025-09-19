@@ -6,12 +6,14 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 
 class FollowAppSettingsController extends BaseController {
   final appC = Get.find<AppSettingsController>();
-
+  // 清理池
+  RxList<FollowUser> cleanPoll = <FollowUser>[].obs;
   // 用户自定义标签
   RxList<FollowUserTag> userTagList = <FollowUserTag>[].obs;
 
@@ -201,5 +203,13 @@ class FollowAppSettingsController extends BaseController {
         ),
       ),
     );
+  }
+
+  // todo:关注清理功能
+  void cleanFollow() {
+    if (cleanPoll.isEmpty) {
+      SmartDialog.showToast("没有需要清理的用户");
+      return;
+    }
   }
 }

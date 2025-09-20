@@ -1,9 +1,12 @@
 import 'package:hive/hive.dart';
+import 'package:simple_live_app/app/utils/duration2strUtils.dart';
+import 'package:simple_live_app/app/utils/dynamic_filter.dart';
+
 
 part 'history.g.dart';
 
 @HiveType(typeId: 2)
-class History {
+class History implements Mappable {
   History({
     required this.id,
     required this.roomId,
@@ -36,6 +39,7 @@ class History {
   @HiveField(6)
   String? watchDuration; // "00:00:00"
 
+  Duration get duration => watchDuration!.toDuration();  //for filter
 
   factory History.fromJson(Map<String, dynamic> json) => History(
         id: json["id"],
@@ -44,7 +48,7 @@ class History {
         userName: json["userName"],
         face: json["face"],
         updateTime: DateTime.parse(json["updateTime"]),
-        watchDuration: json["watchDuration"]??"00:00:00",
+        watchDuration: json["watchDuration"] ?? "00:00:00",
       );
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +58,9 @@ class History {
         "userName": userName,
         "face": face,
         "updateTime": updateTime.toString(),
-        "watchDuration": watchDuration??"00:00:00",
+        "watchDuration": watchDuration ?? "00:00:00",
       };
+
+  @override
+  Map<String, dynamic> toMap() => toJson();
 }

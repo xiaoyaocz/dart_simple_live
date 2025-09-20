@@ -1,12 +1,15 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide Condition;
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/duration2strUtils.dart';
+import 'package:simple_live_app/app/utils/dynamic_filter.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
@@ -14,8 +17,13 @@ import 'package:simple_live_app/services/follow_service.dart';
 
 class FollowAppSettingsController extends BaseController {
   final appC = Get.find<AppSettingsController>();
+
   // 用户自定义标签
   RxList<FollowUserTag> userTagList = <FollowUserTag>[].obs;
+
+  // 用户自定义条件
+  Rx<int> takeLast = 15.obs;
+  Rx<int> minutes= 30.obs;
 
   @override
   void onInit() {
@@ -205,7 +213,7 @@ class FollowAppSettingsController extends BaseController {
     );
   }
 
-  // todo:关注清理功能
+  // 关注清理功能
   Future<void> cleanFollow(List<FollowUser> cleanPool) async {
     if (cleanPool.isEmpty) {
       SmartDialog.showToast("没有需要清理的用户");
@@ -222,6 +230,7 @@ class FollowAppSettingsController extends BaseController {
       await FollowService.instance.removeFollowUser(follow.id);
     }
     SmartDialog.dismiss();
+    EventBus.instance.emit(Constant.kUpdateFollow,0);
     SmartDialog.showToast("清理完成");
   }
 
@@ -230,21 +239,32 @@ class FollowAppSettingsController extends BaseController {
     var histories = DBService.instance.getHistories();
     if (histories.isEmpty || followList.isEmpty) return [];
     // 筛选出历史记录里已关注的
-    final followedIds = followList.map((follow) => follow.id).toSet(); // set性能略优
+    final followedIds =
+        followList.map((follow) => follow.id).toSet(); // set性能略优
     final followedHistories =
         histories.where((history) => followedIds.contains(history.id)).toList();
     if (followedHistories.isEmpty) return [];
-    final oldestFollowedHistories = followedHistories.length > 20
-        ? followedHistories.sublist(followedHistories.length - 20)
-        : followedHistories;
 
-    final shortWatchHistories = oldestFollowedHistories
-        .where((history) => history.watchDuration!.toDuration().inSeconds < 3600);
-    final uidsToClean =
-        shortWatchHistories.map((history) => history.id).toSet();
+    List<Condition> conditions = [
+      // Condition('siteId', FilterOperator.equals, Constant.kBiliBili),
+      Condition(
+        'watchDuration',
+        FilterOperator.lessThan,
+        Duration(minutes: minutes.value),
+        comparableValueProvider: (watchDuration) {
+          if (watchDuration is String) {
+            return watchDuration.toDuration();
+          }
+          return null;
+        },
+      ),
+    ];
+    // 根据动态条件筛选出需要清理的 关注id
+    final df = dynamicFilter(followedHistories, conditions, takeLast: takeLast.value);
+    final uidsToClean = df.map((history) => history.id).toSet();
+
     final autoCleanPool =
         followList.where((follow) => uidsToClean.contains(follow.id)).toList();
     return autoCleanPool;
   }
-
 }

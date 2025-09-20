@@ -61,6 +61,7 @@ class FollowSettingsPage extends GetView<FollowAppSettingsController> {
                     // ),
                     SettingsMenuCheck<FollowUser>(
                       title: '选择要清理的用户',
+                      subtitle: '默认条件为：观看时常低于30分钟，历史观看底部15',
                       confirmText: '清理',
                       itemToString: (user) => user.userName, // 告诉组件如何显示用户名
 

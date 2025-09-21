@@ -3,48 +3,49 @@
 import 'package:get/get.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_controller.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_page.dart';
+import 'package:simple_live_app/modules/follow_user/follow_app_setting/follow_app_settings_controller.dart';
+import 'package:simple_live_app/modules/follow_user/follow_app_setting/follow_app_settings_page.dart';
+import 'package:simple_live_app/modules/follow_user/follow_info_setting/follow_info_controller.dart';
+import 'package:simple_live_app/modules/follow_user/follow_info_setting/follow_info_page.dart';
+import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
+import 'package:simple_live_app/modules/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
-import 'package:simple_live_app/modules/settings/follow_settings_page.dart';
-import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_config_page.dart';
-import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_controller.dart';
-import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_page.dart';
-import 'package:simple_live_app/modules/sync/sync_page.dart';
-import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_controller.dart';
-import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_page.dart';
-import 'package:simple_live_app/modules/search/search_controller.dart';
-import 'package:simple_live_app/modules/search/search_page.dart';
-import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_controller.dart';
-import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_page.dart';
-import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_controller.dart';
-import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_page.dart';
-import 'package:simple_live_app/modules/mine/parse/parse_controller.dart';
-import 'package:simple_live_app/modules/mine/parse/parse_page.dart';
-import 'package:simple_live_app/modules/sync/local_sync/local_sync_controller.dart';
-import 'package:simple_live_app/modules/sync/local_sync/local_sync_page.dart';
 import 'package:simple_live_app/modules/mine/account/account_controller.dart';
 import 'package:simple_live_app/modules/mine/account/account_page.dart';
 import 'package:simple_live_app/modules/mine/account/bilibili/qr_login_controller.dart';
 import 'package:simple_live_app/modules/mine/account/bilibili/qr_login_page.dart';
 import 'package:simple_live_app/modules/mine/account/bilibili/web_login_controller.dart';
 import 'package:simple_live_app/modules/mine/account/bilibili/web_login_page.dart';
+import 'package:simple_live_app/modules/mine/history/history_controller.dart';
+import 'package:simple_live_app/modules/mine/history/history_page.dart';
+import 'package:simple_live_app/modules/mine/parse/parse_controller.dart';
+import 'package:simple_live_app/modules/mine/parse/parse_page.dart';
+import 'package:simple_live_app/modules/search/search_controller.dart';
+import 'package:simple_live_app/modules/search/search_page.dart';
 import 'package:simple_live_app/modules/settings/appstyle_setting_page.dart';
 import 'package:simple_live_app/modules/settings/auto_exit_settings_page.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/modules/settings/danmu_shield/danmu_shield_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_shield/danmu_shield_page.dart';
-import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
-import 'package:simple_live_app/modules/follow_user/follow_user_page.dart';
-import 'package:simple_live_app/modules/mine/history/history_controller.dart';
-import 'package:simple_live_app/modules/mine/history/history_page.dart';
 import 'package:simple_live_app/modules/settings/indexed_settings/indexed_settings_controller.dart';
 import 'package:simple_live_app/modules/settings/indexed_settings/indexed_settings_page.dart';
 import 'package:simple_live_app/modules/settings/other/other_settings_controller.dart';
 import 'package:simple_live_app/modules/settings/other/other_settings_page.dart';
 import 'package:simple_live_app/modules/settings/play_settings_page.dart';
-import 'package:simple_live_app/modules/follow_user/follow_info_setting/follow_info_controller.dart';
-import 'package:simple_live_app/modules/follow_user/follow_info_setting/follow_info_page.dart';
+import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_controller.dart';
+import 'package:simple_live_app/modules/sync/local_sync/device/sync_device_page.dart';
+import 'package:simple_live_app/modules/sync/local_sync/local_sync_controller.dart';
+import 'package:simple_live_app/modules/sync/local_sync/local_sync_page.dart';
+import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_controller.dart';
+import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_controller.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/room/remote_sync_room_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_config_page.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_controller.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_page.dart';
+import 'package:simple_live_app/modules/sync/sync_page.dart';
 
 import '../modules/indexed/indexed_page.dart';
 import 'route_path.dart';
@@ -249,6 +250,9 @@ class AppPages {
     GetPage(
       name: RoutePath.kSettingsFollow,
       page: () => const FollowSettingsPage(),
+      bindings: [
+        BindingsBuilder.put(() => FollowAppSettingsController()),
+      ],
     ),
     // 关注用户-信息详情
     GetPage(

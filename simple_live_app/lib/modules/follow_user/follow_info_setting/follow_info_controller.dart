@@ -176,13 +176,13 @@ class FollowInfoController extends BasePageController<FollowUser> {
       if (tagObj != null) {
         // 自刷新和迁移逻辑一致：删旧增新
         tagObj.userId.remove(current.id);
-        tagObj.userId.add( newFollow.id);
-        FollowService.instance.updateFollowUserTag(tagObj);
+        tagObj.userId.add(newFollow.id);
+        await FollowService.instance.updateFollowUserTag(tagObj);
       }
     }
 
     // 替换关注
-    FollowService.instance.removeFollowUser(current.id);
+    await FollowService.instance.removeFollowUser(current.id);
     FollowService.instance.addFollow(newFollow);
 
     // 刷新本地数据并更新UI

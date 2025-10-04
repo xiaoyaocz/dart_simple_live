@@ -90,32 +90,55 @@ class DouyinSite implements LiveSite {
         .replaceAll(']\\n', ""));
 
     for (var item in renderDataJson["categoryData"]) {
-      List<LiveSubCategory> subs = [];
-      var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
-      for (var subItem in item["sub_partition"]) {
-        var subCategory = LiveSubCategory(
-          id: '${subItem["partition"]["id_str"]},${subItem["partition"]["type"]}',
-          name: asT<String?>(subItem["partition"]["title"]) ?? "",
-          parentId: id,
-          pic: "",
-        );
-        subs.add(subCategory);
-      }
+      // 处理多级类目.一级类目直接保留,两级类目会展开为一级,三级类目展为两级类目.目前只有一级类目及三级类目2种
+      if(item["sub_partition"].length > 0){
+        // 将三级类目提升为二级类目,对应的二级类目提升为一级类目
+        for (var subItem in item["sub_partition"]) {
+          List<LiveSubCategory> subsubs = [];
+          for(var subsubItem in subItem["sub_partition"]){
+            var subCategory = LiveSubCategory(
+              id: '${subsubItem["partition"]["id_str"]},${subsubItem["partition"]["type"]}',
+              name: asT<String?>(subsubItem["partition"]["title"]) ?? "",
+              parentId: '${subItem["partition"]["id_str"]},${subItem["partition"]["type"]}',
+              pic: "",
+            );
+            subsubs.add(subCategory);
+          }
 
-      var category = LiveCategory(
-        children: subs,
-        id: id,
-        name: asT<String?>(item["partition"]["title"]) ?? "",
-      );
-      subs.insert(
-          0,
-          LiveSubCategory(
-            id: category.id,
-            name: category.name,
-            parentId: category.id,
-            pic: "",
-          ));
-      categories.add(category);
+          var category = LiveCategory(
+            children: subsubs,
+            id: '${subItem["partition"]["id_str"]},${subItem["partition"]["type"]}',
+            name: asT<String?>(subItem["partition"]["title"]) ?? "",
+          );
+          subsubs.insert(
+              0,
+              LiveSubCategory(
+                id: category.id,
+                name: category.name,
+                parentId: category.id,
+                pic: "",
+              ));
+          categories.add(category);
+        }
+      } else {
+        // 一级类目直接保留
+        List<LiveSubCategory> subs = [];
+        var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
+        var category = LiveCategory(
+          children: subs,
+          id: id,
+          name: asT<String?>(item["partition"]["title"]) ?? "",
+        );
+        subs.insert(
+            0,
+            LiveSubCategory(
+              id: category.id,
+              name: category.name,
+              parentId: category.id,
+              pic: "",
+            ));
+        categories.add(category);
+      }
     }
     return categories;
   }

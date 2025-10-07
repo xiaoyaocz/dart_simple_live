@@ -1,4 +1,20 @@
+buildscript {
+    ext.kotlin_version = '2.1.0'
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url 'https://maven.aliyun.com/repository/public'
+        }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.3.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 allprojects {
+    ext.kotlin_version = '2.1.0'
     repositories {
         google()
         mavenCentral()
@@ -11,6 +27,40 @@ allprojects {
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+    afterEvaluate {
+        // check if android block is available
+
+        if (it.hasProperty('android')) {
+
+            if (it.android.namespace == null) {
+                def manifest = new XmlSlurper().parse(file(it.android.sourceSets.main.manifest.srcFile))
+                def packageName = manifest.@package.text()
+                println("Setting ${packageName} as android namespace")
+                android.namespace = packageName
+            }
+
+            def javaVersion = JavaVersion.VERSION_17
+            android {
+                def androidApiVersion = 34
+                compileSdkVersion androidApiVersion
+                defaultConfig {
+                    targetSdkVersion androidApiVersion
+                }
+                compileOptions {
+                    sourceCompatibility javaVersion
+                    targetCompatibility javaVersion
+                }
+                tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                    kotlinOptions {
+                        jvmTarget = javaVersion.toString()
+                    }
+                }
+                println("Setting java version to ${javaVersion.toString()} which is $javaVersion")
+                println("Setting compileSdkVersion and targetSdkVersion to $androidApiVersion")
+            }
+        }
+
+    }
 }
 subprojects {
     project.evaluationDependsOn(":app")

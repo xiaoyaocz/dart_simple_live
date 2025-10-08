@@ -219,18 +219,25 @@ jobs:
           cd simple_live_app
           flutter clean
           flutter pub get
-      # 设置fast-forge环境
-      - name: Install fast-forge
+      # 设置fast-forge环境 和 Inno Setup
+      - name: Install fast-forge and Inno Setup
         run: |
           git clone https://github.com/SlotSun/fastforge.git
           cd fastforge
           dart pub global activate melos
           melos run activate
-      # build Windows ZIP\MSIX
+          choco install innosetup
+      # 添加中文安装引导
+      - name: Add Chinese language file for Inno Setup
+        run: |
+          cd simple_live_app
+          Copy-Item "windows/packaging/exe/ChineseSimplified.isl" "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
+        shell: powershell
+      # build Windows ZIP\MSIX\EXE
       - name: Build Windows
         run: |
           cd simple_live_app
-          fastforge package --platform windows --targets msix,zip --skip-clean
+          fastforge package --platform windows --targets msix,zip,exe --skip-clean
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4

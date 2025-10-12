@@ -133,16 +133,9 @@ jobs:
       #完成
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
-  # 打包Linux
-  build-linux:
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            arch: x86_64
-          - runner: ubuntu-24.04-arm
-            arch: aarch64
-    runs-on: ${{ matrix.runner }}
+  # 打包Linux x86_64
+  build-linux-x86_64:
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -182,13 +175,69 @@ jobs:
           cd simple_live_app
           fastforge package --platform linux --targets deb,zip --skip-clean
           cd build/dist/*
-          mv simple_live_app-*-linux.deb simplelive-${{ matrix.arch }}-linux.deb
-          mv simple_live_app-*-linux.zip simplelive-${{ matrix.arch }}-linux.zip
+          mv simple_live_app-*-linux.deb simplelive-x86_64-linux.deb
+          mv simple_live_app-*-linux.zip simplelive-x86_64-linux.zip
       # 上传Linux包至Artifacts
       - name: Upload Linux APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-${{ matrix.arch }}
+          name: linux-x86_64
+          path: |
+            simple_live_app/build/dist/*/*.deb
+            simple_live_app/build/dist/*/*.zip
+
+        #完成
+      - run: echo "🍏 Linux job's status is ${{ job.status }}."
+
+  # 打包Linux aarch64
+  build-linux-aarch64:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+    steps:
+      # 签出代码
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      # 设置Flutter环境
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.8"
+          channel: master
+      # 安装依赖
+      - name: Update apt-get
+        run: sudo apt-get update
+      - name: Install Dependencies
+        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev mpv libasound2-dev
+      # 打开Linux Desktop支持
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-linux-desktop
+      # 更新Flutter的packages
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+      # 设置fast-forge环境
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
+      # build Linux DEB\ZIP
+      - name: Build Linux
+        run: |
+          cd simple_live_app
+          fastforge package --platform linux --targets deb,zip --skip-clean
+          cd build/dist/*
+          mv simple_live_app-*-linux.deb simplelive-aarch64-linux.deb
+          mv simple_live_app-*-linux.zip simplelive-aarch64-linux.zip
+      # 上传Linux包至Artifacts
+      - name: Upload Linux APP to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-aarch64
           path: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip

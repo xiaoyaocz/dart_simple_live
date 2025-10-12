@@ -72,18 +72,18 @@ dependencies:
   # 视频播放
   media_kit:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./media_kit
   media_kit_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./media_kit_video
   media_kit_libs_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./libs/universal/media_kit_libs_video
 
   flutter: 
@@ -102,28 +102,28 @@ dev_dependencies:
 dependency_overrides:
   media_kit_libs_linux:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./libs/linux/media_kit_libs_linux
   media_kit_libs_ios_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./libs/ios/media_kit_libs_ios_video
   media_kit_libs_android_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./libs/android/media_kit_libs_android_video
   media_kit_libs_windows_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./libs/windows/media_kit_libs_windows_video
   media_kit_libs_macos_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 8984f0a3389a786dc2fb8ce055231e5b86e987f7
+      url: https://github.com/SlotSun/media-kit.git
+      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
       path: ./libs/macos/media_kit_libs_macos_video
 
 flutter_launcher_icons:

@@ -194,7 +194,7 @@ class AppPages {
       name: RoutePath.kSyncScan,
       page: () => const SyncScanQRPage(),
       bindings: [
-        BindingsBuilder.put(() => SyncScanQRControlelr()),
+        BindingsBuilder.put(() => SyncScanQRController()),
       ],
     ),
     //同步设备

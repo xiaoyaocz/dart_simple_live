@@ -23,7 +23,7 @@ extension ArchiveExt on Archive {
     final data = json.encode(raw);
     addFile(
       // 这样会出现问题 不清楚原因
-      ArchiveFile(name, data.length, data),
+      ArchiveFile(name, data.length, utf8.encode(data)),
     );
   }
 }

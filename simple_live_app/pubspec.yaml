@@ -70,21 +70,9 @@ dependencies:
   signalr_netcore: ^1.3.9 #SignalR
 
   # 视频播放
-  media_kit:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./media_kit
-  media_kit_video:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./media_kit_video
-  media_kit_libs_video:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./libs/universal/media_kit_libs_video
+  media_kit: ^1.2.1 # Primary package.
+  media_kit_video: ^1.3.1 # For video rendering.
+  media_kit_libs_video: ^1.0.7 # Native video dependencies.
 
   flutter: 
     sdk: flutter
@@ -98,33 +86,6 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   flutter_test: 
     sdk: flutter
-
-dependency_overrides:
-  media_kit_libs_linux:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./libs/linux/media_kit_libs_linux
-  media_kit_libs_ios_video:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./libs/ios/media_kit_libs_ios_video
-  media_kit_libs_android_video:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./libs/android/media_kit_libs_android_video
-  media_kit_libs_windows_video:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./libs/windows/media_kit_libs_windows_video
-  media_kit_libs_macos_video:
-    git:
-      url: https://github.com/SlotSun/media-kit.git
-      ref: 808bf6e390bdf537cc2081dc7a93077a3a3c5832
-      path: ./libs/macos/media_kit_libs_macos_video
 
 flutter_launcher_icons:
   android: true

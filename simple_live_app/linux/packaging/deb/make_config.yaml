@@ -1,8 +1,8 @@
-display_name: Simplelive
-package_name: simplelive
+display_name: Slive
+package_name: Slive
 maintainer:
-  name: xiaoyaocz
-  email: xiaoyaocz@52uwp.com
+  name: slotsun
+  email: slot_sun@outlook.com
 priority: optional
 section: x11
 installed_size: 24400

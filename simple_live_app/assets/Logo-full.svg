@@ -1,0 +1,29 @@
+<svg t="1760941893745" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
+    p-id="29228" id="mx_n_1760941893746" width="1024" height="1024">
+    <defs>
+        <!-- 或多个斑点组合 -->
+        <radialGradient id="multiSpot" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#3193cb"/>
+            <stop offset="30%" stop-color="#2b84bd"/>
+            <stop offset="60%" stop-color="#2675af"/>
+            <stop offset="100%" stop-color="#1e6ba0"/>
+        </radialGradient>
+    </defs>
+    
+    <rect width="100%" height="100%" fill="url(#multiSpot)"/>
+    <g transform="translate(450, 532) scale(1.8)" fill="none" stroke="white" stroke-width="20" stroke-linecap="round">
+        <!-- S -->
+        <path d="M-120,-80 Q-120,-140 -60,-80 Q0,-20 60,-80 Q120,-140 240,-80"/>
+        <!-- l -->
+        <path d="M-120,20 L-120,120"/>
+        <!-- i -->
+        <path d="M-60,20 L-60,80 M-60,40 L-60,40"/>
+        <!-- v -->
+        <path d="M0,20 L30,80 L60,20"/>
+        <!-- e -->
+        <path d="M120,20 Q90,50 120,80 Q150,50 180,20 M110,78 Q210,70 220,40"/>
+        <path d="M-80,-30 L-80,-38"/>
+        <path d="M110,-35 L140,-45"/>
+    </g>
+    
+</svg>

@@ -88,12 +88,17 @@ dev_dependencies:
     sdk: flutter
 
 flutter_launcher_icons:
-  android: true
+  android: "ic_launcher"
   ios: true
   image_path: "assets/logo.png"
   min_sdk_android: 21
+  windows:
+    generate: true
+    image_path: "assets/logo.png"
+    icon_size: 256
   macos:
     generate: true
+    image_path: "assets/logo.png"
 
 flutter: 
   uses-material-design: true

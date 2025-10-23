@@ -319,6 +319,11 @@ class DouyuSite implements LiveSite {
             .firstMatch(html)
             ?.group(1) ??
         "";
+    // 防空
+    if (html == "") {
+      return "";
+    }
+    //去掉eval
     html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
 
     try {

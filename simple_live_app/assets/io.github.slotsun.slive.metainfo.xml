@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>io.github.slotsun.slive</id>
+  <launchable type="desktop-id">io.github.slotsun.slive.desktop</launchable>
+  <name>Slive</name>
+  <developer id="io.github.slotsun">
+    <name>SlotSun</name>
+  </developer>
+  <summary>Watch live streams simply</summary>
+  <summary xml:lang="zh_CN">简简单单看直播</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <url type="homepage">https://github.com/SlotSun/dart_simple_live/</url>
+  <url type="bugtracker">https://github.com/SlotSun/dart_simple_live/issues</url>
+  <description>
+    <p>Slive is a lightweight and user-friendly application for watching live streams across multiple platforms, offering a seamless watching experience with support for popular streaming services.</p>
+    <p xml:lang="zh_CN">Slive 是一款轻量级且用户友好的直播观看应用，支持多个主流直播平台，提供流畅的观看体验。</p>
+    <p>Slive support platforms:</p>
+    <p xml:lang="zh_CN">支持直播平台：</p>
+    <ul>
+        <li>Huya</li>
+        <li xml:lang="zh_CN">虎牙</li>
+        <li>Douyu</li>
+        <li xml:lang="zh_CN">斗鱼</li>
+        <li>Bilibili</li>
+        <li xml:lang="zh_CN">哔哩哔哩</li>
+        <li>Douyin</li>
+        <li xml:lang="zh_CN">抖音</li>
+    </ul>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Light Mode</caption>
+      <image type="source">https://raw.githubusercontent.com/SlotSun/dart_simple_live/v1.7.18/assets/screenshot_light.jpg</image>
+    </screenshot>
+    <screenshot type="default">
+      <caption>Dark Mode</caption>
+      <image type="source">https://raw.githubusercontent.com/SlotSun/dart_simple_live/v1.7.18/assets/screenshot_dark.jpg</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.7.18" date="2025-08-29">
+      <description></description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <update_contact>i@pugai.life</update_contact>
+</component>

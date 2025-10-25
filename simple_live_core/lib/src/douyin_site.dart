@@ -312,7 +312,7 @@ class DouyinSite implements LiveSite {
 
     // 读取用户唯一ID，用于弹幕连接
     // 似乎这个参数不是必须的，先随机生成一个
-    //var userUniqueId = await _getUserUniqueId(webRid);
+    //var userUniqueId = await _getUserUniqueId(webRid) ;
     var userUniqueId = generateRandomNumber(12).toString();
 
     var owner = roomData["owner"];
@@ -610,21 +610,9 @@ class DouyinSite implements LiveSite {
       "round_trip_time": "100",
       "webid": "7382872326016435738",
     });
-    //var requlestUrl = await getAbogusUrl(uri.toString());
     var requlestUrl = uri.toString();
-    var headResp = await HttpClient.instance
-        .head('https://live.douyin.com', header: headers);
-    var dyCookie = "";
-    headResp.headers["set-cookie"]?.forEach((element) {
-      var cookie = element.split(";")[0];
-      if (cookie.contains("ttwid")) {
-        dyCookie += "$cookie;";
-      }
-      if (cookie.contains("__ac_nonce")) {
-        dyCookie += "$cookie;";
-      }
-    });
-
+    var headResp = await getRequestHeaders();
+    var dyCookie = headResp['cookie'];
     var result = await HttpClient.instance.getJson(
       requlestUrl,
       queryParameters: {},

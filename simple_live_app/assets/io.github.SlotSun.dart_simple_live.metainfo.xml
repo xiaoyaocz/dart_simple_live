@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop">
-  <id>io.github.slotsun.slive</id>
-  <launchable type="desktop-id">io.github.slotsun.slive.desktop</launchable>
+  <id>io.github.SlotSun.dart_simple_live</id>
+  <launchable type="desktop-id">io.github.SlotSun.dart_simple_live.desktop</launchable>
   <name>Slive</name>
-  <developer id="io.github.slotsun">
+  <developer id="io.github.SlotSun">
     <name>SlotSun</name>
   </developer>
   <summary>Watch live streams simply</summary>

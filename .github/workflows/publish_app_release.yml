@@ -258,6 +258,7 @@ jobs:
           files: |
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
+            simple_live_app/build/dist/*/*.exe
 
       #完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."

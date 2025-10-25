@@ -147,7 +147,7 @@ class LocalSyncController extends BaseController {
           Visibility(
             visible: SyncService.instance.httpRunning.value,
             child: const Text(
-              "请使用其他Simple Live客户端扫描上方二维码\n建立连接后可选择需要同步的数据",
+              "请使用其他Slive客户端扫描上方二维码\n建立连接后可选择需要同步的数据",
               textAlign: TextAlign.center,
             ),
           ),

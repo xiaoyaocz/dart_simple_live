@@ -16,7 +16,7 @@ class WindowService extends GetxService implements WindowListener {
     WindowOptions windowOptions = WindowOptions(
       minimumSize: Size(280, 280),
       center: false,
-      title: "Simple Live",
+      title: "Slive",
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();

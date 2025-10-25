@@ -100,7 +100,7 @@ class SignalRService {
     if (state != SignalRConnectionState.connected) {
       throw Exception("not connected");
     }
-    String app = "Simple Live";
+    String app = "Slive";
     String platform = Platform.operatingSystem;
     String version = Utils.packageInfo.version;
     var resp = await hubConnection

@@ -1,7 +1,7 @@
 name: simple_live_app
-version: 1.8.0+10800
+version: 1.8.1+10801
 publish_to: none
-description: "Simple Live APP"
+description: "Slive APP"
 environment: 
   sdk: '>=3.0.5 <4.0.0'
   flutter: 3.32.8

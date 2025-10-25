@@ -160,7 +160,7 @@ class MyApp extends StatelessWidget {
             seedColor: styleColor, brightness: Brightness.dark);
       }
       return GetMaterialApp(
-        title: "Simple Live",
+        title: "Slive",
         theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
         darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
         themeMode:

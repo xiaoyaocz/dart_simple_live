@@ -26,4 +26,4 @@ startup_notify: true
 dependencies:
   - libmpv2
 
-metainfo: assets/io.github.slotsun.slive.metainfo.xml
+metainfo: assets/io.github.SlotSun.dart_simple_live.metainfo.xml

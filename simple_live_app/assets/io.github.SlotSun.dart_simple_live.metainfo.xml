@@ -3,7 +3,7 @@
   <id>io.github.SlotSun.dart_simple_live</id>
   <launchable type="desktop-id">io.github.SlotSun.dart_simple_live.desktop</launchable>
   <name>Slive</name>
-  <developer id="io.github.SlotSun">
+  <developer id="io.github.slotsun">
     <name>SlotSun</name>
   </developer>
   <summary>Watch live streams simply</summary>
@@ -39,11 +39,17 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="1.8.1" date="2025-10-25">
-      <description></description>
-    </release>
-    <release version="1.7.18" date="2025-08-29">
-      <description></description>
+    <release version="1.8.1" date="2025-10-26">
+      <description>
+        <p>- feat: Linux平台调整应用名至Slive和图标，数据迁移请通过webdav #43 感谢为此做出的工作 @pugaizai </p>
+        <p>- fix: 修复抖音分类，搜索等功能 </p>
+        <p>- 迁移js引擎至flutter_qjs @GH4NG  </p>
+        <p>- feat: 通过多轮优先级刷新优化关注刷新速度（test） </p>
+        <p>- feat: 条件清理关注功能（test） </p>
+        <p>- chore:关注、标签功能UI调整- </p>
+        <p>- fix: 一些代码和逻辑错误 </p>
+        <p>- tips: ios和macos用户请到action更新测试或者下载上游仓库版本</p>
+      </description>
     </release>
   </releases>
   <content_rating type="oars-1.1"/>

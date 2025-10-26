@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/simple_live_core.dart';
-import 'package:simple_live_core/src/common/douyin/douyinRequestParams.dart';
+import 'package:simple_live_core/src/platforms/douyin/douyinRequestParams.dart';
 import 'package:simple_live_core/src/common/js_engine.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
 

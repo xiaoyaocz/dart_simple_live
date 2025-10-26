@@ -3,9 +3,9 @@ import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
-import 'package:simple_live_core/src/common/douyin/douyin_utils.dart';
+import 'package:simple_live_core/src/platforms/douyin/douyin_utils.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'common/douyin/douyinRequestParams.dart';
+import 'douyinRequestParams.dart';
 
 class DouyinSite implements LiveSite {
   @override

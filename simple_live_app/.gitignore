@@ -48,7 +48,6 @@ app.*.map.json
 /windows/.vs
 
 /ios/Podfile.lock
-pubspec.lock
 
 .fvm/
 .fvmrc

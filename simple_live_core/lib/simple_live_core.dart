@@ -2,10 +2,10 @@ library simple_live_core;
 
 export 'src/interface/live_site.dart';
 export 'src/interface/live_danmaku.dart';
-export 'src/huya_site.dart';
-export 'src/bilibili_site.dart';
-export 'src/douyu_site.dart';
-export 'src/douyin_site.dart';
+export 'src/platforms/huya/huya_site.dart';
+export 'src/platforms/bilibili/bilibili_site.dart';
+export 'src/platforms/douyu/douyu_site.dart';
+export 'src/platforms/douyin/douyin_site.dart';
 export 'src/common/core_log.dart';
 export 'src/model/live_message.dart';
 export 'src/danmaku/bilibili_danmaku.dart';

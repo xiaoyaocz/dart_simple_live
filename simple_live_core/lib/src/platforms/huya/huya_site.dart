@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:crypto/crypto.dart';
+import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
-
-import '../simple_live_core.dart';
 
 class HuyaSite implements LiveSite {
   final String kUserAgent =

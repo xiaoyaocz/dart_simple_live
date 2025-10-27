@@ -1,22 +1,21 @@
-name: app-build-action
-#推送Tag时触发
+name: app-build-action-release
+# 推送 Tag 时触发
 on:
   workflow_dispatch: # 允许手动触发
   push:
     tags:
       - "v*"
 jobs:
+  # 打包 Android
   build-android:
     runs-on: macos-latest
     permissions:
       contents: write
     steps:
-      #签出代码
+      # 签出代码
       - uses: actions/checkout@v4
-        with:
-          ref: master
 
-      #APK签名设置
+      # APK 签名设置
       - name: Download Android keystore
         id: android_keystore
         uses: timheuer/base64-to-file@v1.2
@@ -30,33 +29,33 @@ jobs:
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
 
-      #设置JAVA环境
+      # 设置 JAVA 环境
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: "17"
           cache: 'gradle'
 
-      #设置Flutter
+      # 设置 Flutter
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8'
+          flutter-version-file: simple_live_app/pubspec.yaml
           cache: true
 
-      #更新Flutter的packages
+      # 更新 Flutter 的 packages
       - name: Restore packages
         run: |
           cd simple_live_app
           flutter pub get
 
-      #打包APK
+      # 打包 APK
       - name: Build APK
         run: |
           cd simple_live_app
           flutter build apk --release --split-per-abi
 
-      #上传APK至Artifacts
+      # 上传 APK 至 Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -66,7 +65,7 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
 
-      #读取版本信息
+      # 读取版本信息
       - name: Read version
         id: version
         uses: juliangruber/read-file-action@v1
@@ -77,7 +76,7 @@ jobs:
       - name: Echo version content
         run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
 
-      #上传至Release
+      # 上传至 Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -89,10 +88,10 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-      #完成
+      # 完成
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
-  # 打包Linux
+  # 打包 Linux
   build-linux:
     strategy:
       matrix:
@@ -107,32 +106,26 @@ jobs:
     steps:
       # 签出代码
       - uses: actions/checkout@v4
-        with:
-          # 强制拉取分支master
-          repository: SlotSun/dart_simple_live
-          ref: master
-          fetch-depth: 1
-          submodules: false
-      # 设置Flutter环境
+      # 设置 Flutter 环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.8"
+          flutter-version-file: simple_live_app/pubspec.yaml
           channel: master
       # 安装依赖
       - name: Update apt-get
         run: sudo apt-get update
       - name: Install Dependencies
         run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev mpv libasound2-dev
-      # 打开Linux Desktop支持
+      # 打开 Linux Desktop 支持
       - name: Enable Flutter Desktop
         run: flutter config --enable-linux-desktop
-      # 更新Flutter的packages
+      # 更新 Flutter 的 packages
       - name: Restore Packages
         run: |
           cd simple_live_app
           flutter pub get
-      # 设置fast-forge环境
+      # 设置 Fastforge 环境
       - name: Install fast-forge
         run: |
           git clone https://github.com/SlotSun/fastforge.git
@@ -147,7 +140,7 @@ jobs:
           cd build/dist/*
           mv simple_live_app-*-linux.deb Slive-${{ matrix.arch }}-linux.deb
           mv simple_live_app-*-linux.zip Slive-${{ matrix.arch }}-linux.zip
-      # 上传Linux包至Artifacts
+      # 上传 Linux 包至 Artifacts
       - name: Upload Linux APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -167,7 +160,7 @@ jobs:
       - name: Echo version content
         run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
 
-      #上传至Release
+      # 上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -178,10 +171,10 @@ jobs:
           files: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
-        #完成
+      # 完成
       - run: echo "🍏 Linux job's status is ${{ job.status }}."
 
-    # 打包Windows
+  # 打包Windows
   build-windows:
     runs-on: windows-latest
     permissions:
@@ -189,16 +182,11 @@ jobs:
     steps:
       # 签出代码
       - uses: actions/checkout@v4
-        with:
-          repository: SlotSun/dart_simple_live
-          ref: master
-          fetch-depth: 1
-          submodules: false
-      # 设置Flutter环境
+      # 设置 Flutter 环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.8"
+          flutter-version-file: simple_live_app/pubspec.yaml
           cache: true
           channel: "stable"
       - name: Enable Flutter Desktop
@@ -207,8 +195,8 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
-      # 设置fast-forge环境 和 Inno Setup
-      - name: Install fast-forge and Inno Setup
+      # 设置 Fastforge 环境 和 Inno Setup
+      - name: Install Fastforge and Inno Setup
         run: |
           git clone https://github.com/SlotSun/fastforge.git
           cd fastforge
@@ -226,7 +214,7 @@ jobs:
         run: |
           cd simple_live_app
           fastforge package --platform windows --targets msix,zip,exe --skip-clean
-      # 上传Windows至Artifacts
+      # 上传 Windows 至 Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -247,7 +235,7 @@ jobs:
       - name: Echo version content
         run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
 
-      #上传至Release
+      # 上传至 Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -260,5 +248,71 @@ jobs:
             simple_live_app/build/dist/*/*.zip
             simple_live_app/build/dist/*/*.exe
 
-      #完成
+      # 完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."
+
+  # 打包 Flatpak
+  build-flatpak:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      # 签出代码
+      - uses: actions/checkout@v4
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          sudo add-apt-repository -y ppa:flatpak/stable
+          sudo apt-get update -q
+          sudo apt-get install -y flatpak flatpak-builder ca-certificates gnupg software-properties-common
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          git config --global protocol.file.allow always
+      # 构建 Flatpak bundle
+      - name: Build flatpak bundle
+        run: |
+          flatpak-builder build-dir flatpak/flatpak-manifest.yaml \
+            --arch=${{ matrix.arch }} \
+            --repo=${{ matrix.arch }} \
+            --force-clean \
+            --user \
+            --install-deps-from=flathub \
+            --ccache \
+            --disable-rofiles-fuse
+          flatpak build-bundle ${{ matrix.arch }} Slive-${{ matrix.arch }}.flatpak io.github.SlotSun.dart_simple_live
+
+      # 上传 Linux 包至 Artifacts
+      - name: Upload linux flatpak to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-flatpak-${{ matrix.arch }}
+          path: Slive-*.flatpak
+
+      # 读取版本信息
+      - name: Read version
+        id: version
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: assets/app_version.json
+      - name: Echo version
+        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
+      - name: Echo version content
+        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+
+      # 上传至 Release
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "${{ fromJson(steps.version.outputs.content).version }}"
+          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
+          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          token: ${{ secrets.TOKEN }}
+          files: Slive-*.flatpak
+      # 完成
+      - run: echo "🍏 Flatpak job's status is ${{ job.status }}."

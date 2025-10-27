@@ -12,5 +12,5 @@ dependencies:
     path: ../simple_live_core
 
 dev_dependencies:
-  lints: ^2.0.0
+  lints: ^6.0.0
   test: ^1.21.0

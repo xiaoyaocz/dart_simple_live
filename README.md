@@ -51,7 +51,7 @@ Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1
 
 ## 环境
 
-flutter 3.32.8
+flutter 3.35.7
 
 ## 参考及引用
 

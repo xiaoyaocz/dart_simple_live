@@ -25,7 +25,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8'
+          flutter-version-file: simple_live_app/pubspec.yaml
           cache: true
 
       - name: Enable Flutter Desktop
@@ -84,7 +84,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.8"
+          flutter-version-file: simple_live_app/pubspec.yaml
           channel: master
 
       - name: Install Dependencies
@@ -126,7 +126,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.8"
+          flutter-version-file: simple_live_app/pubspec.yaml
           cache: true
 
       - name: Enable Flutter Desktop
@@ -149,3 +149,41 @@ jobs:
         run: |
           cd simple_live_app
           fastforge package --platform windows --targets msix,zip --skip-clean
+
+  # 打包 Flatpak
+  build-flatpak:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      # 签出代码
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          sudo add-apt-repository -y ppa:flatpak/stable
+          sudo apt-get update -q
+          sudo apt-get install -y flatpak flatpak-builder ca-certificates gnupg software-properties-common
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          git config --global protocol.file.allow always
+      # 构建 Flatpak bundle
+      - name: Build flatpak
+        run: |
+          flatpak-builder build-dir flatpak/flatpak-manifest.yaml \
+            --arch=${{ matrix.arch }} \
+            --repo=${{ matrix.arch }} \
+            --force-clean \
+            --user \
+            --install-deps-from=flathub \
+            --ccache \
+            --disable-rofiles-fuse

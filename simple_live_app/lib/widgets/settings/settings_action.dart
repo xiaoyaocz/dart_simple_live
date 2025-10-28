@@ -15,8 +15,8 @@ class SettingsAction extends StatelessWidget {
     this.onTap,
     this.subtitle,
     this.leading,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

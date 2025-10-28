@@ -11,7 +11,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 class LiveRoomCard extends StatelessWidget {
   final Site site;
   final LiveRoomItem item;
-  const LiveRoomCard(this.site, this.item, {Key? key}) : super(key: key);
+  const LiveRoomCard(this.site, this.item, {super.key});
 
   @override
   Widget build(BuildContext context) {

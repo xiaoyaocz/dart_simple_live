@@ -10,7 +10,7 @@ import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class DanmuSettingsPage extends StatelessWidget {
-  const DanmuSettingsPage({Key? key}) : super(key: key);
+  const DanmuSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -173,8 +173,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                   onChanged: (e) {
                     controller.setDanmuSpeed(e.toDouble());
                     updateDanmuOption(
-                      danmakuController?.option
-                          .copyWith(duration: e),
+                      danmakuController?.option.copyWith(duration: e),
                     );
                   },
                 ),
@@ -189,8 +188,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                   onChanged: (e) {
                     controller.setDanmuStrokeWidth(e.toDouble());
                     updateDanmuOption(
-                      danmakuController?.option
-                          .copyWith(showStroke: e>=1),
+                      danmakuController?.option.copyWith(showStroke: e >= 1),
                     );
                   },
                 ),

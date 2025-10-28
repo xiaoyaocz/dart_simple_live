@@ -10,7 +10,7 @@ import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class PlaySettingsPage extends GetView<AppSettingsController> {
-  const PlaySettingsPage({Key? key}) : super(key: key);
+  const PlaySettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

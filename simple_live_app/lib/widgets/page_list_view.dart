@@ -29,8 +29,8 @@ class PageListView extends StatelessWidget {
     this.showPCRefreshButton = true,
     this.separatorBuilder,
     this.onLoginSuccess,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

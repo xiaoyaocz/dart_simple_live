@@ -5,7 +5,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
 import 'package:simple_live_core/src/platforms/douyin/douyin_utils.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'douyinRequestParams.dart';
+import 'douyin_request_params.dart';
 
 class DouyinSite implements LiveSite {
   @override
@@ -30,7 +30,7 @@ class DouyinSite implements LiveSite {
   Future<Map<String, dynamic>> getRequestHeaders() async {
     try {
       final existCookies = headers['cookie'] ?? '';
-      if(existCookies.contains('ttwid')){
+      if (existCookies.contains('ttwid')) {
         return headers;
       }
       var head = await HttpClient.instance
@@ -57,7 +57,7 @@ class DouyinSite implements LiveSite {
       final result = await HttpClient.instance.getJson(
         url,
         queryParameters: {
-          "aid": DouyinRequestParams.AID_VALUE,
+          "aid": DouyinRequestParams.aidValue,
         },
         header: {
           "user-agent": DouyinRequestParams.kDefaultUserAgent,
@@ -208,9 +208,9 @@ class DouyinSite implements LiveSite {
         title: item["title"].toString(),
         cover: item["cover"]["url_list"][0].toString(),
         userName: item["owner"]["nickname"].toString(),
-        online: int.tryParse(
-                item["room_view_stats"]["display_value"].toString()) ??
-            0,
+        online:
+            int.tryParse(item["room_view_stats"]["display_value"].toString()) ??
+                0,
       );
       items.add(roomItem);
     }
@@ -466,7 +466,8 @@ class DouyinSite implements LiveSite {
       'web_rid': webRid,
       'is_need_double_stream': "false"
     };
-    var targetUrl = DouyinUtils.buildRequestUrl("https://live.douyin.com/webcast/room/web/enter/", queryParams);
+    var targetUrl = DouyinUtils.buildRequestUrl(
+        "https://live.douyin.com/webcast/room/web/enter/", queryParams);
     CoreLog.d("targetUrl: $targetUrl");
     var result = await HttpClient.instance.getJson(
       targetUrl,

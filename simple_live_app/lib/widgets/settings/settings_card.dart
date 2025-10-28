@@ -3,7 +3,7 @@ import 'package:simple_live_app/app/app_style.dart';
 
 class SettingsCard extends StatelessWidget {
   final Widget child;
-  const SettingsCard({required this.child, Key? key}) : super(key: key);
+  const SettingsCard({required this.child, super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -7,7 +7,7 @@ import 'package:simple_live_app/modules/settings/indexed_settings/indexed_settin
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 
 class IndexedSettingsPage extends GetView<IndexedSettingsController> {
-  const IndexedSettingsPage({Key? key}) : super(key: key);
+  const IndexedSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

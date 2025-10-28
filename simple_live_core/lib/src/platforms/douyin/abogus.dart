@@ -18,12 +18,12 @@ class StringProcessor {
 
   static String generateRandomBytes({int length = 3}) {
     List<String> generateByteSequence() {
-      final _rd = Random().nextInt(10000);
+      final rd = Random().nextInt(10000);
       return [
-        String.fromCharCode(((_rd & 255) & 170) | 1),
-        String.fromCharCode(((_rd & 255) & 85) | 2),
-        String.fromCharCode((jsShiftRight(_rd, 8) & 170) | 5),
-        String.fromCharCode((jsShiftRight(_rd, 8) & 85) | 40),
+        String.fromCharCode(((rd & 255) & 170) | 1),
+        String.fromCharCode(((rd & 255) & 85) | 2),
+        String.fromCharCode((jsShiftRight(rd, 8) & 170) | 5),
+        String.fromCharCode((jsShiftRight(rd, 8) & 85) | 40),
       ];
     }
 
@@ -44,19 +44,262 @@ class CryptoUtility {
   CryptoUtility(this.salt, this.base64Alphabet) {
     // fmt: off
     bigArray = [
-        121, 243,  55, 234, 103,  36,  47, 228,  30, 231, 106,   6, 115,  95,  78, 101, 250, 207, 198,  50,
-        139, 227, 220, 105,  97, 143,  34,  28, 194, 215,  18, 100, 159, 160,  43,   8, 169, 217, 180, 120,
-        247,  45,  90,  11,  27, 197,  46,   3,  84,  72,   5,  68,  62,  56, 221,  75, 144,  79,  73, 161,
-        178,  81,  64, 187, 134, 117, 186, 118,  16, 241, 130,  71,  89, 147, 122, 129,  65,  40,  88, 150,
-        110, 219, 199, 255, 181, 254,  48,   4, 195, 248, 208,  32, 116, 167,  69, 201,  17, 124, 125, 104,
-         96,  83,  80, 127, 236, 108, 154, 126, 204,  15,  20, 135, 112, 158,  13,   1, 188, 164, 210, 237,
-        222,  98, 212,  77, 253,  42, 170, 202,  26,  22,  29, 182, 251,  10, 173, 152,  58, 138,  54, 141,
-        185,  33, 157,  31, 252, 132, 233, 235, 102, 196, 191, 223, 240, 148,  39, 123,  92,  82, 128, 109,
-         57,  24,  38, 113, 209, 245,   2, 119, 153, 229, 189, 214, 230, 174, 232,  63,  52, 205,  86, 140,
-         66, 175, 111, 171, 246, 133, 238, 193,  99,  60,  74,  91, 225,  51,  76,  37, 145, 211, 166, 151,
-        213, 206,   0, 200, 244, 176, 218,  44, 184, 172,  49, 216,  93, 168,  53,  21, 183,  41,  67,  85,
-        224, 155, 226, 242,  87, 177, 146,  70, 190,  12, 162,  19, 137, 114,  25, 165, 163, 192,  23,  59,
-          9,  94, 179, 107,  35,   7, 142, 131, 239, 203, 149, 136,  61, 249,  14, 156
+      121,
+      243,
+      55,
+      234,
+      103,
+      36,
+      47,
+      228,
+      30,
+      231,
+      106,
+      6,
+      115,
+      95,
+      78,
+      101,
+      250,
+      207,
+      198,
+      50,
+      139,
+      227,
+      220,
+      105,
+      97,
+      143,
+      34,
+      28,
+      194,
+      215,
+      18,
+      100,
+      159,
+      160,
+      43,
+      8,
+      169,
+      217,
+      180,
+      120,
+      247,
+      45,
+      90,
+      11,
+      27,
+      197,
+      46,
+      3,
+      84,
+      72,
+      5,
+      68,
+      62,
+      56,
+      221,
+      75,
+      144,
+      79,
+      73,
+      161,
+      178,
+      81,
+      64,
+      187,
+      134,
+      117,
+      186,
+      118,
+      16,
+      241,
+      130,
+      71,
+      89,
+      147,
+      122,
+      129,
+      65,
+      40,
+      88,
+      150,
+      110,
+      219,
+      199,
+      255,
+      181,
+      254,
+      48,
+      4,
+      195,
+      248,
+      208,
+      32,
+      116,
+      167,
+      69,
+      201,
+      17,
+      124,
+      125,
+      104,
+      96,
+      83,
+      80,
+      127,
+      236,
+      108,
+      154,
+      126,
+      204,
+      15,
+      20,
+      135,
+      112,
+      158,
+      13,
+      1,
+      188,
+      164,
+      210,
+      237,
+      222,
+      98,
+      212,
+      77,
+      253,
+      42,
+      170,
+      202,
+      26,
+      22,
+      29,
+      182,
+      251,
+      10,
+      173,
+      152,
+      58,
+      138,
+      54,
+      141,
+      185,
+      33,
+      157,
+      31,
+      252,
+      132,
+      233,
+      235,
+      102,
+      196,
+      191,
+      223,
+      240,
+      148,
+      39,
+      123,
+      92,
+      82,
+      128,
+      109,
+      57,
+      24,
+      38,
+      113,
+      209,
+      245,
+      2,
+      119,
+      153,
+      229,
+      189,
+      214,
+      230,
+      174,
+      232,
+      63,
+      52,
+      205,
+      86,
+      140,
+      66,
+      175,
+      111,
+      171,
+      246,
+      133,
+      238,
+      193,
+      99,
+      60,
+      74,
+      91,
+      225,
+      51,
+      76,
+      37,
+      145,
+      211,
+      166,
+      151,
+      213,
+      206,
+      0,
+      200,
+      244,
+      176,
+      218,
+      44,
+      184,
+      172,
+      49,
+      216,
+      93,
+      168,
+      53,
+      21,
+      183,
+      41,
+      67,
+      85,
+      224,
+      155,
+      226,
+      242,
+      87,
+      177,
+      146,
+      70,
+      190,
+      12,
+      162,
+      19,
+      137,
+      114,
+      25,
+      165,
+      163,
+      192,
+      23,
+      59,
+      9,
+      94,
+      179,
+      107,
+      35,
+      7,
+      142,
+      131,
+      239,
+      203,
+      149,
+      136,
+      61,
+      249,
+      14,
+      156
     ];
     // fmt: on
   }
@@ -222,10 +465,14 @@ class BrowserFingerprintGenerator {
     return (browsers[browserType] ?? generateChromeFingerprint)();
   }
 
-  static String generateChromeFingerprint() => _generateFingerprint(platform: "Win32");
-  static String generateFirefoxFingerprint() => _generateFingerprint(platform: "Win32");
-  static String generateSafariFingerprint() => _generateFingerprint(platform: "MacIntel");
-  static String generateEdgeFingerprint() => _generateFingerprint(platform: "Win32");
+  static String generateChromeFingerprint() =>
+      _generateFingerprint(platform: "Win32");
+  static String generateFirefoxFingerprint() =>
+      _generateFingerprint(platform: "Win32");
+  static String generateSafariFingerprint() =>
+      _generateFingerprint(platform: "MacIntel");
+  static String generateEdgeFingerprint() =>
+      _generateFingerprint(platform: "Win32");
 
   static String _generateFingerprint({required String platform}) {
     final random = Random();
@@ -268,19 +515,105 @@ class ABogus {
   ];
   final Uint8List uaKey = Uint8List.fromList([0, 1, 14]);
 
-  final String character = "Dkdpgh2ZmsQB80/MfvV36XI1R45-WUAlEixNLwoqYTOPuzKFjJnry79HbGcaStCe";
-  final String character2 = "ckdp1h4ZKsUB80/Mfvw36XIgR25+WQAlEi7NLboqYTOPuzmFjJnryx9HVGDaStCe";
+  final String character =
+      "Dkdpgh2ZmsQB80/MfvV36XI1R45-WUAlEixNLwoqYTOPuzKFjJnry79HbGcaStCe";
+  final String character2 =
+      "ckdp1h4ZKsUB80/Mfvw36XIgR25+WQAlEi7NLboqYTOPuzmFjJnryx9HVGDaStCe";
   late final List<String> characterList;
   late final CryptoUtility cryptoUtility;
 
   // fmt: off
   final List<int> sortIndex = [
-      18, 20, 52, 26, 30, 34, 58, 38, 40, 53, 42, 21, 27, 54, 55, 31, 35, 57, 39, 41, 43, 22, 28,
-      32, 60, 36, 23, 29, 33, 37, 44, 45, 59, 46, 47, 48, 49, 50, 24, 25, 65, 66, 70, 71
+    18,
+    20,
+    52,
+    26,
+    30,
+    34,
+    58,
+    38,
+    40,
+    53,
+    42,
+    21,
+    27,
+    54,
+    55,
+    31,
+    35,
+    57,
+    39,
+    41,
+    43,
+    22,
+    28,
+    32,
+    60,
+    36,
+    23,
+    29,
+    33,
+    37,
+    44,
+    45,
+    59,
+    46,
+    47,
+    48,
+    49,
+    50,
+    24,
+    25,
+    65,
+    66,
+    70,
+    71
   ];
   final List<int> sortIndex2 = [
-      18, 20, 26, 30, 34, 38, 40, 42, 21, 27, 31, 35, 39, 41, 43, 22, 28, 32, 36, 23, 29, 33, 37,
-      44, 45, 46, 47, 48, 49, 50, 24, 25, 52, 53, 54, 55, 57, 58, 59, 60, 65, 66, 70, 71
+    18,
+    20,
+    26,
+    30,
+    34,
+    38,
+    40,
+    42,
+    21,
+    27,
+    31,
+    35,
+    39,
+    41,
+    43,
+    22,
+    28,
+    32,
+    36,
+    23,
+    29,
+    33,
+    37,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    24,
+    25,
+    52,
+    53,
+    54,
+    55,
+    57,
+    58,
+    59,
+    60,
+    65,
+    66,
+    70,
+    71
   ];
   // fmt: on
 
@@ -290,7 +623,8 @@ class ABogus {
             : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
         browserFp = fp != null && fp.isNotEmpty
             ? fp
-            : BrowserFingerprintGenerator.generateFingerprint(browserType: "Edge"),
+            : BrowserFingerprintGenerator.generateFingerprint(
+                browserType: "Edge"),
         options = options ?? [0, 1, 14] {
     characterList = [character, character2];
     cryptoUtility = CryptoUtility(salt, characterList);
@@ -323,8 +657,10 @@ class ABogus {
 
     final startEncryption = DateTime.now().millisecondsSinceEpoch;
 
-    final array1 = cryptoUtility.paramsToArray(cryptoUtility.paramsToArray(params));
-    final array2 = cryptoUtility.paramsToArray(cryptoUtility.paramsToArray(body));
+    final array1 =
+        cryptoUtility.paramsToArray(cryptoUtility.paramsToArray(params));
+    final array2 =
+        cryptoUtility.paramsToArray(cryptoUtility.paramsToArray(body));
     final array3 = cryptoUtility.paramsToArray(
       cryptoUtility.base64Encode(
         StringProcessor.toCharStr(
@@ -388,7 +724,8 @@ class ABogus {
     abDir[64] = browserFp.length;
     abDir[65] = browserFp.length;
 
-    final sortedValues = sortIndex.map((i) => abDir[i] ?? 0).toList().cast<int>();
+    final sortedValues =
+        sortIndex.map((i) => abDir[i] ?? 0).toList().cast<int>();
     final edgeFpArray = StringProcessor.toOrdArray(browserFp);
 
     var abXor = 0;
@@ -410,4 +747,3 @@ class ABogus {
     return [finalParams, abogus, userAgent, body];
   }
 }
-

@@ -37,8 +37,8 @@ class HighlightWidget extends StatelessWidget {
     this.order = 0.0,
     this.color = Colors.transparent,
     this.foucsedColor = Colors.white,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

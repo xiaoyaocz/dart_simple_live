@@ -128,7 +128,17 @@ class AppSettingsController extends GetxController {
 
     audioOutputDriver.value = LocalStorageService.instance.getValue(
       LocalStorageService.kAudioOutputDriver,
-      Platform.isAndroid ? "audiotrack" : Platform.isLinux ? "pulse" : Platform.isWindows ? "wasapi" : Platform.isIOS ? "audiounit" : Platform.isMacOS ? "coreaudio" : "sdl",
+      Platform.isAndroid
+          ? "audiotrack"
+          : Platform.isLinux
+              ? "pulse"
+              : Platform.isWindows
+                  ? "wasapi"
+                  : Platform.isIOS
+                      ? "audiounit"
+                      : Platform.isMacOS
+                          ? "coreaudio"
+                          : "sdl",
     );
 
     videoHardwareDecoder.value = LocalStorageService.instance.getValue(
@@ -150,7 +160,8 @@ class AppSettingsController extends GetxController {
     updateFollowThreadCount.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
 
-    dbVer = LocalStorageService.instance.getValue(LocalStorageService.kHiveDbVer, 10708);
+    dbVer = LocalStorageService.instance
+        .getValue(LocalStorageService.kHiveDbVer, 10708);
 
     initSiteSort();
     initHomeSort();
@@ -206,32 +217,28 @@ class AppSettingsController extends GetxController {
       SimpleDialog(
         title: const Text("设置主题"),
         children: [
-          RadioListTile<int>(
-            title: const Text("跟随系统"),
-            value: 0,
+          RadioGroup<int>(
             groupValue: themeMode.value,
             onChanged: (e) {
               Get.back();
               setTheme(e ?? 0);
             },
-          ),
-          RadioListTile<int>(
-            title: const Text("浅色模式"),
-            value: 1,
-            groupValue: themeMode.value,
-            onChanged: (e) {
-              Get.back();
-              setTheme(e ?? 1);
-            },
-          ),
-          RadioListTile<int>(
-            title: const Text("深色模式"),
-            value: 2,
-            groupValue: themeMode.value,
-            onChanged: (e) {
-              Get.back();
-              setTheme(e ?? 2);
-            },
+            child: Column(
+              children: [
+                RadioListTile<int>(
+                  title: const Text("跟随系统"),
+                  value: 0,
+                ),
+                RadioListTile<int>(
+                  title: const Text("浅色模式"),
+                  value: 1,
+                ),
+                RadioListTile<int>(
+                  title: const Text("深色模式"),
+                  value: 2,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -503,7 +510,7 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kVideoHardwareDecoder, e);
   }
 
-  var videoDoubleBuffering= false.obs;
+  var videoDoubleBuffering = false.obs;
   void setVideoDoubleBuffering(bool e) {
     videoDoubleBuffering.value = e;
     LocalStorageService.instance

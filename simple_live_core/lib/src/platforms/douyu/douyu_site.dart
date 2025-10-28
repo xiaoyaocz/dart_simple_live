@@ -194,7 +194,9 @@ class DouyuSite implements LiveSite {
       userAvatar: roomInfo["owner_avatar"].toString(),
       introduction: roomInfo["show_details"].toString(),
       notice: "",
-      status: roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1 && !roomInfo["room_name"].startsWith("【回放】"),
+      status: roomInfo["show_status"] == 1 &&
+          roomInfo["videoLoop"] != 1 &&
+          !roomInfo["room_name"].startsWith("【回放】"),
       danmakuData: roomInfo["room_id"].toString(),
       data: await getPlayArgs(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
@@ -308,7 +310,9 @@ class DouyuSite implements LiveSite {
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     var roomInfo = await _getRoomInfo(roomId);
-    return roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1 && !roomInfo["room_name"].startsWith("【回放】");
+    return roomInfo["show_status"] == 1 &&
+        roomInfo["videoLoop"] != 1 &&
+        !roomInfo["room_name"].startsWith("【回放】");
   }
 
   Future<String> getPlayArgs(String html, String rid) async {

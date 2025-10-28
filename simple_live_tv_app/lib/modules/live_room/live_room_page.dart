@@ -12,13 +12,13 @@ import 'package:simple_live_tv_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_tv_app/modules/live_room/player/player_controls.dart';
 
 class LiveRoomPage extends GetView<LiveRoomController> {
-  const LiveRoomPage({Key? key}) : super(key: key);
+  const LiveRoomPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (bool didPop, Object? result) {
         if (!didPop) {
           //双击返回键退出
           if (controller.doubleClickExit) {

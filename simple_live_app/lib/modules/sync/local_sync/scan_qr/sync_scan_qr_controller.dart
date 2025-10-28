@@ -73,8 +73,6 @@ class SyncScanQRControlelr extends BaseController {
   @override
   void onClose() {
     barcodeStreamSubscription?.cancel();
-    qrController?.dispose();
-
     super.onClose();
   }
 }

@@ -9,7 +9,7 @@ import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
-class MigrationService{
+class MigrationService {
   /// 将Hive数据迁移到Application Support
   static Future migrateData() async {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -51,11 +51,11 @@ class MigrationService{
     }
   }
 
-
   /// 数据迁移根据版本：from 1.7.8
   static void migrateDataByVersion() {
     int curAppVer = Utils.parseVersion(Utils.packageInfo.version);
-    int curDBVer = LocalStorageService.instance.getValue(LocalStorageService.kHiveDbVer, 10708);
+    int curDBVer = LocalStorageService.instance
+        .getValue(LocalStorageService.kHiveDbVer, 10708);
     if (curDBVer <= 10708) {
       LocalStorageService.instance.settingsBox
           .delete(LocalStorageService.kWebDAVLastUploadTime);
@@ -64,9 +64,10 @@ class MigrationService{
     }
     // follow_user 添加 tag属性
     // 从followUserTag 读取 标签
-    if(curDBVer <= 10709){
+    if (curDBVer <= 10709) {
       List tagList = DBService.instance.tagBox.values.toList();
-      List<FollowUser> followList = DBService.instance.followBox.values.toList();
+      List<FollowUser> followList =
+          DBService.instance.followBox.values.toList();
       for (int i = 0; i < followList.length; i++) {
         for (FollowUserTag tag in tagList) {
           if (tag.userId.contains(followList[i].id)) {

@@ -62,7 +62,7 @@ class CoreLog {
     }
   }
 
-  static void error(e) {
+  static void error(Object e) {
     if (!enableLog) {
       return;
     }

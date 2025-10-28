@@ -151,7 +151,7 @@ class SyncService extends GetxService {
       serverRouter.post('/sync/account/bilibili', _syncBiliAccountReuqest);
 
       var server = await shelf_io.serve(
-        serverRouter,
+        serverRouter.call,
         InternetAddress.anyIPv4,
         httpPort,
       );

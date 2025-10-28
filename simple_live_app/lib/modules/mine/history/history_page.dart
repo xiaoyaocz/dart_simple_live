@@ -9,7 +9,7 @@ import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
 
 class HistoryPage extends GetView<HistoryController> {
-  const HistoryPage({Key? key}) : super(key: key);
+  const HistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {

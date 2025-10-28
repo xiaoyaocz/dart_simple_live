@@ -10,8 +10,8 @@ class ShadowCard extends StatelessWidget {
     required this.child,
     this.radius = 8.0,
     this.onTap,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

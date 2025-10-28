@@ -148,7 +148,9 @@ class RemoteSyncWebDAVController extends BaseController {
           SmartDialog.showToast("上传成功");
           DateTime uploadTime = DateTime.now();
           lastUploadTime.value = Utils.parseTime(uploadTime);
-          LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastUploadTime, uploadTime.millisecondsSinceEpoch);
+          LocalStorageService.instance.setValue(
+              LocalStorageService.kWebDAVLastUploadTime,
+              uploadTime.millisecondsSinceEpoch);
         } else {
           Log.e("备份失败", StackTrace.current);
           SmartDialog.showToast("上传失败");
@@ -180,9 +182,7 @@ class RemoteSyncWebDAVController extends BaseController {
       await userFollowJsonFile.writeAsString(jsonEncode(dataFollowsMap));
       // 用户自定义标签
       var userTagsList = DBService.instance.getFollowTagList();
-      var dataTagsMap = {
-        'data': userTagsList.map((e) => e.toJson()).toList()
-      };
+      var dataTagsMap = {'data': userTagsList.map((e) => e.toJson()).toList()};
       var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
       await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
       // histories
@@ -221,13 +221,13 @@ class RemoteSyncWebDAVController extends BaseController {
               DateTime.now().millisecondsSinceEpoch,
         }
       };
-      final settingJsonFile = File(join(profile.path,  _userSettingsJsonName));
+      final settingJsonFile = File(join(profile.path, _userSettingsJsonName));
       await settingJsonFile.writeAsString(jsonEncode(dataSettingListMap));
 
       // 遍历profile路径下的所有文件压缩
-      await archive.addDirectoryToArchive(profile.path, profile.path);
+      archive.addDirectoryToArchive(profile.path, profile.path);
       final zipEncoder = ZipEncoder();
-      zipBytes = zipEncoder.encode(archive) ?? [];
+      zipBytes = zipEncoder.encode(archive);
       profile.clearSync();
     } catch (e) {
       Log.logPrint(e);
@@ -253,8 +253,11 @@ class RemoteSyncWebDAVController extends BaseController {
     SmartDialog.showToast('同步完成');
     DateTime recoverTime = DateTime.now();
     lastRecoverTime.value = Utils.parseTime(recoverTime);
-    LocalStorageService.instance.setValue(LocalStorageService.kWebDAVLastRecoverTime, recoverTime.millisecondsSinceEpoch);
+    LocalStorageService.instance.setValue(
+        LocalStorageService.kWebDAVLastRecoverTime,
+        recoverTime.millisecondsSinceEpoch);
   }
+
   // todo: 后续迁出实现无感同步
   Future<void> _recovery(ArchiveFile file) async {
     if (file.isFile && file.name.endsWith('.json')) {
@@ -283,7 +286,7 @@ class RemoteSyncWebDAVController extends BaseController {
           }
           Log.i('已同步用户观看历史记录');
         } catch (e) {
-          Log.e('同步用户观看历史记录失败: $e',StackTrace.current);
+          Log.e('同步用户观看历史记录失败: $e', StackTrace.current);
         }
       } else if (file.name == _userBlockedWordJsonName &&
           isSyncBlockWord.value) {
@@ -308,15 +311,17 @@ class RemoteSyncWebDAVController extends BaseController {
           Log.e('同步用户平台账号失败：$e', StackTrace.current);
         }
       } else if (file.name == _userSettingsJsonName && isSyncSetting.value) {
-        try{
-          jsonData.forEach((key, value) {
-            LocalStorageService.instance.setValue(key, value);
-          },);
+        try {
+          jsonData.forEach(
+            (key, value) {
+              LocalStorageService.instance.setValue(key, value);
+            },
+          );
           Log.i('已同步用户设置');
         } catch (e) {
           Log.e("同步用户设置失败：$e", StackTrace.current);
         }
-      }else if (file.name == _userTagsJsonName && isSyncFollows.value) {
+      } else if (file.name == _userTagsJsonName && isSyncFollows.value) {
         try {
           // 标签功能和关注具有依赖关系，必须同时同步
           // 清空本地标签列表
@@ -332,9 +337,9 @@ class RemoteSyncWebDAVController extends BaseController {
           // 确保tag同步完成后，更新关注列表
           EventBus.instance.emit(Constant.kUpdateFollow, 0);
         } catch (e) {
-          Log.e('同步用户自定义标签失败:$e',StackTrace.current);
+          Log.e('同步用户自定义标签失败:$e', StackTrace.current);
         }
-      }  else {
+      } else {
         return;
       }
     } else {

@@ -19,8 +19,8 @@ class FollowUserItem extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.playing = false,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +91,7 @@ class FollowUserItem extends StatelessWidget {
           ),
           AppStyle.hGap4,
           Text(
-            item.watchDuration??"00:00:00",
+            item.watchDuration ?? "00:00:00",
             style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,

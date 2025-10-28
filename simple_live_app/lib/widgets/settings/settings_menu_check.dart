@@ -7,7 +7,8 @@ import 'package:simple_live_app/app/app_style.dart';
 class _MenuCheckController<T> extends GetxController {
   final RxList<T> selectedItems;
 
-  _MenuCheckController(List<T> initial) : selectedItems = RxList<T>.from(initial);
+  _MenuCheckController(List<T> initial)
+      : selectedItems = RxList<T>.from(initial);
 
   void toggle(T item) {
     if (selectedItems.contains(item)) {
@@ -42,8 +43,8 @@ class SettingsMenuCheck<T> extends StatelessWidget {
     this.onConfirm,
     this.confirmText,
     this.modalTitle,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +144,9 @@ class SettingsMenuCheck<T> extends StatelessWidget {
                 contentPadding: const EdgeInsets.only(
                   left: 12,
                 ),
-                title: Text(modalTitle?.tr ?? title.tr,),
+                title: Text(
+                  modalTitle?.tr ?? title.tr,
+                ),
                 trailing: IconButton(
                   onPressed: () {
                     Get.back();

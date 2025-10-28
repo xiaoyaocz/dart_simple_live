@@ -1,7 +1,6 @@
 import 'package:hive/hive.dart';
-import 'package:simple_live_app/app/utils/duration2strUtils.dart';
+import 'package:simple_live_app/app/utils/duration_2_str_utils.dart';
 import 'package:simple_live_app/app/utils/dynamic_filter.dart';
-
 
 part 'history.g.dart';
 
@@ -39,7 +38,7 @@ class History implements Mappable {
   @HiveField(6)
   String? watchDuration; // "00:00:00"
 
-  Duration get duration => watchDuration!.toDuration();  //for filter
+  Duration get duration => watchDuration!.toDuration(); //for filter
 
   factory History.fromJson(Map<String, dynamic> json) => History(
         id: json["id"],

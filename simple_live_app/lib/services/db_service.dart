@@ -21,7 +21,7 @@ class DBService extends GetxService {
     tagBox = await Hive.openBox("FollowUserTag");
   }
 
-  bool getFollowTagExist(String id){
+  bool getFollowTagExist(String id) {
     return tagBox.containsKey(id);
   }
 
@@ -41,9 +41,9 @@ class DBService extends GetxService {
     await tagBox.putAll(updatedMap);
   }
 
-  Future<FollowUserTag> addFollowTag(String tag) async{
+  Future<FollowUserTag> addFollowTag(String tag) async {
     // 查找数据库中是否已存在 存在则直接返回
-    if(getFollowTagExistByTag(tag)){
+    if (getFollowTagExistByTag(tag)) {
       return getFollowTag(tag)!;
     }
     final String uniqueId = uuid.v4();
@@ -56,13 +56,12 @@ class DBService extends GetxService {
     await tagBox.delete(id);
   }
 
-  FollowUserTag? getFollowTag(String tag){
+  FollowUserTag? getFollowTag(String tag) {
     return tagBox.values.firstWhereOrNull((item) => item.tag == tag);
   }
 
-
   // 判断tag名称是否重复
-  bool getFollowTagExistByTag(String tag){
+  bool getFollowTagExistByTag(String tag) {
     return tagBox.values.any((item) => item.tag == tag);
   }
 

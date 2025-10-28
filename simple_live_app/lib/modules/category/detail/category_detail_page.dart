@@ -8,7 +8,7 @@ import 'package:simple_live_app/widgets/live_room_card.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
 
 class CategoryDetailPage extends GetView<CategoryDetailController> {
-  const CategoryDetailPage({Key? key}) : super(key: key);
+  const CategoryDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {

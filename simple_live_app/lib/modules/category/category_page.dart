@@ -6,7 +6,7 @@ import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_list_view.dart';
 
 class CategoryPage extends GetView<CategoryController> {
-  const CategoryPage({Key? key}) : super(key: key);
+  const CategoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -9,7 +9,7 @@ import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 
 class BiliBiliQRLoginPage extends GetView<BiliBiliQRLoginController> {
-  const BiliBiliQRLoginPage({Key? key}) : super(key: key);
+  const BiliBiliQRLoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {

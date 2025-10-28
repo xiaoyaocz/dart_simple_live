@@ -202,12 +202,12 @@ class HttpClient {
   /// * [cancel] 任务取消Token
   /// * [onProgress] 下载进度 0~1
   Future<File> download(
-      String url,
-      String savePath, {
-        Map<String, dynamic>? header,
-        CancelToken? cancel,
-        Function(int value, int progress)? onReceiveProgress,
-      }) async {
+    String url,
+    String savePath, {
+    Map<String, dynamic>? header,
+    CancelToken? cancel,
+    Function(int value, int progress)? onReceiveProgress,
+  }) async {
     header ??= {};
     final tempPath = "$savePath.part";
     final tempFile = File(tempPath);

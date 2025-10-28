@@ -13,7 +13,7 @@ import 'package:sticky_headers/sticky_headers.dart';
 
 class CategoryListView extends StatelessWidget {
   final String tag;
-  const CategoryListView(this.tag, {Key? key}) : super(key: key);
+  const CategoryListView(this.tag, {super.key});
   CategoryListController get controller =>
       Get.find<CategoryListController>(tag: tag);
   @override

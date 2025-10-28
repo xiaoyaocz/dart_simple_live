@@ -31,14 +31,34 @@ final $typed_data.Uint8List commentTypeTagDescriptor = $convert.base64Decode(
 const Response$json = {
   '1': 'Response',
   '2': [
-    {'1': 'messagesList', '3': 1, '4': 3, '5': 11, '6': '.douyin.Message', '10': 'messagesList'},
+    {
+      '1': 'messagesList',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.Message',
+      '10': 'messagesList'
+    },
     {'1': 'cursor', '3': 2, '4': 1, '5': 9, '10': 'cursor'},
     {'1': 'fetchInterval', '3': 3, '4': 1, '5': 4, '10': 'fetchInterval'},
     {'1': 'now', '3': 4, '4': 1, '5': 4, '10': 'now'},
     {'1': 'internalExt', '3': 5, '4': 1, '5': 9, '10': 'internalExt'},
     {'1': 'fetchType', '3': 6, '4': 1, '5': 13, '10': 'fetchType'},
-    {'1': 'routeParams', '3': 7, '4': 3, '5': 11, '6': '.douyin.Response.RouteParamsEntry', '10': 'routeParams'},
-    {'1': 'heartbeatDuration', '3': 8, '4': 1, '5': 4, '10': 'heartbeatDuration'},
+    {
+      '1': 'routeParams',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.Response.RouteParamsEntry',
+      '10': 'routeParams'
+    },
+    {
+      '1': 'heartbeatDuration',
+      '3': 8,
+      '4': 1,
+      '5': 4,
+      '10': 'heartbeatDuration'
+    },
     {'1': 'needAck', '3': 9, '4': 1, '5': 8, '10': 'needAck'},
     {'1': 'pushServer', '3': 10, '4': 1, '5': 9, '10': 'pushServer'},
     {'1': 'liveCursor', '3': 11, '4': 1, '5': 9, '10': 'liveCursor'},
@@ -97,25 +117,92 @@ final $typed_data.Uint8List messageDescriptor = $convert.base64Decode(
 const ChatMessage$json = {
   '1': 'ChatMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
     {'1': 'user', '3': 2, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
     {'1': 'content', '3': 3, '4': 1, '5': 9, '10': 'content'},
     {'1': 'visibleToSender', '3': 4, '4': 1, '5': 8, '10': 'visibleToSender'},
-    {'1': 'backgroundImage', '3': 5, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'backgroundImage'},
-    {'1': 'fullScreenTextColor', '3': 6, '4': 1, '5': 9, '10': 'fullScreenTextColor'},
-    {'1': 'backgroundImageV2', '3': 7, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'backgroundImageV2'},
-    {'1': 'publicAreaCommon', '3': 8, '4': 1, '5': 11, '6': '.douyin.PublicAreaCommon', '10': 'publicAreaCommon'},
-    {'1': 'giftImage', '3': 9, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'giftImage'},
+    {
+      '1': 'backgroundImage',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'backgroundImage'
+    },
+    {
+      '1': 'fullScreenTextColor',
+      '3': 6,
+      '4': 1,
+      '5': 9,
+      '10': 'fullScreenTextColor'
+    },
+    {
+      '1': 'backgroundImageV2',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'backgroundImageV2'
+    },
+    {
+      '1': 'publicAreaCommon',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.PublicAreaCommon',
+      '10': 'publicAreaCommon'
+    },
+    {
+      '1': 'giftImage',
+      '3': 9,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'giftImage'
+    },
     {'1': 'agreeMsgId', '3': 11, '4': 1, '5': 4, '10': 'agreeMsgId'},
     {'1': 'priorityLevel', '3': 12, '4': 1, '5': 13, '10': 'priorityLevel'},
-    {'1': 'landscapeAreaCommon', '3': 13, '4': 1, '5': 11, '6': '.douyin.LandscapeAreaCommon', '10': 'landscapeAreaCommon'},
+    {
+      '1': 'landscapeAreaCommon',
+      '3': 13,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.LandscapeAreaCommon',
+      '10': 'landscapeAreaCommon'
+    },
     {'1': 'eventTime', '3': 15, '4': 1, '5': 4, '10': 'eventTime'},
     {'1': 'sendReview', '3': 16, '4': 1, '5': 8, '10': 'sendReview'},
     {'1': 'fromIntercom', '3': 17, '4': 1, '5': 8, '10': 'fromIntercom'},
-    {'1': 'intercomHideUserCard', '3': 18, '4': 1, '5': 8, '10': 'intercomHideUserCard'},
+    {
+      '1': 'intercomHideUserCard',
+      '3': 18,
+      '4': 1,
+      '5': 8,
+      '10': 'intercomHideUserCard'
+    },
     {'1': 'chatBy', '3': 20, '4': 1, '5': 9, '10': 'chatBy'},
-    {'1': 'individualChatPriority', '3': 21, '4': 1, '5': 13, '10': 'individualChatPriority'},
-    {'1': 'rtfContent', '3': 22, '4': 1, '5': 11, '6': '.douyin.Text', '10': 'rtfContent'},
+    {
+      '1': 'individualChatPriority',
+      '3': 21,
+      '4': 1,
+      '5': 13,
+      '10': 'individualChatPriority'
+    },
+    {
+      '1': 'rtfContent',
+      '3': 22,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Text',
+      '10': 'rtfContent'
+    },
   ],
 };
 
@@ -146,7 +233,14 @@ const LandscapeAreaCommon$json = {
     {'1': 'showNickname', '3': 2, '4': 1, '5': 8, '10': 'showNickname'},
     {'1': 'showFontColor', '3': 3, '4': 1, '5': 8, '10': 'showFontColor'},
     {'1': 'colorValueList', '3': 4, '4': 3, '5': 9, '10': 'colorValueList'},
-    {'1': 'commentTypeTagsList', '3': 5, '4': 3, '5': 14, '6': '.douyin.CommentTypeTag', '10': 'commentTypeTagsList'},
+    {
+      '1': 'commentTypeTagsList',
+      '3': 5,
+      '4': 3,
+      '5': 14,
+      '6': '.douyin.CommentTypeTag',
+      '10': 'commentTypeTagsList'
+    },
   ],
 };
 
@@ -162,19 +256,58 @@ final $typed_data.Uint8List landscapeAreaCommonDescriptor = $convert.base64Decod
 const RoomUserSeqMessage$json = {
   '1': 'RoomUserSeqMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
-    {'1': 'ranksList', '3': 2, '4': 3, '5': 11, '6': '.douyin.RoomUserSeqMessageContributor', '10': 'ranksList'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
+    {
+      '1': 'ranksList',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.RoomUserSeqMessageContributor',
+      '10': 'ranksList'
+    },
     {'1': 'total', '3': 3, '4': 1, '5': 3, '10': 'total'},
     {'1': 'popStr', '3': 4, '4': 1, '5': 9, '10': 'popStr'},
-    {'1': 'seatsList', '3': 5, '4': 3, '5': 11, '6': '.douyin.RoomUserSeqMessageContributor', '10': 'seatsList'},
+    {
+      '1': 'seatsList',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.RoomUserSeqMessageContributor',
+      '10': 'seatsList'
+    },
     {'1': 'popularity', '3': 6, '4': 1, '5': 3, '10': 'popularity'},
     {'1': 'totalUser', '3': 7, '4': 1, '5': 3, '10': 'totalUser'},
     {'1': 'totalUserStr', '3': 8, '4': 1, '5': 9, '10': 'totalUserStr'},
     {'1': 'totalStr', '3': 9, '4': 1, '5': 9, '10': 'totalStr'},
-    {'1': 'onlineUserForAnchor', '3': 10, '4': 1, '5': 9, '10': 'onlineUserForAnchor'},
-    {'1': 'totalPvForAnchor', '3': 11, '4': 1, '5': 9, '10': 'totalPvForAnchor'},
+    {
+      '1': 'onlineUserForAnchor',
+      '3': 10,
+      '4': 1,
+      '5': 9,
+      '10': 'onlineUserForAnchor'
+    },
+    {
+      '1': 'totalPvForAnchor',
+      '3': 11,
+      '4': 1,
+      '5': 9,
+      '10': 'totalPvForAnchor'
+    },
     {'1': 'upRightStatsStr', '3': 12, '4': 1, '5': 9, '10': 'upRightStatsStr'},
-    {'1': 'upRightStatsStrComplete', '3': 13, '4': 1, '5': 9, '10': 'upRightStatsStrComplete'},
+    {
+      '1': 'upRightStatsStrComplete',
+      '3': 13,
+      '4': 1,
+      '5': 9,
+      '10': 'upRightStatsStrComplete'
+    },
   ],
 };
 
@@ -196,7 +329,14 @@ final $typed_data.Uint8List roomUserSeqMessageDescriptor = $convert.base64Decode
 const CommonTextMessage$json = {
   '1': 'CommonTextMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
     {'1': 'user', '3': 2, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
     {'1': 'scene', '3': 3, '4': 1, '5': 9, '10': 'scene'},
   ],
@@ -212,9 +352,28 @@ final $typed_data.Uint8List commonTextMessageDescriptor = $convert.base64Decode(
 const UpdateFanTicketMessage$json = {
   '1': 'UpdateFanTicketMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
-    {'1': 'roomFanTicketCountText', '3': 2, '4': 1, '5': 9, '10': 'roomFanTicketCountText'},
-    {'1': 'roomFanTicketCount', '3': 3, '4': 1, '5': 4, '10': 'roomFanTicketCount'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
+    {
+      '1': 'roomFanTicketCountText',
+      '3': 2,
+      '4': 1,
+      '5': 9,
+      '10': 'roomFanTicketCountText'
+    },
+    {
+      '1': 'roomFanTicketCount',
+      '3': 3,
+      '4': 1,
+      '5': 4,
+      '10': 'roomFanTicketCount'
+    },
     {'1': 'forceUpdate', '3': 4, '4': 1, '5': 8, '10': 'forceUpdate'},
   ],
 };
@@ -252,35 +411,114 @@ final $typed_data.Uint8List roomUserSeqMessageContributorDescriptor = $convert.b
 const GiftMessage$json = {
   '1': 'GiftMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
     {'1': 'giftId', '3': 2, '4': 1, '5': 4, '10': 'giftId'},
     {'1': 'fanTicketCount', '3': 3, '4': 1, '5': 4, '10': 'fanTicketCount'},
     {'1': 'groupCount', '3': 4, '4': 1, '5': 4, '10': 'groupCount'},
     {'1': 'repeatCount', '3': 5, '4': 1, '5': 4, '10': 'repeatCount'},
     {'1': 'comboCount', '3': 6, '4': 1, '5': 4, '10': 'comboCount'},
     {'1': 'user', '3': 7, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
-    {'1': 'toUser', '3': 8, '4': 1, '5': 11, '6': '.douyin.User', '10': 'toUser'},
+    {
+      '1': 'toUser',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.User',
+      '10': 'toUser'
+    },
     {'1': 'repeatEnd', '3': 9, '4': 1, '5': 13, '10': 'repeatEnd'},
-    {'1': 'textEffect', '3': 10, '4': 1, '5': 11, '6': '.douyin.TextEffect', '10': 'textEffect'},
+    {
+      '1': 'textEffect',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextEffect',
+      '10': 'textEffect'
+    },
     {'1': 'groupId', '3': 11, '4': 1, '5': 4, '10': 'groupId'},
     {'1': 'incomeTaskgifts', '3': 12, '4': 1, '5': 4, '10': 'incomeTaskgifts'},
-    {'1': 'roomFanTicketCount', '3': 13, '4': 1, '5': 4, '10': 'roomFanTicketCount'},
-    {'1': 'priority', '3': 14, '4': 1, '5': 11, '6': '.douyin.GiftIMPriority', '10': 'priority'},
-    {'1': 'gift', '3': 15, '4': 1, '5': 11, '6': '.douyin.GiftStruct', '10': 'gift'},
+    {
+      '1': 'roomFanTicketCount',
+      '3': 13,
+      '4': 1,
+      '5': 4,
+      '10': 'roomFanTicketCount'
+    },
+    {
+      '1': 'priority',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.GiftIMPriority',
+      '10': 'priority'
+    },
+    {
+      '1': 'gift',
+      '3': 15,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.GiftStruct',
+      '10': 'gift'
+    },
     {'1': 'logId', '3': 16, '4': 1, '5': 9, '10': 'logId'},
     {'1': 'sendType', '3': 17, '4': 1, '5': 4, '10': 'sendType'},
-    {'1': 'publicAreaCommon', '3': 18, '4': 1, '5': 11, '6': '.douyin.PublicAreaCommon', '10': 'publicAreaCommon'},
-    {'1': 'trayDisplayText', '3': 19, '4': 1, '5': 11, '6': '.douyin.Text', '10': 'trayDisplayText'},
-    {'1': 'bannedDisplayEffects', '3': 20, '4': 1, '5': 4, '10': 'bannedDisplayEffects'},
+    {
+      '1': 'publicAreaCommon',
+      '3': 18,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.PublicAreaCommon',
+      '10': 'publicAreaCommon'
+    },
+    {
+      '1': 'trayDisplayText',
+      '3': 19,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Text',
+      '10': 'trayDisplayText'
+    },
+    {
+      '1': 'bannedDisplayEffects',
+      '3': 20,
+      '4': 1,
+      '5': 4,
+      '10': 'bannedDisplayEffects'
+    },
     {'1': 'displayForSelf', '3': 25, '4': 1, '5': 8, '10': 'displayForSelf'},
-    {'1': 'interactGiftInfo', '3': 26, '4': 1, '5': 9, '10': 'interactGiftInfo'},
+    {
+      '1': 'interactGiftInfo',
+      '3': 26,
+      '4': 1,
+      '5': 9,
+      '10': 'interactGiftInfo'
+    },
     {'1': 'diyItemInfo', '3': 27, '4': 1, '5': 9, '10': 'diyItemInfo'},
     {'1': 'minAssetSetList', '3': 28, '4': 3, '5': 4, '10': 'minAssetSetList'},
     {'1': 'totalCount', '3': 29, '4': 1, '5': 4, '10': 'totalCount'},
-    {'1': 'clientGiftSource', '3': 30, '4': 1, '5': 13, '10': 'clientGiftSource'},
+    {
+      '1': 'clientGiftSource',
+      '3': 30,
+      '4': 1,
+      '5': 13,
+      '10': 'clientGiftSource'
+    },
     {'1': 'toUserIdsList', '3': 32, '4': 3, '5': 4, '10': 'toUserIdsList'},
     {'1': 'sendTime', '3': 33, '4': 1, '5': 4, '10': 'sendTime'},
-    {'1': 'forceDisplayEffects', '3': 34, '4': 1, '5': 4, '10': 'forceDisplayEffects'},
+    {
+      '1': 'forceDisplayEffects',
+      '3': 34,
+      '4': 1,
+      '5': 4,
+      '10': 'forceDisplayEffects'
+    },
     {'1': 'traceId', '3': 35, '4': 1, '5': 9, '10': 'traceId'},
     {'1': 'effectDisplayTs', '3': 36, '4': 1, '5': 4, '10': 'effectDisplayTs'},
   ],
@@ -316,7 +554,14 @@ final $typed_data.Uint8List giftMessageDescriptor = $convert.base64Decode(
 const GiftStruct$json = {
   '1': 'GiftStruct',
   '2': [
-    {'1': 'image', '3': 1, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'image'},
+    {
+      '1': 'image',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'image'
+    },
     {'1': 'describe', '3': 2, '4': 1, '5': 9, '10': 'describe'},
     {'1': 'notify', '3': 3, '4': 1, '5': 8, '10': 'notify'},
     {'1': 'duration', '3': 4, '4': 1, '5': 4, '10': 'duration'},
@@ -327,9 +572,22 @@ const GiftStruct$json = {
     {'1': 'combo', '3': 10, '4': 1, '5': 8, '10': 'combo'},
     {'1': 'type', '3': 11, '4': 1, '5': 13, '10': 'type'},
     {'1': 'diamondCount', '3': 12, '4': 1, '5': 13, '10': 'diamondCount'},
-    {'1': 'isDisplayedOnPanel', '3': 13, '4': 1, '5': 8, '10': 'isDisplayedOnPanel'},
+    {
+      '1': 'isDisplayedOnPanel',
+      '3': 13,
+      '4': 1,
+      '5': 8,
+      '10': 'isDisplayedOnPanel'
+    },
     {'1': 'primaryEffectId', '3': 14, '4': 1, '5': 4, '10': 'primaryEffectId'},
-    {'1': 'giftLabelIcon', '3': 15, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'giftLabelIcon'},
+    {
+      '1': 'giftLabelIcon',
+      '3': 15,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'giftLabelIcon'
+    },
     {'1': 'name', '3': 16, '4': 1, '5': 9, '10': 'name'},
     {'1': 'region', '3': 17, '4': 1, '5': 9, '10': 'region'},
     {'1': 'manual', '3': 18, '4': 1, '5': 9, '10': 'manual'},
@@ -359,7 +617,13 @@ const GiftIMPriority$json = {
   '1': 'GiftIMPriority',
   '2': [
     {'1': 'queueSizesList', '3': 1, '4': 3, '5': 4, '10': 'queueSizesList'},
-    {'1': 'selfQueuePriority', '3': 2, '4': 1, '5': 4, '10': 'selfQueuePriority'},
+    {
+      '1': 'selfQueuePriority',
+      '3': 2,
+      '4': 1,
+      '5': 4,
+      '10': 'selfQueuePriority'
+    },
     {'1': 'priority', '3': 3, '4': 1, '5': 4, '10': 'priority'},
   ],
 };
@@ -374,8 +638,22 @@ final $typed_data.Uint8List giftIMPriorityDescriptor = $convert.base64Decode(
 const TextEffect$json = {
   '1': 'TextEffect',
   '2': [
-    {'1': 'portrait', '3': 1, '4': 1, '5': 11, '6': '.douyin.TextEffectDetail', '10': 'portrait'},
-    {'1': 'landscape', '3': 2, '4': 1, '5': 11, '6': '.douyin.TextEffectDetail', '10': 'landscape'},
+    {
+      '1': 'portrait',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextEffectDetail',
+      '10': 'portrait'
+    },
+    {
+      '1': 'landscape',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextEffectDetail',
+      '10': 'landscape'
+    },
   ],
 };
 
@@ -391,7 +669,14 @@ const TextEffectDetail$json = {
   '2': [
     {'1': 'text', '3': 1, '4': 1, '5': 11, '6': '.douyin.Text', '10': 'text'},
     {'1': 'textFontSize', '3': 2, '4': 1, '5': 13, '10': 'textFontSize'},
-    {'1': 'background', '3': 3, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'background'},
+    {
+      '1': 'background',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'background'
+    },
     {'1': 'start', '3': 4, '4': 1, '5': 13, '10': 'start'},
     {'1': 'duration', '3': 5, '4': 1, '5': 13, '10': 'duration'},
     {'1': 'x', '3': 6, '4': 1, '5': 13, '10': 'x'},
@@ -423,27 +708,101 @@ final $typed_data.Uint8List textEffectDetailDescriptor = $convert.base64Decode(
 const MemberMessage$json = {
   '1': 'MemberMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
     {'1': 'user', '3': 2, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
     {'1': 'memberCount', '3': 3, '4': 1, '5': 4, '10': 'memberCount'},
-    {'1': 'operator', '3': 4, '4': 1, '5': 11, '6': '.douyin.User', '10': 'operator'},
+    {
+      '1': 'operator',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.User',
+      '10': 'operator'
+    },
     {'1': 'isSetToAdmin', '3': 5, '4': 1, '5': 8, '10': 'isSetToAdmin'},
     {'1': 'isTopUser', '3': 6, '4': 1, '5': 8, '10': 'isTopUser'},
     {'1': 'rankScore', '3': 7, '4': 1, '5': 4, '10': 'rankScore'},
     {'1': 'topUserNo', '3': 8, '4': 1, '5': 4, '10': 'topUserNo'},
     {'1': 'enterType', '3': 9, '4': 1, '5': 4, '10': 'enterType'},
     {'1': 'action', '3': 10, '4': 1, '5': 4, '10': 'action'},
-    {'1': 'actionDescription', '3': 11, '4': 1, '5': 9, '10': 'actionDescription'},
+    {
+      '1': 'actionDescription',
+      '3': 11,
+      '4': 1,
+      '5': 9,
+      '10': 'actionDescription'
+    },
     {'1': 'userId', '3': 12, '4': 1, '5': 4, '10': 'userId'},
-    {'1': 'effectConfig', '3': 13, '4': 1, '5': 11, '6': '.douyin.EffectConfig', '10': 'effectConfig'},
+    {
+      '1': 'effectConfig',
+      '3': 13,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.EffectConfig',
+      '10': 'effectConfig'
+    },
     {'1': 'popStr', '3': 14, '4': 1, '5': 9, '10': 'popStr'},
-    {'1': 'enterEffectConfig', '3': 15, '4': 1, '5': 11, '6': '.douyin.EffectConfig', '10': 'enterEffectConfig'},
-    {'1': 'backgroundImage', '3': 16, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'backgroundImage'},
-    {'1': 'backgroundImageV2', '3': 17, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'backgroundImageV2'},
-    {'1': 'anchorDisplayText', '3': 18, '4': 1, '5': 11, '6': '.douyin.Text', '10': 'anchorDisplayText'},
-    {'1': 'publicAreaCommon', '3': 19, '4': 1, '5': 11, '6': '.douyin.PublicAreaCommon', '10': 'publicAreaCommon'},
-    {'1': 'userEnterTipType', '3': 20, '4': 1, '5': 4, '10': 'userEnterTipType'},
-    {'1': 'anchorEnterTipType', '3': 21, '4': 1, '5': 4, '10': 'anchorEnterTipType'},
+    {
+      '1': 'enterEffectConfig',
+      '3': 15,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.EffectConfig',
+      '10': 'enterEffectConfig'
+    },
+    {
+      '1': 'backgroundImage',
+      '3': 16,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'backgroundImage'
+    },
+    {
+      '1': 'backgroundImageV2',
+      '3': 17,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'backgroundImageV2'
+    },
+    {
+      '1': 'anchorDisplayText',
+      '3': 18,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Text',
+      '10': 'anchorDisplayText'
+    },
+    {
+      '1': 'publicAreaCommon',
+      '3': 19,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.PublicAreaCommon',
+      '10': 'publicAreaCommon'
+    },
+    {
+      '1': 'userEnterTipType',
+      '3': 20,
+      '4': 1,
+      '5': 4,
+      '10': 'userEnterTipType'
+    },
+    {
+      '1': 'anchorEnterTipType',
+      '3': 21,
+      '4': 1,
+      '5': 4,
+      '10': 'anchorEnterTipType'
+    },
   ],
 };
 
@@ -471,9 +830,28 @@ final $typed_data.Uint8List memberMessageDescriptor = $convert.base64Decode(
 const PublicAreaCommon$json = {
   '1': 'PublicAreaCommon',
   '2': [
-    {'1': 'userLabel', '3': 1, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'userLabel'},
-    {'1': 'userConsumeInRoom', '3': 2, '4': 1, '5': 4, '10': 'userConsumeInRoom'},
-    {'1': 'userSendGiftCntInRoom', '3': 3, '4': 1, '5': 4, '10': 'userSendGiftCntInRoom'},
+    {
+      '1': 'userLabel',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'userLabel'
+    },
+    {
+      '1': 'userConsumeInRoom',
+      '3': 2,
+      '4': 1,
+      '5': 4,
+      '10': 'userConsumeInRoom'
+    },
+    {
+      '1': 'userSendGiftCntInRoom',
+      '3': 3,
+      '4': 1,
+      '5': 4,
+      '10': 'userSendGiftCntInRoom'
+    },
   ],
 };
 
@@ -491,18 +869,78 @@ const EffectConfig$json = {
     {'1': 'icon', '3': 2, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'icon'},
     {'1': 'avatarPos', '3': 3, '4': 1, '5': 4, '10': 'avatarPos'},
     {'1': 'text', '3': 4, '4': 1, '5': 11, '6': '.douyin.Text', '10': 'text'},
-    {'1': 'textIcon', '3': 5, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'textIcon'},
+    {
+      '1': 'textIcon',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'textIcon'
+    },
     {'1': 'stayTime', '3': 6, '4': 1, '5': 13, '10': 'stayTime'},
     {'1': 'animAssetId', '3': 7, '4': 1, '5': 4, '10': 'animAssetId'},
-    {'1': 'badge', '3': 8, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'badge'},
-    {'1': 'flexSettingArrayList', '3': 9, '4': 3, '5': 4, '10': 'flexSettingArrayList'},
-    {'1': 'textIconOverlay', '3': 10, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'textIconOverlay'},
-    {'1': 'animatedBadge', '3': 11, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'animatedBadge'},
+    {
+      '1': 'badge',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'badge'
+    },
+    {
+      '1': 'flexSettingArrayList',
+      '3': 9,
+      '4': 3,
+      '5': 4,
+      '10': 'flexSettingArrayList'
+    },
+    {
+      '1': 'textIconOverlay',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'textIconOverlay'
+    },
+    {
+      '1': 'animatedBadge',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'animatedBadge'
+    },
     {'1': 'hasSweepLight', '3': 12, '4': 1, '5': 8, '10': 'hasSweepLight'},
-    {'1': 'textFlexSettingArrayList', '3': 13, '4': 3, '5': 4, '10': 'textFlexSettingArrayList'},
-    {'1': 'centerAnimAssetId', '3': 14, '4': 1, '5': 4, '10': 'centerAnimAssetId'},
-    {'1': 'dynamicImage', '3': 15, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'dynamicImage'},
-    {'1': 'extraMap', '3': 16, '4': 3, '5': 11, '6': '.douyin.EffectConfig.ExtraMapEntry', '10': 'extraMap'},
+    {
+      '1': 'textFlexSettingArrayList',
+      '3': 13,
+      '4': 3,
+      '5': 4,
+      '10': 'textFlexSettingArrayList'
+    },
+    {
+      '1': 'centerAnimAssetId',
+      '3': 14,
+      '4': 1,
+      '5': 4,
+      '10': 'centerAnimAssetId'
+    },
+    {
+      '1': 'dynamicImage',
+      '3': 15,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'dynamicImage'
+    },
+    {
+      '1': 'extraMap',
+      '3': 16,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.EffectConfig.ExtraMapEntry',
+      '10': 'extraMap'
+    },
     {'1': 'mp4AnimAssetId', '3': 17, '4': 1, '5': 4, '10': 'mp4AnimAssetId'},
     {'1': 'priority', '3': 18, '4': 1, '5': 4, '10': 'priority'},
     {'1': 'maxWaitTime', '3': 19, '4': 1, '5': 4, '10': 'maxWaitTime'},
@@ -550,8 +988,22 @@ const Text$json = {
   '2': [
     {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
     {'1': 'defaultPatter', '3': 2, '4': 1, '5': 9, '10': 'defaultPatter'},
-    {'1': 'defaultFormat', '3': 3, '4': 1, '5': 11, '6': '.douyin.TextFormat', '10': 'defaultFormat'},
-    {'1': 'piecesList', '3': 4, '4': 3, '5': 11, '6': '.douyin.TextPiece', '10': 'piecesList'},
+    {
+      '1': 'defaultFormat',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextFormat',
+      '10': 'defaultFormat'
+    },
+    {
+      '1': 'piecesList',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.TextPiece',
+      '10': 'piecesList'
+    },
   ],
 };
 
@@ -567,13 +1019,55 @@ const TextPiece$json = {
   '1': 'TextPiece',
   '2': [
     {'1': 'type', '3': 1, '4': 1, '5': 8, '10': 'type'},
-    {'1': 'format', '3': 2, '4': 1, '5': 11, '6': '.douyin.TextFormat', '10': 'format'},
+    {
+      '1': 'format',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextFormat',
+      '10': 'format'
+    },
     {'1': 'stringValue', '3': 3, '4': 1, '5': 9, '10': 'stringValue'},
-    {'1': 'userValue', '3': 4, '4': 1, '5': 11, '6': '.douyin.TextPieceUser', '10': 'userValue'},
-    {'1': 'giftValue', '3': 5, '4': 1, '5': 11, '6': '.douyin.TextPieceGift', '10': 'giftValue'},
-    {'1': 'heartValue', '3': 6, '4': 1, '5': 11, '6': '.douyin.TextPieceHeart', '10': 'heartValue'},
-    {'1': 'patternRefValue', '3': 7, '4': 1, '5': 11, '6': '.douyin.TextPiecePatternRef', '10': 'patternRefValue'},
-    {'1': 'imageValue', '3': 8, '4': 1, '5': 11, '6': '.douyin.TextPieceImage', '10': 'imageValue'},
+    {
+      '1': 'userValue',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextPieceUser',
+      '10': 'userValue'
+    },
+    {
+      '1': 'giftValue',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextPieceGift',
+      '10': 'giftValue'
+    },
+    {
+      '1': 'heartValue',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextPieceHeart',
+      '10': 'heartValue'
+    },
+    {
+      '1': 'patternRefValue',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextPiecePatternRef',
+      '10': 'patternRefValue'
+    },
+    {
+      '1': 'imageValue',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.TextPieceImage',
+      '10': 'imageValue'
+    },
   ],
 };
 
@@ -592,7 +1086,14 @@ final $typed_data.Uint8List textPieceDescriptor = $convert.base64Decode(
 const TextPieceImage$json = {
   '1': 'TextPieceImage',
   '2': [
-    {'1': 'image', '3': 1, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'image'},
+    {
+      '1': 'image',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'image'
+    },
     {'1': 'scalingRate', '3': 2, '4': 1, '5': 2, '10': 'scalingRate'},
   ],
 };
@@ -625,15 +1126,22 @@ const TextPieceHeart$json = {
 };
 
 /// Descriptor for `TextPieceHeart`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List textPieceHeartDescriptor = $convert.base64Decode(
-    'Cg5UZXh0UGllY2VIZWFydBIUCgVjb2xvchgBIAEoCVIFY29sb3I=');
+final $typed_data.Uint8List textPieceHeartDescriptor = $convert
+    .base64Decode('Cg5UZXh0UGllY2VIZWFydBIUCgVjb2xvchgBIAEoCVIFY29sb3I=');
 
 @$core.Deprecated('Use textPieceGiftDescriptor instead')
 const TextPieceGift$json = {
   '1': 'TextPieceGift',
   '2': [
     {'1': 'giftId', '3': 1, '4': 1, '5': 4, '10': 'giftId'},
-    {'1': 'nameRef', '3': 2, '4': 1, '5': 11, '6': '.douyin.PatternRef', '10': 'nameRef'},
+    {
+      '1': 'nameRef',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.PatternRef',
+      '10': 'nameRef'
+    },
   ],
 };
 
@@ -680,7 +1188,13 @@ const TextFormat$json = {
     {'1': 'weight', '3': 4, '4': 1, '5': 13, '10': 'weight'},
     {'1': 'italicAngle', '3': 5, '4': 1, '5': 13, '10': 'italicAngle'},
     {'1': 'fontSize', '3': 6, '4': 1, '5': 13, '10': 'fontSize'},
-    {'1': 'useHeighLightColor', '3': 7, '4': 1, '5': 8, '10': 'useHeighLightColor'},
+    {
+      '1': 'useHeighLightColor',
+      '3': 7,
+      '4': 1,
+      '5': 8,
+      '10': 'useHeighLightColor'
+    },
     {'1': 'useRemoteClor', '3': 8, '4': 1, '5': 8, '10': 'useRemoteClor'},
   ],
 };
@@ -697,17 +1211,45 @@ final $typed_data.Uint8List textFormatDescriptor = $convert.base64Decode(
 const LikeMessage$json = {
   '1': 'LikeMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
     {'1': 'count', '3': 2, '4': 1, '5': 4, '10': 'count'},
     {'1': 'total', '3': 3, '4': 1, '5': 4, '10': 'total'},
     {'1': 'color', '3': 4, '4': 1, '5': 4, '10': 'color'},
     {'1': 'user', '3': 5, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
     {'1': 'icon', '3': 6, '4': 1, '5': 9, '10': 'icon'},
-    {'1': 'doubleLikeDetail', '3': 7, '4': 1, '5': 11, '6': '.douyin.DoubleLikeDetail', '10': 'doubleLikeDetail'},
-    {'1': 'displayControlInfo', '3': 8, '4': 1, '5': 11, '6': '.douyin.DisplayControlInfo', '10': 'displayControlInfo'},
+    {
+      '1': 'doubleLikeDetail',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.DoubleLikeDetail',
+      '10': 'doubleLikeDetail'
+    },
+    {
+      '1': 'displayControlInfo',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.DisplayControlInfo',
+      '10': 'displayControlInfo'
+    },
     {'1': 'linkmicGuestUid', '3': 9, '4': 1, '5': 4, '10': 'linkmicGuestUid'},
     {'1': 'scene', '3': 10, '4': 1, '5': 9, '10': 'scene'},
-    {'1': 'picoDisplayInfo', '3': 11, '4': 1, '5': 11, '6': '.douyin.PicoDisplayInfo', '10': 'picoDisplayInfo'},
+    {
+      '1': 'picoDisplayInfo',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.PicoDisplayInfo',
+      '10': 'picoDisplayInfo'
+    },
   ],
 };
 
@@ -727,13 +1269,27 @@ final $typed_data.Uint8List likeMessageDescriptor = $convert.base64Decode(
 const SocialMessage$json = {
   '1': 'SocialMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
     {'1': 'user', '3': 2, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
     {'1': 'shareType', '3': 3, '4': 1, '5': 4, '10': 'shareType'},
     {'1': 'action', '3': 4, '4': 1, '5': 4, '10': 'action'},
     {'1': 'shareTarget', '3': 5, '4': 1, '5': 9, '10': 'shareTarget'},
     {'1': 'followCount', '3': 6, '4': 1, '5': 4, '10': 'followCount'},
-    {'1': 'publicAreaCommon', '3': 7, '4': 1, '5': 11, '6': '.douyin.PublicAreaCommon', '10': 'publicAreaCommon'},
+    {
+      '1': 'publicAreaCommon',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.PublicAreaCommon',
+      '10': 'publicAreaCommon'
+    },
   ],
 };
 
@@ -752,7 +1308,14 @@ const PicoDisplayInfo$json = {
   '2': [
     {'1': 'comboSumCount', '3': 1, '4': 1, '5': 4, '10': 'comboSumCount'},
     {'1': 'emoji', '3': 2, '4': 1, '5': 9, '10': 'emoji'},
-    {'1': 'emojiIcon', '3': 3, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'emojiIcon'},
+    {
+      '1': 'emojiIcon',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'emojiIcon'
+    },
     {'1': 'emojiText', '3': 4, '4': 1, '5': 9, '10': 'emojiText'},
   ],
 };
@@ -798,11 +1361,25 @@ final $typed_data.Uint8List displayControlInfoDescriptor = $convert.base64Decode
 const EpisodeChatMessage$json = {
   '1': 'EpisodeChatMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Message', '10': 'common'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Message',
+      '10': 'common'
+    },
     {'1': 'user', '3': 2, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
     {'1': 'content', '3': 3, '4': 1, '5': 9, '10': 'content'},
     {'1': 'visibleToSende', '3': 4, '4': 1, '5': 8, '10': 'visibleToSende'},
-    {'1': 'giftImage', '3': 7, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'giftImage'},
+    {
+      '1': 'giftImage',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'giftImage'
+    },
     {'1': 'agreeMsgId', '3': 8, '4': 1, '5': 4, '10': 'agreeMsgId'},
     {'1': 'colorValueList', '3': 9, '4': 3, '5': 9, '10': 'colorValueList'},
   ],
@@ -821,8 +1398,22 @@ final $typed_data.Uint8List episodeChatMessageDescriptor = $convert.base64Decode
 const MatchAgainstScoreMessage$json = {
   '1': 'MatchAgainstScoreMessage',
   '2': [
-    {'1': 'common', '3': 1, '4': 1, '5': 11, '6': '.douyin.Common', '10': 'common'},
-    {'1': 'against', '3': 2, '4': 1, '5': 11, '6': '.douyin.Against', '10': 'against'},
+    {
+      '1': 'common',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Common',
+      '10': 'common'
+    },
+    {
+      '1': 'against',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Against',
+      '10': 'against'
+    },
     {'1': 'matchStatus', '3': 3, '4': 1, '5': 13, '10': 'matchStatus'},
     {'1': 'displayStatus', '3': 4, '4': 1, '5': 13, '10': 'displayStatus'},
   ],
@@ -840,20 +1431,58 @@ const Against$json = {
   '1': 'Against',
   '2': [
     {'1': 'leftName', '3': 1, '4': 1, '5': 9, '10': 'leftName'},
-    {'1': 'leftLogo', '3': 2, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'leftLogo'},
+    {
+      '1': 'leftLogo',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'leftLogo'
+    },
     {'1': 'leftGoal', '3': 3, '4': 1, '5': 9, '10': 'leftGoal'},
     {'1': 'rightName', '3': 6, '4': 1, '5': 9, '10': 'rightName'},
-    {'1': 'rightLogo', '3': 7, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'rightLogo'},
+    {
+      '1': 'rightLogo',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'rightLogo'
+    },
     {'1': 'rightGoal', '3': 8, '4': 1, '5': 9, '10': 'rightGoal'},
     {'1': 'timestamp', '3': 11, '4': 1, '5': 4, '10': 'timestamp'},
     {'1': 'version', '3': 12, '4': 1, '5': 4, '10': 'version'},
     {'1': 'leftTeamId', '3': 13, '4': 1, '5': 4, '10': 'leftTeamId'},
     {'1': 'rightTeamId', '3': 14, '4': 1, '5': 4, '10': 'rightTeamId'},
-    {'1': 'diffSei2absSecond', '3': 15, '4': 1, '5': 4, '10': 'diffSei2absSecond'},
+    {
+      '1': 'diffSei2absSecond',
+      '3': 15,
+      '4': 1,
+      '5': 4,
+      '10': 'diffSei2absSecond'
+    },
     {'1': 'finalGoalStage', '3': 16, '4': 1, '5': 13, '10': 'finalGoalStage'},
-    {'1': 'currentGoalStage', '3': 17, '4': 1, '5': 13, '10': 'currentGoalStage'},
-    {'1': 'leftScoreAddition', '3': 18, '4': 1, '5': 13, '10': 'leftScoreAddition'},
-    {'1': 'rightScoreAddition', '3': 19, '4': 1, '5': 13, '10': 'rightScoreAddition'},
+    {
+      '1': 'currentGoalStage',
+      '3': 17,
+      '4': 1,
+      '5': 13,
+      '10': 'currentGoalStage'
+    },
+    {
+      '1': 'leftScoreAddition',
+      '3': 18,
+      '4': 1,
+      '5': 13,
+      '10': 'leftScoreAddition'
+    },
+    {
+      '1': 'rightScoreAddition',
+      '3': 19,
+      '4': 1,
+      '5': 13,
+      '10': 'rightScoreAddition'
+    },
     {'1': 'leftGoalInt', '3': 20, '4': 1, '5': 4, '10': 'leftGoalInt'},
     {'1': 'rightGoalInt', '3': 21, '4': 1, '5': 4, '10': 'rightGoalInt'},
   ],
@@ -889,16 +1518,58 @@ const Common$json = {
     {'1': 'anchorFoldType', '3': 10, '4': 1, '5': 4, '10': 'anchorFoldType'},
     {'1': 'priorityScore', '3': 11, '4': 1, '5': 4, '10': 'priorityScore'},
     {'1': 'logId', '3': 12, '4': 1, '5': 9, '10': 'logId'},
-    {'1': 'msgProcessFilterK', '3': 13, '4': 1, '5': 9, '10': 'msgProcessFilterK'},
-    {'1': 'msgProcessFilterV', '3': 14, '4': 1, '5': 9, '10': 'msgProcessFilterV'},
+    {
+      '1': 'msgProcessFilterK',
+      '3': 13,
+      '4': 1,
+      '5': 9,
+      '10': 'msgProcessFilterK'
+    },
+    {
+      '1': 'msgProcessFilterV',
+      '3': 14,
+      '4': 1,
+      '5': 9,
+      '10': 'msgProcessFilterV'
+    },
     {'1': 'user', '3': 15, '4': 1, '5': 11, '6': '.douyin.User', '10': 'user'},
-    {'1': 'anchorFoldTypeV2', '3': 17, '4': 1, '5': 4, '10': 'anchorFoldTypeV2'},
-    {'1': 'processAtSeiTimeMs', '3': 18, '4': 1, '5': 4, '10': 'processAtSeiTimeMs'},
-    {'1': 'randomDispatchMs', '3': 19, '4': 1, '5': 4, '10': 'randomDispatchMs'},
+    {
+      '1': 'anchorFoldTypeV2',
+      '3': 17,
+      '4': 1,
+      '5': 4,
+      '10': 'anchorFoldTypeV2'
+    },
+    {
+      '1': 'processAtSeiTimeMs',
+      '3': 18,
+      '4': 1,
+      '5': 4,
+      '10': 'processAtSeiTimeMs'
+    },
+    {
+      '1': 'randomDispatchMs',
+      '3': 19,
+      '4': 1,
+      '5': 4,
+      '10': 'randomDispatchMs'
+    },
     {'1': 'isDispatch', '3': 20, '4': 1, '5': 8, '10': 'isDispatch'},
     {'1': 'channelId', '3': 21, '4': 1, '5': 4, '10': 'channelId'},
-    {'1': 'diffSei2absSecond', '3': 22, '4': 1, '5': 4, '10': 'diffSei2absSecond'},
-    {'1': 'anchorFoldDuration', '3': 23, '4': 1, '5': 4, '10': 'anchorFoldDuration'},
+    {
+      '1': 'diffSei2absSecond',
+      '3': 22,
+      '4': 1,
+      '5': 4,
+      '10': 'diffSei2absSecond'
+    },
+    {
+      '1': 'anchorFoldDuration',
+      '3': 23,
+      '4': 1,
+      '5': 4,
+      '10': 'anchorFoldDuration'
+    },
   ],
 };
 
@@ -931,9 +1602,30 @@ const User$json = {
     {'1': 'Level', '3': 6, '4': 1, '5': 13, '10': 'Level'},
     {'1': 'Birthday', '3': 7, '4': 1, '5': 4, '10': 'Birthday'},
     {'1': 'Telephone', '3': 8, '4': 1, '5': 9, '10': 'Telephone'},
-    {'1': 'AvatarThumb', '3': 9, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'AvatarThumb'},
-    {'1': 'AvatarMedium', '3': 10, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'AvatarMedium'},
-    {'1': 'AvatarLarge', '3': 11, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'AvatarLarge'},
+    {
+      '1': 'AvatarThumb',
+      '3': 9,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'AvatarThumb'
+    },
+    {
+      '1': 'AvatarMedium',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'AvatarMedium'
+    },
+    {
+      '1': 'AvatarLarge',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'AvatarLarge'
+    },
     {'1': 'Verified', '3': 12, '4': 1, '5': 8, '10': 'Verified'},
     {'1': 'Experience', '3': 13, '4': 1, '5': 13, '10': 'Experience'},
     {'1': 'city', '3': 14, '4': 1, '5': 9, '10': 'city'},
@@ -942,13 +1634,54 @@ const User$json = {
     {'1': 'ModifyTime', '3': 17, '4': 1, '5': 4, '10': 'ModifyTime'},
     {'1': 'Secret', '3': 18, '4': 1, '5': 13, '10': 'Secret'},
     {'1': 'ShareQrcodeUri', '3': 19, '4': 1, '5': 9, '10': 'ShareQrcodeUri'},
-    {'1': 'IncomeSharePercent', '3': 20, '4': 1, '5': 13, '10': 'IncomeSharePercent'},
-    {'1': 'BadgeImageList', '3': 21, '4': 3, '5': 11, '6': '.douyin.Image', '10': 'BadgeImageList'},
-    {'1': 'FollowInfo', '3': 22, '4': 1, '5': 11, '6': '.douyin.FollowInfo', '10': 'FollowInfo'},
+    {
+      '1': 'IncomeSharePercent',
+      '3': 20,
+      '4': 1,
+      '5': 13,
+      '10': 'IncomeSharePercent'
+    },
+    {
+      '1': 'BadgeImageList',
+      '3': 21,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'BadgeImageList'
+    },
+    {
+      '1': 'FollowInfo',
+      '3': 22,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.FollowInfo',
+      '10': 'FollowInfo'
+    },
     {'1': 'SpecialId', '3': 26, '4': 1, '5': 9, '10': 'SpecialId'},
-    {'1': 'AvatarBorder', '3': 27, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'AvatarBorder'},
-    {'1': 'Medal', '3': 28, '4': 1, '5': 11, '6': '.douyin.Image', '10': 'Medal'},
-    {'1': 'RealTimeIconsList', '3': 29, '4': 3, '5': 11, '6': '.douyin.Image', '10': 'RealTimeIconsList'},
+    {
+      '1': 'AvatarBorder',
+      '3': 27,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'AvatarBorder'
+    },
+    {
+      '1': 'Medal',
+      '3': 28,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'Medal'
+    },
+    {
+      '1': 'RealTimeIconsList',
+      '3': 29,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.Image',
+      '10': 'RealTimeIconsList'
+    },
     {'1': 'displayId', '3': 38, '4': 1, '5': 9, '10': 'displayId'},
     {'1': 'secUid', '3': 46, '4': 1, '5': 9, '10': 'secUid'},
     {'1': 'fanTicketCount', '3': 1022, '4': 1, '5': 4, '10': 'fanTicketCount'},
@@ -990,7 +1723,13 @@ const FollowInfo$json = {
     {'1': 'pushStatus', '3': 4, '4': 1, '5': 4, '10': 'pushStatus'},
     {'1': 'remarkName', '3': 5, '4': 1, '5': 9, '10': 'remarkName'},
     {'1': 'followerCountStr', '3': 6, '4': 1, '5': 9, '10': 'followerCountStr'},
-    {'1': 'followingCountStr', '3': 7, '4': 1, '5': 9, '10': 'followingCountStr'},
+    {
+      '1': 'followingCountStr',
+      '3': 7,
+      '4': 1,
+      '5': 9,
+      '10': 'followingCountStr'
+    },
   ],
 };
 
@@ -1014,10 +1753,31 @@ const Image$json = {
     {'1': 'avgColor', '3': 5, '4': 1, '5': 9, '10': 'avgColor'},
     {'1': 'imageType', '3': 6, '4': 1, '5': 13, '10': 'imageType'},
     {'1': 'openWebUrl', '3': 7, '4': 1, '5': 9, '10': 'openWebUrl'},
-    {'1': 'content', '3': 8, '4': 1, '5': 11, '6': '.douyin.ImageContent', '10': 'content'},
+    {
+      '1': 'content',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.ImageContent',
+      '10': 'content'
+    },
     {'1': 'isAnimated', '3': 9, '4': 1, '5': 8, '10': 'isAnimated'},
-    {'1': 'FlexSettingList', '3': 10, '4': 1, '5': 11, '6': '.douyin.NinePatchSetting', '10': 'FlexSettingList'},
-    {'1': 'TextSettingList', '3': 11, '4': 1, '5': 11, '6': '.douyin.NinePatchSetting', '10': 'TextSettingList'},
+    {
+      '1': 'FlexSettingList',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.NinePatchSetting',
+      '10': 'FlexSettingList'
+    },
+    {
+      '1': 'TextSettingList',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.NinePatchSetting',
+      '10': 'TextSettingList'
+    },
   ],
 };
 
@@ -1070,7 +1830,14 @@ const PushFrame$json = {
     {'1': 'logId', '3': 2, '4': 1, '5': 4, '10': 'logId'},
     {'1': 'service', '3': 3, '4': 1, '5': 4, '10': 'service'},
     {'1': 'method', '3': 4, '4': 1, '5': 4, '10': 'method'},
-    {'1': 'headersList', '3': 5, '4': 3, '5': 11, '6': '.douyin.HeadersList', '10': 'headersList'},
+    {
+      '1': 'headersList',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.HeadersList',
+      '10': 'headersList'
+    },
     {'1': 'payloadEncoding', '3': 6, '4': 1, '5': 9, '10': 'payloadEncoding'},
     {'1': 'payloadType', '3': 7, '4': 1, '5': 9, '10': 'payloadType'},
     {'1': 'payload', '3': 8, '4': 1, '5': 12, '10': 'payload'},
@@ -1094,16 +1861,28 @@ const kk$json = {
 };
 
 /// Descriptor for `kk`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List kkDescriptor = $convert.base64Decode(
-    'CgJraxIMCgFrGA4gASgNUgFr');
+final $typed_data.Uint8List kkDescriptor =
+    $convert.base64Decode('CgJraxIMCgFrGA4gASgNUgFr');
 
 @$core.Deprecated('Use sendMessageBodyDescriptor instead')
 const SendMessageBody$json = {
   '1': 'SendMessageBody',
   '2': [
     {'1': 'conversationId', '3': 1, '4': 1, '5': 9, '10': 'conversationId'},
-    {'1': 'conversationType', '3': 2, '4': 1, '5': 13, '10': 'conversationType'},
-    {'1': 'conversationShortId', '3': 3, '4': 1, '5': 4, '10': 'conversationShortId'},
+    {
+      '1': 'conversationType',
+      '3': 2,
+      '4': 1,
+      '5': 13,
+      '10': 'conversationType'
+    },
+    {
+      '1': 'conversationShortId',
+      '3': 3,
+      '4': 1,
+      '5': 4,
+      '10': 'conversationShortId'
+    },
     {'1': 'content', '3': 4, '4': 1, '5': 9, '10': 'content'},
     {'1': 'ext', '3': 5, '4': 3, '5': 11, '6': '.douyin.ExtList', '10': 'ext'},
     {'1': 'messageType', '3': 6, '4': 1, '5': 13, '10': 'messageType'},
@@ -1182,10 +1961,24 @@ const PreMessage$json = {
     {'1': 'refer', '3': 5, '4': 1, '5': 13, '10': 'refer'},
     {'1': 'inboxType', '3': 6, '4': 1, '5': 13, '10': 'inboxType'},
     {'1': 'buildNumber', '3': 7, '4': 1, '5': 9, '10': 'buildNumber'},
-    {'1': 'sendMessageBody', '3': 8, '4': 1, '5': 11, '6': '.douyin.SendMessageBody', '10': 'sendMessageBody'},
+    {
+      '1': 'sendMessageBody',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.douyin.SendMessageBody',
+      '10': 'sendMessageBody'
+    },
     {'1': 'aa', '3': 9, '4': 1, '5': 9, '10': 'aa'},
     {'1': 'devicePlatform', '3': 11, '4': 1, '5': 9, '10': 'devicePlatform'},
-    {'1': 'headers', '3': 15, '4': 3, '5': 11, '6': '.douyin.HeadersList', '10': 'headers'},
+    {
+      '1': 'headers',
+      '3': 15,
+      '4': 3,
+      '5': 11,
+      '6': '.douyin.HeadersList',
+      '10': 'headers'
+    },
     {'1': 'authType', '3': 18, '4': 1, '5': 13, '10': 'authType'},
     {'1': 'biz', '3': 21, '4': 1, '5': 9, '10': 'biz'},
     {'1': 'access', '3': 22, '4': 1, '5': 9, '10': 'access'},
@@ -1215,4 +2008,3 @@ const HeadersList$json = {
 /// Descriptor for `HeadersList`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List headersListDescriptor = $convert.base64Decode(
     'CgtIZWFkZXJzTGlzdBIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU=');
-

@@ -26,7 +26,7 @@ import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class LiveRoomPage extends GetView<LiveRoomController> {
-  const LiveRoomPage({Key? key}) : super(key: key);
+  const LiveRoomPage({super.key});
 
   @override
   Widget build(BuildContext context) {

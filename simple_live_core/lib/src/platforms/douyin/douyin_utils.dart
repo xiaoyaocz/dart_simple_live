@@ -5,7 +5,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 
 import 'abogus.dart';
-import 'douyinRequestParams.dart';
+import 'douyin_request_params.dart';
 
 class DouyinUtils {
 // 根据传入长度产生随机字符串
@@ -20,7 +20,7 @@ class DouyinUtils {
     return sb.toString();
   }
 
-  static buildRequestUrl(String baseUrl, Map<String, dynamic> params) {
+  static String buildRequestUrl(String baseUrl, Map<String, dynamic> params) {
     var abogus = ABogus(userAgent: DouyinRequestParams.kDefaultUserAgent);
     var parsedUrl = Uri.parse(baseUrl);
     var exParams = params;
@@ -42,7 +42,7 @@ class DouyinUtils {
     return newUrl.toString();
   }
 
-  Future<Map<String, String>> get_ttwid_webid({required String req_url}) async {
+  Future<Map<String, String>> getTtwidWebid({required String reqUrl}) async {
     // 先请求以获取 ttwid 等 Cookie，再解析页面的 RENDER_DATA 获取 user_unique_id
     final headers = <String, String>{
       "User-Agent":
@@ -58,7 +58,7 @@ class DouyinUtils {
     try {
       // 先用 HEAD 获取 Set-Cookie（包含 ttwid）
       final headResp = await HttpClient.instance.head(
-        req_url,
+        reqUrl,
         header: headers,
       );
       final setCookies = headResp.headers["set-cookie"];
@@ -74,7 +74,7 @@ class DouyinUtils {
 
       // 再用 GET 拉取页面 HTML，解析 RENDER_DATA
       final html = await HttpClient.instance.getText(
-        req_url,
+        reqUrl,
         header: headers,
       );
 

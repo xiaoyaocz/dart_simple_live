@@ -597,7 +597,7 @@ Widget buildControls(
 
 Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
   var padding = MediaQuery.of(videoState.context).padding;
-  controller.danmakuView ??= DanmakuScreen  (
+  controller.danmakuView ??= DanmakuScreen(
     createdController: controller.initDanmakuController,
     option: DanmakuOption(
       fontSize: AppSettingsController.instance.danmuSize.value,
@@ -752,60 +752,46 @@ void showPlayerSettings(LiveRoomController controller) {
               style: Get.textTheme.titleMedium,
             ),
           ),
-          RadioListTile(
-            value: 0,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("适应"),
-            visualDensity: VisualDensity.compact,
+          RadioGroup(
             groupValue: AppSettingsController.instance.scaleMode.value,
             onChanged: (e) {
               AppSettingsController.instance.setScaleMode(e ?? 0);
               controller.updateScaleMode();
             },
-          ),
-          RadioListTile(
-            value: 1,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("拉伸"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 1);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 2,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("铺满"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 2);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 3,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("16:9"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 3);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 4,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("4:3"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 4);
-              controller.updateScaleMode();
-            },
+            child: Column(
+              children: [
+                RadioListTile(
+                  value: 0,
+                  contentPadding: AppStyle.edgeInsetsH4,
+                  title: const Text("适应"),
+                  visualDensity: VisualDensity.compact,
+                ),
+                RadioListTile(
+                  value: 1,
+                  contentPadding: AppStyle.edgeInsetsH4,
+                  title: const Text("拉伸"),
+                  visualDensity: VisualDensity.compact,
+                ),
+                RadioListTile(
+                  value: 2,
+                  contentPadding: AppStyle.edgeInsetsH4,
+                  title: const Text("铺满"),
+                  visualDensity: VisualDensity.compact,
+                ),
+                RadioListTile(
+                  value: 3,
+                  contentPadding: AppStyle.edgeInsetsH4,
+                  title: const Text("16:9"),
+                  visualDensity: VisualDensity.compact,
+                ),
+                RadioListTile(
+                  value: 4,
+                  contentPadding: AppStyle.edgeInsetsH4,
+                  title: const Text("4:3"),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
           ),
         ],
       ),

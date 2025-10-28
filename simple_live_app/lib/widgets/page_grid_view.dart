@@ -30,8 +30,8 @@ class PageGridView extends StatelessWidget {
     this.mainAxisSpacing = 0.0,
     this.showPCRefreshButton = true,
     required this.crossAxisCount,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

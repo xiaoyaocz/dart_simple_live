@@ -11,7 +11,7 @@ import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 
 class DouyinSearchView extends StatelessWidget {
-  const DouyinSearchView({Key? key}) : super(key: key);
+  const DouyinSearchView({super.key});
   DouyinSearchController get controller => Get.find<DouyinSearchController>();
 
   @override

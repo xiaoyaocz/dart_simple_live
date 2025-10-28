@@ -8,7 +8,7 @@
         android:value="false"
         />
     <application
-        android:label="Simple Live"
+        android:label="Slive"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

@@ -40,7 +40,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: simple_live_app/pubspec.yaml
+          flutter-version-file: simple_live_tv_app/pubspec.yaml
           cache: true
 
       # 更新 Flutter 的 packages

@@ -286,18 +286,24 @@ class Utils {
     var result = await Get.dialog(
       SimpleDialog(
         title: Text(title),
-        children: contents
-            .map(
-              (e) => RadioListTile<T>(
-                title: Text(e.toString()),
-                value: e,
-                groupValue: value,
-                onChanged: (e) {
-                  Get.back(result: e);
-                },
-              ),
-            )
-            .toList(),
+        children: [
+          RadioGroup<T>(
+            groupValue: value,
+            onChanged: (e) {
+              Get.back(result: e);
+            },
+            child: Column(
+              children: contents
+                  .map(
+                    (e) => RadioListTile<T>(
+                      title: Text(e.toString()),
+                      value: e,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
       ),
     );
     return result;
@@ -313,12 +319,13 @@ class Utils {
         title: title ?? const Text("帮助"),
         scrollable: true,
         content: SingleChildScrollView(child: ListBody(children: content)),
-        actions: actions??[
-          TextButton(
-            onPressed: Get.back,
-            child: const Text("确定"),
-          ),
-        ],
+        actions: actions ??
+            [
+              TextButton(
+                onPressed: Get.back,
+                child: const Text("确定"),
+              ),
+            ],
       ),
     );
     return result;
@@ -347,18 +354,24 @@ class Utils {
     var result = await Get.dialog(
       SimpleDialog(
         title: Text(title),
-        children: contents.keys
-            .map(
-              (e) => RadioListTile<T>(
-                title: Text((contents[e] ?? '-').tr),
-                value: e,
-                groupValue: value,
-                onChanged: (e) {
-                  Get.back(result: e);
-                },
-              ),
-            )
-            .toList(),
+        children: [
+          RadioGroup<T>(
+            groupValue: value,
+            onChanged: (e) {
+              Get.back(result: e);
+            },
+            child: Column(
+              children: contents.keys
+                  .map(
+                    (e) => RadioListTile<T>(
+                      title: Text((contents[e] ?? '-').tr),
+                      value: e,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
       ),
     );
     return result;

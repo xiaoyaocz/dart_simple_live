@@ -1,11 +1,9 @@
 // ignore_for_file: invalid_use_of_protected_member
 
 import 'dart:async';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
-import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
@@ -96,8 +94,8 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   void removeFollow(FollowUser follow) async {
-    var result =
-        await Utils.showAlertDialog("确定要取消关注${follow.userName}吗?", title: "取消关注");
+    var result = await Utils.showAlertDialog("确定要取消关注${follow.userName}吗?",
+        title: "取消关注");
     if (!result) {
       return;
     }

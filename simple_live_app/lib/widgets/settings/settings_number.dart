@@ -22,8 +22,7 @@ class SettingsNumber extends StatelessWidget {
       this.min = 0,
       this.unit = '',
       this.displayValue,
-      Key? key})
-      : super(key: key);
+      super.key});
 
   @override
   Widget build(BuildContext context) {

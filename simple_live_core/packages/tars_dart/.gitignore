@@ -46,7 +46,6 @@ app.*.symbols
 
 # Obfuscation related
 app.*.map.json
-pubspec.lock
 tars_flutter.iml
 tars_flutter_android.iml
 .metadata

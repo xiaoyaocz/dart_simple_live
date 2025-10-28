@@ -12,8 +12,8 @@ class SuperChatCard extends StatefulWidget {
   const SuperChatCard(
     this.message, {
     required this.onExpire,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<SuperChatCard> createState() => _SuperChatCardState();
@@ -36,7 +36,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
     super.initState();
   }
 
-  void timerCallback(e) {
+  void timerCallback(Timer e) {
     if (countdown <= 0) {
       widget.onExpire?.call();
       timer.cancel();

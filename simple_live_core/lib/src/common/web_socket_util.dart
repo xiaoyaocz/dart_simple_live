@@ -80,7 +80,7 @@ class WebScoketUtils {
         connect(retry: true);
         return;
       }
-      onError(e, e);
+      onError(e, StackTrace.current);
     }
   }
 
@@ -113,7 +113,7 @@ class WebScoketUtils {
     onMessage?.call(data);
   }
 
-  void onError(e, s) {
+  void onError(Object e, StackTrace s) {
     status = SocketStatus.failed;
     onClose?.call(e.toString());
   }

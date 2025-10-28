@@ -3,3 +3,7 @@ simple_live_tv_app/.vscode/settings.json
 .idea/
 .vscode/
 .vercel/
+.flatpak-builder/
+.crush/
+CRUSH.md
+build/

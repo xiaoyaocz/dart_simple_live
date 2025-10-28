@@ -20,7 +20,7 @@ class Log {
     logFileWriter = null;
   }
 
-  static void writeLog(content, [Level level = Level.info]) {
+  static void writeLog(Object content, [Level level = Level.info]) {
     logFileWriter
         ?.write("[${level.name.toUpperCase()}] $_currentTime：$content");
   }

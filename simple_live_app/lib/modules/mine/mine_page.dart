@@ -11,7 +11,7 @@ import 'package:simple_live_app/services/signalr_service.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class MinePage extends StatelessWidget {
-  const MinePage({Key? key}) : super(key: key);
+  const MinePage({super.key});
 
   @override
   Widget build(BuildContext context) {

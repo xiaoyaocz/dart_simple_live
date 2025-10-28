@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
-import 'package:simple_live_app/app/utils/duration2strUtils.dart';
+import 'package:simple_live_app/app/utils/duration_2_str_utils.dart';
 import 'package:simple_live_app/models/db/history.dart';
 
 import 'db_service.dart';
@@ -29,7 +29,7 @@ class HistoryService extends GetxService {
   }
 
   // reset
-  void reset(String roomId){
+  void reset(String roomId) {
     _updateHistory();
     _stopwatch.reset();
     History? history = DBService.instance.getHistory(roomId);
@@ -52,7 +52,7 @@ class HistoryService extends GetxService {
   void _loadHistory(History history) {
     curLiveRoomHistory = DBService.instance.getHistory(history.id);
     // 首次观看则创建
-    if(curLiveRoomHistory == null){
+    if (curLiveRoomHistory == null) {
       curLiveRoomHistory = history;
       DBService.instance.addOrUpdateHistory(history);
     }
@@ -61,13 +61,14 @@ class HistoryService extends GetxService {
 
   // updateHistory
   void _updateHistory() {
-    if(curLiveRoomHistory == null){
+    if (curLiveRoomHistory == null) {
       return;
     }
     // 累加到当前历史记录
     _elapsed = _stopwatch.elapsed;
-    Duration curTime = _oldWatchedDuration+_elapsed;
-    Log.i("已观看时间：${_oldWatchedDuration.toHMSString()}_增加时间：${_elapsed.toHMSString()}");
+    Duration curTime = _oldWatchedDuration + _elapsed;
+    Log.i(
+        "已观看时间：${_oldWatchedDuration.toHMSString()}_增加时间：${_elapsed.toHMSString()}");
     curLiveRoomHistory?.watchDuration = curTime.toHMSString();
     curLiveRoomHistory?.updateTime = DateTime.now();
     DBService.instance.addOrUpdateHistory(curLiveRoomHistory!);

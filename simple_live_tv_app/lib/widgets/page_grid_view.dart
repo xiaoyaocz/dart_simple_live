@@ -25,8 +25,8 @@ class PageGridView extends StatelessWidget {
     this.crossAxisSpacing = 0.0,
     this.mainAxisSpacing = 0.0,
     required this.crossAxisCount,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

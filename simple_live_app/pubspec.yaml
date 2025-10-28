@@ -4,94 +4,81 @@ publish_to: none
 description: "Slive APP"
 environment: 
   sdk: '>=3.0.5 <4.0.0'
-  flutter: 3.32.8
+  flutter: 3.35.7
 
 dependencies: 
   simple_live_core:
     path: ../simple_live_core
   # 图标
   cupertino_icons: ^1.0.8
-  remixicon: ^1.4.1 #Remix图标
+  remixicon: ^1.4.1 # Remix 图标
 
   # 框架、工具
-  archive: ^3.6.1 #文件压缩
-  get: ^4.7.2 #状态管理、路由管理、国际化
-  dio: ^5.4.3+1 #网络请求
-  hive: 2.2.3 #持久化存储
-  hive_flutter: 1.1.0 #持久化存储
-  logger: ^2.0.2 #日志
-  intl: ^0.20.2 #国际化
-  qr_flutter: ^4.1.0 #二维码生成
-  dynamic_color: ^1.8.1 #动态颜色
+  archive: ^4.0.7 # 文件压缩
+  get: ^4.7.2 # 状态管理、路由管理、国际化
+  dio: ^5.4.3+1 # 网络请求
+  hive: 2.2.3 # 持久化存储
+  hive_flutter: 1.1.0 # 持久化存储
+  logger: ^2.0.2 # 日志
+  intl: ^0.20.2 # 国际化
+  qr_flutter: ^4.1.0 # 二维码生成
+  dynamic_color: ^1.8.1 # 动态颜色
   path: any
-  udp: ^5.0.3 #UDP
-  uuid: ^4.5.1 #UUID
-  synchronized: ^3.3.1 #线程安全
+  udp: ^5.0.3 # UDP
+  uuid: ^4.5.1 # UUID
+  synchronized: ^3.3.1 # 线程安全
   collection: ^1.18.0
 
-  #Widget
-  flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
-  flutter_easyrefresh: 2.2.2 #下拉刷新、上拉加载
-  extended_image: ^8.2.0 #拓展Image,支持缓存
-  flutter_smart_dialog: ^4.9.8+7 #各种弹窗 Toast/Dialog/Popup
-  sticky_headers: ^0.3.0+2 #吸顶
-  lottie: ^1.4.3 #lottie动画
-  canvas_danmaku: ^0.2.7
+  # Widget
+  flutter_staggered_grid_view: ^0.7.0 # 瀑布流 / GridView
+  flutter_easyrefresh: 2.2.2 # 下拉刷新、上拉加载
+  extended_image: ^10.0.1 # 拓展 Image ，支持缓存
+  flutter_smart_dialog: ^4.9.8+7 # 各种弹窗 Toast / Dialog / Popup
+  sticky_headers: ^0.3.0+2 # 吸顶
+  lottie: ^3.3.2 # Lottie 动画
+  canvas_danmaku: ^0.2.7 # 弹幕库
 
-  #系统交互
-  package_info_plus: ^8.2.1 #包信息
-  device_info_plus: ^11.3.0 #设备信息
-  url_launcher: ^6.3.1 #打开链接
-  share_plus: ^10.1.4 #分享
-  path_provider: ^2.1.3 #常用路径
-  cross_file: ^0.3.4+1 #跨平台文件
-  permission_handler: ^11.3.1 #权限处理
-  flutter_image_gallery_saver: ^0.0.2 #图片保存到相册
-  screen_brightness: ^2.1.2 #亮度控制
-  auto_orientation_v2: ^2.3.6 #屏幕方向
-  wakelock_plus: ^1.3.1 #屏幕常亮
-  file_picker: ^10.1.2 #文件选择
-  window_manager: ^0.5.0 #窗口管理
-  floating: ^6.0.0 #PIP画中画
+  # 系统交互
+  package_info_plus: ^9.0.0 # 包信息
+  device_info_plus: ^12.2.0 # 设备信息
+  url_launcher: ^6.3.1 # 打开链接
+  share_plus: ^12.0.1 # 分享
+  path_provider: ^2.1.3 # 常用路径
+  cross_file: ^0.3.4+1 # 跨平台文件
+  permission_handler: ^12.0.1 # 权限处理
+  flutter_image_gallery_saver: ^0.0.2 # 图片保存到相册
+  screen_brightness: ^2.1.2 # 亮度控制
+  auto_orientation_v2: ^2.3.6 # 屏幕方向
+  wakelock_plus: ^1.3.1 # 屏幕常亮
+  file_picker: ^10.1.2 # 文件选择
+  window_manager: ^0.5.0 # 窗口管理
+  floating: ^6.0.0 # PIP 画中画
   flutter_inappwebview:
     git:
       url: https://github.com/guide-inc-org/guide-flutter_inappwebview.git
       path: flutter_inappwebview
       ref: sbi_fx_pc/v6.2.0-beta.3
-  connectivity_plus: ^6.0.3 #网络状态
-  flutter_single_instance: ^1.5.1 #应用启动检测
-  qr_code_scanner_plus: ^2.0.10+1 #二维码扫描
+  connectivity_plus: ^7.0.0 # 网络状态
+  flutter_single_instance: ^1.5.1 # 应用启动检测
+  qr_code_scanner_plus: ^2.0.10+1 # 二维码扫描
 
   # 网络相关
   webdav_client: ^1.2.2 # WebDAV
   shelf: ^1.4.1
   shelf_router: ^1.1.4
-  network_info_plus: ^6.1.3
-  signalr_netcore: ^1.3.9 #SignalR
+  network_info_plus: ^7.0.0
+  signalr_netcore: ^1.3.9 # SignalR
 
   # 视频播放
-  media_kit:  # Primary package.
-  media_kit_libs_video:  # For video rendering.
-  media_kit_video:   # Native video dependencies.
+  media_kit: ^1.2.1 # Primary package.
+  media_kit_video: ^1.3.1 # For video rendering.
+  media_kit_libs_video: ^1.0.7 # Native video dependencies.
+  volume_controller: any
 
   flutter: 
     sdk: flutter
   flutter_localizations: 
     sdk: flutter
-
-dependency_overrides:
-  media_kit:
-    git:
-      url: https://github.com/media-kit/media-kit
-      path: media_kit
-  media_kit_libs_video:
-    git:
-      url: https://github.com/media-kit/media-kit
-      path: libs/universal/media_kit_libs_video
-  media_kit_video:
-    git:
-      url: https://github.com/media-kit/media-kit
-      path: media_kit_video
 
 dev_dependencies:
   flutter_lints: ^6.0.0
@@ -122,4 +109,3 @@ flutter:
     - assets/icons/
     - assets/lotties/
     - shorebird.yaml
-

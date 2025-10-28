@@ -132,7 +132,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
           ),
           AppStyle.divider,
           Obx(
-                () => CheckboxListTile(
+            () => CheckboxListTile(
               secondary: const Icon(Remix.user_settings_line),
               title: const Text("同步用户设置"),
               value: controller.isSyncSetting.value,

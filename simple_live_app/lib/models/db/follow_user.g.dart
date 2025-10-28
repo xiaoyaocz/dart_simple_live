@@ -17,15 +17,14 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return FollowUser(
-      id: fields[0] as String,
-      roomId: fields[1] as String,
-      siteId: fields[2] as String,
-      userName: fields[3] as String,
-      face: fields[4] as String,
-      addTime: fields[5] as DateTime,
-      watchDuration: fields[6] as String?,
-      tag: fields[7] ?? ""
-    );
+        id: fields[0] as String,
+        roomId: fields[1] as String,
+        siteId: fields[2] as String,
+        userName: fields[3] as String,
+        face: fields[4] as String,
+        addTime: fields[5] as DateTime,
+        watchDuration: fields[6] as String?,
+        tag: fields[7] ?? "");
   }
 
   @override

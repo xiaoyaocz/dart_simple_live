@@ -1,5 +1,5 @@
-name: app-tv-build-action
-#推送Tag时触发
+name: app-tv-build-action-release
+# 推送 Tag 时触发
 on:
   push:
     tags:
@@ -10,12 +10,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      #签出代码 
+      # 签出代码 
       - uses: actions/checkout@v4
         with:
           ref: master
         
-      #APK签名设置
+      # APK 签名设置
       - name: Download Android keystore
         id: android_tv_keystore
         uses: timheuer/base64-to-file@v1.2
@@ -29,33 +29,33 @@ jobs:
           echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
           echo "keyAlias=${{ secrets.TV_KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
 
-      # 设置JAVA环境
+      # 设置 JAVA 环境
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: "17"
           cache: "gradle"
     
-      #设置Flutter
+      # 设置 Flutter
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.x'
+          flutter-version-file: simple_live_app/pubspec.yaml
           cache: true
 
-      #更新Flutter的packages
+      # 更新 Flutter 的 packages
       - name: Restore packages
         run: |
           cd simple_live_tv_app
           flutter pub get
         
-      #打包APK
+      # 打包 APK
       - name: Build APK
         run: |
           cd simple_live_tv_app
           flutter build apk --release --split-per-abi
     
-      #上传APK至Artifacts
+      # 上传 APK 至 Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -65,7 +65,7 @@ jobs:
             simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
     
-      #读取版本信息
+      # 读取版本信息
       - name: Read version
         id: version
         uses: juliangruber/read-file-action@v1
@@ -76,7 +76,7 @@ jobs:
       - name: Echo version content
         run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
     
-      #上传至Release
+      # 上传至 Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -89,5 +89,5 @@ jobs:
             simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
         
-      #完成
+      # 完成
       - run: echo "🍏 This job's status is ${{ job.status }}."

@@ -199,7 +199,7 @@ class SyncService extends GetxService {
       serverRouter.post('/sync/account/bilibili', _syncBiliAccountReuqest);
 
       var server = await shelf_io.serve(
-        serverRouter,
+        serverRouter.call,
         InternetAddress.anyIPv4,
         httpPort,
       );
@@ -274,10 +274,11 @@ class SyncService extends GetxService {
   }
 
   /// 同步标签列表
-  Future<shelf.Response> _syncFollowUserTagRequest(shelf.Request request) async {
+  Future<shelf.Response> _syncFollowUserTagRequest(
+      shelf.Request request) async {
     try {
       var overlay =
-      int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
 
       var body = await request.readAsString();
       Log.d('_syncFollowUserTagRequest: $body');

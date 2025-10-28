@@ -9,8 +9,8 @@ class FilterButton extends StatelessWidget {
     this.selected = false,
     required this.text,
     this.onTap,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

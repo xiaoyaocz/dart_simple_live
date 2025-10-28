@@ -15,8 +15,7 @@ class NetImage extends StatelessWidget {
       this.fit = BoxFit.cover,
       this.borderRadius = 0,
       this.cacheWidth,
-      Key? key})
-      : super(key: key);
+      super.key});
 
   @override
   Widget build(BuildContext context) {

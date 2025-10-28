@@ -9,7 +9,7 @@ import 'package:simple_live_app/widgets/page_grid_view.dart';
 
 class HomeListView extends StatelessWidget {
   final String tag;
-  const HomeListView(this.tag, {Key? key}) : super(key: key);
+  const HomeListView(this.tag, {super.key});
   HomeListController get controller => Get.find<HomeListController>(tag: tag);
   @override
   Widget build(BuildContext context) {

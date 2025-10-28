@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
 
 class AppLoaddingWidget extends StatelessWidget {
-  const AppLoaddingWidget({Key? key}) : super(key: key);
+  const AppLoaddingWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

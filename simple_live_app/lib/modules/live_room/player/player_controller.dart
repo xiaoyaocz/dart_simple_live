@@ -37,11 +37,12 @@ mixin PlayerMixin {
           : MPVLogLevel.error,
     ),
   );
+
   /// 初始化播放器并设置 ao 参数
   Future<void> initializePlayer() async {
     var pp = player.platform as NativePlayer;
     // 在所有平台上正确启用双重缓存
-    if(AppSettingsController.instance.videoDoubleBuffering.value) {
+    if (AppSettingsController.instance.videoDoubleBuffering.value) {
       final directory = await getTemporaryDirectory();
       await pp.setProperty("demuxer-cache-dir", directory.path);
     }
@@ -59,19 +60,19 @@ mixin PlayerMixin {
     player,
     configuration: AppSettingsController.instance.customPlayerOutput.value
         ? VideoControllerConfiguration(
-      vo: AppSettingsController.instance.videoOutputDriver.value,
-      hwdec: AppSettingsController.instance.videoHardwareDecoder.value,
-    )
+            vo: AppSettingsController.instance.videoOutputDriver.value,
+            hwdec: AppSettingsController.instance.videoHardwareDecoder.value,
+          )
         : AppSettingsController.instance.playerCompatMode.value
-        ? const VideoControllerConfiguration(
-      vo: 'mediacodec_embed',
-      hwdec: 'mediacodec',
-    )
-        : VideoControllerConfiguration(
-      enableHardwareAcceleration:
-      AppSettingsController.instance.hardwareDecode.value,
-      androidAttachSurfaceAfterVideoParameters: false,
-    ),
+            ? const VideoControllerConfiguration(
+                vo: 'mediacodec_embed',
+                hwdec: 'mediacodec',
+              )
+            : VideoControllerConfiguration(
+                enableHardwareAcceleration:
+                    AppSettingsController.instance.hardwareDecode.value,
+                androidAttachSurfaceAfterVideoParameters: false,
+              ),
   );
 }
 mixin PlayerStateMixin on PlayerMixin {
@@ -249,7 +250,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       // 亮度重置,桌面平台可能会报错,暂时不处理桌面平台的亮度
       try {
-        await screenBrightness.resetScreenBrightness();
+        await screenBrightness.resetApplicationScreenBrightness();
       } catch (e) {
         Log.logPrint(e);
       }
@@ -368,9 +369,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (Platform.isIOS) {
       var info = await deviceInfo.iosInfo;
       var version = info.systemVersion;
-      var versionInt = int.tryParse(version
-          .split('.')
-          .first) ?? 0;
+      var versionInt = int.tryParse(version.split('.').first) ?? 0;
       return versionInt < 16;
     } else {
       return false;
@@ -405,9 +404,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         var path = await FilePicker.platform.saveFile(
           allowedExtensions: ["jpg"],
           type: FileType.image,
-          fileName: "${DateTime
-              .now()
-              .millisecondsSinceEpoch}.jpg",
+          fileName: "${DateTime.now().millisecondsSinceEpoch}.jpg",
         );
         if (path == null) {
           SmartDialog.showToast("取消保存");
@@ -472,7 +469,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 }
 mixin PlayerGestureControlMixin
-on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
+    on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
   /// 单击显示/隐藏控制器
   void onTap() {
     if (showControlsState.value) {
@@ -496,10 +493,7 @@ on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
   }
 
   void onHover(PointerHoverEvent event, BuildContext context) {
-    final screenHeight = MediaQuery
-        .of(context)
-        .size
-        .height;
+    final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
     if (event.position.dy <= targetPosition ||
         event.position.dy >= targetPosition * 3) {
@@ -554,7 +548,7 @@ on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
       _currentVolume = await volumeController.getVolume();
     }
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      _currentBrightness = await screenBrightness.current;
+      _currentBrightness = await screenBrightness.application;
     }
   }
 
@@ -627,7 +621,7 @@ on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
       if (seek < 0) {
         seek = 0;
       }
-      screenBrightness.setScreenBrightness(seek);
+      screenBrightness.setApplicationScreenBrightness(seek);
 
       gestureTipText.value = "亮度 ${(seek * 100).toInt()}%";
       Log.logPrint(value);
@@ -638,7 +632,7 @@ on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
         seek = 1;
       }
 
-      screenBrightness.setScreenBrightness(seek);
+      screenBrightness.setApplicationScreenBrightness(seek);
       gestureTipText.value = "亮度 ${(seek * 100).toInt()}%";
       Log.logPrint(value);
     }
@@ -709,22 +703,20 @@ class PlayerController extends BaseController
     });
     _widthSubscription = player.stream.width.listen((event) {
       Log.d(
-          'width:$event  W:${(player.state.width)}  H:${(player.state
-              .height)}');
+          'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
     _heightSubscription = player.stream.height.listen((event) {
       Log.d(
-          'height:$event  W:${(player.state.width)}  H:${(player.state
-              .height)}');
+          'height:$event  W:${(player.state.width)}  H:${(player.state.height)}');
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
     });
     _escSubscription =
         EventBus.instance.listen(EventBus.kEscapePressed, (event) {
-          exitFull();
-        });
+      exitFull();
+    });
   }
 
   void disposeStream() {
@@ -758,7 +750,7 @@ class PlayerController extends BaseController
               Clipboard.setData(
                 ClipboardData(
                   text:
-                  "Resolution\n${player.state.width}x${player.state.height}",
+                      "Resolution\n${player.state.width}x${player.state.height}",
                 ),
               );
             },

@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 mixin AfterFirstFrameMixin<T extends StatefulWidget> on State<T> {
-
   bool _afterFirstFrame = false;
 
   @override
@@ -18,5 +17,4 @@ mixin AfterFirstFrameMixin<T extends StatefulWidget> on State<T> {
       callback();
     }
   }
-
 }

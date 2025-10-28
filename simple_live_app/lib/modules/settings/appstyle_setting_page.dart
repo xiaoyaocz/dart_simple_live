@@ -6,7 +6,7 @@ import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class AppstyleSettingPage extends GetView<AppSettingsController> {
-  const AppstyleSettingPage({Key? key}) : super(key: key);
+  const AppstyleSettingPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,46 +26,40 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
           ),
           SettingsCard(
             child: Obx(
-              () => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  RadioListTile<int>(
-                    title: const Text(
-                      "跟随系统",
+              () => RadioGroup<int>(
+                groupValue: controller.themeMode.value,
+                onChanged: (e) {
+                  controller.setTheme(e ?? 0);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<int>(
+                      title: const Text(
+                        "跟随系统",
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      value: 0,
+                      contentPadding: AppStyle.edgeInsetsH12,
                     ),
-                    visualDensity: VisualDensity.compact,
-                    value: 0,
-                    contentPadding: AppStyle.edgeInsetsH12,
-                    groupValue: controller.themeMode.value,
-                    onChanged: (e) {
-                      controller.setTheme(e ?? 0);
-                    },
-                  ),
-                  RadioListTile<int>(
-                    title: const Text(
-                      "浅色模式",
+                    RadioListTile<int>(
+                      title: const Text(
+                        "浅色模式",
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      value: 1,
+                      contentPadding: AppStyle.edgeInsetsH12,
                     ),
-                    visualDensity: VisualDensity.compact,
-                    value: 1,
-                    contentPadding: AppStyle.edgeInsetsH12,
-                    groupValue: controller.themeMode.value,
-                    onChanged: (e) {
-                      controller.setTheme(e ?? 1);
-                    },
-                  ),
-                  RadioListTile<int>(
-                    title: const Text(
-                      "深色模式",
+                    RadioListTile<int>(
+                      title: const Text(
+                        "深色模式",
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      value: 2,
+                      contentPadding: AppStyle.edgeInsetsH12,
                     ),
-                    visualDensity: VisualDensity.compact,
-                    value: 2,
-                    contentPadding: AppStyle.edgeInsetsH12,
-                    groupValue: controller.themeMode.value,
-                    onChanged: (e) {
-                      controller.setTheme(e ?? 2);
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

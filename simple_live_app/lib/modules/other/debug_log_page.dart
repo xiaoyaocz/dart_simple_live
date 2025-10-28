@@ -8,7 +8,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/log.dart';
 
 class DebugLogPage extends StatelessWidget {
-  const DebugLogPage({Key? key}) : super(key: key);
+  const DebugLogPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,8 @@ class DebugLogPage extends StatelessWidget {
               var logFile = File(
                   '${dir.path}/${DateTime.now().millisecondsSinceEpoch}.log');
               await logFile.writeAsString(msg);
-              Share.shareXFiles([XFile(logFile.path)]);
+              SharePlus.instance
+                  .share(ShareParams(files: [XFile(logFile.path)]));
             },
             icon: const Icon(Icons.save),
           ),

@@ -12,7 +12,7 @@ import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 import 'package:simple_live_tv_app/widgets/card/live_room_card.dart';
 
 class CategoryDetailPage extends GetView<CategoryDetailController> {
-  const CategoryDetailPage({Key? key}) : super(key: key);
+  const CategoryDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {

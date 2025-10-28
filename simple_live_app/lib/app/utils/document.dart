@@ -6,9 +6,9 @@ import 'package:simple_live_app/app/log.dart';
 extension DirectoryCleaner on Directory {
   Future<void> clear() async {
     // 首先判断是否为文件夹
-    if (await this.exists() && await FileSystemEntity.isDirectory(this.path)) {
+    if (await exists() && await FileSystemEntity.isDirectory(path)) {
       // 列出文件夹中的所有文件和子文件夹
-      List<FileSystemEntity> files = this.listSync();
+      List<FileSystemEntity> files = listSync();
 
       // 遍历文件列表并删除每个文件或子文件夹
       for (FileSystemEntity file in files) {
@@ -23,13 +23,14 @@ extension DirectoryCleaner on Directory {
 
       Log.i('文件夹清空完成');
     } else {
-      Log.i('${this.path} 不是一个有效的文件夹');
+      Log.i('$path 不是一个有效的文件夹');
     }
   }
+
   // 阻塞主线程
-  void clearSync()  {
-    if ( this.existsSync() && FileSystemEntity.isDirectorySync(this.path)) {
-      List<FileSystemEntity> files = this.listSync();
+  void clearSync() {
+    if (existsSync() && FileSystemEntity.isDirectorySync(path)) {
+      List<FileSystemEntity> files = listSync();
       for (FileSystemEntity file in files) {
         if (file is File) {
           file.deleteSync();
@@ -42,7 +43,7 @@ extension DirectoryCleaner on Directory {
 
       Log.i('文件夹清空完成');
     } else {
-      Log.i('${this.path} 不是一个有效的文件夹');
+      Log.i('$path 不是一个有效的文件夹');
     }
   }
 }

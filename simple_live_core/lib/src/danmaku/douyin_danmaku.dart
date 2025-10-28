@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/simple_live_core.dart';
-import 'package:simple_live_core/src/platforms/douyin/douyinRequestParams.dart';
+import 'package:simple_live_core/src/platforms/douyin/douyin_request_params.dart';
 import 'package:simple_live_core/src/common/js_engine.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
 
@@ -54,9 +54,9 @@ class DouyinDanmaku implements LiveDanmaku {
     var ts = DateTime.now().millisecondsSinceEpoch;
     var uri = Uri.parse(serverUrl).replace(scheme: "wss", queryParameters: {
       "app_name": "douyin_web",
-      "version_code": DouyinRequestParams.VERSION_CODE_VALUE,
-      "webcast_sdk_version": DouyinRequestParams.SDK_VERSION,
-      "update_version_code": DouyinRequestParams.SDK_VERSION,
+      "version_code": DouyinRequestParams.versionCodeValue,
+      "webcast_sdk_version": DouyinRequestParams.sdkVersion,
+      "update_version_code": DouyinRequestParams.sdkVersion,
       "compress": "gzip",
       // "internal_ext":
       //     "internal_src:dim|wss_push_room_id:${danmakuArgs.roomId}|wss_push_did:${danmakuArgs.userId}|dim_log_id:20230626152702E8F63662383A350588E1|fetch_time:1687764422114|seq:1|wss_info:0-1687764422114-0-0|wrds_kvs:WebcastRoomRankMessage-1687764036509597990_InputPanelComponentSyncData-1687736682345173033_WebcastRoomStatsMessage-1687764414427812578",
@@ -128,7 +128,7 @@ class DouyinDanmaku implements LiveDanmaku {
     webScoketUtils?.sendMessage(obj.writeToBuffer());
   }
 
-  void decodeMessage(args) {
+  void decodeMessage(List<int> args) {
     // CoreLog.i(args.toString());
 
     var wssPackage = PushFrame.fromBuffer(args);
@@ -179,7 +179,7 @@ class DouyinDanmaku implements LiveDanmaku {
     );
   }
 
-  void sendAck(var logId, String internalExt) {
+  void sendAck(dynamic logId, String internalExt) {
     var obj = PushFrame();
     obj.payloadType = 'ack';
     obj.logId = logId;
@@ -187,7 +187,7 @@ class DouyinDanmaku implements LiveDanmaku {
     webScoketUtils?.sendMessage(obj.writeToBuffer());
   }
 
-  void joinRoom(args) {
+  void joinRoom(dynamic args) {
     var obj = PushFrame();
     obj.payloadType = 'hb';
     webScoketUtils?.sendMessage(obj.writeToBuffer());
@@ -211,8 +211,8 @@ class DouyinDanmaku implements LiveDanmaku {
       Map<String, dynamic> params = {
         "live_id": "1",
         "aid": "6383",
-        "version_code": DouyinRequestParams.VERSION_CODE_VALUE,
-        "webcast_sdk_version": DouyinRequestParams.SDK_VERSION,
+        "version_code": DouyinRequestParams.versionCodeValue,
+        "webcast_sdk_version": DouyinRequestParams.sdkVersion,
         "room_id": roomId,
         "sub_room_id": "",
         "sub_channel_id": "",

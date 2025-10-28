@@ -7,7 +7,7 @@ import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class AutoExitSettingsPage extends GetView<AppSettingsController> {
-  const AutoExitSettingsPage({Key? key}) : super(key: key);
+  const AutoExitSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

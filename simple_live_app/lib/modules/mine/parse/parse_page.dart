@@ -5,7 +5,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/mine/parse/parse_controller.dart';
 
 class ParsePage extends GetView<ParseController> {
-  const ParsePage({Key? key}) : super(key: key);
+  const ParsePage({super.key});
 
   @override
   Widget build(BuildContext context) {

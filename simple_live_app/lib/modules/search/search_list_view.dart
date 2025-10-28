@@ -12,7 +12,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 
 class SearchListView extends StatelessWidget {
   final String tag;
-  const SearchListView(this.tag, {Key? key}) : super(key: key);
+  const SearchListView(this.tag, {super.key});
   SearchListController get controller =>
       Get.find<SearchListController>(tag: tag);
   @override

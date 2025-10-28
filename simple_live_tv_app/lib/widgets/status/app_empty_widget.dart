@@ -11,8 +11,8 @@ class AppEmptyWidget extends StatelessWidget {
   const AppEmptyWidget({
     this.onRefresh,
     this.text,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

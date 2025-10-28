@@ -237,7 +237,8 @@ class BiliBiliSite implements LiveSite {
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
     var roomInfo = await getRoomInfo(roomId: roomId);
     var realRoomId = roomInfo["room_info"]["room_id"].toString();
-    var url = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?id=$realRoomId";
+    var url =
+        "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?id=$realRoomId";
     var queryParams = await getWbiSign(url);
     var roomDanmakuResult = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo",

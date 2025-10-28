@@ -4,7 +4,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/settings/danmu_shield/danmu_shield_controller.dart';
 
 class DanmuShieldPage extends GetView<DanmuShieldController> {
-  const DanmuShieldPage({Key? key}) : super(key: key);
+  const DanmuShieldPage({super.key});
 
   @override
   Widget build(BuildContext context) {

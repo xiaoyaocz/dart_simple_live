@@ -43,53 +43,55 @@ class FollowInfoPage extends GetView<FollowInfoController> {
           // 顶部：头像+平台+房间号
           Padding(
             padding: AppStyle.edgeInsetsA12,
-            child: Obx(()=> Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: NetworkImage(controller.followUser.value!.face),
-                    ),
-                    AppStyle.hGap12,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            controller.followUser.value!.userName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+            child: Obx(
+              () => Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundImage:
+                        NetworkImage(controller.followUser.value!.face),
+                  ),
+                  AppStyle.hGap12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          controller.followUser.value!.userName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
-                          AppStyle.vGap4,
-                          Row(
-                            children: [
-                              Image.asset(site.logo, width: 18),
-                              AppStyle.hGap8,
-                              Flexible(
-                                child: Text(
-                                  '${site.name}  房间号：${controller.followUser.value!.roomId}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color
-                                        ?.withValues(alpha: .7),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        AppStyle.vGap4,
+                        Row(
+                          children: [
+                            Image.asset(site.logo, width: 18),
+                            AppStyle.hGap8,
+                            Flexible(
+                              child: Text(
+                                '${site.name}  房间号：${controller.followUser.value!.roomId}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color
+                                      ?.withValues(alpha: .7),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
             ),
           ),
           AppStyle.divider,

@@ -1,4 +1,4 @@
-library simple_live_core;
+library;
 
 export 'src/interface/live_site.dart';
 export 'src/interface/live_danmaku.dart';

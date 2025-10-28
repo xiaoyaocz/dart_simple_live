@@ -43,7 +43,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: "17"
+          java-version: "21"
           cache: "gradle"
 
       # 设置 Flutter

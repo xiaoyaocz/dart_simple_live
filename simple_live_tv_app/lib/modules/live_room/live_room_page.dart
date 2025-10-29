@@ -18,7 +18,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           //双击返回键退出
           if (controller.doubleClickExit) {

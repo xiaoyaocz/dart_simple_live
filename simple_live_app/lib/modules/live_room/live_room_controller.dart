@@ -29,6 +29,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:simple_live_app/app/utils/sandbox.dart';
 
 class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final Site pSite;
@@ -574,8 +575,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   Future<void> visitWebLive() async {
-    var uri = Uri.parse(detail.value!.url);
-    if (await canLaunchUrl(uri)) {
+    Uri uri = Uri.parse(detail.value!.url);
+    if (await canLaunchUrl(uri) || runningInSandbox()) {
       await launchUrl(uri);
     } else {
       throw '无法打开网页 $uri';

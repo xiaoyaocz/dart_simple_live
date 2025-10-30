@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
+import 'package:simple_live_core/src/danmaku/twitch_danmaku.dart';
 import 'package:simple_live_core/src/platforms/twitch/models.dart';
 
 class TwitchSite implements LiveSite {
@@ -21,7 +22,7 @@ class TwitchSite implements LiveSite {
 
   static const baseUrl = "https://www.twitch.tv";
 
-  Map<String, dynamic> headers = {
+  Map<String, String> headers = {
     'user-agent': defaultUa,
     'accept-language': 'en-US,en;q=0.9',
     'accept': 'application/vnd.twitchtv.v5+json',
@@ -79,9 +80,7 @@ class TwitchSite implements LiveSite {
   }
 
   @override
-  LiveDanmaku getDanmaku() {
-    throw Exception("twitch暂不支持弹幕");
-  }
+  LiveDanmaku getDanmaku() => TwitchDanmaku();
 
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
@@ -204,7 +203,8 @@ class TwitchSite implements LiveSite {
     required LivePlayQuality quality,
   }) async {
     return LivePlayUrl(
-      urls: _playUrlList,
+      urls: [quality.data],
+      headers: headers,
     );
   }
 

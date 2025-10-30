@@ -28,10 +28,17 @@ class Sites {
       name: "抖音直播",
       liveSite: DouyinSite(),
     ),
+    Constant.kTwitch: Site(
+      id: Constant.kTwitch,
+      logo: "assets/images/Twitch.png",
+      name: "Twitch",
+      liveSite: TwitchSite(),
+    )
   };
 
   static List<Site> get supportSites {
     return AppSettingsController.instance.siteSort
+        .where((key) => Sites.allSites[key]?.name != 'Twitch')
         .map((key) => allSites[key]!)
         .toList();
   }
@@ -42,6 +49,7 @@ class Site {
   final String name;
   final String logo;
   final LiveSite liveSite;
+
   Site({
     required this.id,
     required this.liveSite,

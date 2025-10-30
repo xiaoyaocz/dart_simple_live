@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class UrlParse {
   static UrlParse? _urlParse;
@@ -54,6 +55,14 @@ class UrlParse {
       var regExp = RegExp(r"reflow/(\d+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
       return [id, Sites.allSites[Constant.kDouyin]!];
+    }
+    if (url.contains("https://www.twitch.tv/")) {
+      final regExp = RegExp(r'twitch\.tv/([^/?]+)');
+      id = regExp.firstMatch(url)?.group(1) ?? "";
+      return [
+        id,
+        Sites.allSites[Constant.kTwitch]!
+      ];
     }
     if (url.contains("v.douyin.com")) {
       var regExp = RegExp(r"http.?://v.douyin.com/[\d\w]+/");

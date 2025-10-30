@@ -59,7 +59,9 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 onReorder: controller.updateSiteSort,
-                children: controller.siteSort.map(
+                children: controller.siteSort
+                    .where((key) => Sites.allSites[key]?.name != 'Twitch')
+                    .map(
                   (key) {
                     var e = Sites.allSites[key]!;
                     return ListTile(

@@ -1,7 +1,6 @@
 ﻿import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/cupertino.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/twitch_danmaku.dart';
@@ -113,7 +112,6 @@ class TwitchSite implements LiveSite {
     );
     var token = response['data']['streamPlaybackAccessToken']['value'];
     var sign = response['data']['streamPlaybackAccessToken']['signature'];
-    var anchorName = detail.userName;
     var liveStatus = detail.status;
     if (liveStatus) {
       // 随机选择一个sessionId
@@ -289,23 +287,6 @@ class TwitchSite implements LiveSite {
     if (responses.length < 2) {
       CoreLog.error('Invalid response from Twitch API');
     }
-    return responses;
-  }
-
-  // gql 查询demo
-  Future<List<dynamic>> _post_gql({required String body}) async {
-    getRequestHeaders();
-    var response = await HttpClient.instance.postJson(
-      gplApiUrl,
-      header: headers,
-      data: body,
-    );
-    CoreLog.d("twitch-response:$response");
-
-    final List<dynamic> decoded = jsonDecode(response);
-    final responses = decoded
-        .map((item) => TwitchResponse.fromJson(item as Map<String, dynamic>))
-        .toList();
     return responses;
   }
 

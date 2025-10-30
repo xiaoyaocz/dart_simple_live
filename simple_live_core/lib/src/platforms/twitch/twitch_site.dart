@@ -85,8 +85,10 @@ class TwitchSite implements LiveSite {
   }
 
   @override
-  Future<bool> getLiveStatus({required String roomId}) {
-    throw UnimplementedError();
+  Future<bool> getLiveStatus({required String roomId}) async {
+    var detail = await getRoomDetail(roomId: roomId);
+    var status = detail.status;
+    return status;
   }
 
   @override

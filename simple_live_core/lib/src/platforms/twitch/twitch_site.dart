@@ -80,8 +80,7 @@ class TwitchSite implements LiveSite {
 
   @override
   LiveDanmaku getDanmaku() {
-    // TODO: implement getDanmaku
-    throw UnimplementedError();
+    throw Exception("twitch暂不支持弹幕");
   }
 
   @override
@@ -319,13 +318,11 @@ class TwitchSite implements LiveSite {
 
   @override
   Future<LiveSearchAnchorResult> searchAnchors(String keyword, {int page = 1}) {
-    // TODO: implement searchAnchors
-    throw UnimplementedError();
+    throw Exception("twitch暂不支持搜索主播");
   }
 
   @override
   Future<LiveSearchRoomResult> searchRooms(String keyword, {int page = 1}) {
-    // TODO: implement searchRooms
-    throw UnimplementedError();
+    throw Exception("twitch暂不支持搜索房间");
   }
 }

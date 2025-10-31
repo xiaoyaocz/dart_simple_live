@@ -247,7 +247,7 @@ class TwitchSite implements LiveSite {
         url: "$baseUrl/$roomId",
         introduction: "",
         notice: "",
-        danmakuData: null,
+        danmakuData: roomId,
         data: null);
   }
 

@@ -23,6 +23,16 @@ static void first_frame_cb(MyApplication* self, FlView *view)
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+
+  GList* list = gtk_application_get_windows(GTK_APPLICATION(application));
+
+  GtkWindow* existing_window = list ? GTK_WINDOW(list->data) : NULL;
+
+  if (existing_window) {
+    gtk_window_present(existing_window);
+    return;
+  }
+
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
@@ -139,6 +149,6 @@ MyApplication* my_application_new() {
 
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID,
-                                     "flags", G_APPLICATION_NON_UNIQUE,
+                                    //  "flags", G_APPLICATION_FLAGS_NONE,
                                      nullptr));
 }

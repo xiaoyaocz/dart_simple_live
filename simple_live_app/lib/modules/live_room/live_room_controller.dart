@@ -406,7 +406,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     //重置错误次数
     mediaErrorRetryCount = 0;
-    setPlayer();
+    initPlaylist();
   }
 
   void changePlayLine(int index) {
@@ -416,25 +416,33 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     setPlayer();
   }
 
-  void setPlayer() async {
+  void initPlaylist() async {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
 
-    var playurl = playUrls[currentLineIndex];
-    if (AppSettingsController.instance.playerForceHttps.value) {
-      playurl = playurl.replaceAll("http://", "https://");
-    }
+    final mediaList = playUrls.map((url) {
+      var finalUrl = url;
+      if (AppSettingsController.instance.playerForceHttps.value) {
+        finalUrl = finalUrl.replaceAll("http://", "https://");
+      }
+      return Media(finalUrl, httpHeaders: playHeaders);
+    }).toList();
 
     // 初始化播放器并设置 ao 参数
     await initializePlayer();
 
     await player.open(
-      Media(
-        playurl,
-        httpHeaders: playHeaders,
-      ),
+      Playlist(
+        mediaList
+      )
     );
-    Log.d("播放链接\r\n：$playurl");
+  }
+
+  void setPlayer() async {
+    currentLineInfo.value = "线路${currentLineIndex + 1}";
+    errorMsg.value = "";
+
+    await player.jump(currentLineIndex);
   }
 
   @override

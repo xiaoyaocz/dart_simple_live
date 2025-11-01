@@ -868,7 +868,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
             ListTile(
               leading: const Icon(Icons.open_in_new),
-              title: const Text("APP中打开"),
+              title: const Text("APP 中打开"),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Get.back();

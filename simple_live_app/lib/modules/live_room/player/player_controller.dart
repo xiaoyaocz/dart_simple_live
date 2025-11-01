@@ -33,7 +33,7 @@ mixin PlayerMixin {
     configuration: PlayerConfiguration(
       title: "Slive Player",
       logLevel: AppSettingsController.instance.logEnable.value
-          ? MPVLogLevel.info
+          ? MPVLogLevel.debug
           : MPVLogLevel.error,
     ),
   );
@@ -110,6 +110,9 @@ mixin PlayerStateMixin on PlayerMixin {
 
   /// 显示提示底部Tip
   RxBool showBottomTip = false.obs;
+
+  /// 是否显示OSD统计信息
+  RxBool showOSDStats = false.obs;
 
   /// 提示底部Tip文本
   RxString bottomTipText = "".obs;
@@ -740,11 +743,25 @@ class PlayerController extends BaseController
     WakelockPlus.disable();
   }
 
+  Future<void> toggleOSDStats() async {
+    showOSDStats.value = !showOSDStats.value;
+    if (player.platform is NativePlayer) {
+      await (player.platform as NativePlayer).command([
+        'script-binding',
+        'stats/display-page-1-toggle',
+      ]);
+    }
+  }
+
   void showDebugInfo() {
     Utils.showBottomSheet(
       title: "播放信息",
       child: ListView(
         children: [
+          Obx(() => SwitchListTile(
+              title: const Text("OSD 显示"),
+              value: showOSDStats.value,
+              onChanged: (value) => toggleOSDStats())),
           ListTile(
             title: const Text("Resolution"),
             subtitle: Text('${player.state.width}x${player.state.height}'),

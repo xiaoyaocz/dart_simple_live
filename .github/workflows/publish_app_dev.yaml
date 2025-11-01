@@ -293,7 +293,7 @@ jobs:
             --disable-rofiles-fuse
           flatpak build-bundle ${{ matrix.arch }} Slive-${{ matrix.arch }}.flatpak io.github.SlotSun.dart_simple_live
 
-      # 上传 Linux 包至 Artifacts
+      # 上传 Flatpak 包至 Artifacts
       - name: Upload linux flatpak to artifacts
         uses: actions/upload-artifact@v4
         with:

@@ -52,6 +52,8 @@ mixin PlayerMixin {
         'ao',
         AppSettingsController.instance.audioOutputDriver.value,
       );
+    } else if (Platform.isLinux) {
+      await pp.setProperty('ao', 'alsa');
     }
   }
 

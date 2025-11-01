@@ -38,7 +38,7 @@ modules:
       - /share/metainfo
     config-opts:
       - -Dalsa=enabled
-      - -Dbuild-date=true
+      - -Dbuild-date=false
       - -Dcdda=disabled
       - -Dcplayer=true
       - -Dcplugins=enabled
@@ -64,7 +64,7 @@ modules:
       - -Dlibavdevice=enabled
       - -Dlibbluray=disabled
       - -Dlibmpv=true
-      - -Dlua=disabled
+      - -Dlua=enabled
       - -Dmanpage-build=disabled
       - -Dopenal=enabled
       - -Dpipewire=enabled
@@ -180,6 +180,26 @@ modules:
             x-checker-data:
               type: git
               tag-pattern: ^([\d.]+)$
+
+      # Lua to display mpv play info
+      - name: luajit
+        no-autogen: true
+        cleanup:
+          - /bin
+          - /include
+          - /lib/pkgconfig
+          - /share/man
+        sources:
+          - type: git
+            url: https://github.com/openresty/luajit2.git
+            tag: v2.1-20251030
+            commit: 71fae383f6c4637d64b03a6d0ec76ae8c19d6821
+            x-checker-data:
+              type: git
+              tag-pattern: ^v2.1-([\d\.\-]+)$
+          - type: shell
+            commands:
+              - sed -i 's|/usr/local|/app|' ./Makefile
 
       # X11
       - name: libXpresent

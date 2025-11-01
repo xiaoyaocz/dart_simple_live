@@ -340,7 +340,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   /// 初始化播放器
   void getPlayQualites() async {
-    qualites.clear();
     currentQuality = -1;
 
     try {
@@ -351,7 +350,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         SmartDialog.showToast("无法读取播放清晰度");
         return;
       }
-      qualites.value = playQualites;
+      qualites.assignAll(playQualites);
       var qualityLevel = await getQualityLevel();
       if (qualityLevel == 2) {
         //最高
@@ -364,8 +363,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         int middle = (playQualites.length / 2).floor();
         currentQuality = middle;
       }
-
-      getPlayUrl();
+      await getPlayUrl();
     } catch (e) {
       Log.logPrint(e);
       SmartDialog.showToast("无法读取播放清晰度");
@@ -386,8 +384,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     return qualityLevel;
   }
 
-  void getPlayUrl() async {
-    playUrls.clear();
+  Future<void> getPlayUrl() async {
     currentQualityInfo.value = qualites[currentQuality].quality;
     currentLineInfo.value = "";
     currentLineIndex = -1;
@@ -397,7 +394,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       SmartDialog.showToast("无法读取播放地址");
       return;
     }
-    playUrls.value = playUrl.urls;
+    playUrls.assignAll(playUrl.urls);  // 深拷贝
     playHeaders = playUrl.headers;
     currentLineIndex = 0;
     currentLineInfo.value = "线路${currentLineIndex + 1}";
@@ -638,10 +635,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       title: "切换清晰度",
       child: RadioGroup(
         groupValue: currentQuality,
-        onChanged: (e) {
+        onChanged: (e) async {
           Get.back();
           currentQuality = e ?? 0;
-          getPlayUrl();
+          await getPlayUrl();
         },
         child: ListView.builder(
           itemCount: qualites.length,

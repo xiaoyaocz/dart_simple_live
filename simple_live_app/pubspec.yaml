@@ -28,6 +28,7 @@ dependencies:
   uuid: ^4.5.1 # UUID
   synchronized: ^3.3.1 # 线程安全
   collection: ^1.18.0
+  pool: ^1.5.2 #并发控制器
 
   # Widget
   flutter_staggered_grid_view: ^0.7.0 # 瀑布流 / GridView
@@ -79,6 +80,7 @@ dependencies:
     sdk: flutter
   flutter_localizations: 
     sdk: flutter
+
 
 dependency_overrides:
   media_kit:

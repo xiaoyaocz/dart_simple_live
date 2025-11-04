@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
 
@@ -8,6 +9,14 @@ class LiveSearchRoomResult {
     required this.hasMore,
     required this.items,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "hasMore": hasMore,
+      "items": items.map((e) => json.decode(e.toString())).toList(),
+    });
+  }
 }
 
 class LiveSearchAnchorResult {
@@ -17,4 +26,12 @@ class LiveSearchAnchorResult {
     required this.hasMore,
     required this.items,
   });
+
+  @override
+  String toString() {
+    return json.encode({
+      "hasMore": hasMore,
+      "items": items.map((e) => json.decode(e.toString())).toList(),
+    });
+  }
 }

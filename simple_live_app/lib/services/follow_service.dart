@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pool/pool.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
@@ -296,20 +297,28 @@ class FollowService extends GetxService {
       // 静态权重
       const double wDuration = 0.5;
       const double wRecency = 0.5;
+      // 在线降权，离线增权
+      const double wOnline = 0.3;
+      const double wOffline = 1 - wOnline;
 
+      // 动态权重
       double normDurationA =
           a.watchDuration!.toDuration().inSeconds.toDouble() /
               maxDurationInSeconds;
       int rankA = historyRankMap[a.id] ?? maxRank;
       double normRecencyA = (maxRank - rankA).toDouble() / maxRank;
-      double scoreA = (wDuration * normDurationA) + (wRecency * normRecencyA);
+      double scoreA =
+          ((wDuration * normDurationA) + (wRecency * normRecencyA)) *
+              (a.liveStatus.value == 2 ? wOnline : wOffline);
 
       double normDurationB =
           b.watchDuration!.toDuration().inSeconds.toDouble() /
               maxDurationInSeconds;
       int rankB = historyRankMap[b.id] ?? maxRank;
       double normRecencyB = (maxRank - rankB).toDouble() / maxRank;
-      double scoreB = (wDuration * normDurationB) + (wRecency * normRecencyB);
+      double scoreB =
+          ((wDuration * normDurationB) + (wRecency * normRecencyB)) *
+              (b.liveStatus.value == 2 ? wOnline : wOffline);
 
       return scoreB.compareTo(scoreA);
     });
@@ -318,10 +327,12 @@ class FollowService extends GetxService {
   void startUpdateStatus({int? cycle}) async {
     List<FollowUser> usersToUpdate;
     final totalUsers = followList.length;
+    final douyinCount = followList.where((x) => x.siteId == 'douyin').length;
 
-    if (cycle != null && totalUsers > 100) {
+    //tips: 噪音用户画像（高风险平台：90%; 多次手刷; 单高关注数>50; 频繁切直播间; 不登录反复高危操作; 移动宽带用户; 反复关注取消; 多ip切换; 特殊地区风控; 多端在线请求; 黑号）
+    if (cycle != null && (totalUsers > 100 || douyinCount > 50)) {
       // 简单28
-      final topNCount = (totalUsers * 0.2).round(); // Top 50%
+      final topNCount = (totalUsers * 0.2).round(); // Top 20%
       final bottomNCount = (totalUsers * 0.2).round(); // Bottom 20%
       final middlePartEndIndex = totalUsers - bottomNCount;
       multiRoundPriority();
@@ -343,7 +354,6 @@ class FollowService extends GetxService {
             "Update Follow: List <= 100, updating all ${usersToUpdate.length} users.");
       }
     }
-
     _totalToUpdate = usersToUpdate.length;
     updatedCount = 0;
     updating.value = true;
@@ -357,24 +367,14 @@ class FollowService extends GetxService {
     var threadCount =
         AppSettingsController.instance.updateFollowThreadCount.value;
 
+    var pool = Pool(threadCount);
     var tasks = <Future>[];
-    for (var i = 0; i < threadCount; i++) {
-      tasks.add(
-        Future(() async {
-          var start = i * usersToUpdate.length ~/ threadCount;
-          var end = (i + 1) * usersToUpdate.length ~/ threadCount;
 
-          if (end > usersToUpdate.length) {
-            end = usersToUpdate.length;
-          }
-          var items = usersToUpdate.sublist(start, end);
-          for (var item in items) {
-            await updateLiveStatus(item);
-          }
-        }),
-      );
+    for (var user in usersToUpdate) {
+      tasks.add(pool.withResource(() => updateLiveStatus(user)));
     }
     await Future.wait(tasks);
+    await pool.close();
   }
 
   Future updateLiveStatus(FollowUser item) async {

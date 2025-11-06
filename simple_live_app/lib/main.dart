@@ -40,6 +40,10 @@ import 'package:simple_live_core/simple_live_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // init-queue:
+  // window(first)->migration->media_kit->Hive->services->start
+  // window(second)->open
+  await initWindow();
   await MigrationService.migrateData();
   MediaKit.ensureInitialized();
   await Hive.initFlutter(
@@ -49,7 +53,7 @@ void main() async {
   );
   //初始化服务
   await initServices();
-  await initWindow();
+  WindowService.instance.init();
 
   MigrationService.migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -68,17 +72,17 @@ Future initWindow() async {
     return;
   }
   await windowManager.ensureInitialized();
-  // 判定程序是否启动
-  if (!await FlutterSingleInstance().isFirstInstance()) {
-    Log.i("App is already running");
-    final err = await FlutterSingleInstance().focus();
-    if (err != null) {
-      Log.e("Error focusing running instance: $err", StackTrace.current);
+  // 判定程序是否启动-- windows 交给原生
+  if(Platform.isWindows == false) {
+    if (!await FlutterSingleInstance().isFirstInstance()) {
+      Log.i("App is already running");
+      final err = await FlutterSingleInstance().focus();
+      if (err != null) {
+        Log.e("Error focusing running instance: $err", StackTrace.current);
+      }
+      exit(0);
     }
-    exit(0);
   }
-
-  WindowService.instance.init();
 }
 
 Future initServices() async {

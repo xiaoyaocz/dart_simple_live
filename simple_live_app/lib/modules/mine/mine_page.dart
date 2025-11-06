@@ -38,7 +38,7 @@ class MinePage extends StatelessWidget {
                 "Slive",
                 style: TextStyle(height: 1.0),
               ),
-              subtitle: const Text("简简单单看直播"),
+              subtitle: const Text("我默默看你表演"),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Get.dialog(AboutDialog(
@@ -48,7 +48,7 @@ class MinePage extends StatelessWidget {
                     height: 48,
                   ),
                   applicationName: "Slive",
-                  applicationVersion: "简简单单看直播",
+                  applicationVersion: "我默默看你表演",
                   applicationLegalese: "Ver ${Utils.packageInfo.version}",
                 ));
               },

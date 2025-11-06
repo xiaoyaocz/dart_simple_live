@@ -1,20 +1,8 @@
+&lt;p align="center"&gt; &lt;img width="128" src="/assets/logo.png" alt="Simple Live logo"&gt; &lt;/p&gt; &lt;h2 align="center"&gt;Slive&lt;/h2&gt;
 
+&lt;p align="center"&gt; 我默默看你表演 &lt;/p&gt;
 
-
-<p align="center">
-    <img width="128" src="/assets/logo.png" alt="Simple Live logo">
-</p>
-<h2 align="center">Slive</h2>
-
-<p align="center">
-简简单单的看直播
-</p>
-
-![浅色模式](/assets/screenshot_light.jpg)
-
-![深色模式](/assets/screenshot_dark.jpg)
-
-## 支持直播平台：
+![浅色模式](/assets/screenshot_light.jpg)![深色模式](/assets/screenshot_dark.jpg)## 支持直播平台：
 
 - 虎牙直播
 

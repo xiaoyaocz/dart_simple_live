@@ -43,7 +43,7 @@ void main() async {
   // init-queue:
   // window(first)->migration->media_kit->Hive->services->start
   // window(second)->open
-  await initWindow();
+  await firstOpen();
   await MigrationService.migrateData();
   MediaKit.ensureInitialized();
   await Hive.initFlutter(
@@ -53,7 +53,7 @@ void main() async {
   );
   //初始化服务
   await initServices();
-  WindowService.instance.init();
+  await initWindow();
 
   MigrationService.migrateDataByVersion();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -67,13 +67,9 @@ void main() async {
   runApp(const MyApp());
 }
 
-Future initWindow() async {
-  if (!(Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
-    return;
-  }
-  await windowManager.ensureInitialized();
+Future firstOpen() async {
   // 判定程序是否启动-- windows 交给原生
-  if(Platform.isWindows == false) {
+  if (Platform.isWindows == false) {
     if (!await FlutterSingleInstance().isFirstInstance()) {
       Log.i("App is already running");
       final err = await FlutterSingleInstance().focus();
@@ -83,6 +79,14 @@ Future initWindow() async {
       exit(0);
     }
   }
+}
+
+Future initWindow() async {
+  if (!(Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+    return;
+  }
+  await windowManager.ensureInitialized();
+  WindowService.instance.init();
 }
 
 Future initServices() async {

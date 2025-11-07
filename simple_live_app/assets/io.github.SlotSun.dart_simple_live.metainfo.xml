@@ -7,7 +7,7 @@
     <name>SlotSun</name>
   </developer>
   <summary>Watch live streams simply</summary>
-  <summary xml:lang="zh_CN">简简单单看直播</summary>
+  <summary xml:lang="zh_CN">我就默默看你表演</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0</project_license>
   <url type="homepage">https://github.com/SlotSun/dart_simple_live/</url>

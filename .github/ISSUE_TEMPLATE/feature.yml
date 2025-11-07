@@ -39,7 +39,6 @@ body:
         - label: MacOS
         - label: Windows
         - label: Linux
-        - label: Android TV
 
   - type: textarea
     id: additional

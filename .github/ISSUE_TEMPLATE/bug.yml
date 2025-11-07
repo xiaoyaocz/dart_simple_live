@@ -78,7 +78,6 @@ body:
         - Linux
         - Android
         - iOS
-        - Android TV
 
   - type: input
     id: os-version

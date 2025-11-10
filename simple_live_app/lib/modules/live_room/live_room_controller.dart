@@ -1008,6 +1008,7 @@ ${error?.stackTrace}''');
     //返回前台
     if (state == AppLifecycleState.resumed) {
       Log.d("返回前台");
+      danmakuController?.onResume();
       isBackground = false;
     }
   }

@@ -466,7 +466,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
     _pipSubscription ??= pip.pipStatusStream.listen((event) {
       if (event == PiPStatus.disabled) {
-        danmakuController?.clear();
+        // 返回前台时恢复弹幕
+        danmakuController?.resume();
         showDanmakuState.value = danmakuStateBeforePIP;
       }
       Log.w(event.toString());

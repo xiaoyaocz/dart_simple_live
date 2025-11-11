@@ -506,7 +506,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       ],
                     ),
                   ),
-                  if (controller.site.id == Constant.kBiliBili)
+                  if (controller.site.id == Constant.kBiliBili ||
+                      controller.site.id == Constant.kDouyu)
                     buildSuperChats(),
                   buildFollowList(),
                   buildSettings(),

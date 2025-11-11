@@ -1000,6 +1000,8 @@ ${error?.stackTrace}''');
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.paused) {
+      var height = MediaQuery.of(Get.context!).padding.top;
+      Log.d("当前状态栏高度$height");
       Log.d("进入后台");
       //进入后台，关闭弹幕
       danmakuController?.clear();
@@ -1007,6 +1009,9 @@ ${error?.stackTrace}''');
     } else
     //返回前台
     if (state == AppLifecycleState.resumed) {
+      // update();
+      var height = MediaQuery.of(Get.context!).padding.top;
+      Log.d("当前状态栏高度$height");
       Log.d("返回前台");
       danmakuController?.onResume();
       isBackground = false;

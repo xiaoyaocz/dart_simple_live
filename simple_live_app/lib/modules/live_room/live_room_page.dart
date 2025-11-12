@@ -7,7 +7,6 @@ import 'package:lottie/lottie.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
@@ -436,7 +435,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildMessageArea() {
     return Expanded(
       child: DefaultTabController(
-        length: controller.site.id == Constant.kBiliBili ? 4 : 3,
+        length: 4,
         child: Column(
           children: [
             TabBar(
@@ -447,16 +446,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 const Tab(
                   text: "聊天",
                 ),
-                if (controller.site.id == Constant.kBiliBili)
-                  Tab(
-                    child: Obx(
-                      () => Text(
-                        controller.superChats.isNotEmpty
-                            ? "SC(${controller.superChats.length})"
-                            : "SC",
-                      ),
+                Tab(
+                  child: Obx(
+                    () => Text(
+                      controller.superChats.isNotEmpty
+                          ? "SC(${controller.superChats.length})"
+                          : "SC",
                     ),
                   ),
+                ),
                 const Tab(
                   text: "关注",
                 ),
@@ -506,9 +504,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       ],
                     ),
                   ),
-                  if (controller.site.id == Constant.kBiliBili ||
-                      controller.site.id == Constant.kDouyu)
-                    buildSuperChats(),
+                  buildSuperChats(),
                   buildFollowList(),
                   buildSettings(),
                 ],

@@ -140,7 +140,7 @@ class FollowAppSettingsController extends BaseController {
     bool upMode = title == "添加标签" ? true : false;
     Get.dialog(
       AlertDialog(
-        contentPadding: const EdgeInsets.all(16.0),
+        contentPadding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
         ),
@@ -179,8 +179,7 @@ class FollowAppSettingsController extends BaseController {
                   Get.back();
                 },
               ),
-              Container(
-                margin: AppStyle.edgeInsetsB4,
+              SizedBox(
                 width: double.infinity,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,

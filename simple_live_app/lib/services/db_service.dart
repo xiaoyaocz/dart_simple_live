@@ -92,6 +92,10 @@ class DBService extends GetxService {
     await historyBox.put(history.id, history);
   }
 
+  Future delHistory(String id) async {
+    await historyBox.delete(id);
+  }
+
   List<History> getHistories() {
     var his = historyBox.values.toList();
     his.sort((a, b) => b.updateTime.compareTo(a.updateTime));

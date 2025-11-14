@@ -55,6 +55,8 @@ mixin PlayerMixin {
     } else if (Platform.isLinux) {
       await pp.setProperty('ao', 'alsa');
     }
+    // media_kit 仓库更新导致的问题，临时解决办法
+    await pp.setProperty('force-seekable', 'yes');
   }
 
   /// 视频控制器

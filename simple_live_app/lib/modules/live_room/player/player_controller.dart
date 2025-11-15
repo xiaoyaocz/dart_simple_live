@@ -237,11 +237,6 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
     // 开始隐藏计时
     resetHideControlsTimer();
-
-    // 进入全屏模式
-    if (AppSettingsController.instance.autoFullScreen.value) {
-      enterFullScreen();
-    }
   }
 
   /// 释放一些系统状态
@@ -712,8 +707,16 @@ class PlayerController extends BaseController
     _widthSubscription = player.stream.width.listen((event) {
       Log.d(
           'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
-      isVertical.value =
-          (player.state.height ?? 9) > (player.state.width ?? 16);
+      if(player.state.width == null){
+        return;
+      }else{
+        // 可获取直播流size时且不为全屏模式时判断是否进入全屏模式
+        isVertical.value =
+            player.state.height! > player.state.width!;
+        if (AppSettingsController.instance.autoFullScreen.value && !fullScreenState.value) {
+          enterFullScreen();
+        }
+      }
     });
     _heightSubscription = player.stream.height.listen((event) {
       Log.d(

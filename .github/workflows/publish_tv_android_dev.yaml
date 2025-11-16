@@ -1,4 +1,4 @@
-name: app-build-action-dev
+name: publish_tv_android_dev
 
 on:
   workflow_dispatch:

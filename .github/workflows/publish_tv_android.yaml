@@ -46,13 +46,13 @@ jobs:
         uses: timheuer/base64-to-file@v1.2
         with:
           fileName: keystore_tv.jks
-          encodedString: ${{ secrets.TV_KEYSTORE_BASE64 }}
+          encodedString: ${{ secrets.KEYSTORE_BASE64 }}
       - name: Create key.properties for TV app
         run: |
           echo "storeFile=${{ steps.android_tv_keystore.outputs.filePath }}" > simple_live_tv_app/android/key.properties
-          echo "storePassword=${{ secrets.TV_STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyAlias=${{ secrets.TV_KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
+          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
 
       # 打包 Android TV APK
       - name: Build TV APK

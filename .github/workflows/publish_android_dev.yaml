@@ -46,7 +46,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
+          api-level: 36
           build-tools: 34.0.0
 
       # 设置Flutter环境

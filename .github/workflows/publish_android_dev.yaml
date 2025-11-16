@@ -41,6 +41,13 @@ jobs:
           distribution: 'zulu'
           java-version: "17"
           cache: "gradle"
+      
+      # 这一步会读取您项目中的配置，并安装正确的SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
 
       # 设置Flutter环境
       - name: Setup Flutter

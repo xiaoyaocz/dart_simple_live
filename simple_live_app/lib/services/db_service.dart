@@ -20,7 +20,7 @@ class DBService extends GetxService {
   }
 
   // follow_user_tag 相关逻辑
-  bool getFollowTagExist(String id){
+  bool getFollowTagExist(String id) {
     return tagBox.containsKey(id);
   }
 
@@ -29,12 +29,12 @@ class DBService extends GetxService {
     await tagBox.delete(id);
   }
 
-  FollowUserTag? getFollowTag(String tag){
-     return tagBox.values.firstWhereOrNull((item) => item.tag == tag);
+  FollowUserTag? getFollowTag(String tag) {
+    return tagBox.values.firstWhereOrNull((item) => item.tag == tag);
   }
 
   // 判断标签名称是否重复
-  bool getFollowTagExistByTag(String tag){
+  bool getFollowTagExistByTag(String tag) {
     return tagBox.values.any((item) => item.tag == tag);
   }
 
@@ -49,9 +49,9 @@ class DBService extends GetxService {
   }
 
   // 添加标签
-  Future<FollowUserTag> addFollowTag(String tag) async{
+  Future<FollowUserTag> addFollowTag(String tag) async {
     // 限制标签唯一且长度不超过8个字符
-    if(getFollowTagExistByTag(tag) && tag.length > 8){
+    if (getFollowTagExistByTag(tag) && tag.length > 8) {
       return getFollowTag(tag)!;
     }
     final String uniqueId = uuid.v4();

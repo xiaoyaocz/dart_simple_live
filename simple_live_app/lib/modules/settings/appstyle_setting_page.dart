@@ -129,7 +129,7 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
                                       child: Icon(
                                         Icons.check,
                                         color: controller.styleColor.value ==
-                                                e.value
+                                                e.toARGB32()
                                             ? Colors.white
                                             : Colors.transparent,
                                       ),

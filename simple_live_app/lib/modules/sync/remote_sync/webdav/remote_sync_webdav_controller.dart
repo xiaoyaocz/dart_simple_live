@@ -179,9 +179,7 @@ class RemoteSyncWebDAVController extends BaseController {
       await userFollowJsonFile.writeAsString(jsonEncode(dataFollowsMap));
       // 用户自定义标签
       var userTagsList = DBService.instance.getFollowTagList();
-      var dataTagsMap = {
-        'data': userTagsList.map((e) => e.toJson()).toList()
-      };
+      var dataTagsMap = {'data': userTagsList.map((e) => e.toJson()).toList()};
       var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
       await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
       // histories
@@ -218,7 +216,7 @@ class RemoteSyncWebDAVController extends BaseController {
       // 遍历profile路径下的所有文件压缩
       await archive.addDirectoryToArchive(profile.path, profile.path);
       final zipEncoder = ZipEncoder();
-      zipBytes = zipEncoder.encode(archive) ?? [];
+      zipBytes = zipEncoder.encode(archive);
       profile.clearSync();
     } catch (e) {
       Log.logPrint(e);
@@ -310,7 +308,7 @@ class RemoteSyncWebDAVController extends BaseController {
         } catch (e) {
           Log.e("同步用户设置失败：$e", StackTrace.current);
         }
-      }else if (file.name == _userTagsJsonName && isSyncFollows.value) {
+      } else if (file.name == _userTagsJsonName && isSyncFollows.value) {
         try {
           // 标签功能和关注具有依赖关系，必须同时同步
           // 清空本地标签列表
@@ -325,9 +323,9 @@ class RemoteSyncWebDAVController extends BaseController {
           EventBus.instance.emit(Constant.kUpdateFollow, 0);
           Log.i('已同步用户自定义标签');
         } catch (e) {
-          Log.e('同步用户自定义标签失败:$e',StackTrace.current);
+          Log.e('同步用户自定义标签失败:$e', StackTrace.current);
         }
-      }  else {
+      } else {
         return;
       }
     } else {

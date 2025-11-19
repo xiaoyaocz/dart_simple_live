@@ -57,18 +57,17 @@ mixin PlayerMixin {
     }
     // media_kit 仓库更新导致的问题，临时解决办法
     if(Platform.isAndroid){
-      // 通过错误参数强制media_kit不seek, 解决了加载-pause-seekd 在直播流上的开屏问题
+      // 通过错误参数强制media_kit不seek, 解决了加载-pause-seek 在直播流上的开屏问题
       await pp.setProperty('force-seekable', 'yes');
     }
     // 低内存管理
-    /**
-     *  根据：https://mpv.io/manual/stable/#cache
-     *  --cache=<yes|no|auto>
-     *  --cache-secs=<seconds>
-     *  --demuxer-seekable-cache=<yes|no|auto>
-     *  --demuxer-max-back-bytes=<bytesize>
-     *  --demuxer-donate-buffer==<yes|no>
-     */
+    //
+    // 根据：https://mpv.io/manual/stable/#cache
+    // --cache=<yes|no|auto>// --cache-secs=<seconds>
+    // --demuxer-seekable-cache=<yes|no|auto>
+    // --demuxer-max-back-bytes=<bytesize>
+    // --demuxer-donate-buffer==<yes|no>
+    //
     // 内存换空间, 同时通过调整参数禁用mpv回放缓存（直播暂时不需要）
     // hls流/令牌流/.. 根据mdk-sdk作者回复, rtsp 在 ffmpeg存在内存泄露, 这意味着我们只能等待修复
     await pp.setProperty("cache", "no");
@@ -76,7 +75,6 @@ mixin PlayerMixin {
     await pp.setProperty('demuxer-seekable-cache', 'no');
     await pp.setProperty('demuxer-donate-buffer', 'no');
     await pp.setProperty("demuxer-max-back-bytes", "0");
-
     // bili/douyin流存在时间戳跳变问题
     // 真机建议-空间换内存-暂时不需要
     // windows:

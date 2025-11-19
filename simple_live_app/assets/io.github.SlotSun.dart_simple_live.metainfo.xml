@@ -39,14 +39,14 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="1.8.1" date="2025-10-26">
+    <release version="1.8.2" date="2025-11-19">
       <description>
-        <p>- feat: Linux平台调整应用名至Slive和图标，数据迁移请通过webdav #43 感谢为此做出的工作 @pugaizai </p>
-        <p>- fix: 修复抖音分类，搜索等功能 </p>
-        <p>- 迁移js引擎至flutter_qjs @GH4NG  </p>
-        <p>- feat: 通过多轮优先级刷新优化关注刷新速度（test） </p>
-        <p>- feat: 条件清理关注功能（test） </p>
-        <p>- chore:关注、标签功能UI调整- </p>
+        <p>- 项目升级到flutter 3.35.7 </p>
+        <p>- 支持Twitch解析 </p>
+        <p>- 支持斗鱼SC   </p>
+        <p>- 优化关注刷新 </p>
+        <p>- 关于linux的一系列修复 @pugaizai  </p>
+        <p>- chore:关注、标签功能UI调整 </p>
         <p>- fix: 一些代码和逻辑错误 </p>
         <p>- tips: ios和macos用户请到action更新测试或者下载上游仓库版本</p>
       </description>

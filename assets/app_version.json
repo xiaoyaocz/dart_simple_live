@@ -1,7 +1,7 @@
 {
-    "version": "1.8.1",
-    "version_num": 10801,
-    "version_desc": "- feat: Linux平台调整应用名至Slive和图标，数据迁移请通过webdav #43 感谢为此做出的工作 @pugaizai \n- fix: 修复抖音分类，搜索等功能 \n- 迁移js引擎至flutter_qjs @GH4NG  \n- feat: 通过多轮优先级刷新优化关注刷新速度（test） \n- feat: 条件清理关注功能（test） \n- chore:关注、标签功能UI调整- \n- fix: 一些代码和逻辑错误 \n- tips: ios和macos用户请到action更新测试或者下载上游仓库版本",
-    "prerelease":false,
+    "version": "1.8.2",
+    "version_num": 10802,
+    "version_desc": "- 项目升级到flutter 3.35.7 \n- 支持Twitch解析 \n- 支持斗鱼SC   \n- 优化关注刷新 \n- 关于linux的一系列修复 @pugaizai  \n- chore:关注、标签功能UI调整 \n- fix: 一些代码和逻辑错误 \n- tips: ios和macos用户请到action更新测试或者下载上游仓库版本",
+    "prerelease": true,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

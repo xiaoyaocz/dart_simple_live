@@ -46,7 +46,10 @@ dependencies:
   share_plus: ^12.0.1 # 分享
   path_provider: ^2.1.3 # 常用路径
   cross_file: ^0.3.5+1 # 跨平台文件
-  permission_handler: ^12.0.1 # 权限处理
+  # permission_handler: ^12.0.1 # 权限处理
+  permission_handler_apple: ^9.4.7
+  permission_handler_android: ^13.0.1
+  permission_handler_platform_interface: ^4.3.0
   flutter_image_gallery_saver: ^0.0.2 # 图片保存到相册
   screen_brightness: ^2.1.7 # 亮度控制
   auto_orientation_v2: ^2.3.6 # 屏幕方向

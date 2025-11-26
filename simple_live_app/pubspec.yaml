@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.9.8+10908
+version: 1.9.9+10909
 publish_to: none
 description: "Simple Live APP"
 environment:
@@ -13,7 +13,7 @@ dependencies:
   remixicon: ^1.4.1 #Remix图标
 
   # 框架、工具
-  get: ^4.7.2 #状态管理、路由管理、国际化
+  get: ^4.7.3 #状态管理、路由管理、国际化
   dio: ^5.9.0 #网络请求
   hive: 2.2.3 #持久化存储
   hive_flutter: 1.1.0 #持久化存储

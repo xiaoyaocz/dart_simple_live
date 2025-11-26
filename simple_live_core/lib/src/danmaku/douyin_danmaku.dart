@@ -102,7 +102,11 @@ class DouyinDanmaku implements LiveDanmaku {
       },
       heartBeatTime: heartbeatTime,
       onMessage: (e) {
-        decodeMessage(e);
+        try{
+          decodeMessage(e);
+        }catch(e){
+          CoreLog.error("douyin_danmaku_error$e");
+        }
       },
       onReady: () {
         onReady?.call();

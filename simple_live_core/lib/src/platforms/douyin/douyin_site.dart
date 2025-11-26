@@ -556,10 +556,21 @@ class DouyinSite implements LiveSite {
           qualities.add(qualityItem);
         }
       }
-    }
-    // var qualityData = json.decode(
-    //     detail.data["live_core_sdk_data"]["pull_data"]["stream_data"])["data"];
 
+      //   // 真原画 media_kit 不支持 hvc1编码
+      //   try{
+      //     String realOriginStream =  (qualityData['ao']['main']['flv'] as String).replaceAll('&only_audio=1','');
+      //     List<String> urls = [realOriginStream];
+      //     var realQualityItem = LivePlayQuality(
+      //       quality: "真原画",
+      //       sort: 10,
+      //       data: urls,
+      //     );
+      //     qualities.add(realQualityItem);
+      //   }catch(e){
+      //     CoreLog.error("未找到 ao 流 $e");
+      //   }
+    }
     qualities.sort((a, b) => b.sort.compareTo(a.sort));
     return qualities;
   }

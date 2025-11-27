@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -150,32 +151,75 @@ class FollowService extends GetxService {
     }
   }
 
+  /// 获取最优并发数
+  /// 根据 CPU 核心数和用户设置自动计算
+  int getOptimalConcurrency() {
+    var userSetting = AppSettingsController.instance.updateFollowThreadCount.value;
+
+    // 如果用户设置为 0，则自动根据 CPU 核心数计算
+    if (userSetting == 0) {
+      var cpuCount = Platform.numberOfProcessors;
+      // 网络 I/O 密集型任务，并发数可以是 CPU 核心数的 2-3 倍
+      var optimal = (cpuCount * 2.5).round();
+      // 限制在合理范围内（最少 4，最多 20）
+      return optimal.clamp(4, 20);
+    }
+
+    return userSetting;
+  }
+
+  /// 按平台交错排列，避免单一平台阻塞
+  List<FollowUser> interleaveByPlatform(List<FollowUser> list) {
+    // 按平台分组
+    var grouped = <String, Queue<FollowUser>>{};
+    for (var item in list) {
+      grouped.putIfAbsent(item.siteId, () => Queue<FollowUser>()).add(item);
+    }
+
+    // 交错处理
+    var result = <FollowUser>[];
+    while (grouped.values.any((queue) => queue.isNotEmpty)) {
+      for (var queue in grouped.values) {
+        if (queue.isNotEmpty) {
+          result.add(queue.removeFirst());
+        }
+      }
+    }
+
+    return result;
+  }
+
   void startUpdateStatus() async {
     updatedCount = 0;
     updating.value = true;
 
-    var threadCount =
-        AppSettingsController.instance.updateFollowThreadCount.value;
+    var concurrency = getOptimalConcurrency();
 
-    var tasks = <Future>[];
-    for (var i = 0; i < threadCount; i++) {
-      tasks.add(
-        Future(() async {
-          var start = i * followList.length ~/ threadCount;
-          var end = (i + 1) * followList.length ~/ threadCount;
+    Log.logPrint("开始更新关注状态，并发数: $concurrency，总数: ${followList.length}");
 
-          // 确保 end 不超出列表长度
-          if (end > followList.length) {
-            end = followList.length;
-          }
-          var items = followList.sublist(start, end);
-          for (var item in items) {
-            await updateLiveStatus(item);
-          }
-        }),
-      );
+    // 按平台交错排列，避免单一平台阻塞
+    var interleavedList = interleaveByPlatform(followList);
+
+    // 创建任务队列
+    var taskQueue = Queue<FollowUser>.from(interleavedList);
+
+    // 工作函数 - 持续从队列中取任务执行
+    Future<void> worker(int workerId) async {
+      while (taskQueue.isNotEmpty) {
+        var item = taskQueue.removeFirst();
+        await updateLiveStatus(item);
+      }
     }
-    await Future.wait(tasks);
+
+    // 启动固定数量的并发 worker
+    var workers = <Future>[];
+    for (var i = 0; i < concurrency; i++) {
+      workers.add(worker(i));
+    }
+
+    await Future.wait(workers);
+
+    Log.logPrint("关注状态更新完成");
   }
 
   Future updateLiveStatus(FollowUser item) async {

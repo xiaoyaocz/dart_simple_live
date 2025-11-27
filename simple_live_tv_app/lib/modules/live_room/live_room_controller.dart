@@ -230,7 +230,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void setPlayer() async {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
-
+    // 初始化播放器并设置 ao 参数
+    await initializePlayer();
     player.open(
       Media(
         playUrls[currentLineIndex],

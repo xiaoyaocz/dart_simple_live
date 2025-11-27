@@ -26,6 +26,16 @@ mixin PlayerMixin {
     ),
   );
 
+  /// 初始化播放器并设置 ao 参数
+  Future<void> initializePlayer() async {
+    var pp = player.platform as NativePlayer;
+
+    // media_kit 仓库更新导致的问题，临时解决办法
+    if (Platform.isAndroid) {
+      await pp.setProperty('force-seekable', 'yes');
+    }
+  }
+
   /// 视频控制器
   late final videoController = VideoController(
     player,

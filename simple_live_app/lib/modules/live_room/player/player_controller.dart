@@ -41,11 +41,6 @@ mixin PlayerMixin {
   /// 初始化播放器并设置 ao 参数
   Future<void> initializePlayer() async {
     var pp = player.platform as NativePlayer;
-    // 在所有平台上正确启用双重缓存
-    if (AppSettingsController.instance.videoDoubleBuffering.value) {
-      final directory = await getTemporaryDirectory();
-      await pp.setProperty("demuxer-cache-dir", directory.path);
-    }
     // 设置音频输出驱动
     if (AppSettingsController.instance.customPlayerOutput.value) {
       await pp.setProperty(
@@ -75,6 +70,15 @@ mixin PlayerMixin {
     await pp.setProperty('demuxer-seekable-cache', 'no');
     await pp.setProperty('demuxer-donate-buffer', 'no');
     await pp.setProperty("demuxer-max-back-bytes", "0");
+    // 在所有平台上正确启用双重缓存,覆写mpv设置
+    if (AppSettingsController.instance.videoDoubleBuffering.value) {
+      final directory = await getTemporaryDirectory();
+      await pp.setProperty("cache", "yes");
+      await pp.setProperty("cache-secs", "3");
+      await pp.setProperty('demuxer-seekable-cache', 'yes');
+      await pp.setProperty('demuxer-donate-buffer', 'yes');
+      await pp.setProperty("demuxer-cache-dir", directory.path);
+    }
     // bili/douyin流存在时间戳跳变问题
     // 真机建议-空间换内存-暂时不需要
     // windows:

@@ -17,6 +17,8 @@ class DouyinSite implements LiveSite {
   @override
   LiveDanmaku getDanmaku() => DouyinDanmaku();
 
+  bool hlsFirst = false;
+
   static const String kDefaultReferer = "https://live.douyin.com";
 
   static const String kDefaultAuthority = "live.douyin.com";
@@ -545,7 +547,11 @@ class DouyinSite implements LiveSite {
         var hlsUrl =
             qualityData[quality["sdk_key"]]?["main"]?["hls"]?.toString();
         if (hlsUrl != null && hlsUrl.isNotEmpty) {
-          urls.add(hlsUrl);
+          if(hlsFirst){
+            urls.insert(0, hlsUrl);
+          }else{
+            urls.add(hlsUrl);
+          }
         }
         var qualityItem = LivePlayQuality(
           quality: quality["name"],

@@ -11,13 +11,17 @@ import 'package:simple_live_core/simple_live_core.dart';
 
 class DouyinAccountService extends GetxService {
   static DouyinAccountService get instance => Get.find<DouyinAccountService>();
-
+  final site = (Sites.allSites[Constant.kDouyin]!.liveSite as DouyinSite);
   var logined = false.obs;
   var cookie = "";
   var name = "未登录".obs;
+  var hlsFirst = false;
 
   @override
   void onInit() {
+    hlsFirst = LocalStorageService.instance
+        .getValue(LocalStorageService.kDouyinHlsFirst, false);
+    _setSiteHlsFirst();
     cookie = LocalStorageService.instance
         .getValue(LocalStorageService.kDouyinCookie, "");
     logined.value = cookie.isNotEmpty;
@@ -25,12 +29,16 @@ class DouyinAccountService extends GetxService {
     super.onInit();
   }
 
+  // 设置DouyinHlsFirst
+  void _setSiteHlsFirst(){
+    site.hlsFirst = hlsFirst;
+  }
+
   Future loadUserInfo() async {
     if (cookie.isEmpty) {
       return;
     }
     try {
-      final site = (Sites.allSites[Constant.kDouyin]!.liveSite as DouyinSite);
       final data = await site.getUserInfoByCookie(cookie);
       if (data.isEmpty) {
         SmartDialog.showToast("抖音登录已失效，请重新登录");
@@ -40,14 +48,13 @@ class DouyinAccountService extends GetxService {
       var info = DouyinUserInfoModel.fromJson(data);
       name.value = info.nickname!;
       logined.value = true;
-      _setSite();
+      _setSiteCookie();
     } catch (e) {
       SmartDialog.showToast("获取抖音登录用户信息失败，可前往账号管理重试");
     }
   }
 
-  void _setSite() {
-    var site = (Sites.allSites[Constant.kDouyin]!.liveSite as DouyinSite);
+  void _setSiteCookie() {
     if (cookie.isEmpty) {
       site.headers.remove("cookie");
     } else {
@@ -67,7 +74,7 @@ class DouyinAccountService extends GetxService {
         .setValue(LocalStorageService.kDouyinCookie, "");
     logined.value = false;
     name.value = "未登录";
-    _setSite();
+    _setSiteCookie();
     if (Platform.isAndroid || Platform.isIOS) {
       CookieManager cookieManager = CookieManager.instance();
       await cookieManager.deleteAllCookies();

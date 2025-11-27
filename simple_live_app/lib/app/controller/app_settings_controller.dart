@@ -82,6 +82,9 @@ class AppSettingsController extends GetxController {
     playerForceHttps.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerForceHttps, false);
 
+    douyinHlsFirst.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDouyinHlsFirst, false);
+
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
 
@@ -543,5 +546,12 @@ class AppSettingsController extends GetxController {
     playerForceHttps.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerForceHttps, e);
+  }
+  
+  var douyinHlsFirst = false.obs;
+  void setDouyinHlsFirst(bool e) {
+    douyinHlsFirst.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDouyinHlsFirst, e);
   }
 }

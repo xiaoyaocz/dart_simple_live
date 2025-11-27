@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
+import 'package:simple_live_core/src/scripts/douyin_sign.dart';
 
 import 'proto/douyin.pb.dart';
 
@@ -46,43 +47,48 @@ class DouyinDanmaku implements LiveDanmaku {
   Future start(dynamic args) async {
     danmakuArgs = args as DouyinDanmakuArgs;
     var ts = DateTime.now().millisecondsSinceEpoch;
-    var uri = Uri.parse(serverUrl).replace(scheme: "wss", queryParameters: {
-      "app_name": "douyin_web",
-      "version_code": "180800",
-      "webcast_sdk_version": "1.3.0",
-      "update_version_code": "1.3.0",
-      "compress": "gzip",
-      // "internal_ext":
-      //     "internal_src:dim|wss_push_room_id:${danmakuArgs.roomId}|wss_push_did:${danmakuArgs.userId}|dim_log_id:20230626152702E8F63662383A350588E1|fetch_time:1687764422114|seq:1|wss_info:0-1687764422114-0-0|wrds_kvs:WebcastRoomRankMessage-1687764036509597990_InputPanelComponentSyncData-1687736682345173033_WebcastRoomStatsMessage-1687764414427812578",
-      "cursor": "h-1_t-${ts}_r-1_d-1_u-1",
-      "host": "https://live.douyin.com",
-      "aid": "6383",
-      "live_id": "1",
-      "did_rule": "3",
-      "debug": "false",
-      "maxCacheMessageNumber": "20",
-      "endpoint": "live_pc",
-      "support_wrds": "1",
-      "im_path": "/webcast/im/fetch/",
-      "user_unique_id": danmakuArgs.userId,
-      "device_platform": "web",
-      "cookie_enabled": "true",
-      "screen_width": "1920",
-      "screen_height": "1080",
-      "browser_language": "zh-CN",
-      "browser_platform": "Win32",
-      "browser_name": "Mozilla",
-      "browser_version":
-          DouyinSite.kDefaultUserAgent.replaceAll("Mozilla/", ""),
-      "browser_online": "true",
-      "tz_name": "Asia/Shanghai",
-      "identity": "audience",
-      "room_id": danmakuArgs.roomId,
-      "heartbeatDuration": "0",
-      //"signature": "00000000"
-    });
+    var uri = Uri.parse(serverUrl).replace(
+      scheme: "wss",
+      queryParameters: {
+        "app_name": "douyin_web",
+        "version_code": "180800",
+        "webcast_sdk_version": "1.3.0",
+        "update_version_code": "1.3.0",
+        "compress": "gzip",
+        // "internal_ext":
+        //     "internal_src:dim|wss_push_room_id:${danmakuArgs.roomId}|wss_push_did:${danmakuArgs.userId}|dim_log_id:20230626152702E8F63662383A350588E1|fetch_time:1687764422114|seq:1|wss_info:0-1687764422114-0-0|wrds_kvs:WebcastRoomRankMessage-1687764036509597990_InputPanelComponentSyncData-1687736682345173033_WebcastRoomStatsMessage-1687764414427812578",
+        "cursor": "h-1_t-${ts}_r-1_d-1_u-1",
+        "host": "https://live.douyin.com",
+        "aid": "6383",
+        "live_id": "1",
+        "did_rule": "3",
+        "debug": "false",
+        "maxCacheMessageNumber": "20",
+        "endpoint": "live_pc",
+        "support_wrds": "1",
+        "im_path": "/webcast/im/fetch/",
+        "user_unique_id": danmakuArgs.userId,
+        "device_platform": "web",
+        "cookie_enabled": "true",
+        "screen_width": "1920",
+        "screen_height": "1080",
+        "browser_language": "zh-CN",
+        "browser_platform": "Win32",
+        "browser_name": "Mozilla",
+        "browser_version": DouyinSite.kDefaultUserAgent.replaceAll(
+          "Mozilla/",
+          "",
+        ),
+        "browser_online": "true",
+        "tz_name": "Asia/Shanghai",
+        "identity": "audience",
+        "room_id": danmakuArgs.roomId,
+        "heartbeatDuration": "0",
+        //"signature": "00000000"
+      },
+    );
 
-    var sign = await getSignature(danmakuArgs.roomId, danmakuArgs.userId);
+    var sign = DouyinSign.getSignature(danmakuArgs.roomId, danmakuArgs.userId);
 
     var url = "$uri&signature=$sign";
     var backupUrl = url.replaceAll("webcast3-ws-web-lq", "webcast5-ws-web-lf");
@@ -93,7 +99,7 @@ class DouyinDanmaku implements LiveDanmaku {
       headers: {
         "User-Agnet": DouyinSite.kDefaultUserAgent,
         "Cookie": danmakuArgs.cookie,
-        "Origin": "https://live.douyin.com"
+        "Origin": "https://live.douyin.com",
       },
       heartBeatTime: heartbeatTime,
       onMessage: (e) {
@@ -193,14 +199,5 @@ class DouyinDanmaku implements LiveDanmaku {
     onMessage = null;
     onClose = null;
     webScoketUtils?.close();
-  }
-
-  Future<String> Function(String, String) getSignature =
-      (roomId, uniqueId) async {
-    return "";
-  };
-
-  void setSignatureFunction(Future<String> Function(String, String) func) {
-    getSignature = func;
   }
 }

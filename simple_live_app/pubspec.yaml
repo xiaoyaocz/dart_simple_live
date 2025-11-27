@@ -61,7 +61,6 @@ dependencies:
   connectivity_plus: ^7.0.0 #网络状态
   qr_code_scanner_plus: ^2.0.14 #二维码扫描
   volume_controller: ^3.4.0 #音量控制
-  flutter_js: ^0.8.5
 
   # 网络相关
   shelf: ^1.4.2
@@ -103,4 +102,3 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/lotties/
-    - assets/scripts/

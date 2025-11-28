@@ -18,6 +18,7 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/modules/live_room/danmu/danmaku_mask.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/services/db_service.dart';
@@ -35,6 +36,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
+  IsolateDanmakuMask? danmakuMask;
+
   LiveRoomController({
     required this.pSite,
     required this.pRoomId,
@@ -120,7 +123,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     scrollController.addListener(scrollListener);
 
+    _initDanmakuMask();
     super.onInit();
+  }
+
+  void _initDanmakuMask() async {
+    danmakuMask = await IsolateDanmakuMask.create(adaptiveWindow: true);
   }
 
   void scrollListener() {
@@ -202,7 +210,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   /// 接收到WebSocket信息
-  void onWSMessage(LiveMessage msg) {
+  void onWSMessage(LiveMessage msg) async {
     if (msg.type == LiveMessageType.chat) {
       if (messages.length > 200 && !disableAutoScroll.value) {
         messages.removeAt(0);
@@ -227,7 +235,15 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           return;
         }
       }
-
+      //  messages.length>n 预加载部分弹幕后启用去重功能
+      if (AppSettingsController.instance.danmakuMaskEnable.value &&
+          danmakuMask != null &&
+          messages.length > 50) {
+        var nowMs = DateTime.now().millisecondsSinceEpoch;
+        if (!await danmakuMask!.allow(msg.message, nowMs)) {
+          return;
+        }
+      }
       messages.add(msg);
 
       WidgetsBinding.instance.addPostFrameCallback(
@@ -395,7 +411,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       SmartDialog.showToast("无法读取播放地址");
       return;
     }
-    playUrls.assignAll(playUrl.urls);  // 深拷贝
+    playUrls.assignAll(playUrl.urls); // 深拷贝
     playHeaders = playUrl.headers;
     currentLineIndex = 0;
     currentLineInfo.value = "线路${currentLineIndex + 1}";
@@ -426,11 +442,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     // 初始化播放器并设置 ao 参数
     await initializePlayer();
 
-    await player.open(
-      Playlist(
-        mediaList
-      )
-    );
+    await player.open(Playlist(mediaList));
   }
 
   void setPlayer() async {
@@ -1026,6 +1038,7 @@ ${error?.stackTrace}''');
     HistoryService.instance.stop();
 
     liveDanmaku.stop();
+    danmakuMask?.dispose();
     danmakuController = null;
     super.onClose();
   }

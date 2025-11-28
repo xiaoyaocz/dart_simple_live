@@ -59,6 +59,16 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                 onTap: onTapDanmuShield ??
                     () => Get.toNamed(RoutePath.kSettingsDanmuShield),
               ),
+              Obx(
+                    () => SettingsSwitch(
+                  title: "弹幕去重",
+                  subtitle: "测试性功能",
+                  value: controller.danmakuMaskEnable.value,
+                  onChanged: (e) {
+                    controller.setDanmakuMaskEnable(e);
+                  },
+                ),
+              ),
             ],
           ),
         ),

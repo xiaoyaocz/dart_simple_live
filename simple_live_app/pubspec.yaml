@@ -54,7 +54,7 @@ dependencies:
   screen_brightness: ^2.1.7 #亮度控制
   auto_orientation_v2: ^2.3.6 #屏幕方向
   wakelock_plus: ^1.4.0 #屏幕常亮
-  file_picker: ^10.3.6 #文件选择
+  file_picker: ^10.3.7 #文件选择
   window_manager: ^0.5.1 #窗口管理
   floating: ^6.0.0 #PIP画中画
   flutter_inappwebview: ^6.1.5 #WebView

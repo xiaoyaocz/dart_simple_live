@@ -156,7 +156,7 @@ class IsolateDanmakuMask {
 
   static Future<IsolateDanmakuMask> create({
     int baseWindowMs = 15000,
-    int bucketCount = 5,
+    int bucketCount = 15,
     bool useNormalization = false,
     bool useFrequencyControl = false,
     int maxFrequency = 3,

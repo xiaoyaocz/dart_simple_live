@@ -1,0 +1,14 @@
+// 项目特定的 init.gradle，会覆盖全局配置
+allprojects {
+    buildscript {
+        repositories {
+            // 对于 Flutter 项目，只使用标准仓库
+            google()
+            mavenCentral()
+        }
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

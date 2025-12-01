@@ -47,7 +47,7 @@ android {
         applicationId = "com.xycz.simple_live"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdk = 21
+        minSdkVersion = flutter.minSdkVersion
         multiDexEnabled true
         targetSdk = 34
         versionCode = flutterVersionCode.toInteger()
@@ -95,6 +95,6 @@ flutter {
 }
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0"  // 直接使用版本号
     implementation 'org.jetbrains:annotations:24.0.1' // 修复 R8 报错
 }

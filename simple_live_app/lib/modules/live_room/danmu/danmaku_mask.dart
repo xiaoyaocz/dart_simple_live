@@ -77,30 +77,39 @@ class DanmakuMask {
     _bucketSizeMs = _windowMs ~/ bucketCount;
   }
 
-  bool allow(String text, int nowMs) {
-    text = _normalize(text);
-
+  // 替换为List传递消息，减少线程间通信开销
+  List<bool> allowList(List<String> texts, int nowMs) {
     _shiftIfNeeded(nowMs);
     _adaptWindow();
 
-    final hash = text.hashCode;
+    final results = <bool>[];
+    for (String text in texts) {
+      final normalizedText = _normalize(text);
+      final hash = normalizedText.hashCode;
+      var isAllowed = true;
 
-    // 去重
-    for (final bucket in _buckets) {
-      if (bucket.contains(hash)) return false;
+      for (final bucket in _buckets) {
+        if (bucket.contains(hash)) {
+          isAllowed = false;
+          break;
+        }
+      }
+
+      if (isAllowed && useFrequencyControl) {
+        final freq = _freqMap[hash] ?? 0;
+        if (freq >= maxFrequency) {
+          isAllowed = false;
+        }
+      }
+
+      if (isAllowed) {
+        _buckets[_currentBucket].add(hash);
+        _freqMap[hash] = (_freqMap[hash] ?? 0) + 1;
+      }
+
+      results.add(isAllowed);
     }
-
-    // 高频词限制
-    if (useFrequencyControl) {
-      final freq = _freqMap[hash] ?? 0;
-      if (freq >= maxFrequency) return false;
-    }
-
-    // 允许 --> 写入当前桶
-    _buckets[_currentBucket].add(hash);
-    _freqMap[hash] = (_freqMap[hash] ?? 0) + 1;
-
-    return true;
+    return results;
   }
 
   void reset() {
@@ -149,7 +158,7 @@ class IsolateDanmakuMask {
   final _mainReceivePort = ReceivePort();
   late final Isolate _isolate;
 
-  final Map<int, Completer<bool>> _pendingRequests = {};
+  final Map<int, Completer<dynamic>> _pendingRequests = {};
   int _requestId = 0;
 
   IsolateDanmakuMask._();
@@ -191,7 +200,7 @@ class IsolateDanmakuMask {
         }
       } else if (message is List) {
         final id = message[0] as int;
-        final result = message[1] as bool;
+        final result = message[1];
         _pendingRequests.remove(id)?.complete(result);
       }
     });
@@ -213,11 +222,11 @@ class IsolateDanmakuMask {
     return initCompleter.future;
   }
 
-  Future<bool> allow(String text, int nowMs) {
+  Future<List<bool>> allowList(List<String> texts, int nowMs) {
     final id = _requestId++;
-    final completer = Completer<bool>();
+    final completer = Completer<List<bool>>();
     _pendingRequests[id] = completer;
-    _isolateSendPort.send(['allow', id, text, nowMs]);
+    _isolateSendPort.send(['allowList', id, texts, nowMs]);
     return completer.future;
   }
 
@@ -253,12 +262,12 @@ void _danmakuIsolateEntryPoint(List<dynamic> initialMessage) {
 
     final command = message[0] as String;
     switch (command) {
-      case 'allow':
+      case 'allowList':
         final id = message[1] as int;
-        final text = message[2] as String;
+        final texts = (message[2] as List).cast<String>();
         final nowMs = message[3] as int;
-        final bool allowed = danmakuMask.allow(text, nowMs);
-        mainSendPort.send([id, allowed]);
+        final List<bool> allowedList = danmakuMask.allowList(texts, nowMs);
+        mainSendPort.send([id, allowedList]);
         break;
       case 'reset':
         danmakuMask.reset();

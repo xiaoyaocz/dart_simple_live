@@ -5,7 +5,10 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 
+import '../../../sync/remote_sync/sync_data_controller.dart';
+
 class BiliBiliWebLoginController extends BaseController {
+  final SyncDataController syncDataController = SyncDataController();
   InAppWebViewController? webViewController;
   final CookieManager cookieManager = CookieManager.instance();
   void onWebViewCreated(InAppWebViewController controller) {
@@ -41,6 +44,8 @@ class BiliBiliWebLoginController extends BaseController {
       var cookieStr = cookies.map((e) => "${e.name}=${e.value}").join(";");
       Log.i(cookieStr);
       BiliBiliAccountService.instance.setCookie(cookieStr);
+      //同步数据
+      syncDataController.syncAll();
       await BiliBiliAccountService.instance.loadUserInfo();
       Get.back();
       return true;

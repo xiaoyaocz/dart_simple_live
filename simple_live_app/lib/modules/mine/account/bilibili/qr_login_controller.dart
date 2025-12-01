@@ -6,6 +6,8 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/requests/http_client.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 
+import '../../../sync/remote_sync/sync_data_controller.dart';
+
 enum QRStatus {
   loading,
   unscanned,
@@ -25,6 +27,7 @@ class BiliBiliQRLoginController extends GetxController {
 
   var qrcodeUrl = "".obs;
   var qrcodeKey = "";
+  final SyncDataController syncDataController = SyncDataController();
 
   /// 二维码状态
   /// - [0] 加载中
@@ -87,6 +90,8 @@ class BiliBiliQRLoginController extends GetxController {
           var cookieStr = cookies.join(";");
           Log.i(cookieStr);
           BiliBiliAccountService.instance.setCookie(cookieStr);
+          //同步数据
+          syncDataController.syncAll();
           await BiliBiliAccountService.instance.loadUserInfo();
           Get.back();
         }

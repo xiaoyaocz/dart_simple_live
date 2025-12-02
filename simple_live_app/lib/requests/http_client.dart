@@ -150,6 +150,9 @@ class HttpClient {
         ),
         cancelToken: cancel,
       );
+      if(result.statusCode==200 && result.data==""){
+        result.data = {'action':'done'};
+      }
       return result.data;
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.badResponse) {

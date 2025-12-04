@@ -14,6 +14,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/services/window_service.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -252,6 +253,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final screenBrightness = ScreenBrightness();
   final VolumeController volumeController = VolumeController.instance;
   final pip = Floating();
+  final windowService = Get.find<WindowService>();
   StreamSubscription<PiPStatus>? _pipSubscription;
 
   /// 初始化一些系统状态
@@ -337,6 +339,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (!(Platform.isAndroid || Platform.isIOS)) {
       fullScreenState.value = true;
       smallWindowState.value = true;
+      windowService.isPIP = smallWindowState.value;
 
       // 读取窗口大小
       _lastWindowSize = await windowManager.getSize();
@@ -365,6 +368,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (!(Platform.isAndroid || Platform.isIOS)) {
       fullScreenState.value = false;
       smallWindowState.value = false;
+      windowService.isPIP = smallWindowState.value;
       windowManager.setTitleBarStyle(TitleBarStyle.normal);
       windowManager.setSize(_lastWindowSize!);
       windowManager.setPosition(_lastWindowPosition!);

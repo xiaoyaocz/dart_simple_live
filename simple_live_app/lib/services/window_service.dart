@@ -1,3 +1,4 @@
+
 import 'dart:ui';
 
 import 'package:get/get.dart';
@@ -6,6 +7,8 @@ import 'package:window_manager/window_manager.dart';
 
 class WindowService extends GetxService implements WindowListener {
   static WindowService get instance => Get.find<WindowService>();
+
+  bool isPIP = false;
 
   WindowService() {
     windowManager.addListener(this);
@@ -69,8 +72,10 @@ class WindowService extends GetxService implements WindowListener {
 
   @override
   Future<void> onWindowMoved() async {
-    final bounds = await windowManager.getBounds();
-    _saveBounds(bounds);
+    if(!isPIP){
+      final bounds = await windowManager.getBounds();
+      _saveBounds(bounds);
+    }
   }
 
   @override
@@ -78,8 +83,10 @@ class WindowService extends GetxService implements WindowListener {
 
   @override
   Future<void> onWindowResized() async {
-    final bounds = await windowManager.getBounds();
-    _saveBounds(bounds);
+    if(!isPIP){
+      final bounds = await windowManager.getBounds();
+      _saveBounds(bounds);
+    }
   }
 
   @override

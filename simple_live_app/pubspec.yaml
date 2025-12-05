@@ -4,7 +4,7 @@ publish_to: none
 description: "Slive APP"
 environment: 
   sdk: '>=3.0.5 <4.0.0'
-  flutter: 3.38.3
+  flutter: 3.38.4
 
 dependencies: 
   simple_live_core:

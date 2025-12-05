@@ -7,6 +7,11 @@ environment:
   flutter: 3.38.4
 
 dependencies: 
+  flutter: 
+    sdk: flutter
+  flutter_localizations: 
+    sdk: flutter
+
   simple_live_core:
     path: ../simple_live_core
   # 图标
@@ -117,12 +122,6 @@ dependency_overrides:
       url: https://github.com/Predidit/media-kit.git
       ref: 480c1e182fdb300ba975b2160765965f79a9b955
       path: ./libs/macos/media_kit_libs_macos_video
-
-  flutter: 
-    sdk: flutter
-  flutter_localizations: 
-    sdk: flutter
-
 
 dev_dependencies:
   flutter_lints: ^6.0.0

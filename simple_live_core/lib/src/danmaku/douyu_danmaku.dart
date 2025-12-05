@@ -129,6 +129,14 @@ class DouyuDanmaku implements LiveDanmaku {
         DateTime curTimestamp = DateTime.fromMillisecondsSinceEpoch(
           int.parse(jsonData["now"]),
         );
+        //
+        var face = "";
+        try{
+          // 疑似换接口了
+          face = (jsonData["chatmsg"]["ic"] as List<dynamic>).cast<String>().join("/");
+        }catch(e){
+          CoreLog.error("DouyuSuperChat-face:$e");
+        }
         LiveSuperChatMessage sc = LiveSuperChatMessage(
           // 斗鱼没有颜色 借用b站默认
           backgroundBottomColor: "#edf5ff",
@@ -136,7 +144,7 @@ class DouyuDanmaku implements LiveDanmaku {
           endTime:
               curTimestamp.add(Duration(seconds: int.parse(jsonData["cet"]))),
           face:
-              "https://apic.douyucdn.cn/upload/${(jsonData["chatmsg"]["ic"] as List<dynamic>).cast<String>().join("/")}_small.jpg",
+              "https://apic.douyucdn.cn/upload/${face}_small.jpg",
           message: jsonData["chatmsg"]["txt"].toString(),
           price: int.parse(jsonData["cprice"]) ~/ 100,
           startTime: curTimestamp,
@@ -152,7 +160,7 @@ class DouyuDanmaku implements LiveDanmaku {
         onMessage?.call(liveMsg);
       }
     } catch (e) {
-      CoreLog.error(e);
+      CoreLog.error("DouyuSuperChat:$e");
     }
   }
 

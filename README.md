@@ -30,11 +30,14 @@
 - [x] Windows 
 - [x] MacOS `自测`
 - [x] Linux
-- [x] Android TV `请自行打包` [说明](https://github.com/SlotSun/dart_simple_live/issues/4)
+- [ ] Android TV `请自行打包` [说明](https://github.com/SlotSun/dart_simple_live/issues/4)
 
 只保证Android, Linux和Windows可用性
 
-请到[Releases](https://github.com/slotsun/dart_simple_live/releases)下载最新版本，iOS请下载ipa文件自行签名安装
+请到[Releases](https://github.com/slotsun/dart_simple_live/releases)下载最新版本，iOS请到上游或者action下载体验
+
+Arch Linux: ```yay -S slive```
+
 
 如果想体验最新功能，可前往[Actions](https://github.com/slotsun/dart_simple_live/actions)下载自动打包的开发版本
 
@@ -50,7 +53,7 @@ Windows建议下载UWP版[聚合直播](https://www.microsoft.com/store/apps/9N1
 
 ## 环境
 
-flutter 3.35.7
+flutter 3.38.4
 
 ## 参考及引用
 

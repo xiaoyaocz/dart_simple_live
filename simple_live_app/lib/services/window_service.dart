@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:get/get.dart';
@@ -43,7 +44,11 @@ class WindowService extends GetxService implements WindowListener {
   void onWindowBlur() {}
 
   @override
-  void onWindowClose() {}
+  void onWindowClose() {
+    if (Platform.isLinux) {
+      exit(0);
+    }
+  }
 
   @override
   void onWindowDocked() {}

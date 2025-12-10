@@ -602,7 +602,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
     var id = "${site.id}_$roomId";
-    var historyDuration = HistoryService.instance.getHistoryDuration(followUserId: id);
+    var historyDuration =
+        HistoryService.instance.getHistoryDuration(followUserId: id);
     FollowService.instance.addFollow(
       FollowUser(
         id: id,

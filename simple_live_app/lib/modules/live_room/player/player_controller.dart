@@ -52,7 +52,7 @@ mixin PlayerMixin {
       await pp.setProperty('ao', 'alsa');
     }
     // media_kit 仓库更新导致的问题，临时解决办法
-    if(Platform.isAndroid){
+    if (Platform.isAndroid) {
       // 通过错误参数强制media_kit不seek, 解决了加载-pause-seek 在直播流上的开屏问题
       await pp.setProperty('force-seekable', 'yes');
     }
@@ -739,13 +739,13 @@ class PlayerController extends BaseController
     _widthSubscription = player.stream.width.listen((event) {
       Log.d(
           'width:$event  W:${(player.state.width)}  H:${(player.state.height)}');
-      if(player.state.width == null){
+      if (player.state.width == null) {
         return;
-      }else{
+      } else {
         // 可获取直播流size时且不为全屏模式时判断是否进入全屏模式
-        isVertical.value =
-            player.state.height! > player.state.width!;
-        if (AppSettingsController.instance.autoFullScreen.value && !fullScreenState.value) {
+        isVertical.value = player.state.height! > player.state.width!;
+        if (AppSettingsController.instance.autoFullScreen.value &&
+            !fullScreenState.value) {
           enterFullScreen();
         }
       }

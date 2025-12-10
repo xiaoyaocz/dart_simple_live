@@ -317,8 +317,10 @@ class AppSettingsController extends GetxController {
   var danmakuMaskEnable = false.obs;
   void setDanmakuMaskEnable(bool e) {
     danmakuMaskEnable.value = e;
-    LocalStorageService.instance.setValue(LocalStorageService.kDanmakuMaskEnable, e);
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmakuMaskEnable, e);
   }
+
   var danmuStrokeWidth = 2.0.obs;
   void setDanmuStrokeWidth(double e) {
     danmuStrokeWidth.value = e;
@@ -554,7 +556,7 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerForceHttps, e);
   }
-  
+
   var douyinHlsFirst = false.obs;
   void setDouyinHlsFirst(bool e) {
     douyinHlsFirst.value = e;

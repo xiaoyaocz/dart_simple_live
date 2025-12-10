@@ -104,16 +104,11 @@ class CoreDispatcher {
 }
 
 class CoreApiService extends GetxService {
-
   CoreApiBuilder get builder => CoreApiBuilder();
 
   // demo
   void exampleUsage() {
-    builder
-        .site("bilibili")
-        .func("getRecommends")
-        .param("limit", 1)
-        .build();
+    builder.site("bilibili").func("getRecommends").param("limit", 1).build();
     // builder
     //     .site("douyu")
     //     .room("12345")

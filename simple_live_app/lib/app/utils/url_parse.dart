@@ -58,10 +58,7 @@ class UrlParse {
     if (url.contains("twitch.tv/")) {
       final regExp = RegExp(r'twitch\.tv/([^/?]+)');
       id = regExp.firstMatch(url)?.group(1) ?? "";
-      return [
-        id,
-        Sites.allSites[Constant.kTwitch]!
-      ];
+      return [id, Sites.allSites[Constant.kTwitch]!];
     }
     if (url.contains("v.douyin.com")) {
       var regExp = RegExp(r"http.?://v.douyin.com/[\d\w]+/");

@@ -30,7 +30,7 @@ class DouyinAccountService extends GetxService {
   }
 
   // 设置DouyinHlsFirst
-  void _setSiteHlsFirst(){
+  void _setSiteHlsFirst() {
     site.hlsFirst = hlsFirst;
   }
 

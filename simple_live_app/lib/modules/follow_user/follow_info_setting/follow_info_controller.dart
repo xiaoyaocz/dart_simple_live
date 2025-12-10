@@ -192,7 +192,7 @@ class FollowInfoController extends BasePageController<FollowUser> {
     // 更新关注同时 更新历史记录数据
     History? oldHistroy = DBService.instance.getHistory(current.id);
     // null不迁移
-    if(oldHistroy != null){
+    if (oldHistroy != null) {
       final History newHistory = History(
         id: '${targetSite.id}_$targetRoomId',
         roomId: targetRoomId,

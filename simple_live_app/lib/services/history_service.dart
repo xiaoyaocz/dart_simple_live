@@ -15,6 +15,7 @@ class HistoryService extends GetxService {
   var _elapsed = Duration.zero;
   Duration _oldWatchedDuration = Duration.zero;
   History? curLiveRoomHistory;
+
   //两分钟自动保存一次，防止用户直接关闭app，丢失数据
   final _saveInterval = const Duration(minutes: 2);
   Timer? _timer; // 定时器
@@ -73,5 +74,13 @@ class HistoryService extends GetxService {
     curLiveRoomHistory?.updateTime = DateTime.now();
     DBService.instance.addOrUpdateHistory(curLiveRoomHistory!);
     EventBus.instance.emit(Constant.kUpdateFollow, curLiveRoomHistory);
+  }
+
+  // 获取历史记录中存储的累计观看时长
+  String getHistoryDuration({required String followUserId}) {
+    var historyWatchDuration = "00:00:00";
+    History? history = DBService.instance.getHistory(followUserId);
+    historyWatchDuration = history?.watchDuration ?? "00:00:00";
+    return historyWatchDuration;
   }
 }

@@ -212,14 +212,10 @@ class RemoteSyncWebDAVController extends BaseController {
       final accountJsonFile = File(join(profile.path, _userAccountJsonName));
       await accountJsonFile.writeAsString(jsonEncode(userAccountCookieMap));
       await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
-      // 根据需要同步部分设置，其中 HiveDbVer为必须项
+      // 全量备份用户设置，为修改包名无痛迁移数据做准备
+      var settingList = LocalStorageService.instance.settingsBox.toMap();
       var dataSettingListMap = {
-        'data': {
-          LocalStorageService.kHiveDbVer: LocalStorageService.instance
-              .getValue(LocalStorageService.kHiveDbVer, 10708),
-          LocalStorageService.kWebDAVLastUploadTime:
-              DateTime.now().millisecondsSinceEpoch,
-        }
+        'data': settingList,
       };
       final settingJsonFile = File(join(profile.path, _userSettingsJsonName));
       await settingJsonFile.writeAsString(jsonEncode(dataSettingListMap));

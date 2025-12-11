@@ -1,4 +1,4 @@
-package com.xycz.simple_live
+package com.slotsun.slive
 
 import io.flutter.embedding.android.FlutterActivity
 

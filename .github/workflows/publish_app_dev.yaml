@@ -238,6 +238,11 @@ jobs:
         run: |
           cd simple_live_app
           fastforge package --platform windows --targets msix,zip,exe --skip-clean
+          Get-ChildItem "simple_live_app-*" | ForEach-Object {
+              $newName = $_.Name -replace '^simple_live_app', 'Slive'
+              Rename-Item $_ -NewName $newName
+          }
+        shell: pwsh
       # 上传 Windows 至 Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4

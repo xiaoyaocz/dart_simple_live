@@ -162,6 +162,9 @@ class LocalStorageService extends GetxService {
   /// WebDAV_服务器地址
   static const String kWebDAVUri = "WebDAVUri";
 
+  /// WebDAV_文件夹
+  static const String kWebDAVDirectory = "WebDAVDirectory";
+
   /// WebDAV_登录账号
   static const String kWebDAVUser = "WebDAVUser";
 

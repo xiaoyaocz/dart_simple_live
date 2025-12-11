@@ -29,6 +29,7 @@ import 'package:simple_live_app/services/migration_service.dart';
 class RemoteSyncWebDAVController extends BaseController {
   // ui
   var passwordVisible = true.obs;
+
   // ui-用户选择是否同步
   var isSyncFollows = true.obs;
   var isSyncHistories = true.obs;
@@ -40,6 +41,9 @@ class RemoteSyncWebDAVController extends BaseController {
   var user = "--".obs;
   var lastRecoverTime = "--".obs;
   var lastUploadTime = "--".obs;
+  var uri = "";
+  var password = "";
+  var webDavBackupDirectory = "/simple_live_app".obs;
 
   final _userFollowJsonName = 'SimpleLive_follows.json';
   final _userHistoriesJsonName = 'SimpleLive_histories.json';
@@ -54,19 +58,46 @@ class RemoteSyncWebDAVController extends BaseController {
     super.onInit();
   }
 
+  void setWebDavBackupDirectory({required String newDirectory}) {
+    if (newDirectory == webDavBackupDirectory.value) {
+      return;
+    }
+    webDavBackupDirectory.value = newDirectory;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kWebDAVDirectory,
+      webDavBackupDirectory.value,
+    );
+    // 重定义/应该单例化
+    davClient = DAVClient(
+      uri,
+      user.value,
+      password,
+      webDAVDirectory: webDavBackupDirectory.value,
+    );
+  }
+
   // webDAV 逻辑
   // 初始化webDAV
   void doWebDAVInit() {
-    var uri = LocalStorageService.instance
+    uri = LocalStorageService.instance
         .getValue(LocalStorageService.kWebDAVUri, "");
     if (uri.isEmpty) {
       notLogin.value = true;
     } else {
       user.value = LocalStorageService.instance
           .getValue(LocalStorageService.kWebDAVUser, "");
-      var password = LocalStorageService.instance
+      password = LocalStorageService.instance
           .getValue(LocalStorageService.kWebDAVPassword, "");
-      davClient = DAVClient(uri, user.value, password);
+      webDavBackupDirectory.value = LocalStorageService.instance.getValue(
+        LocalStorageService.kWebDAVDirectory,
+        "/simple_live_app",
+      );
+      davClient = DAVClient(
+        uri,
+        user.value,
+        password,
+        webDAVDirectory: webDavBackupDirectory.value,
+      );
       // 从未同步过默认为最新数据
       lastRecoverTime.value = Utils.parseTime(
         DateTime.fromMillisecondsSinceEpoch(

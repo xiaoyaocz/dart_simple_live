@@ -45,6 +45,17 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                           },
                         ),
                         AppStyle.divider,
+                        Obx(
+                          () => ListTile(
+                            title: const Text("云端备份目录"),
+                            leading: const Icon(Icons.drive_folder_upload),
+                            subtitle:
+                                Text(controller.webDavBackupDirectory.value),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showEditBackupDirectory,
+                          ),
+                        ),
+                        AppStyle.divider,
                         ListTile(
                           title: const Text("上传到云端"),
                           subtitle: Text("上次上传：${controller.lastUploadTime}"),
@@ -144,5 +155,16 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
         ],
       ),
     );
+  }
+
+  void _showEditBackupDirectory() async{
+    var directory = await Utils.showEditTextDialog(
+      controller.webDavBackupDirectory.value,
+      title: "修改远程备份文件夹",
+    );
+    if (directory== null || directory.isEmpty) {
+      return;
+    }
+    controller.setWebDavBackupDirectory(newDirectory: directory);
   }
 }

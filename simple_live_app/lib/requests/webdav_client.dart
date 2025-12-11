@@ -6,11 +6,14 @@ import 'package:webdav_client/webdav_client.dart';
 class DAVClient {
   late Client client;
   Completer<bool> pingCompleter = Completer();
+  // 强制统一
+  String root = "/simple_live_app";
 
   DAVClient(
     String webDAVUri,
     String webDAVUser,
     String webDAVPassword,
+    {String webDAVDirectory = "/simple_live_app"}
   ) {
     client = newClient(
       webDAVUri,
@@ -27,6 +30,7 @@ class DAVClient {
     client.setSendTimeout(8000);
     client.setReceiveTimeout(8000);
     pingCompleter.complete(_ping());
+    root = webDAVDirectory;
   }
 
   Future<bool> _ping() async {
@@ -38,8 +42,6 @@ class DAVClient {
     }
   }
 
-  // 强制统一
-  String get root => "/simple_live_app";
 
   String get backupFile => "$root/backup.zip";
 

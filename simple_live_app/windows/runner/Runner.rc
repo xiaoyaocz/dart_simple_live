@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.xycz" "\0"
-            VALUE "FileDescription", "simple_live_app" "\0"
+            VALUE "CompanyName", "com.slotsun" "\0"
+            VALUE "FileDescription", "slive" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "simple_live_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2023 com.xycz. All rights reserved." "\0"
-            VALUE "OriginalFilename", "simple_live_app.exe" "\0"
-            VALUE "ProductName", "simple_live_app" "\0"
+            VALUE "InternalName", "slive" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2023 com.xycz and com.slotsun. All rights reserved." "\0"
+            VALUE "OriginalFilename", "slive.exe" "\0"
+            VALUE "ProductName", "slive" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

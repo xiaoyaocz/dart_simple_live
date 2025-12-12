@@ -1,9 +1,7 @@
 name: app-tv-build-action-release
-# 推送 Tag 时触发
+# 手动触发
 on:
-  push:
-    tags:
-      - "tv_*"
+  workflow_dispatch:
 jobs:
   build-tv:
     runs-on: macos-latest

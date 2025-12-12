@@ -1,7 +1,7 @@
 {
-    "version": "1.2.3",
-    "version_num": 10203,
-    "version_desc": "- 修复虎牙播放中断 #585",
+    "version": "1.5.0",
+    "version_num": 10500,
+    "version_desc": "- 永远的1.5.0",
     "prerelease":true,
     "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
 }

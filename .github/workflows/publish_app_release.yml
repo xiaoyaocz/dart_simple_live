@@ -102,23 +102,19 @@ jobs:
           name: windows
           path: simple_live_app/build/windows/runner/Release/Runner.exe
 
-      # 读取版本信息
-      - name: Read version
-        id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
-
-      - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
+      # 生成基于当前时间的版本号
+      - name: Generate version number based on current time
+        id: generate_version
+        run: echo "::set-output name=version::$(date +'%Y%m%d%H%M%S')"
 
       # 上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          # 使用基于当前时间的版本号
+          name: "${{ steps.generate_version.outputs.version }}"  # 自动生成版本号
+          body: "Release based on current time"
+          prerelease: false
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/ios/iphoneos/ios_no_sign.ipa

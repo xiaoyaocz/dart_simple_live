@@ -115,7 +115,7 @@ jobs:
           name: "${{ steps.generate_version.outputs.version }}"  # 自动生成版本号
           body: "Release based on current time"
           prerelease: false
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.TOKEN }}  # 使用 GitHub Secrets 中配置的 TOKEN
           files: |
             simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
             simple_live_app/build/windows/runner/Release/Runner.exe

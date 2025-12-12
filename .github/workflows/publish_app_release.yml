@@ -95,6 +95,15 @@ jobs:
           cd simple_live_app
           flutter build windows --release
 
+      # 检查 Windows EXE 是否成功生成
+      - name: Check if Runner.exe exists
+        run: |
+          if [ -f "simple_live_app/build/windows/runner/Release/Runner.exe" ]; then
+            echo "EXE file exists"
+          else
+            echo "EXE file not found"
+          fi
+
       # 上传Windows EXE至Artifacts
       - name: Upload Windows EXE to Artifacts
         uses: actions/upload-artifact@v4
@@ -105,7 +114,7 @@ jobs:
       # 生成基于当前时间的版本号
       - name: Generate version number based on current time
         id: generate_version
-        run: echo "::set-output name=version::$(date +'%Y%m%d%H%M%S')"
+        run: echo "VERSION=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
       # 上传至Release
       - name: Upload Release
@@ -115,7 +124,7 @@ jobs:
           name: "${{ steps.generate_version.outputs.version }}"  # 自动生成版本号
           body: "Release based on current time"
           prerelease: false
-          token: ${{ secrets.TOKEN }}  # 使用 GitHub Secrets 中配置的 TOKEN
+          token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
             simple_live_app/build/windows/runner/Release/Runner.exe

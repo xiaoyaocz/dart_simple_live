@@ -95,6 +95,9 @@ dependencies:
       url: https://github.com/Predidit/media-kit.git
       ref: 66d46c3d77ee15684e0c5c6ed51ac78d819d5e6f
       path: ./libs/universal/media_kit_libs_video
+  rust_lib_simple_live_app:
+    path: rust_builder
+  flutter_rust_bridge: 2.11.1
 
 dependency_overrides:
   media_kit_libs_linux:
@@ -129,6 +132,8 @@ dev_dependencies:
   hive_generator: ^2.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_test: 
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
 flutter_launcher_icons:

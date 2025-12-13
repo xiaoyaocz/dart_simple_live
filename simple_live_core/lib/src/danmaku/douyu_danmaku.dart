@@ -138,9 +138,9 @@ class DouyuDanmaku implements LiveDanmaku {
           CoreLog.error("DouyuSuperChat-face:$e");
         }
         LiveSuperChatMessage sc = LiveSuperChatMessage(
-          // 斗鱼没有颜色 借用b站默认
-          backgroundBottomColor: "#edf5ff",
-          backgroundColor: "#6a90c9",
+          // 斗鱼没有颜色 调整配色方案-偏紫色系
+          backgroundBottomColor: "#292a60",
+          backgroundColor: "#c1c1ff",
           endTime:
               curTimestamp.add(Duration(seconds: int.parse(jsonData["cet"]))),
           face:

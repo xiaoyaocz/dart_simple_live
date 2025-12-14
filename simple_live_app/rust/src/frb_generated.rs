@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -63024570;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1540820557;
 
 // Section: executor
 
@@ -93,7 +93,7 @@ fn wire__crate__api__danmaku_mask__DanmakuMask_allow_list_batch_impl(
                     let output_ok = Result::<_, ()>::Ok(
                         crate::api::danmaku_mask::DanmakuMask::allow_list_batch(
                             &mut *api_that_guard,
-                            &api_texts,
+                            api_texts,
                             api_now_ms,
                         ),
                     )?;
@@ -103,17 +103,16 @@ fn wire__crate__api__danmaku_mask__DanmakuMask_allow_list_batch_impl(
         },
     )
 }
-fn wire__crate__api__danmaku_mask__DanmakuMask_new_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
+fn wire__crate__api__danmaku_mask__DanmakuMask_dispose_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "DanmakuMask_new",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+            debug_name: "DanmakuMask_dispose",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
         move || {
             let message = unsafe {
@@ -125,41 +124,69 @@ fn wire__crate__api__danmaku_mask__DanmakuMask_new_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_base_window_ms = <u64>::sse_decode(&mut deserializer);
-            let api_bucket_count = <usize>::sse_decode(&mut deserializer);
+            let api_that = <DanmakuMask>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok({
+                    crate::api::danmaku_mask::DanmakuMask::dispose(api_that);
+                })?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__danmaku_mask__DanmakuMask_new_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "DanmakuMask_new",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_base_window_ms = <u32>::sse_decode(&mut deserializer);
+            let api_bucket_count = <u16>::sse_decode(&mut deserializer);
             let api_use_normalization = <bool>::sse_decode(&mut deserializer);
             let api_use_frequency_control = <bool>::sse_decode(&mut deserializer);
-            let api_max_frequency = <u32>::sse_decode(&mut deserializer);
+            let api_max_frequency = <u16>::sse_decode(&mut deserializer);
             let api_adaptive_window = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok =
-                        Result::<_, ()>::Ok(crate::api::danmaku_mask::DanmakuMask::new(
-                            api_base_window_ms,
-                            api_bucket_count,
-                            api_use_normalization,
-                            api_use_frequency_control,
-                            api_max_frequency,
-                            api_adaptive_window,
-                        ))?;
-                    Ok(output_ok)
-                })())
-            }
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::danmaku_mask::DanmakuMask::new(
+                    api_base_window_ms,
+                    api_bucket_count,
+                    api_use_normalization,
+                    api_use_frequency_control,
+                    api_max_frequency,
+                    api_adaptive_window,
+                ))?;
+                Ok(output_ok)
+            })())
         },
     )
 }
 fn wire__crate__api__danmaku_mask__DanmakuMask_reset_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "DanmakuMask_reset",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
         move || {
             let message = unsafe {
@@ -175,59 +202,24 @@ fn wire__crate__api__danmaku_mask__DanmakuMask_reset_impl(
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DanmakuMask>,
             >>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, true,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref_mut()),
-                            _ => unreachable!(),
-                        }
-                    }
-                    let mut api_that_guard = api_that_guard.unwrap();
-                    let output_ok = Result::<_, ()>::Ok({
-                        crate::api::danmaku_mask::DanmakuMask::reset(&mut *api_that_guard);
-                    })?;
-                    Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__simple__allow_list_batch_global_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "allow_list_batch_global",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_texts = <Vec<String>>::sse_decode(&mut deserializer);
-            let api_now_ms = <u64>::sse_decode(&mut deserializer);
-            deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(crate::api::simple::allow_list_batch_global(
-                    api_texts, api_now_ms,
-                ))?;
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, true,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref_mut()),
+                        _ => unreachable!(),
+                    }
+                }
+                let mut api_that_guard = api_that_guard.unwrap();
+                let output_ok = Result::<_, ()>::Ok({
+                    crate::api::danmaku_mask::DanmakuMask::reset(&mut *api_that_guard);
+                })?;
                 Ok(output_ok)
             })())
         },
@@ -335,6 +327,13 @@ impl SseDecode for Vec<u8> {
     }
 }
 
+impl SseDecode for u16 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u16::<NativeEndian>().unwrap()
+    }
+}
+
 impl SseDecode for u32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -390,15 +389,6 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        2 => {
-            wire__crate__api__danmaku_mask__DanmakuMask_new_impl(port, ptr, rust_vec_len, data_len)
-        }
-        3 => wire__crate__api__danmaku_mask__DanmakuMask_reset_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
         5 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
@@ -412,7 +402,9 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        4 => wire__crate__api__simple__allow_list_batch_global_impl(ptr, rust_vec_len, data_len),
+        2 => wire__crate__api__danmaku_mask__DanmakuMask_dispose_impl(ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__danmaku_mask__DanmakuMask_new_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__danmaku_mask__DanmakuMask_reset_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -483,6 +475,13 @@ impl SseEncode for Vec<u8> {
         for item in self {
             <u8>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for u16 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_u16::<NativeEndian>(self).unwrap();
     }
 }
 

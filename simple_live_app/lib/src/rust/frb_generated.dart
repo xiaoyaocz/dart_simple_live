@@ -4,7 +4,6 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/danmaku_mask.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -71,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -63024570;
+  int get rustContentHash => -1540820557;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -87,18 +86,17 @@ abstract class RustLibApi extends BaseApi {
       required List<String> texts,
       required BigInt nowMs});
 
-  Future<DanmakuMask> crateApiDanmakuMaskDanmakuMaskNew(
-      {required BigInt baseWindowMs,
-      required BigInt bucketCount,
+  void crateApiDanmakuMaskDanmakuMaskDispose({required DanmakuMask that});
+
+  DanmakuMask crateApiDanmakuMaskDanmakuMaskNew(
+      {required int baseWindowMs,
+      required int bucketCount,
       required bool useNormalization,
       required bool useFrequencyControl,
       required int maxFrequency,
       required bool adaptiveWindow});
 
-  Future<void> crateApiDanmakuMaskDanmakuMaskReset({required DanmakuMask that});
-
-  Uint8List crateApiSimpleAllowListBatchGlobal(
-      {required List<String> texts, required BigInt nowMs});
+  void crateApiDanmakuMaskDanmakuMaskReset({required DanmakuMask that});
 
   Future<void> crateApiSimpleInitApp();
 
@@ -151,24 +149,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<DanmakuMask> crateApiDanmakuMaskDanmakuMaskNew(
-      {required BigInt baseWindowMs,
-      required BigInt bucketCount,
+  void crateApiDanmakuMaskDanmakuMaskDispose({required DanmakuMask that}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDanmakuMask(
+            that, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiDanmakuMaskDanmakuMaskDisposeConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiDanmakuMaskDanmakuMaskDisposeConstMeta =>
+      const TaskConstMeta(
+        debugName: "DanmakuMask_dispose",
+        argNames: ["that"],
+      );
+
+  @override
+  DanmakuMask crateApiDanmakuMaskDanmakuMaskNew(
+      {required int baseWindowMs,
+      required int bucketCount,
       required bool useNormalization,
       required bool useFrequencyControl,
       required int maxFrequency,
       required bool adaptiveWindow}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_64(baseWindowMs, serializer);
-        sse_encode_usize(bucketCount, serializer);
+        sse_encode_u_32(baseWindowMs, serializer);
+        sse_encode_u_16(bucketCount, serializer);
         sse_encode_bool(useNormalization, serializer);
         sse_encode_bool(useFrequencyControl, serializer);
-        sse_encode_u_32(maxFrequency, serializer);
+        sse_encode_u_16(maxFrequency, serializer);
         sse_encode_bool(adaptiveWindow, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -202,15 +224,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiDanmakuMaskDanmakuMaskReset(
-      {required DanmakuMask that}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
+  void crateApiDanmakuMaskDanmakuMaskReset({required DanmakuMask that}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDanmakuMask(
             that, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 3, port: port_);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -226,32 +246,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "DanmakuMask_reset",
         argNames: ["that"],
-      );
-
-  @override
-  Uint8List crateApiSimpleAllowListBatchGlobal(
-      {required List<String> texts, required BigInt nowMs}) {
-    return handler.executeSync(SyncTask(
-      callFfi: () {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_list_String(texts, serializer);
-        sse_encode_u_64(nowMs, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_list_prim_u_8_strict,
-        decodeErrorData: null,
-      ),
-      constMeta: kCrateApiSimpleAllowListBatchGlobalConstMeta,
-      argValues: [texts, nowMs],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiSimpleAllowListBatchGlobalConstMeta =>
-      const TaskConstMeta(
-        debugName: "allow_list_batch_global",
-        argNames: ["texts", "nowMs"],
       );
 
   @override
@@ -331,6 +325,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  int dco_decode_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -420,6 +420,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint16();
   }
 
   @protected
@@ -515,6 +521,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint16(self);
+  }
+
+  @protected
   void sse_encode_u_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint32(self);
@@ -569,14 +581,19 @@ class DanmakuMaskImpl extends RustOpaque implements DanmakuMask {
         RustLib.instance.api.rust_arc_decrement_strong_count_DanmakuMaskPtr,
   );
 
-  /// 处理一批文本，返回 Vec<u8>：1 表示允许，0 表示被屏蔽
+  /// 批量判断是否允许
+  /// 返回 Vec<u8>：1 = 允许，0 = 屏蔽
   Future<Uint8List> allowListBatch(
           {required List<String> texts, required BigInt nowMs}) =>
       RustLib.instance.api.crateApiDanmakuMaskDanmakuMaskAllowListBatch(
           that: this, texts: texts, nowMs: nowMs);
 
-  Future<void> reset() =>
-      RustLib.instance.api.crateApiDanmakuMaskDanmakuMaskReset(
+  void dispose() => RustLib.instance.api.crateApiDanmakuMaskDanmakuMaskDispose(
+        that: this,
+      );
+
+  /// 重置状态
+  void reset() => RustLib.instance.api.crateApiDanmakuMaskDanmakuMaskReset(
         that: this,
       );
 }

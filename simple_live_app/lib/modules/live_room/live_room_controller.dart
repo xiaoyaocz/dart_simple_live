@@ -16,6 +16,7 @@ import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/app/utils/sandbox.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
@@ -23,19 +24,20 @@ import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/history_service.dart';
-import 'package:simple_live_app/src/rust/api/simple.dart';
+import 'package:simple_live_app/src/rust/api/danmaku_mask.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:simple_live_app/app/utils/sandbox.dart';
 
 class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
+  late DanmakuMask rustDanmakuMask;
+
 
   List<LiveMessage> danmakuBuffer = [];
   Timer? danmakuTimer;
@@ -131,6 +133,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void _initDanmakuMask() async {
+    rustDanmakuMask = DanmakuMask(baseWindowMs: 1500, bucketCount: 15, useNormalization: false, useFrequencyControl: false, maxFrequency: 3, adaptiveWindow: true);
     danmakuTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       _processDanmakuBuffer();
     });
@@ -148,7 +151,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
       final batchMessages = batch.map((e) => e.message).toList();
       final nowMs = DateTime.now().millisecondsSinceEpoch;
-      final allowedResults = allowListBatchGlobal(texts: batchMessages, nowMs: BigInt.from(nowMs));
+      final allowedResults = await rustDanmakuMask.allowListBatch(texts: batchMessages, nowMs: BigInt.from(nowMs));
 
       final filteredBatch = <LiveMessage>[];
       for (int i = 0; i < batch.length; i++) {
@@ -289,7 +292,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
 
       //  messages.length>n 预加载部分弹幕后启用去重功能
-      if (AppSettingsController.instance.danmakuMaskEnable.value &&
+      if (AppSettingsController.instance.danmakuMaskEnable.value&&
           messages.length > 50) {
         danmakuBuffer.add(msg);
       } else {
@@ -1043,6 +1046,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     // 重新设置LiveDanmaku
     liveDanmaku = site.liveSite.getDanmaku();
+    rustDanmakuMask.reset();
 
     // 停止播放
     await player.stop();
@@ -1095,6 +1099,7 @@ ${error?.stackTrace}''');
 
     liveDanmaku.stop();
     danmakuController = null;
+    rustDanmakuMask.dispose();
     super.onClose();
   }
 }

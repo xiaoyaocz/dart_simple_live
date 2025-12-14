@@ -10,14 +10,18 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DanmakuMask>>
 abstract class DanmakuMask implements RustOpaqueInterface {
-  /// 处理一批文本，返回 Vec<u8>：1 表示允许，0 表示被屏蔽
+  /// 批量判断是否允许
+  /// 返回 Vec<u8>：1 = 允许，0 = 屏蔽
   Future<Uint8List> allowListBatch(
       {required List<String> texts, required BigInt nowMs});
 
-  // HINT: Make it `#[frb(sync)]` to let it become the default constructor of Dart class.
-  static Future<DanmakuMask> newInstance(
-          {required BigInt baseWindowMs,
-          required BigInt bucketCount,
+  @override
+  void dispose();
+
+  /// 构造函数（会生成 Dart 构造器）
+  factory DanmakuMask(
+          {required int baseWindowMs,
+          required int bucketCount,
           required bool useNormalization,
           required bool useFrequencyControl,
           required int maxFrequency,
@@ -30,5 +34,6 @@ abstract class DanmakuMask implements RustOpaqueInterface {
           maxFrequency: maxFrequency,
           adaptiveWindow: adaptiveWindow);
 
-  Future<void> reset();
+  /// 重置状态
+  void reset();
 }

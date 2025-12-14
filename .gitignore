@@ -7,5 +7,5 @@ simple_live_tv_app/.vscode/settings.json
 .crush/
 CRUSH.md
 build/
-*.ps1
+dev-tool.ps1
 *.py

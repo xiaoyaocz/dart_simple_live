@@ -157,12 +157,12 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
     );
   }
 
-  void _showEditBackupDirectory() async{
+  void _showEditBackupDirectory() async {
     var directory = await Utils.showEditTextDialog(
       controller.webDavBackupDirectory.value,
       title: "修改远程备份文件夹",
     );
-    if (directory== null || directory.isEmpty) {
+    if (directory == null || directory.isEmpty) {
       return;
     }
     controller.setWebDavBackupDirectory(newDirectory: directory);

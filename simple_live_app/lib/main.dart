@@ -35,6 +35,7 @@ import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/migration_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_app/services/window_service.dart';
+import 'package:simple_live_app/src/rust/frb_generated.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -44,6 +45,7 @@ void main() async {
   // window(first)->migration->media_kit->Hive->services->start
   // window(second)->open
   await firstOpen();
+  await RustLib.init();
   await MigrationService.migrateData();
   MediaKit.ensureInitialized();
   await Hive.initFlutter(

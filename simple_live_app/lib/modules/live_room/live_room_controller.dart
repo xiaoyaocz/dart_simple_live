@@ -133,7 +133,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void _initDanmakuMask() async {
-    rustDanmakuMask = DanmakuMask(baseWindowMs: 1500, bucketCount: 15, useNormalization: false, useFrequencyControl: false, maxFrequency: 3, adaptiveWindow: true);
+    rustDanmakuMask = DanmakuMask(baseWindowMs: 15000, bucketCount: 15, useNormalization: true, useFrequencyControl: false, maxFrequency: 3, adaptiveWindow: false);
     danmakuTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       _processDanmakuBuffer();
     });

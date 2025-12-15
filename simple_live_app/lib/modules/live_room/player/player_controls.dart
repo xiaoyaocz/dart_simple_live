@@ -301,12 +301,22 @@ Widget buildFullControls(
                     child: IconButton(
                       key: volumeButtonkey,
                       onPressed: () {
-                        controller
-                            .showVolumeSlider(volumeButtonkey.currentContext!);
+                        controller.setPlayerMute();
                       },
-                      icon: const Icon(
-                        Icons.volume_down,
-                        size: 24,
+                      onHover: (_) {
+                        controller.showVolumeSlider(
+                          volumeButtonkey.currentContext!,
+                        );
+                      },
+                      iconSize: 24,
+                      icon: Icon(
+                        switch (AppSettingsController.instance.playerVolume.value) {
+                          0 => Icons.volume_off,
+                          <=35 => Icons.volume_mute,
+                          <=65 => Icons.volume_down,
+                          <=100 => Icons.volume_up,
+                          _ => Icons.volume_down,
+                        },
                         color: Colors.white,
                       ),
                     ),
@@ -558,13 +568,22 @@ Widget buildControls(
                   child: IconButton(
                     key: volumeButtonkey,
                     onPressed: () {
+                      controller.setPlayerMute();
+                    },
+                    onHover: (_) {
                       controller.showVolumeSlider(
                         volumeButtonkey.currentContext!,
                       );
                     },
-                    icon: const Icon(
-                      Icons.volume_down,
-                      size: 24,
+                    iconSize: 24,
+                    icon: Icon(
+                      switch (AppSettingsController.instance.playerVolume.value) {
+                        0 => Icons.volume_off,
+                        <=35 => Icons.volume_mute,
+                        <=65 => Icons.volume_down,
+                        <=100 => Icons.volume_up,
+                        _ => Icons.volume_down,
+                      },
                       color: Colors.white,
                     ),
                   ),

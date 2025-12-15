@@ -620,8 +620,28 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
   }
 
+  void setPlayerMute() {
+    var nowVolume = AppSettingsController.instance.playerVolume.value;
+    var lastVolume = AppSettingsController.instance.playerLastVolume.value;
+    if (nowVolume == 0) {
+      lastVolume = (lastVolume == 0) ? 50 : lastVolume;
+      player.setVolume(lastVolume);
+      AppSettingsController.instance.setPlayerVolume(lastVolume);
+    }
+    else {
+      AppSettingsController.instance.setPlayerLastVolume(nowVolume);
+      player.setVolume(0);
+      AppSettingsController.instance.setPlayerVolume(0);
+    }
+  }
+
   void showVolumeSlider(BuildContext targetContext) {
+    // 防止窗口因按钮未完全显现而反复弹出
+    if (SmartDialog.checkExist(tag: "volume_slider")) return;
     SmartDialog.showAttach(
+      tag: "volume_slider",
+      keepSingle: true, // 仅允许一个窗口存在
+      usePenetrate: true, // 允许穿透遮罩以响应后方按钮单击事件
       targetContext: targetContext,
       alignment: Alignment.topCenter,
       displayTime: const Duration(seconds: 3),
@@ -639,7 +659,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
               child: Slider(
                 min: 0,
                 max: 100,
+                divisions: 20,
                 value: AppSettingsController.instance.playerVolume.value,
+                label: '${AppSettingsController.instance.playerVolume.value.round()}',
                 onChanged: (newValue) {
                   player.setVolume(newValue);
                   AppSettingsController.instance.setPlayerVolume(newValue);

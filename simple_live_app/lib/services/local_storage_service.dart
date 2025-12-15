@@ -65,6 +65,18 @@ class LocalStorageService extends GetxService {
   /// 弹幕字重
   static const String kDanmuFontWeight = "DanmuFontWeight";
 
+  /// 弹幕去重参数--文本归一化
+  static const String kDanmuTextNormalization = "DanmuTextNormalization";
+
+  /// 弹幕去重参数--窗口大小：10s-60s
+  static const String kDanmuWindowMs = "DanmuWindowMs";
+
+  /// 弹幕去重参数--开启去重频率限制
+  static const String kDanmuFrequencyControl = "DanmuFrequencyControl";
+
+  /// 弹幕去重参数--去重频率限制
+  static const String kDanmuMaxFrequency = "DanmuMaxFrequency";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 

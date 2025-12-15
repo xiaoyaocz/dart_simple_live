@@ -31,6 +31,7 @@ class DanmuSettingsPage extends StatelessWidget {
 class DanmuSettingsView extends GetView<AppSettingsController> {
   final Function()? onTapDanmuShield;
   final DanmakuController? danmakuController;
+
   const DanmuSettingsView({
     this.onTapDanmuShield,
     this.danmakuController,
@@ -46,7 +47,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
         Padding(
           padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
           child: Text(
-            "弹幕屏蔽",
+            "弹幕筛选",
             style: Get.textTheme.titleSmall,
           ),
         ),
@@ -229,6 +230,69 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                   onChanged: (e) {
                     controller.setDanmuBottomMargin(e.toDouble());
                   },
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+          child: Text(
+            "弹幕去重参数设置",
+            style: Get.textTheme.titleSmall,
+          ),
+        ),
+        SettingsCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Obx(
+                () => SettingsNumber(
+                  title: "去重窗口大小(秒)",
+                  value: AppSettingsController.instance.danmuWindowMs.value,
+                  step: 1,
+                  max: 45,
+                  min: 10,
+                  onChanged: (e) {
+                    AppSettingsController.instance.setDanmuWindowMs(e);
+                  },
+                ),
+              ),
+              Obx(
+                () => SettingsSwitch(
+                  value: AppSettingsController
+                      .instance.danmuTextNormalization.value,
+                  title: "文本归一化",
+                  onChanged: (e) {
+                    AppSettingsController.instance.setDanmuTextNormalization(e);
+                  },
+                ),
+              ),
+              Obx(
+                () => SettingsSwitch(
+                  value: AppSettingsController
+                      .instance.danmuFrequencyControl.value,
+                  title: "弹幕显示频率",
+                  onChanged: (e) {
+                    AppSettingsController.instance.setDanmuFrequencyControl(e);
+                  },
+                ),
+              ),
+              Obx(
+                () => Visibility(
+                  visible: AppSettingsController
+                      .instance.danmuFrequencyControl.value,
+                  child: SettingsNumber(
+                    title: "显示频率(次)",
+                    value: AppSettingsController
+                        .instance.danmuMaxFrequency.value,
+                    step: 1,
+                    max: 10,
+                    min: 1,
+                    onChanged: (e) {
+                      AppSettingsController.instance.setDanmuMaxFrequency(e);
+                    },
+                  ),
                 ),
               ),
             ],

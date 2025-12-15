@@ -133,10 +133,22 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void _initDanmakuMask() async {
-    rustDanmakuMask = DanmakuMask(baseWindowMs: 15000, bucketCount: 15, useNormalization: true, useFrequencyControl: false, maxFrequency: 3, adaptiveWindow: false);
-    danmakuTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      _processDanmakuBuffer();
-    });
+    rustDanmakuMask = DanmakuMask(
+      baseWindowMs: AppSettingsController.instance.danmuWindowMs.value * 1000,
+      bucketCount: AppSettingsController.instance.danmuWindowMs.value,
+      useNormalization:
+          AppSettingsController.instance.danmuTextNormalization.value,
+      useFrequencyControl:
+          AppSettingsController.instance.danmuFrequencyControl.value,
+      maxFrequency: AppSettingsController.instance.danmuMaxFrequency.value,
+      adaptiveWindow: false,
+    );
+    danmakuTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (timer) {
+        _processDanmakuBuffer();
+      },
+    );
   }
 
   // 缓存降低跨线程消息开销 估算弹幕延迟在800ms左右

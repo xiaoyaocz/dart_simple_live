@@ -173,27 +173,27 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                   onChanged: (e) {
                     controller.setDanmuSpeed(e.toDouble());
                     updateDanmuOption(
-                      danmakuController?.option.copyWith(duration: e.toInt()),
+                      danmakuController?.option.copyWith(duration: e.toDouble()),
                     );
                   },
                 ),
               ),
-              // AppStyle.divider,
-              // Obx(
-              //   () => SettingsNumber(
-              //     title: "字体描边",
-              //     value: controller.danmuStrokeWidth.toInt(),
-              //     min: 0,
-              //     max: 10,
-              //     onChanged: (e) {
-              //       controller.setDanmuStrokeWidth(e.toDouble());
-              //       updateDanmuOption(
-              //         danmakuController?.option
-              //             .copyWith(strokeWidth: e.toDouble()),
-              //       );
-              //     },
-              //   ),
-              // ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsNumber(
+                   title: "字体描边",
+                   value: controller.danmuStrokeWidth.toInt(),
+                   min: 0,
+                   max: 10,
+                   onChanged: (e) {
+                     controller.setDanmuStrokeWidth(e.toDouble());
+                     updateDanmuOption(
+                       danmakuController?.option
+                           .copyWith(strokeWidth: e.toDouble()),
+                     );
+                   },
+                 ),
+               ),
               AppStyle.divider,
               Obx(
                 () => SettingsNumber(

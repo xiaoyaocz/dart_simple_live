@@ -215,10 +215,27 @@ class MyApp extends StatelessWidget {
         builder: FlutterSmartDialog.init(
           loadingBuilder: ((msg) => const AppLoaddingWidget()),
           //字体大小不跟随系统变化
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: const TextScaler.linear(1.0)),
-            child: Stack(
+          builder: (context, child) {
+            // Fix for HyperOS windowed-mode Flutter bug:
+            // - Values > 50 indicate the bug (windowed mode on HyperOS)
+            // - Values == 0 are valid for fullscreen/immersive mode and must NOT be treated as abnormal
+            const fallbackPadding = EdgeInsets.only(top: 25, bottom: 35);
+            const maxNormalPadding = 50.0;
+
+            final mediaQueryData = MediaQuery.of(context);
+            final hasAbnormalPadding = mediaQueryData.viewPadding.top > maxNormalPadding;
+
+            final fixedMediaQueryData = hasAbnormalPadding
+                ? mediaQueryData.copyWith(
+                    viewPadding: fallbackPadding,
+                    padding: fallbackPadding,
+                    textScaler: const TextScaler.linear(1.0),
+                  )
+                : mediaQueryData.copyWith(textScaler: const TextScaler.linear(1.0));
+
+            return MediaQuery(
+              data: fixedMediaQueryData,
+              child: Stack(
               children: [
                 //侧键返回
                 RawGestureDetector(
@@ -283,7 +300,8 @@ class MyApp extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+            );
+          },
         ),
       );
     }));

@@ -59,9 +59,11 @@ modules:
         aarch64:
           env:
             BUNDLE_PATH: simple_live_app/build/linux/arm64/release/bundle
-      append-path: /usr/lib/sdk/llvm21/bin:/run/build/dart_simple_live/flutter/bin
+      append-path: /var/lib/rustup/bin:/usr/lib/sdk/llvm21/bin:/run/build/dart_simple_live/flutter/bin
       prepend-ld-library-path: /usr/lib/sdk/llvm21/lib
       env:
+        RUSTUP_HOME: /var/lib/rustup
+        CARGO_HOME: /var/lib/rustup
         PUB_CACHE: /run/build/dart_simple_live/.pub-cache
     build-commands:
       - cd simple_live_app && flutter build linux --release

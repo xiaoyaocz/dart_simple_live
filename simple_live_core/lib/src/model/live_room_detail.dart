@@ -39,6 +39,7 @@ class LiveRoomDetail {
 
   /// 链接
   final String url;
+
   LiveRoomDetail({
     required this.roomId,
     required this.title,
@@ -54,6 +55,46 @@ class LiveRoomDetail {
     required this.url,
     this.isRecord = false,
   });
+
+  LiveRoomDetail copyWith({
+    String? roomId,
+    String? title,
+    String? cover,
+    String? userName,
+    String? userAvatar,
+    int? online,
+    String? introduction,
+    String? notice,
+    bool? status,
+    dynamic data,
+    dynamic danmakuData,
+    String? url,
+    bool? isRecord,
+  }) {
+    return LiveRoomDetail(
+      roomId: roomId ?? this.roomId,
+      title: title ?? this.title,
+      cover: cover ?? this.cover,
+      userName: userName ?? this.userName,
+      userAvatar: userAvatar ?? this.userAvatar,
+      online: online ?? this.online,
+      introduction: introduction ?? this.introduction,
+      notice: notice ?? this.notice,
+      status: status ?? this.status,
+      data: data ?? this.data,
+      danmakuData: danmakuData ?? this.danmakuData,
+      isRecord: isRecord ?? this.isRecord,
+      url: url ?? this.url,
+    );
+  }
+
+  LiveRoomDetail updateData(dynamic newData) {
+    return copyWith(data: newData);
+  }
+
+  LiveRoomDetail updateDanmakuData(dynamic newDanmakuData) {
+    return copyWith(danmakuData: newDanmakuData);
+  }
 
   @override
   String toString() {

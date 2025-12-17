@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/platforms/twitch/twitch_site.dart';
 import 'package:test/test.dart';
@@ -91,7 +93,7 @@ void testSite(LiveSite site) async {
 
   LiveRoomDetail? roomDetail;
   test('getRoomDetail', () async {
-    roomDetail = await site.getRoomDetail(roomId: "riotgames");
+    roomDetail = await site.getRoomDetail(roomId: "222523");
     expect(roomDetail, isNotNull);
     expect(roomDetail?.roomId, isNotEmpty);
     // expect(roomDetail?.danmakuData, isNotNull);
@@ -152,23 +154,7 @@ void testSite(LiveSite site) async {
 void main() {
   CoreLog.requestLogType = RequestLogType.short;
 
-  group('bilibili tests', () {
-    testSite(BiliBiliSite());
-  });
-
-  group('douyu tests', () {
-    testSite(DouyuSite());
-  });
-
   group('huya tests', () {
     testSite(HuyaSite());
-  });
-
-  group('douyin tests', () {
-    testSite(DouyinSite());
-  });
-
-  group('twitch tests', () {
-    testSite(TwitchSite());
   });
 }

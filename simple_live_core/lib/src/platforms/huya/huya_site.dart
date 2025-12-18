@@ -12,7 +12,7 @@ class HuyaSite implements LiveSite {
   static const String baseUrl = "https://www.huya.com";
   static const String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
-  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui");
+
 
   // regex
   /// 匹配房间数据
@@ -26,15 +26,17 @@ class HuyaSite implements LiveSite {
   static const String AYYUID_REGEX = r'"yyid":"?(\d+)"?';
 
   static const String HYSDK_UA =
-      "HYSDK(Windows, 30000002)_APP(pc_exe&7050007&official)_SDK(trans&2.31.0.5636)";
+      "HYSDK(Windows,30000002)_APP(pc_exe&7030003&official)_SDK(trans&2.29.0.5493)";
 
   static Map<String, String> get requestHeaders {
     return {
-      'origin': baseUrl,
-      'referer': baseUrl,
-      'user-agent': HYSDK_UA,
+      'Origin': baseUrl,
+      'Referer': baseUrl,
+      'User-Agent': HYSDK_UA,
     };
   }
+
+  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui",headers: requestHeaders);
 
   bool _shouldSkipQueryBuild = false;
 
@@ -188,13 +190,15 @@ class HuyaSite implements LiveSite {
         await tupClient.tupRequest("getCdnTokenInfo", req, GetCdnTokenResp());
     var suffix = line.lineType == HuyaLineType.hls ? "m3u8" : "flv";
     var antiCode =
-        line.lineType == HuyaLineType.hls ? line.hlsAntiCode : line.flvAntiCode;
+        line.lineType == HuyaLineType.hls ? resp.hlsAntiCode : resp.flvAntiCode;
     var url = '${line.line}/${resp.streamName}.$suffix?$antiCode&codec=264';
     if (bitRate > 0) {
       url += "&ratio=$bitRate";
     }
     return url;
   }
+
+
 
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {

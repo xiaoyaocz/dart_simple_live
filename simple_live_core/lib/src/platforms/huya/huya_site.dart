@@ -13,7 +13,6 @@ class HuyaSite implements LiveSite {
   static const String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
 
-
   // regex
   /// 匹配房间数据
   static const String ROOM_DATA_REGEX =
@@ -36,7 +35,8 @@ class HuyaSite implements LiveSite {
     };
   }
 
-  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui",headers: requestHeaders);
+  final BaseTarsHttp tupClient =
+      BaseTarsHttp("http://wup.huya.com", "liveui", headers: requestHeaders);
 
   bool _shouldSkipQueryBuild = false;
 
@@ -198,8 +198,6 @@ class HuyaSite implements LiveSite {
     return url;
   }
 
-
-
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
     var resultText = await HttpClient.instance.getJson(
@@ -277,11 +275,14 @@ class HuyaSite implements LiveSite {
         );
         // live -> add HuyaUrlDataModel and danmaku
         if (result.status) {
-          var streamDataGameStreamInfo = streamDataJson["gameStreamInfoList"][0];
+          var streamDataGameStreamInfo =
+              streamDataJson["gameStreamInfoList"][0];
           // danmaku
           // maybe int or string don't know why
-          var topSid = int.tryParse(streamDataGameStreamInfo["lChannelId"].toString());
-          var subSid = int.tryParse(streamDataGameStreamInfo["lSubChannelId"].toString());
+          var topSid =
+              int.tryParse(streamDataGameStreamInfo["lChannelId"].toString());
+          var subSid = int.tryParse(
+              streamDataGameStreamInfo["lSubChannelId"].toString());
           var yySid = int.tryParse(streamDataGameLiveInfo["yyid"].toString());
           result = result.updateDanmakuData(
             HuyaDanmakuArgs(

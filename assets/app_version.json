@@ -1,7 +1,7 @@
 {
     "version": "1.8.4",
     "version_num": 10804,
-    "version_desc": "### 已修改包名slotsun.slive,相关事宜请查看 #93 \n- fix：huya \n- 优化弹幕去重功能 \n- 关于linux的一系列修复 @pugaizai\n- fix: 一些代码和逻辑错误\n- tips: ios和macos用户请到action更新测试或者下载上游仓库版本",
+    "version_desc": "### 已修改包名slotsun.slive,相关事宜请查看 #86 \n- fix：huya \n- 优化弹幕去重功能 \n- 关于linux的一系列修复 @pugaizai\n- fix: 一些代码和逻辑错误\n- tips: ios和macos用户请到action更新测试或者下载上游仓库版本",
     "prerelease": false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

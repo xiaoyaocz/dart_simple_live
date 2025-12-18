@@ -30,7 +30,7 @@
 - [x] Windows 
 - [x] MacOS `自测`
 - [x] Linux
-- [ ] Android TV `请自行打包` [说明](https://github.com/SlotSun/dart_simple_live/issues/4)
+- [ ] Android TV `请自行打包` [说明](https://github.com/SlotSun/dart_simple_live/issues/89)
 
 只保证Android, Linux和Windows可用性
 

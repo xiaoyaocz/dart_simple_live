@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Slive
 Exec=Slive
-Icon=slive
+Icon=io.github.SlotSun.dart_simple_live
 Comment=Slive is a lightweight and user-friendly application for watching live streams across multiple platforms, offering a seamless watching experience with support for popular streaming services.
 Comment[zh_CN]=Slive 是一个轻量且用户友好的应用程序，可跨多个平台观看直播流，提供无缝的观看体验，并支持流行的流媒体服务。
 Type=Application

@@ -1,7 +1,7 @@
 {
-    "version": "1.8.3",
-    "version_num": 10803,
-    "version_desc": "### 这是修改包名前的最后一个版本，Android用户建议不要升级\n- 项目升级到flutter 3.38.4\n- 支持arch linux aur\n- 支持弹幕去重(test)\n- douyin优选HLS\n- 优化关注刷新\n- 调整media_kit @pugaizai\n- 关于linux的一系列修复 @pugaizai\n- fix: 一些代码和逻辑错误\n- tips: ios和macos用户请到action更新测试或者下载上游仓库版本",
-    "prerelease": true,
+    "version": "1.8.4",
+    "version_num": 10804,
+    "version_desc": "### 已修改包名slotsun.slive,相关事宜请查看 #93 \n- fix：huya \n- 优化弹幕去重功能 \n- 关于linux的一系列修复 @pugaizai\n- fix: 一些代码和逻辑错误\n- tips: ios和macos用户请到action更新测试或者下载上游仓库版本",
+    "prerelease": false,
     "download_url": "https://github.com/SlotSun/dart_simple_live/releases"
 }

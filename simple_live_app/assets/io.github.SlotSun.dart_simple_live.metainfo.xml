@@ -39,15 +39,11 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="1.8.3" date="2025-12-11">
+    <release version="1.8.4" date="2025-12-18">
       <description>
-        <p>### 这是修改包名前的最后一个版本，Android用户建议不要升级</p>
-        <p>- 项目升级到flutter 3.38.4</p>
-        <p>- 支持arch linux aur</p>
-        <p>- 支持弹幕去重(test)</p>
-        <p>- douyin优选HLS</p>
-        <p>- 优化关注刷新</p>
-        <p>- 调整media_kit @pugaizai</p>
+        <p>### 已修改包名slotsun.slive,相关事宜请查看 #93 </p>
+        <p>- fix：huya </p>
+        <p>- 优化弹幕去重功能 </p>
         <p>- 关于linux的一系列修复 @pugaizai</p>
         <p>- fix: 一些代码和逻辑错误</p>
         <p>- tips: ios和macos用户请到action更新测试或者下载上游仓库版本</p>

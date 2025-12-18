@@ -277,16 +277,11 @@ class HuyaSite implements LiveSite {
         );
         // live -> add HuyaUrlDataModel and danmaku
         if (result.status) {
+          var streamDataGameStreamInfo = streamDataJson["gameStreamInfoList"][0];
           // danmaku
-          var topSid = int.tryParse(RegExp(r'lChannelId":([0-9]+)')
-                  .firstMatch(resultText)
-                  ?.group(1) ??
-              "0");
-          var subSid = int.tryParse(RegExp(r'lSubChannelId":([0-9]+)')
-                  .firstMatch(resultText)
-                  ?.group(1) ??
-              "0");
           // maybe int or string don't know why
+          var topSid = int.tryParse(streamDataGameStreamInfo["lChannelId"].toString());
+          var subSid = int.tryParse(streamDataGameStreamInfo["lSubChannelId"].toString());
           var yySid = int.tryParse(streamDataGameLiveInfo["yyid"].toString());
           result = result.updateDanmakuData(
             HuyaDanmakuArgs(

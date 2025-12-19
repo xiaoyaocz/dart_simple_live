@@ -7,7 +7,7 @@ on:
       - "v*"
 jobs:
   # 打包 Android
-  build-andoird:
+  build-android:
     runs-on: ubuntu-latest
     permissions: write-all
 

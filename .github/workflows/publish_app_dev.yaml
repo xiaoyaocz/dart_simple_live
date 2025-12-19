@@ -14,7 +14,7 @@ concurrency:
 jobs:
 
   # packing android on ubuntu, macos slowly
-  build-andoird:
+  build-android:
     runs-on: ubuntu-latest
     permissions: write-all
 

@@ -9,9 +9,22 @@ import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
 
 class HuyaSite implements LiveSite {
+  static const baseUrl = "https://m.huya.com/";
   final String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
-  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui");
+
+  static const String HYSDK_UA =
+      "HYSDK(Windows,30000002)_APP(pc_exe&7030003&official)_SDK(trans&2.29.0.5493)";
+
+  static Map<String, String> requestHeaders =  {
+      'Origin': baseUrl,
+      'Referer': baseUrl,
+      'User-Agent': HYSDK_UA,
+  };
+
+  final BaseTarsHttp tupClient =
+  BaseTarsHttp("http://wup.huya.com", "liveui", headers: requestHeaders);
+
   String? playUserAgent;
   @override
   String id = "huya";
@@ -189,7 +202,7 @@ class HuyaSite implements LiveSite {
       CoreLog.error(e);
     }
     return playUserAgent ??
-        "HYSDK(Windows, 30000002)_APP(pc_exe&6080100&official)_SDK(trans&2.23.0.4969)";
+        HYSDK_UA;
   }
 
   @override
@@ -202,11 +215,11 @@ class HuyaSite implements LiveSite {
       var url = await getPlayUrl(line, quality.data["bitRate"]);
       ls.add(url);
     }
-    // from stream-rec url:https://github.com/stream-rec/stream-rec
-    var ua = await getHuYaUA();
+    // 最新UA需要额外验证，此方法暂时弃用
+    // var ua = await getHuYaUA();
     return LivePlayUrl(
       urls: ls,
-      headers: {"user-agent": ua},
+      headers: {"user-agent": HYSDK_UA},
     );
   }
 

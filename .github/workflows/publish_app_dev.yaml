@@ -275,6 +275,7 @@ jobs:
         run: |
           cd simple_live_app
           fastforge package --platform windows --targets msix,zip,exe --skip-clean
+          cd build/dist/*
           Get-ChildItem "simple_live_app-*" | ForEach-Object {
               $newName = $_.Name -replace '^simple_live_app', 'Slive'
               Rename-Item $_ -NewName $newName

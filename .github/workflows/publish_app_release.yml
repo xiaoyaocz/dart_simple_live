@@ -7,13 +7,15 @@ on:
       - "v*"
 jobs:
   # 打包 Android
-  build-android:
-    runs-on: macos-latest
-    permissions:
-      contents: write
+  build-andoird:
+    runs-on: ubuntu-latest
+    permissions: write-all
+
     steps:
       # 签出代码
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          ref: dev
 
       # APK 签名设置
       - name: Download Android keystore
@@ -30,16 +32,20 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
 
       # 设置 JAVA 环境
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
-          java-version: "21"
+          distribution: "zulu"
+          java-version: "17"
           cache: "gradle"
+          cache-dependency-path: |
+            simple_live_app/android/*.gradle*
+            simple_live_app/android/**/gradle-wrapper.properties
 
       # 设置 Flutter
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
+          channel: stable
           flutter-version-file: simple_live_app/pubspec.yaml
           cache: true
 
@@ -214,6 +220,12 @@ jobs:
         run: |
           cd simple_live_app
           fastforge package --platform windows --targets msix,zip,exe --skip-clean
+          cd build/dist/*
+          Get-ChildItem "simple_live_app-*" | ForEach-Object {
+              $newName = $_.Name -replace '^simple_live_app', 'Slive'
+              Rename-Item $_ -NewName $newName
+          }
+        shell: pwsh
       # 上传 Windows 至 Artifacts
       - name: Upload Windows APP to Artifacts
         uses: actions/upload-artifact@v4

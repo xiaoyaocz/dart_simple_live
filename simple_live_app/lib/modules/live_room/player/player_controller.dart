@@ -779,7 +779,8 @@ class PlayerController extends BaseController
   }
 
   void mediaError(String error) {
-    WakelockPlus.disable();
+   // 弱网调整：用户自责
+   // WakelockPlus.disable();
   }
 
   Future<void> toggleOSDStats() async {

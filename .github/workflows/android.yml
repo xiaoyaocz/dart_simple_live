@@ -1,4 +1,4 @@
-name: Build Release APK
+name: Build Release APKs
 
 on:
   push:
@@ -14,24 +14,25 @@ jobs:
         app: [simple_live_app, simple_live_tv_app]
 
     steps:
-      - name: Checkout code
+      # 1️⃣ 获取代码
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ 安装 Java
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      # 3️⃣ 安装 Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.38.5
           channel: stable
 
-      # -------------------------------
-      # 生成 release keystore
-      # -------------------------------
+      # 4️⃣ 生成 release keystore
       - name: Generate release keystore
         run: |
           mkdir -p ${{ matrix.app }}/android/app
@@ -45,6 +46,7 @@ jobs:
             -validity 10000 \
             -dname "CN=Your Name, OU=Dev, O=Your Org, L=City, ST=State, C=CN"
 
+      # 5️⃣ 生成 key.properties
       - name: Create key.properties
         run: |
           echo "storePassword=mypassword" > ${{ matrix.app }}/android/key.properties
@@ -52,17 +54,28 @@ jobs:
           echo "keyAlias=my-key-alias" >> ${{ matrix.app }}/android/key.properties
           echo "storeFile=my-release-key.jks" >> ${{ matrix.app }}/android/key.properties
 
+      # 6️⃣ 获取依赖
       - name: Flutter pub get
         run: |
           cd ${{ matrix.app }}
           flutter pub get
 
-      - name: Build APK (release, split ABI)
+      # 7️⃣ 构建 release APK（多架构）
+      - name: Build APK (split per ABI)
         run: |
           cd ${{ matrix.app }}
           flutter build apk --split-per-abi --release
 
-      - name: Upload APK to GitHub Release
+      # 8️⃣ 给 APK 文件加上 app 前缀，避免覆盖
+      - name: Rename APKs for upload
+        run: |
+          cd ${{ matrix.app }}/build/app/outputs/flutter-apk
+          for f in *.apk; do
+            mv "$f" "${{ matrix.app }}-$f"
+          done
+
+      # 9️⃣ 上传到 GitHub Release
+      - name: Upload APKs to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.app }}/build/app/outputs/flutter-apk/*.apk
+          files: ${{ matrix.app }}/build/app/outputs/flutter-apk/${{ matrix.app }}-*.apk

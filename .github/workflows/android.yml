@@ -1,4 +1,4 @@
-name: Build Multiple APKs
+name: Build Release APK
 
 on:
   push:
@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [simple_live_app, simple_live_tv_app]  # 两个应用同时编译
+        app: [simple_live_app, simple_live_tv_app]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -29,12 +29,35 @@ jobs:
           flutter-version: 3.38.5
           channel: stable
 
+      # -------------------------------
+      # 生成 release keystore
+      # -------------------------------
+      - name: Generate release keystore
+        run: |
+          mkdir -p ${{ matrix.app }}/android/app
+          keytool -genkeypair -v \
+            -keystore ${{ matrix.app }}/android/app/my-release-key.jks \
+            -alias my-key-alias \
+            -storepass qq123123 \
+            -keypass qq123123 \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=haha, OU=Dev, O=Your Org, L=City, ST=State, C=CN"
+
+      - name: Create key.properties
+        run: |
+          echo "storePassword=mypassword" > ${{ matrix.app }}/android/key.properties
+          echo "keyPassword=mypassword" >> ${{ matrix.app }}/android/key.properties
+          echo "keyAlias=my-key-alias" >> ${{ matrix.app }}/android/key.properties
+          echo "storeFile=my-release-key.jks" >> ${{ matrix.app }}/android/key.properties
+
       - name: Flutter pub get
         run: |
           cd ${{ matrix.app }}
           flutter pub get
 
-      - name: Build APK (split ABI)
+      - name: Build APK (release, split ABI)
         run: |
           cd ${{ matrix.app }}
           flutter build apk --split-per-abi --release
@@ -42,5 +65,4 @@ jobs:
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ${{ matrix.app }}/build/app/outputs/flutter-apk/*.apk
+          files: ${{ matrix.app }}/build/app/outputs/flutter-apk/*.apk

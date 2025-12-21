@@ -38,12 +38,12 @@ jobs:
           keytool -genkeypair -v \
             -keystore ${{ matrix.app }}/android/app/my-release-key.jks \
             -alias my-key-alias \
-            -storepass qq123123 \
-            -keypass qq123123 \
+            -storepass mypassword \
+            -keypass mypassword \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -dname "CN=haha, OU=Dev, O=Your Org, L=City, ST=State, C=CN"
+            -dname "CN=Your Name, OU=Dev, O=Your Org, L=City, ST=State, C=CN"
 
       - name: Create key.properties
         run: |

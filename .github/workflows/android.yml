@@ -1,4 +1,4 @@
-name: Build Simple Live Android APK
+name: Build Multiple APKs
 
 on:
   push:
@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [simple_live_app, simple_live_tv_app]  # 两个应用同时编译
 
     steps:
       - name: Checkout code
@@ -28,16 +31,16 @@ jobs:
 
       - name: Flutter pub get
         run: |
-          cd simple_live_app
+          cd ${{ matrix.app }}
           flutter pub get
 
       - name: Build APK (split ABI)
         run: |
-          cd simple_live_app
-          flutter build apk --split-per-abi
+          cd ${{ matrix.app }}
+          flutter build apk --split-per-abi --release
 
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            simple_live_app/build/app/outputs/flutter-apk/*.apk
+            ${{ matrix.app }}/build/app/outputs/flutter-apk/*.apk

@@ -17,8 +17,9 @@ jobs:
     steps:
       # 签出代码
       - uses: actions/checkout@v4
-        #with:
-        #  ref: master
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0 
 
       # APK签名设置
       - name: Download Android keystore

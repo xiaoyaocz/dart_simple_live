@@ -4,8 +4,11 @@ import 'dart:math';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:crypto/crypto.dart';
+import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_req.dart';
+import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_resp.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
+import 'package:simple_live_core/src/model/tars/huya_user_id.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
 
 class HuyaSite implements LiveSite {
@@ -224,17 +227,96 @@ class HuyaSite implements LiveSite {
   }
 
   Future<String> getPlayUrl(HuyaLineModel line, int bitRate) async {
-    var req = GetCdnTokenReq();
-    req.cdnType = line.cdnType;
-    req.streamName = line.streamName;
-    var resp =
-        await tupClient.tupRequest("getCdnTokenInfo", req, GetCdnTokenResp());
+    var antiCode = await getCndTokenInfoEx(line.streamName);
+    antiCode = buildAntiCode(line.streamName, line.presenterUid, antiCode);
     var url =
-        '${line.line}/${resp.streamName}.flv?${resp.flvAntiCode}&codec=264';
+        '${line.line}/${line.streamName}.flv?${antiCode}&codec=264';
     if (bitRate > 0) {
       url += "&ratio=$bitRate";
     }
     return url;
+  }
+
+  // 构造 anticode, python转写
+  /// [stream] streamname [presenterUid] 用户id [antiCode] 页面anti
+  ///
+  /// return ture anticode
+  String buildAntiCode(String stream, int presenterUid, String antiCode) {
+
+    var mapAnti = Uri(query: antiCode).queryParametersAll;
+    if (mapAnti.containsKey("fm")) {
+      return antiCode;
+    }
+
+    var ctype = mapAnti["ctype"]?.first ?? "huya_pc_exe";
+    var platformId = int.tryParse(mapAnti["ctype"]?.first ?? "0");
+
+    bool isWap = platformId == 103;
+    var clacStartTime = DateTime.now().millisecondsSinceEpoch;
+
+    CoreLog.i(
+        "using $presenterUid | ctype-{$ctype} | platformId - {$platformId} | isWap - {$isWap} | $clacStartTime");
+
+    var seqId = presenterUid + clacStartTime;
+    final secretHash = md5
+        .convert(utf8.encode('$seqId|$ctype|$platformId'))
+        .toString();
+
+    final convertUid = rotl64(presenterUid);
+    final calcUid = isWap ? presenterUid : convertUid;
+    final fm = Uri.decodeComponent(mapAnti['fm']!.first);
+    final secretPrefix = utf8
+        .decode(base64.decode(fm))
+        .split('_')
+        .first;
+    var wsTime = mapAnti['wsTime']!.first;
+    final secretStr =
+        '${secretPrefix}_${calcUid}_${stream}_${secretHash}_$wsTime';
+
+    final wsSecret =
+    md5.convert(utf8.encode(secretStr)).toString();
+
+    final rnd = Random();
+    final ct =
+    ((int.parse(wsTime, radix: 16) + rnd.nextDouble()) * 1000).toInt();
+    final uuid =
+    (((ct % 1e10) + rnd.nextDouble()) * 1e3 % 0xffffffff)
+        .toInt()
+        .toString();
+    final Map<String, dynamic> antiCodeRes = {
+      'wsSecret': wsSecret,
+      'wsTime': wsTime,
+      'seqid': seqId,
+      'ctype': ctype,
+      'ver': '1',
+      'fs': mapAnti['fs']!.first,
+      'fm': Uri.encodeComponent(mapAnti['fm']!.first),
+      't': platformId,
+    };
+    if (isWap) {
+      antiCodeRes.addAll({
+        'uid': presenterUid,
+        'uuid': uuid,
+      });
+    } else {
+      antiCodeRes['u'] = convertUid;
+    }
+
+    return antiCodeRes.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('&');
+  }
+
+  /// return sFlvToken
+  Future<String> getCndTokenInfoEx(String stream) async {
+    var func = "getCdnTokenInfoEx";
+    var tid = HuyaUserId();
+    tid.sHuYaUA = HYSDK_UA;
+    var tReq = GetCdnTokenExReq();
+    tReq.tId = tid;
+    tReq.sStreamName = stream;
+    var resp = await tupClient.tupRequest(func, tReq, GetCdnTokenExResp());
+    return resp.sFlvToken;
   }
 
   @override
@@ -296,6 +378,7 @@ class HuyaSite implements LiveSite {
           hlsAntiCode: item["sHlsAntiCode"].toString(),
           streamName: item["sStreamName"].toString(),
           cdnType: item["sCdnType"].toString(),
+          presenterUid: roomInfo["topSid"]??0,
         ));
       }
     }
@@ -473,6 +556,14 @@ class HuyaSite implements LiveSite {
     return result["data"]["uid"].toString();
   }
 
+  int rotl64(int t) {
+    final low = t & 0xFFFFFFFF;
+    final rotatedLow =
+    ((low << 8) | (low >> 24)) & 0xFFFFFFFF;
+    final high = t & ~0xFFFFFFFF;
+    return high | rotatedLow;
+  }
+
   String getUUid() {
     var currentTime = DateTime.now().millisecondsSinceEpoch;
     var randomValue = Random().nextInt(4294967295);
@@ -625,6 +716,7 @@ class HuyaLineModel {
   final String streamName;
   final HuyaLineType lineType;
   int bitRate;
+  final int presenterUid; // topSid = subSid = presenterUid
 
   HuyaLineModel({
     required this.line,
@@ -634,6 +726,7 @@ class HuyaLineModel {
     required this.streamName,
     required this.cdnType,
     this.bitRate = 0,
+    required this.presenterUid,
   });
 
   @override
@@ -645,6 +738,7 @@ class HuyaLineModel {
       "hlsAntiCode": hlsAntiCode,
       "streamName": streamName,
       "lineType": lineType.toString(),
+      "presenterUid": presenterUid,
     });
   }
 }

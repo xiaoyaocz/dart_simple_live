@@ -1,0 +1,46 @@
+# 工作流名称
+name: Android Build APK
+
+# 触发条件：push 代码或手动触发（workflow_dispatch）
+on:
+  push:
+    branches: [ main, master ]  # 监听主分支推送
+  workflow_dispatch:  # 允许手动触发
+
+# 工作流任务
+jobs:
+  build:
+    # 运行环境：Ubuntu 最新版（支持安卓编译）
+    runs-on: ubuntu-latest
+
+    steps:
+      # 步骤 1：拉取仓库代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 步骤 2：配置 JDK（安卓编译需要 JDK 17/11，根据项目适配）
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'  # 开源 JDK 发行版
+          cache: gradle  # 缓存 Gradle 依赖，加速构建
+
+      # 步骤 3：配置 Android SDK（自动下载对应版本）
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 步骤 4：授予 Gradle 执行权限
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      # 步骤 5：编译 Release 版 APK（或 Debug 版，根据需求改）
+      - name: Build Release APK
+        run: ./gradlew assembleRelease  # 编译 Release 包；Debug 包用 assembleDebug
+
+      # 步骤 6：上传 APK 作为构建产物（供下载）
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk  # 产物名称，自定义
+          path: app/build/outputs/apk/release/*.apk  # APK 输出路径（通用路径，需确认项目结构）

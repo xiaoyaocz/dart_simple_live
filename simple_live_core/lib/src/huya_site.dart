@@ -204,8 +204,7 @@ class HuyaSite implements LiveSite {
     } catch (e) {
       CoreLog.error(e);
     }
-    return playUserAgent ??
-        HYSDK_UA;
+    return playUserAgent ?? HYSDK_UA;
   }
 
   @override
@@ -229,8 +228,7 @@ class HuyaSite implements LiveSite {
   Future<String> getPlayUrl(HuyaLineModel line, int bitRate) async {
     var antiCode = await getCndTokenInfoEx(line.streamName);
     antiCode = buildAntiCode(line.streamName, line.presenterUid, antiCode);
-    var url =
-        '${line.line}/${line.streamName}.flv?${antiCode}&codec=264';
+    var url = '${line.line}/${line.streamName}.flv?${antiCode}&codec=264';
     if (bitRate > 0) {
       url += "&ratio=$bitRate";
     }
@@ -242,7 +240,6 @@ class HuyaSite implements LiveSite {
   ///
   /// return ture anticode
   String buildAntiCode(String stream, int presenterUid, String antiCode) {
-
     var mapAnti = Uri(query: antiCode).queryParametersAll;
     if (!mapAnti.containsKey("fm")) {
       return antiCode;
@@ -258,29 +255,23 @@ class HuyaSite implements LiveSite {
         "using $presenterUid | ctype-{$ctype} | platformId - {$platformId} | isWap - {$isWap} | $clacStartTime");
 
     var seqId = presenterUid + clacStartTime;
-    final secretHash = md5
-        .convert(utf8.encode('$seqId|$ctype|$platformId'))
-        .toString();
+    final secretHash =
+        md5.convert(utf8.encode('$seqId|$ctype|$platformId')).toString();
 
     final convertUid = rotl64(presenterUid);
     final calcUid = isWap ? presenterUid : convertUid;
     final fm = Uri.decodeComponent(mapAnti['fm']!.first);
-    final secretPrefix = utf8
-        .decode(base64.decode(fm))
-        .split('_')
-        .first;
+    final secretPrefix = utf8.decode(base64.decode(fm)).split('_').first;
     var wsTime = mapAnti['wsTime']!.first;
     final secretStr =
         '${secretPrefix}_${calcUid}_${stream}_${secretHash}_$wsTime';
 
-    final wsSecret =
-    md5.convert(utf8.encode(secretStr)).toString();
+    final wsSecret = md5.convert(utf8.encode(secretStr)).toString();
 
     final rnd = Random();
     final ct =
-    ((int.parse(wsTime, radix: 16) + rnd.nextDouble()) * 1000).toInt();
-    final uuid =
-    (((ct % 1e10) + rnd.nextDouble()) * 1e3 % 0xffffffff)
+        ((int.parse(wsTime, radix: 16) + rnd.nextDouble()) * 1000).toInt();
+    final uuid = (((ct % 1e10) + rnd.nextDouble()) * 1e3 % 0xffffffff)
         .toInt()
         .toString();
     final Map<String, dynamic> antiCodeRes = {
@@ -302,9 +293,7 @@ class HuyaSite implements LiveSite {
       antiCodeRes['u'] = convertUid;
     }
 
-    return antiCodeRes.entries
-        .map((e) => '${e.key}=${e.value}')
-        .join('&');
+    return antiCodeRes.entries.map((e) => '${e.key}=${e.value}').join('&');
   }
 
   /// return sFlvToken

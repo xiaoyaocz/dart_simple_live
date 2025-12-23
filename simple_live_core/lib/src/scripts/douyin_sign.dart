@@ -10649,7 +10649,10 @@ function getMSSDKSignature(msStub, userAgent) {
 
   static const String defaultUserAgent = DouyinSite.kDefaultUserAgent;
   static String getAbogusUrl(String url, String userAgent) {
-    JsRuntime flutterJs = JsRuntime();
+    JsRuntime flutterJs = JsRuntime(
+      memoryLimit: 4 * 1024 * 1024,
+      maxStackSize: 64 * 1024,
+    );
     final msToken = generateMsToken(107);
     var params = ('$url&msToken=$msToken').split('?')[1];
     var query = params.contains("?") ? params.split("?")[1] : params;
@@ -10664,7 +10667,10 @@ function getMSSDKSignature(msStub, userAgent) {
   }
 
   static String getSignature(String roomId, String uniqueId) {
-    JsRuntime flutterJs = JsRuntime();
+    JsRuntime flutterJs = JsRuntime(
+      memoryLimit: 4 * 1024 * 1024,
+      maxStackSize: 128 * 1024,
+    );
 
     flutterJs.eval(kWebMsSDK);
     var msStub = getMsStub(roomId, uniqueId);

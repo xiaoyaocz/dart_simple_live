@@ -116,24 +116,20 @@ jobs:
             simple_live_app/build/dist/*/*.dmg
             simple_live_app/build/dist/*/*.zip
 
-      #读取版本信息
-      - name: Read version
+      #获取版本信息（自动从 Git Tag 提取）
+      - name: Get version from tag
         id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+        run: echo "${{ steps.version.outputs.VERSION }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
@@ -191,24 +187,20 @@ jobs:
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
 
-      # 读取版本信息
-      - name: Read version
+      #获取版本信息（自动从 Git Tag 提取）
+      - name: Get version from tag
         id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+        run: echo "${{ steps.version.outputs.VERSION }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.deb
@@ -256,24 +248,21 @@ jobs:
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
-      # 读取版本信息
-      - name: Read version
+      #获取版本信息（自动从 Git Tag 提取）
+      - name: Get version from tag
         id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+        run: echo "${{ steps.version.outputs.VERSION }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.msix

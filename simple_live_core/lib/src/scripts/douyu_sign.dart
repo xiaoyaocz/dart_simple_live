@@ -6,7 +6,10 @@ class DouyuSign {
 ''';
 
   static String getSign(String html, String rid) {
-    JsRuntime flutterJs = JsRuntime();
+    JsRuntime flutterJs = JsRuntime(
+      memoryLimit: 4 * 1024 * 1024,
+      maxStackSize: 64 * 1024,
+    );
 
     flutterJs.eval(kCryptoJs);
 

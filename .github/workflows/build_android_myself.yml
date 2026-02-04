@@ -1,0 +1,44 @@
+name: [TEST] Build Android APK Only
+
+# 修改1：允许手动在网页点击触发，方便测试
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android-test:
+    # 修改2：使用更通用的 Ubuntu 环境，无需 macOS
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. 检出代码
+      - uses: actions/checkout@v4
+
+      # 2. 设置 Flutter 环境
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.x"
+          cache: true
+
+      # 3. 获取项目依赖
+      - name: Get Dependencies
+        run: |
+          cd simple_live_app # 构建手机版APK，如需TV版请切换到 simple_live_tv_app
+          flutter pub get
+
+      # 4. 编译 APK (关键步骤)
+      # 修改3：移除了所有签名配置，直接构建 release APK
+      - name: Build APK
+        run: |
+          cd simple_live_app
+          flutter build apk --release --split-per-abi
+
+      # 5. 上传 APK 作为构建产物
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-apks
+          path: |
+            simple_live_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk

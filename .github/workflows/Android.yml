@@ -1,0 +1,62 @@
+name: Build Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "simple_live_app/**"
+      - ".github/workflows/android.yml"
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 可选：如果项目里用到 submodules，打开这一段
+      # - name: Checkout (with submodules)
+      #   uses: actions/checkout@v4
+      #   with:
+      #     submodules: recursive
+
+      # Flutter 安装（版本建议与你本机一致：3.38.9）
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.9"
+          channel: "stable"
+          cache: true
+
+      # Java 17（Android 构建常用）
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: gradle
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Pub get
+        working-directory: simple_live_app
+        run: flutter pub get
+
+      # 可选：跑测试（没有就删）
+      # - name: Test
+      #   working-directory: simple_live_app
+      #   run: flutter test
+
+      - name: Build APK (release)
+        working-directory: simple_live_app
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: |
+            simple_live_app/build/app/outputs/flutter-apk/*.apk

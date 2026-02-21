@@ -50,9 +50,20 @@ class AppNavigator {
       }
     }
 
-    Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
-      "roomId": roomId,
-    });
+    final params = {"roomId": roomId};
+    if (Get.currentRoute == RoutePath.kLiveRoomDetail) {
+      Get.offNamed(
+        RoutePath.kLiveRoomDetail,
+        arguments: site,
+        parameters: params,
+      );
+    } else {
+      Get.toNamed(
+        RoutePath.kLiveRoomDetail,
+        arguments: site,
+        parameters: params,
+      );
+    }
   }
 
   /// 跳转至哔哩哔哩登录

@@ -1,9 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_page.dart';
@@ -13,10 +14,13 @@ import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart'
 import 'package:simple_live_app/modules/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/mine/mine_page.dart';
 
-class IndexedController extends GetxController {
+class IndexedController extends GetxController
+    with GetSingleTickerProviderStateMixin {
   RxList<HomePageItem> items = RxList<HomePageItem>([]);
 
   var index = 0.obs;
+
+  late TabController tabController;
   RxList<Widget> pages = RxList<Widget>([
     const SizedBox(),
     const SizedBox(),
@@ -56,6 +60,8 @@ class IndexedController extends GetxController {
 
   @override
   void onInit() {
+    tabController =
+        TabController(length: Sites.supportSites.length, vsync: this);
     Future.delayed(Duration.zero, showFirstRun);
     items.value = AppSettingsController.instance.homeSort
         .map((key) => Constant.allHomePages[key]!)
@@ -64,11 +70,17 @@ class IndexedController extends GetxController {
     super.onInit();
   }
 
+  @override
+  void onClose() {
+    tabController.dispose();
+    super.onClose();
+  }
+
   void showFirstRun() async {
     var settingsController = Get.find<AppSettingsController>();
     if (settingsController.firstRun) {
       settingsController.setNoFirstRun();
       await Utils.showStatement();
-    } 
+    }
   }
 }

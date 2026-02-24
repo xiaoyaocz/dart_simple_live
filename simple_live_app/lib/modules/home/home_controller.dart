@@ -7,15 +7,12 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/home/home_list_controller.dart';
+import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 
-class HomeController extends GetxController
-    with GetSingleTickerProviderStateMixin {
-  late TabController tabController;
-  HomeController() {
-    tabController =
-        TabController(length: Sites.supportSites.length, vsync: this);
-  }
+class HomeController extends GetxController {
+  TabController get tabController =>
+      Get.find<IndexedController>().tabController;
 
   StreamSubscription<dynamic>? streamSubscription;
 

@@ -10,6 +10,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/sync_client_info_model.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
+import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -50,9 +51,21 @@ class AppNavigator {
       }
     }
 
-    Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
-      "roomId": roomId,
-    });
+    // 如果已经在直播间页面，直接复用控制器切换房间
+    if (Get.isRegistered<LiveRoomController>()) {
+      try {
+        final controller = Get.find<LiveRoomController>();
+        controller.resetRoom(site, roomId);
+        return;
+      } catch (_) {}
+    }
+
+    final params = {"roomId": roomId};
+    Get.toNamed(
+      RoutePath.kLiveRoomDetail,
+      arguments: site,
+      parameters: params,
+    );
   }
 
   /// 跳转至哔哩哔哩登录

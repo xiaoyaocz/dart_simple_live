@@ -834,34 +834,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     // 不重置状态,保持上次选择的列表
     Utils.showBottomSheet(
       title: "",
-      child: DefaultTabController(
-        length: 2,
-        initialIndex: showFollowList.value ? 0 : 1,
-        child: Column(
-          children: [
-            TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelPadding: EdgeInsets.zero,
-              indicatorWeight: 1.0,
-              onTap: (index) {
-                showFollowList.value = index == 0;
-              },
-              tabs: const [
-                Tab(text: "关注列表"),
-                Tab(text: "观看历史"),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildFollowListView(),
-                  _buildHistoryListView(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: _FollowUserBottomSheet(controller: this),
     );
   }
 
@@ -1157,5 +1130,67 @@ ${error?.stackTrace}''');
     danmakuController = null;
     _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
     super.onClose();
+  }
+}
+
+class _FollowUserBottomSheet extends StatefulWidget {
+  final LiveRoomController controller;
+
+  const _FollowUserBottomSheet({required this.controller});
+
+  @override
+  State<_FollowUserBottomSheet> createState() => _FollowUserBottomSheetState();
+}
+
+class _FollowUserBottomSheetState extends State<_FollowUserBottomSheet>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.controller.showFollowList.value ? 0 : 1,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        widget.controller.showFollowList.value = _tabController.index == 0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelPadding: EdgeInsets.zero,
+          indicatorWeight: 1.0,
+          tabs: const [
+            Tab(text: "关注列表"),
+            Tab(text: "观看历史"),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              widget.controller._buildFollowListView(),
+              widget.controller._buildHistoryListView(),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

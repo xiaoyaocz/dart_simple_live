@@ -859,35 +859,70 @@ void showFollowUser(LiveRoomController controller) {
     title: "",
     width: 400,
     useSystem: true,
-    child: DefaultTabController(
+    child: _FollowUserDialog(controller: controller),
+  );
+}
+
+class _FollowUserDialog extends StatefulWidget {
+  final LiveRoomController controller;
+
+  const _FollowUserDialog({required this.controller});
+
+  @override
+  State<_FollowUserDialog> createState() => _FollowUserDialogState();
+}
+
+class _FollowUserDialogState extends State<_FollowUserDialog>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
       length: 2,
-      initialIndex: controller.showFollowList.value ? 0 : 1,
-      child: Column(
-        children: [
-          TabBar(
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelPadding: EdgeInsets.zero,
-            indicatorWeight: 1.0,
-            onTap: (index) {
-              controller.showFollowList.value = index == 0;
-            },
-            tabs: const [
-              Tab(text: "关注列表"),
-              Tab(text: "观看历史"),
+      vsync: this,
+      initialIndex: widget.controller.showFollowList.value ? 0 : 1,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        widget.controller.showFollowList.value = _tabController.index == 0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelPadding: EdgeInsets.zero,
+          indicatorWeight: 1.0,
+          tabs: const [
+            Tab(text: "关注列表"),
+            Tab(text: "观看历史"),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildFollowListForDialog(widget.controller),
+              _buildHistoryListForDialog(widget.controller),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildFollowListForDialog(controller),
-                _buildHistoryListForDialog(controller),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      ],
+    );
+  }
 }
 
 Widget _buildFollowListForDialog(LiveRoomController controller) {

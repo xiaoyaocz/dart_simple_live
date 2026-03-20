@@ -98,6 +98,9 @@ class AppSettingsController extends GetxController {
     pipHideDanmu.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPIPHideDanmu, true);
 
+    playershowSuperChat.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerShowSuperChat, true);
+
     styleColor.value = LocalStorageService.instance
         .getValue(LocalStorageService.kStyleColor, 0xff3498db);
 

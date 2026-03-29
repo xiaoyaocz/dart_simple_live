@@ -11,9 +11,11 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
+import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
+import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'dart:async';
@@ -852,50 +854,177 @@ void showFollowUser(LiveRoomController controller) {
     return;
   }
 
+  // 不重置状态,保持上次选择的列表
   Utils.showRightDialog(
-    title: "关注列表",
+    title: "",
     width: 400,
     useSystem: true,
-    child: Obx(
-      () => Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: FollowService.instance.loadData,
-            child: ListView.builder(
-              itemCount: FollowService.instance.liveList.length,
-              itemBuilder: (_, i) {
-                var item = FollowService.instance.liveList[i];
-                return Obx(
-                  () => FollowUserItem(
-                    item: item,
-                    playing: controller.rxSite.value.id == item.siteId &&
-                        controller.rxRoomId.value == item.roomId,
-                    onTap: () {
-                      Utils.hideRightDialog();
-                      controller.resetRoom(
-                        Sites.allSites[item.siteId]!,
-                        item.roomId,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+    child: _FollowUserDialog(controller: controller),
+  );
+}
+
+class _FollowUserDialog extends StatefulWidget {
+  final LiveRoomController controller;
+
+  const _FollowUserDialog({required this.controller});
+
+  @override
+  State<_FollowUserDialog> createState() => _FollowUserDialogState();
+}
+
+class _FollowUserDialogState extends State<_FollowUserDialog>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.controller.showFollowList.value ? 0 : 1,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        widget.controller.showFollowList.value = _tabController.index == 0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelPadding: EdgeInsets.zero,
+          indicatorWeight: 1.0,
+          tabs: const [
+            Tab(text: "关注列表"),
+            Tab(text: "观看历史"),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildFollowListForDialog(widget.controller),
+              _buildHistoryListForDialog(widget.controller),
+            ],
           ),
-          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Obx(
-                () => DesktopRefreshButton(
-                  refreshing: FollowService.instance.updating.value,
-                  onPressed: FollowService.instance.loadData,
+        ),
+      ],
+    );
+  }
+}
+
+Widget _buildFollowListForDialog(LiveRoomController controller) {
+  return Obx(
+    () => Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: FollowService.instance.loadData,
+          child: ListView.builder(
+            itemCount: FollowService.instance.liveList.length,
+            itemBuilder: (_, i) {
+              var item = FollowService.instance.liveList[i];
+              return Obx(
+                () => FollowUserItem(
+                  item: item,
+                  playing: controller.rxSite.value.id == item.siteId &&
+                      controller.rxRoomId.value == item.roomId,
+                  onTap: () {
+                    Utils.hideRightDialog();
+                    controller.resetRoom(
+                      Sites.allSites[item.siteId]!,
+                      item.roomId,
+                    );
+                  },
                 ),
+              );
+            },
+          ),
+        ),
+        if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: Obx(
+              () => DesktopRefreshButton(
+                refreshing: FollowService.instance.updating.value,
+                onPressed: FollowService.instance.loadData,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     ),
+  );
+}
+
+Widget _buildHistoryListForDialog(LiveRoomController controller) {
+  var historyList = DBService.instance.getHistores();
+  return ListView.builder(
+    itemCount: historyList.length,
+    itemBuilder: (_, i) {
+      var item = historyList[i];
+      var itemSite = Sites.allSites[item.siteId];
+      if (itemSite == null) return const SizedBox.shrink();
+
+      return ListTile(
+        contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 4),
+        leading: NetImage(
+          item.face,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+        ),
+        title: Text(item.userName),
+        subtitle: Row(
+          children: [
+            Image.asset(
+              itemSite.logo,
+              width: 20,
+            ),
+            AppStyle.hGap4,
+            Text(
+              itemSite.name,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+            AppStyle.hGap8,
+            Text(
+              Utils.parseTime(item.updateTime),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        trailing: (controller.rxSite.value.id == item.siteId &&
+                controller.rxRoomId.value == item.roomId)
+            ? const SizedBox(
+                width: 64,
+                child: Center(
+                  child: Icon(Icons.play_arrow),
+                ),
+              )
+            : null,
+        onTap: () {
+          Utils.hideRightDialog();
+          controller.resetRoom(
+            itemSite,
+            item.roomId,
+          );
+        },
+      );
+    },
   );
 }
 

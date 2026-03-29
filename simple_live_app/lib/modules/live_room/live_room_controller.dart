@@ -24,6 +24,7 @@ import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
+import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -106,6 +107,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   // 开播时长状态变量
   var liveDuration = "00:00:00".obs;
   Timer? _liveDurationTimer;
+
+  /// 关注/历史列表切换状态 (true: 关注列表, false: 观看历史)
+  var showFollowList = true.obs;
 
   @override
   void onInit() {
@@ -827,48 +831,113 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void showFollowUserSheet() {
+    // 不重置状态,保持上次选择的列表
     Utils.showBottomSheet(
-      title: "关注列表",
-      child: Obx(
-        () => Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: FollowService.instance.loadData,
-              child: ListView.builder(
-                itemCount: FollowService.instance.liveList.length,
-                itemBuilder: (_, i) {
-                  var item = FollowService.instance.liveList[i];
-                  return Obx(
-                    () => FollowUserItem(
-                      item: item,
-                      playing: rxSite.value.id == item.siteId &&
-                          rxRoomId.value == item.roomId,
-                      onTap: () {
-                        Get.back();
-                        resetRoom(
-                          Sites.allSites[item.siteId]!,
-                          item.roomId,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: Obx(
-                  () => DesktopRefreshButton(
-                    refreshing: FollowService.instance.updating.value,
-                    onPressed: FollowService.instance.loadData,
+      title: "",
+      child: _FollowUserBottomSheet(controller: this),
+    );
+  }
+
+  Widget _buildFollowListView() {
+    return Obx(
+      () => Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: FollowService.instance.loadData,
+            child: ListView.builder(
+              itemCount: FollowService.instance.liveList.length,
+              itemBuilder: (_, i) {
+                var item = FollowService.instance.liveList[i];
+                return Obx(
+                  () => FollowUserItem(
+                    item: item,
+                    playing: rxSite.value.id == item.siteId &&
+                        rxRoomId.value == item.roomId,
+                    onTap: () {
+                      Get.back();
+                      resetRoom(
+                        Sites.allSites[item.siteId]!,
+                        item.roomId,
+                      );
+                    },
                   ),
+                );
+              },
+            ),
+          ),
+          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Obx(
+                () => DesktopRefreshButton(
+                  refreshing: FollowService.instance.updating.value,
+                  onPressed: FollowService.instance.loadData,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildHistoryListView() {
+    var historyList = DBService.instance.getHistores();
+    return ListView.builder(
+      itemCount: historyList.length,
+      itemBuilder: (_, i) {
+        var item = historyList[i];
+        var itemSite = Sites.allSites[item.siteId];
+        if (itemSite == null) return const SizedBox.shrink();
+        
+        return ListTile(
+          contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 4),
+          leading: NetImage(
+            item.face,
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+          ),
+          title: Text(item.userName),
+          subtitle: Row(
+            children: [
+              Image.asset(
+                itemSite.logo,
+                width: 20,
+              ),
+              AppStyle.hGap4,
+              Text(
+                itemSite.name,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+              AppStyle.hGap8,
+              Text(
+                Utils.parseTime(item.updateTime),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          trailing: (rxSite.value.id == item.siteId &&
+                  rxRoomId.value == item.roomId)
+              ? const SizedBox(
+                  width: 64,
+                  child: Center(
+                    child: Icon(Icons.play_arrow),
+                  ),
+                )
+              : null,
+          onTap: () {
+            Get.back();
+            resetRoom(
+              itemSite,
+              item.roomId,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1061,5 +1130,67 @@ ${error?.stackTrace}''');
     danmakuController = null;
     _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
     super.onClose();
+  }
+}
+
+class _FollowUserBottomSheet extends StatefulWidget {
+  final LiveRoomController controller;
+
+  const _FollowUserBottomSheet({required this.controller});
+
+  @override
+  State<_FollowUserBottomSheet> createState() => _FollowUserBottomSheetState();
+}
+
+class _FollowUserBottomSheetState extends State<_FollowUserBottomSheet>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.controller.showFollowList.value ? 0 : 1,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        widget.controller.showFollowList.value = _tabController.index == 0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelPadding: EdgeInsets.zero,
+          indicatorWeight: 1.0,
+          tabs: const [
+            Tab(text: "关注列表"),
+            Tab(text: "观看历史"),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              widget.controller._buildFollowListView(),
+              widget.controller._buildHistoryListView(),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

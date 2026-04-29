@@ -41,8 +41,8 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuTopMargin, 0.0);
     danmuBottomMargin.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuBottomMargin, 0.0);
-    danmuFontWeight.value = LocalStorageService.instance.getValue(
-        LocalStorageService.kDanmuFontWeight, FontWeight.normal.index);
+    danmuFontWeight.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuFontWeight, 4);
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
@@ -126,7 +126,17 @@ class AppSettingsController extends GetxController {
 
     audioOutputDriver.value = LocalStorageService.instance.getValue(
       LocalStorageService.kAudioOutputDriver,
-      Platform.isAndroid ? "audiotrack" : Platform.isLinux ? "pulse" : Platform.isWindows ? "wasapi" : Platform.isIOS ? "audiounit" : Platform.isMacOS ? "coreaudio" : "sdl",
+      Platform.isAndroid
+          ? "audiotrack"
+          : Platform.isLinux
+              ? "pulse"
+              : Platform.isWindows
+                  ? "wasapi"
+                  : Platform.isIOS
+                      ? "audiounit"
+                      : Platform.isMacOS
+                          ? "coreaudio"
+                          : "sdl",
     );
 
     videoHardwareDecoder.value = LocalStorageService.instance.getValue(
@@ -141,10 +151,11 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kUpdateFollowDuration, 10);
 
     updateFollowThreadCount.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
+        .getValue(LocalStorageService.kUpdateFollowThreadCount, 0);  // 默认 0 = 自动
 
     initSiteSort();
     initHomeSort();
+
     super.onInit();
   }
 
@@ -194,37 +205,29 @@ class AppSettingsController extends GetxController {
 
   void changeTheme() {
     Get.dialog(
-      SimpleDialog(
-        title: const Text("设置主题"),
-        children: [
-          RadioListTile<int>(
-            title: const Text("跟随系统"),
-            value: 0,
-            groupValue: themeMode.value,
-            onChanged: (e) {
-              Get.back();
-              setTheme(e ?? 0);
-            },
-          ),
-          RadioListTile<int>(
-            title: const Text("浅色模式"),
-            value: 1,
-            groupValue: themeMode.value,
-            onChanged: (e) {
-              Get.back();
-              setTheme(e ?? 1);
-            },
-          ),
-          RadioListTile<int>(
-            title: const Text("深色模式"),
-            value: 2,
-            groupValue: themeMode.value,
-            onChanged: (e) {
-              Get.back();
-              setTheme(e ?? 2);
-            },
-          ),
-        ],
+      RadioGroup(
+        groupValue: themeMode.value,
+        onChanged: (e) {
+          Get.back();
+          setTheme(e ?? 0);
+        },
+        child: const SimpleDialog(
+          title: Text("设置主题"),
+          children: [
+            RadioListTile<int>(
+              title: Text("跟随系统"),
+              value: 0,
+            ),
+            RadioListTile<int>(
+              title: Text("浅色模式"),
+              value: 1,
+            ),
+            RadioListTile<int>(
+              title: Text("深色模式"),
+              value: 2,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -300,7 +303,7 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kDanmuStrokeWidth, e);
   }
 
-  var danmuFontWeight = FontWeight.normal.index.obs;
+  var danmuFontWeight = 4.obs;
   void setDanmuFontWeight(int e) {
     danmuFontWeight.value = e;
     LocalStorageService.instance
@@ -368,6 +371,13 @@ class AppSettingsController extends GetxController {
     autoFullScreen.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kAutoFullScreen, e);
+  }
+
+  var playershowSuperChat = true.obs;
+  void setPlayerShowSuperChat(bool e) {
+    playershowSuperChat.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerShowSuperChat, e);
   }
 
   RxSet<String> shieldList = <String>{}.obs;

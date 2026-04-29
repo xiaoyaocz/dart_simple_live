@@ -134,7 +134,9 @@ class OtherSettingsController extends BaseController {
   }
 
   void shareLogFile(LogFileModel item) {
-    Share.shareXFiles([XFile(item.path)]);
+    SharePlus.instance.share(ShareParams(
+      files: [XFile(item.path)],
+    ));
   }
 
   void saveLogFile(LogFileModel item) async {
@@ -142,6 +144,7 @@ class OtherSettingsController extends BaseController {
       allowedExtensions: ['log'],
       type: FileType.custom,
       fileName: item.name,
+      bytes: Uint8List(0),
     );
     if (filePath != null) {
       var file = File(item.path);
@@ -163,7 +166,7 @@ class OtherSettingsController extends BaseController {
       };
 
       var bytes = Uint8List.fromList(utf8.encode(jsonEncode(data)));
-      
+
       // FilePicker 直接写入
       var inlineSave = Platform.isAndroid || Platform.isIOS || kIsWeb;
 
@@ -173,12 +176,12 @@ class OtherSettingsController extends BaseController {
         fileName: "simple_live_config.json",
         bytes: inlineSave ? bytes : null,
       );
-      
+
       if (path == null && !kIsWeb) {
         SmartDialog.showToast("保存取消");
         return;
       }
-      
+
       // 桌面平台需要手动写入
       if (!inlineSave && path != null) {
         await File(path).writeAsBytes(bytes);

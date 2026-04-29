@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:ns_danmaku/ns_danmaku.dart';
+import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -51,12 +51,16 @@ Widget buildFullControls(
         buildDanmuView(videoState, controller),
 
         // 左下角SC显示
-        Visibility(
-          visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
-          child: Positioned(
-            left: 24,
-            bottom: 24,
-            child: PlayerSuperChatOverlay(controller: controller),
+        Obx(
+          () => Visibility(
+            visible: AppSettingsController.instance.playershowSuperChat.value &&
+                ((!Platform.isAndroid && !Platform.isIOS) ||
+                    controller.fullScreenState.value),
+            child: Positioned(
+              left: 24,
+              bottom: 24,
+              child: PlayerSuperChatOverlay(controller: controller),
+            ),
           ),
         ),
 
@@ -286,7 +290,8 @@ Widget buildFullControls(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: Text(
                         controller.liveDuration.value,
-                        style: const TextStyle(fontSize: 14, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 14, color: Colors.white),
                       ),
                     ),
                   ),
@@ -432,12 +437,16 @@ Widget buildControls(
       buildDanmuView(videoState, controller),
 
       // 左下角SC显示
-      Visibility(
-        visible: (!Platform.isAndroid && !Platform.isIOS) || controller.fullScreenState.value,
-        child: Positioned(
-          left: 24,
-          bottom: 24,
-          child: PlayerSuperChatOverlay(controller: controller),
+      Obx(
+        () => Visibility(
+          visible: AppSettingsController.instance.playershowSuperChat.value &&
+              ((!Platform.isAndroid && !Platform.isIOS) ||
+                  controller.fullScreenState.value),
+          child: Positioned(
+            left: 24,
+            bottom: 24,
+            child: PlayerSuperChatOverlay(controller: controller),
+          ),
         ),
       ),
 
@@ -638,11 +647,16 @@ Widget buildControls(
 
 Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
   var padding = MediaQuery.of(videoState.context).padding;
-  controller.danmakuView ??= DanmakuView(
+  controller.danmakuView ??= DanmakuScreen(
     key: controller.globalDanmuKey,
     createdController: controller.initDanmakuController,
     option: DanmakuOption(
-      fontSize: 16,
+      fontSize: AppSettingsController.instance.danmuSize.value,
+      area: AppSettingsController.instance.danmuArea.value,
+      duration: AppSettingsController.instance.danmuSpeed.value.toInt(),
+      opacity: AppSettingsController.instance.danmuOpacity.value,
+      //strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
+      fontWeight: AppSettingsController.instance.danmuFontWeight.value,
     ),
   );
   return Positioned.fill(
@@ -779,72 +793,54 @@ void showPlayerSettings(LiveRoomController controller) {
     width: 320,
     useSystem: true,
     child: Obx(
-      () => ListView(
-        padding: AppStyle.edgeInsetsV12,
-        children: [
-          Padding(
-            padding: AppStyle.edgeInsetsH16,
-            child: Text(
-              "画面尺寸",
-              style: Get.textTheme.titleMedium,
+      () => RadioGroup(
+        groupValue: AppSettingsController.instance.scaleMode.value,
+        onChanged: (e) {
+          AppSettingsController.instance.setScaleMode(e ?? 0);
+          controller.updateScaleMode();
+        },
+        child: ListView(
+          padding: AppStyle.edgeInsetsV12,
+          children: [
+            Padding(
+              padding: AppStyle.edgeInsetsH16,
+              child: Text(
+                "画面尺寸",
+                style: Get.textTheme.titleMedium,
+              ),
             ),
-          ),
-          RadioListTile(
-            value: 0,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("适应"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 0);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 1,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("拉伸"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 1);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 2,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("铺满"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 2);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 3,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("16:9"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 3);
-              controller.updateScaleMode();
-            },
-          ),
-          RadioListTile(
-            value: 4,
-            contentPadding: AppStyle.edgeInsetsH4,
-            title: const Text("4:3"),
-            visualDensity: VisualDensity.compact,
-            groupValue: AppSettingsController.instance.scaleMode.value,
-            onChanged: (e) {
-              AppSettingsController.instance.setScaleMode(e ?? 4);
-              controller.updateScaleMode();
-            },
-          ),
-        ],
+            const RadioListTile(
+              value: 0,
+              contentPadding: AppStyle.edgeInsetsH4,
+              title: Text("适应"),
+              visualDensity: VisualDensity.compact,
+            ),
+            const RadioListTile(
+              value: 1,
+              contentPadding: AppStyle.edgeInsetsH4,
+              title: Text("拉伸"),
+              visualDensity: VisualDensity.compact,
+            ),
+            const RadioListTile(
+              value: 2,
+              contentPadding: AppStyle.edgeInsetsH4,
+              title: Text("铺满"),
+              visualDensity: VisualDensity.compact,
+            ),
+            const RadioListTile(
+              value: 3,
+              contentPadding: AppStyle.edgeInsetsH4,
+              title: Text("16:9"),
+              visualDensity: VisualDensity.compact,
+            ),
+            const RadioListTile(
+              value: 4,
+              contentPadding: AppStyle.edgeInsetsH4,
+              title: Text("4:3"),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -907,7 +903,12 @@ class PlayerSuperChatCard extends StatefulWidget {
   final LiveSuperChatMessage message;
   final VoidCallback onExpire;
   final int duration;
-  const PlayerSuperChatCard({required this.message, required this.onExpire, required this.duration, Key? key}) : super(key: key);
+  const PlayerSuperChatCard(
+      {required this.message,
+      required this.onExpire,
+      required this.duration,
+      Key? key})
+      : super(key: key);
   @override
   State<PlayerSuperChatCard> createState() => _PlayerSuperChatCardState();
 }
@@ -930,11 +931,13 @@ class _PlayerSuperChatCardState extends State<PlayerSuperChatCard> {
       });
     });
   }
+
   @override
   void dispose() {
     timer.cancel();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
@@ -957,7 +960,8 @@ class LocalDisplaySC {
 
 class PlayerSuperChatOverlay extends StatefulWidget {
   final LiveRoomController controller;
-  const PlayerSuperChatOverlay({required this.controller, Key? key}) : super(key: key);
+  const PlayerSuperChatOverlay({required this.controller, Key? key})
+      : super(key: key);
   @override
   State<PlayerSuperChatOverlay> createState() => _PlayerSuperChatOverlayState();
 }
@@ -994,7 +998,8 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
       }
     }
     // 监听SC列表变化
-    _worker = ever<List<LiveSuperChatMessage>>(widget.controller.superChats, (list) {
+    _worker =
+        ever<List<LiveSuperChatMessage>>(widget.controller.superChats, (list) {
       // 新增
       for (var sc in list) {
         if (!_displayed.any((e) => e.sc == sc)) {
@@ -1018,7 +1023,8 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = _displayed.toList()..sort((a, b) => a.sc.endTime.compareTo(b.sc.endTime));
+    final sorted = _displayed.toList()
+      ..sort((a, b) => a.sc.endTime.compareTo(b.sc.endTime));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

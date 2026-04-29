@@ -24,6 +24,7 @@ import 'package:simple_live_app/modules/other/debug_log_page.dart';
 import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
+import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
@@ -131,6 +132,8 @@ Future initServices() async {
 
   Get.put(BiliBiliAccountService());
 
+  Get.put(DouyinAccountService());
+
   Get.put(SyncService());
 
   Get.put(FollowService());
@@ -205,15 +208,34 @@ class MyApp extends StatelessWidget {
           Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
           Log.writeLog(text, (isError ?? false) ? Level.error : Level.info);
         },
+        // 升级后Android页面过渡动画似乎有BUG
+        defaultTransition: Platform.isAndroid ? Transition.cupertino : null,
         //debugShowCheckedModeBanner: false,
         navigatorObservers: [FlutterSmartDialog.observer],
         builder: FlutterSmartDialog.init(
           loadingBuilder: ((msg) => const AppLoaddingWidget()),
           //字体大小不跟随系统变化
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: const TextScaler.linear(1.0)),
-            child: Stack(
+          builder: (context, child) {
+            // Fix for HyperOS windowed-mode Flutter bug:
+            // - Values > 50 indicate the bug (windowed mode on HyperOS)
+            // - Values == 0 are valid for fullscreen/immersive mode and must NOT be treated as abnormal
+            const fallbackPadding = EdgeInsets.only(top: 25, bottom: 35);
+            const maxNormalPadding = 50.0;
+
+            final mediaQueryData = MediaQuery.of(context);
+            final hasAbnormalPadding = mediaQueryData.viewPadding.top > maxNormalPadding;
+
+            final fixedMediaQueryData = hasAbnormalPadding
+                ? mediaQueryData.copyWith(
+                    viewPadding: fallbackPadding,
+                    padding: fallbackPadding,
+                    textScaler: const TextScaler.linear(1.0),
+                  )
+                : mediaQueryData.copyWith(textScaler: const TextScaler.linear(1.0));
+
+            return MediaQuery(
+              data: fixedMediaQueryData,
+              child: Stack(
               children: [
                 //侧键返回
                 RawGestureDetector(
@@ -278,7 +300,8 @@ class MyApp extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+            );
+          },
         ),
       );
     }));

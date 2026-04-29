@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      #签出代码 
+      #签出代码
       - uses: actions/checkout@v4
         with:
           ref: master
@@ -28,20 +28,20 @@ jobs:
           echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
-     
+
       #设置JAVA环境
       - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: "zulu"
           java-version: "17"
-          cache: 'gradle'
-      
+          cache: "gradle"
+
       #设置Flutter
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
-          cache: true 
+          flutter-version: "3.38.x"
+          cache: true
 
       # 打开MAC Desktop支持
       - name: Enable Flutter Desktop
@@ -66,7 +66,7 @@ jobs:
         run: |
           cd simple_live_app
           flutter build apk --release --split-per-abi
-      
+
       #上传APK至Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
@@ -82,7 +82,7 @@ jobs:
         run: |
           cd simple_live_app
           flutter build ios --release --no-codesign
-      
+
       #创建未签名ipa
       - name: Create IPA
         run: |
@@ -92,7 +92,7 @@ jobs:
           cd build/ios/iphoneos/
           zip -q -r ios_no_sign.ipa Payload
           cd ../../..
-      
+
       #上传IPA至Artifacts
       - name: Upload IPA to Artifacts
         uses: actions/upload-artifact@v4
@@ -100,7 +100,7 @@ jobs:
           name: ios
           path: |
             simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
-      
+
       # 打包MAC
       - name: Build MacOS
         run: |
@@ -116,24 +116,20 @@ jobs:
             simple_live_app/build/dist/*/*.dmg
             simple_live_app/build/dist/*/*.zip
 
-      #读取版本信息
-      - name: Read version
+      #获取版本信息（自动从 Git Tag 提取）
+      - name: Get version from tag
         id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+        run: echo "${{ steps.version.outputs.VERSION }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
@@ -159,13 +155,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.38.x"
           cache: true
       # 安装依赖
       - name: Update apt-get
         run: sudo apt-get update
       - name: Install Dependencies
-        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev mpv
+        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libmpv-dev mpv
       # 打开Linux Desktop支持
       - name: Enable Flutter Desktop
         run: flutter config --enable-linux-desktop
@@ -191,24 +187,20 @@ jobs:
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
 
-      # 读取版本信息
-      - name: Read version
+      #获取版本信息（自动从 Git Tag 提取）
+      - name: Get version from tag
         id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+        run: echo "${{ steps.version.outputs.VERSION }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.deb
@@ -230,7 +222,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.38.x"
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop
@@ -256,24 +248,21 @@ jobs:
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
-      # 读取版本信息
-      - name: Read version
+      #获取版本信息（自动从 Git Tag 提取）
+      - name: Get version from tag
         id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/app_version.json
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+        run: echo "${{ steps.version.outputs.VERSION }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+          name: "${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.msix

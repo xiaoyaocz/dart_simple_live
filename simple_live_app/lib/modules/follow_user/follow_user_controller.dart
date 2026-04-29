@@ -131,7 +131,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     filterData();
   }
 
-  void removeTag(FollowUserTag tag) {
+  Future<void> removeTag(FollowUserTag tag) async {
     // 将tag下的所有follow设置为全部
     for(var i in tag.userId){
       var follow = DBService.instance.followBox.get(i);
@@ -140,7 +140,7 @@ class FollowUserController extends BasePageController<FollowUser> {
         updateItem(follow);
       }
     }
-    FollowService.instance.delFollowUserTag(tag);
+    await FollowService.instance.delFollowUserTag(tag);
     updateTagList();
     Log.i('删除tag${tag.tag}');
   }
@@ -158,19 +158,27 @@ class FollowUserController extends BasePageController<FollowUser> {
     FollowService.instance.updateFollowUserTag(followUserTag);
   }
 
-  void updateTagName(FollowUserTag followUserTag, String tag) {
+  void updateTagName(FollowUserTag followUserTag, String newTagName) {
     // 未操作
-    if (followUserTag.tag == tag) {
+    if (followUserTag.tag == newTagName) {
       return;
     }
     // 避免重名
-    if (tagList.any((item) => item.tag == tag)) {
+    if (tagList.any((item) => item.tag == newTagName)) {
       SmartDialog.showToast("标签名重复，修改失败");
       return;
     }
-    final FollowUserTag item = followUserTag.copyWith(tag: tag);
-    updateTag(item);
-    SmartDialog.showToast("修改成功");
+    final FollowUserTag newTag = followUserTag.copyWith(tag: newTagName);
+    updateTag(newTag);
+    // update item's tag when update tagName
+    for(var i in newTag.userId){
+      var follow = DBService.instance.followBox.get(i);
+      if(follow != null){
+        follow.tag = newTagName;
+        updateItem(follow);
+      }
+    }
+    SmartDialog.showToast("标签名修改成功");
     updateTagList();
   }
 

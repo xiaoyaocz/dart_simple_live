@@ -126,20 +126,19 @@ class Utils {
     String title = '',
   }) async {
     var result = await Get.dialog(
-      SimpleDialog(
+      AlertDialog(
         title: Text(title),
-        children: contents
-            .map(
-              (e) => RadioListTile<T>(
-                title: Text(e.toString()),
-                value: e,
-                groupValue: value,
-                onChanged: (e) {
-                  Get.back(result: e);
-                },
-              ),
-            )
-            .toList(),
+        content: RadioGroup(
+          onChanged: (e) => Get.back(result: e),
+          groupValue: value,
+          child: Column(
+            children: contents
+                .map(
+                  (e) => RadioListTile<T>(title: Text(e.toString()), value: e),
+                )
+                .toList(),
+          ),
+        ),
       ),
     );
     return result;
@@ -151,20 +150,22 @@ class Utils {
     String title = '',
   }) async {
     var result = await Get.dialog(
-      SimpleDialog(
+      AlertDialog(
         title: Text(title),
-        children: contents.keys
-            .map(
-              (e) => RadioListTile<T>(
-                title: Text((contents[e] ?? '-').tr),
-                value: e,
-                groupValue: value,
-                onChanged: (e) {
-                  Get.back(result: e);
-                },
-              ),
-            )
-            .toList(),
+        content: RadioGroup(
+          onChanged: (e) => Get.back(result: e),
+          groupValue: value,
+          child: Column(
+            children: contents.keys
+                .map(
+                  (e) => RadioListTile<T>(
+                    title: Text((contents[e] ?? '-').tr),
+                    value: e,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
       ),
     );
     return result;
@@ -211,12 +212,12 @@ class Utils {
     );
   }
 
-  static void showSystemRightDialog({
+  static Future<void> showSystemRightDialog({
     Function()? onDismiss,
     required Widget child,
     double width = 320,
   }) {
-    Get.dialog(
+    return Get.dialog(
       Dialog(
         insetPadding: EdgeInsets.zero,
         backgroundColor: Colors.transparent,

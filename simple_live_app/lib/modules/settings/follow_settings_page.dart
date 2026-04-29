@@ -5,8 +5,8 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
-import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
+import 'dart:io';
 
 class FollowSettingsPage extends GetView<AppSettingsController> {
   const FollowSettingsPage({super.key});
@@ -54,16 +54,21 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
                 ),
                 AppStyle.divider,
                 Obx(
-                  () => SettingsNumber(
-                    value: controller.updateFollowThreadCount.value,
-                    title: "更新线程数",
-                    subtitle: "多线程可以能更快的完成加载，但可能会因为请求太频繁导致读取状态失败",
-                    min: 1,
-                    max: 12,
-                    onChanged: (e) {
-                      controller.setUpdateFollowThreadCount(e);
-                    },
-                  ),
+                  () {
+                    var threadCount = controller.updateFollowThreadCount.value;
+                    var displayValue = threadCount == 0
+                        ? "自动 (根据 CPU 核心数)"
+                        : "$threadCount";
+
+                    return SettingsAction(
+                      title: "更新并发数",
+                      subtitle: "0 = 自动根据 CPU 核心数优化（推荐），或手动设置 1-20",
+                      value: displayValue,
+                      onTap: () {
+                        showConcurrencyDialog();
+                      },
+                    );
+                  },
                 ),
               ],
             ),
@@ -96,5 +101,87 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
     var duration = Duration(hours: value.hour, minutes: value.minute);
     controller.setAutoUpdateFollowDuration(duration.inMinutes);
     FollowService.instance.initTimer();
+  }
+
+  void showConcurrencyDialog() {
+    var currentValue = controller.updateFollowThreadCount.value;
+    var cpuCount = Platform.numberOfProcessors;
+    var autoValue = (cpuCount * 2.5).round().clamp(4, 20);
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text("设置更新并发数"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "CPU 核心数: $cpuCount",
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            Text(
+              "自动推荐值: $autoValue",
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "选择并发数：",
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            // 快捷选项
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildQuickOption(0, "自动 ($autoValue)", currentValue),
+                _buildQuickOption(4, "4", currentValue),
+                _buildQuickOption(8, "8", currentValue),
+                _buildQuickOption(12, "12", currentValue),
+                _buildQuickOption(16, "16", currentValue),
+                _buildQuickOption(20, "20", currentValue),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 自定义输入
+            TextField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "自定义 (1-20)",
+                border: OutlineInputBorder(),
+                hintText: "输入 1-20 之间的数字",
+              ),
+              onSubmitted: (value) {
+                var num = int.tryParse(value);
+                if (num != null && num >= 0 && num <= 20) {
+                  controller.setUpdateFollowThreadCount(num);
+                  Get.back();
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("取消"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickOption(int value, String label, int currentValue) {
+    var isSelected = currentValue == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          controller.setUpdateFollowThreadCount(value);
+          Get.back();
+        }
+      },
+    );
   }
 }

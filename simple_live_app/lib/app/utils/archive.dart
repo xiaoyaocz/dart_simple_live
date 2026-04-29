@@ -22,8 +22,9 @@ extension ArchiveExt on Archive {
   add<T>(String name, T raw) {
     final data = json.encode(raw);
     addFile(
-      // 这样会出现问题 不清楚原因
-      ArchiveFile(name, data.length, data),
-    );
+        // 这样会出现问题 不清楚原因
+        ArchiveFile.string(name, data)
+        //ArchiveFile(name, data.length, data),
+        );
   }
 }

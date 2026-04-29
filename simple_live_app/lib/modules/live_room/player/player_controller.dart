@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:ns_danmaku/ns_danmaku.dart';
+import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -35,8 +35,10 @@ mixin PlayerMixin {
           : MPVLogLevel.error,
     ),
   );
+
   /// 初始化播放器并设置 ao 参数
   Future<void> initializePlayer() async {
+    var pp = player.platform as NativePlayer;
     // 设置音频输出驱动
     if (AppSettingsController.instance.customPlayerOutput.value) {
       if (player.platform is NativePlayer) {
@@ -45,6 +47,10 @@ mixin PlayerMixin {
           AppSettingsController.instance.audioOutputDriver.value,
         );
       }
+    }
+    // media_kit 仓库更新导致的问题，临时解决办法
+    if(Platform.isAndroid){
+      await pp.setProperty('force-seekable', 'yes');
     }
   }
 
@@ -186,17 +192,17 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 
   void initDanmakuController(DanmakuController e) {
     danmakuController = e;
-    danmakuController?.updateOption(
-      DanmakuOption(
-        fontSize: AppSettingsController.instance.danmuSize.value,
-        area: AppSettingsController.instance.danmuArea.value,
-        duration: AppSettingsController.instance.danmuSpeed.value,
-        opacity: AppSettingsController.instance.danmuOpacity.value,
-        strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
-        fontWeight: FontWeight
-            .values[AppSettingsController.instance.danmuFontWeight.value],
-      ),
-    );
+    // danmakuController?.updateOption(
+    //   DanmakuOption(
+    //     fontSize: AppSettingsController.instance.danmuSize.value,
+    //     area: AppSettingsController.instance.danmuArea.value,
+    //     duration: AppSettingsController.instance.danmuSpeed.value,
+    //     opacity: AppSettingsController.instance.danmuOpacity.value,
+    //     strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
+    //     fontWeight: FontWeight
+    //         .values[AppSettingsController.instance.danmuFontWeight.value],
+    //   ),
+    // );
   }
 
   void updateDanmuOption(DanmakuOption? option) {
@@ -208,11 +214,13 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
     danmakuController?.clear();
   }
 
-  void addDanmaku(List<DanmakuItem> items) {
+  void addDanmaku(List<DanmakuContentItem> items) {
     if (!showDanmakuState.value) {
       return;
     }
-    danmakuController?.addItems(items);
+    for (var item in items) {
+      danmakuController?.addDanmaku(item);
+    }
   }
 }
 mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
@@ -221,12 +229,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   final pip = Floating();
   StreamSubscription<PiPStatus>? _pipSubscription;
 
-  final VolumeController volumeController = VolumeController();
+  //final VolumeController volumeController = VolumeController();
 
   /// 初始化一些系统状态
   void initSystem() async {
     if (Platform.isAndroid || Platform.isIOS) {
-      volumeController.showSystemUI = false;
+      VolumeController.instance.showSystemUI = false;
     }
 
     // 屏幕常亮
@@ -389,7 +397,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       }
 
       if (Platform.isIOS || Platform.isAndroid) {
-        await ImageGallerySaver.saveImage(
+        await ImageGallerySaverPlus.saveImage(
           imageData,
         );
         SmartDialog.showToast("已保存截图至相册");
@@ -539,7 +547,7 @@ mixin PlayerGestureControlMixin
       showGestureTip.value = true;
     }
     if (Platform.isAndroid || Platform.isIOS) {
-      _currentVolume = await volumeController.getVolume();
+      _currentVolume = await VolumeController.instance.getVolume();
     }
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       _currentBrightness = await ScreenBrightness.instance.application;
@@ -603,7 +611,7 @@ mixin PlayerGestureControlMixin
 
   Future _realSetVolume(int volume) async {
     Log.logPrint(volume);
-    volumeController.setVolume(volume / 100);
+    VolumeController.instance.setVolume(volume / 100);
   }
 
   void setGestureBrightness(double dy) {

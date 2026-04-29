@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:canvas_danmaku/models/danmaku_content_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:ns_danmaku/models/danmaku_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_tv_app/app/constant.dart';
 import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
@@ -128,14 +128,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
 
       addDanmaku([
-        DanmakuItem(
+        DanmakuContentItem(
           msg.message,
-          color: Color.fromARGB(
-            255,
-            msg.color.r,
-            msg.color.g,
-            msg.color.b,
-          ),
+          color: Color.fromARGB(255, msg.color.r, msg.color.g, msg.color.b),
         ),
       ]);
     } else if (msg.type == LiveMessageType.online) {
@@ -235,7 +230,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void setPlayer() async {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
-
+    // 初始化播放器并设置 ao 参数
+    await initializePlayer();
     player.open(
       Media(
         playUrls[currentLineIndex],

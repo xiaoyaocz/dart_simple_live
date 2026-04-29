@@ -7,7 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:ns_danmaku/ns_danmaku.dart';
+import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/constant.dart';
@@ -238,7 +238,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
 
       addDanmaku([
-        DanmakuItem(
+        DanmakuContentItem(
           msg.message,
           color: Color.fromARGB(
             255,
@@ -317,6 +317,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       getSuperChatMessage();
 
       addHistory();
+      // 确认房间关注状态
+      followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status || detail.value!.isRecord;
       if (liveStatus.value) {
@@ -404,7 +406,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     //重置错误次数
     mediaErrorRetryCount = 0;
-    setPlayer();
+    initPlaylist();
   }
 
   void changePlayLine(int index) {
@@ -414,25 +416,29 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     setPlayer();
   }
 
-  void setPlayer() async {
+  void initPlaylist() async {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
 
-    var playurl = playUrls[currentLineIndex];
-    if (AppSettingsController.instance.playerForceHttps.value) {
-      playurl = playurl.replaceAll("http://", "https://");
-    }
+    final mediaList = playUrls.map((url) {
+      var finalUrl = url;
+      if (AppSettingsController.instance.playerForceHttps.value) {
+        finalUrl = finalUrl.replaceAll("http://", "https://");
+      }
+      return Media(finalUrl, httpHeaders: playHeaders);
+    }).toList();
 
     // 初始化播放器并设置 ao 参数
     await initializePlayer();
 
-    await player.open(
-      Media(
-        playurl,
-        httpHeaders: playHeaders,
-      ),
-    );
-    Log.d("播放链接\r\n：$playurl");
+    await player.open(Playlist(mediaList));
+  }
+
+  void setPlayer() async {
+    currentLineInfo.value = "线路${currentLineIndex + 1}";
+    errorMsg.value = "";
+
+    await player.jump(currentLineIndex);
   }
 
   @override
@@ -568,7 +574,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (detail.value == null) {
       return;
     }
-    Share.share(detail.value!.url);
+    SharePlus.instance.share(ShareParams(uri: Uri.parse(detail.value!.url)));
   }
 
   void copyUrl() {
@@ -649,21 +655,23 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void showQualitySheet() {
     Utils.showBottomSheet(
       title: "切换清晰度",
-      child: ListView.builder(
-        itemCount: qualites.length,
-        itemBuilder: (_, i) {
-          var item = qualites[i];
-          return RadioListTile(
-            value: i,
-            groupValue: currentQuality,
-            title: Text(item.quality),
-            onChanged: (e) {
-              Get.back();
-              currentQuality = i;
-              getPlayUrl();
-            },
-          );
+      child: RadioGroup(
+        groupValue: currentQuality,
+        onChanged: (e) {
+          Get.back();
+          currentQuality = e ?? 0;
+          getPlayUrl();
         },
+        child: ListView.builder(
+          itemCount: qualites.length,
+          itemBuilder: (_, i) {
+            var item = qualites[i];
+            return RadioListTile(
+              value: i,
+              title: Text(item.quality),
+            );
+          },
+        ),
       ),
     );
   }
@@ -671,24 +679,26 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void showPlayUrlsSheet() {
     Utils.showBottomSheet(
       title: "切换线路",
-      child: ListView.builder(
-        itemCount: playUrls.length,
-        itemBuilder: (_, i) {
-          return RadioListTile(
-            value: i,
-            groupValue: currentLineIndex,
-            title: Text("线路${i + 1}"),
-            secondary: Text(
-              playUrls[i].contains(".flv") ? "FLV" : "HLS",
-            ),
-            onChanged: (e) {
-              Get.back();
-              //currentLineIndex = i;
-              //setPlayer();
-              changePlayLine(i);
-            },
-          );
+      child: RadioGroup(
+        groupValue: currentLineIndex,
+        onChanged: (e) {
+          Get.back();
+          //currentLineIndex = i;
+          //setPlayer();
+          changePlayLine(e ?? 0);
         },
+        child: ListView.builder(
+          itemCount: playUrls.length,
+          itemBuilder: (_, i) {
+            return RadioListTile(
+              value: i,
+              title: Text("线路${i + 1}"),
+              secondary: Text(
+                playUrls[i].contains(".flv") ? "FLV" : "HLS",
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -697,60 +707,42 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     Utils.showBottomSheet(
       title: "画面尺寸",
       child: Obx(
-        () => ListView(
-          padding: AppStyle.edgeInsetsV12,
-          children: [
-            RadioListTile(
-              value: 0,
-              title: const Text("适应"),
-              visualDensity: VisualDensity.compact,
-              groupValue: AppSettingsController.instance.scaleMode.value,
-              onChanged: (e) {
-                AppSettingsController.instance.setScaleMode(e ?? 0);
-                updateScaleMode();
-              },
-            ),
-            RadioListTile(
-              value: 1,
-              title: const Text("拉伸"),
-              visualDensity: VisualDensity.compact,
-              groupValue: AppSettingsController.instance.scaleMode.value,
-              onChanged: (e) {
-                AppSettingsController.instance.setScaleMode(e ?? 1);
-                updateScaleMode();
-              },
-            ),
-            RadioListTile(
-              value: 2,
-              title: const Text("铺满"),
-              visualDensity: VisualDensity.compact,
-              groupValue: AppSettingsController.instance.scaleMode.value,
-              onChanged: (e) {
-                AppSettingsController.instance.setScaleMode(e ?? 2);
-                updateScaleMode();
-              },
-            ),
-            RadioListTile(
-              value: 3,
-              title: const Text("16:9"),
-              visualDensity: VisualDensity.compact,
-              groupValue: AppSettingsController.instance.scaleMode.value,
-              onChanged: (e) {
-                AppSettingsController.instance.setScaleMode(e ?? 3);
-                updateScaleMode();
-              },
-            ),
-            RadioListTile(
-              value: 4,
-              title: const Text("4:3"),
-              visualDensity: VisualDensity.compact,
-              groupValue: AppSettingsController.instance.scaleMode.value,
-              onChanged: (e) {
-                AppSettingsController.instance.setScaleMode(e ?? 4);
-                updateScaleMode();
-              },
-            ),
-          ],
+        () => RadioGroup(
+          groupValue: AppSettingsController.instance.scaleMode.value,
+          onChanged: (e) {
+            AppSettingsController.instance.setScaleMode(e ?? 0);
+            updateScaleMode();
+          },
+          child: ListView(
+            padding: AppStyle.edgeInsetsV12,
+            children: const [
+              RadioListTile(
+                value: 0,
+                title: Text("适应"),
+                visualDensity: VisualDensity.compact,
+              ),
+              RadioListTile(
+                value: 1,
+                title: Text("拉伸"),
+                visualDensity: VisualDensity.compact,
+              ),
+              RadioListTile(
+                value: 2,
+                title: Text("铺满"),
+                visualDensity: VisualDensity.compact,
+              ),
+              RadioListTile(
+                value: 3,
+                title: Text("16:9"),
+                visualDensity: VisualDensity.compact,
+              ),
+              RadioListTile(
+                value: 4,
+                title: Text("4:3"),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
         ),
       ),
     );

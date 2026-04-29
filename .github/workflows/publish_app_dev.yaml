@@ -3,8 +3,8 @@ name: app-build-action-dev
 on:
   workflow_dispatch:
   push:
-    branches:
-      - 'dev'
+    tags:
+      - "dev_v*"
 
 jobs:
   # 打包Android、iOS、Mac
@@ -37,7 +37,7 @@ jobs:
       # 设置JAVA环境
       - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: "zulu"
           java-version: "17"
           cache: "gradle"
 
@@ -45,8 +45,8 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
-          cache: true 
+          flutter-version: "3.38.x"
+          cache: true
 
       # 打开MAC Desktop支持
       - name: Enable Flutter Desktop
@@ -82,35 +82,6 @@ jobs:
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
 
-      # TV APK签名设置
-      - name: Download Android TV keystore
-        id: android_tv_keystore
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: keystore_tv.jks
-          encodedString: ${{ secrets.TV_KEYSTORE_BASE64 }}
-      - name: Create key.properties
-        run: |
-          echo "storeFile=${{ steps.android_tv_keystore.outputs.filePath }}" > simple_live_tv_app/android/key.properties
-          echo "storePassword=${{ secrets.TV_STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyAlias=${{ secrets.TV_KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
-
-      #打包 Android TV APK
-      - name: Build TV APK
-        run: |
-          cd simple_live_tv_app
-          flutter build apk --release --split-per-abi
-      #上传TV APK至Artifacts
-      - name: Upload TV APK to Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android_tv
-          path: |
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-
       #打包iOS
       - name: Build IPA
         run: |
@@ -140,7 +111,7 @@ jobs:
         run: |
           cd simple_live_app
           flutter_distributor package --platform macos --targets dmg,zip --skip-clean
-      
+
       # 上传MAC至Artifacts
       - name: Upload MacOS to Artifacts
         uses: actions/upload-artifact@v4
@@ -166,13 +137,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.38.x"
           cache: true
       # 安装依赖
       - name: Update apt-get
         run: sudo apt-get update
       - name: Install Dependencies
-        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev mpv
+        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libmpv-dev mpv
       # 打开Linux Desktop支持
       - name: Enable Flutter Desktop
         run: flutter config --enable-linux-desktop
@@ -215,7 +186,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.38.x"
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop

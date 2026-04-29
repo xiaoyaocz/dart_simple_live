@@ -105,6 +105,9 @@ class LocalStorageService extends GetxService {
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
 
+  /// 显示SC
+  static const String kPlayerShowSuperChat = "PlayerShowSuperChat";
+
   /// 播放器音量
   static const String kPlayerVolume = "PlayerVolume";
 
@@ -113,6 +116,9 @@ class LocalStorageService extends GetxService {
 
   /// 哔哩哔哩cookie
   static const String kBilibiliCookie = "BilibiliCookie";
+
+  /// 抖音cookie
+  static const String kDouyinCookie = "DouyinCookie";
 
   ///主题色
   static const String kStyleColor = "kStyleColor";

@@ -1,0 +1,56 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "dev_v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.x"
+          cache: true
+
+      - run: flutter config --enable-macos-desktop
+
+      - name: Install dependencies
+        working-directory: simple_live_app
+        run: flutter pub get
+
+      - name: Install flutter_distributor
+        run: |
+          npm install -g appdmg
+          dart pub global activate flutter_distributor
+
+      - name: Build macOS
+        working-directory: simple_live_app
+        run: flutter_distributor package --platform macos --targets dmg,zip --skip-clean
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            simple_live_app/build/dist/**/*.dmg
+            simple_live_app/build/dist/**/*.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.ref_name }}
+          files: |
+            simple_live_app/build/dist/**/*.dmg
+            simple_live_app/build/dist/**/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -27,8 +27,10 @@ import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:window_manager/window_manager.dart';
 
-class LiveRoomController extends PlayerController with WidgetsBindingObserver {
+class LiveRoomController extends PlayerController
+    with WidgetsBindingObserver, WindowListener {
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
@@ -106,10 +108,20 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   // 开播时长状态变量
   var liveDuration = "00:00:00".obs;
   Timer? _liveDurationTimer;
+  StreamSubscription<Duration>? _positionSubscription;
+  Duration _lastKnownPlayerPosition = Duration.zero;
+  Duration? _positionBeforeBackground;
+  DateTime? _backgroundedAt;
+  Duration? _positionBeforeWindowBlur;
+  DateTime? _windowBlurredAt;
+  bool _playerReopening = false;
 
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
+    if (Platform.isWindows) {
+      windowManager.addListener(this);
+    }
     if (FollowService.instance.followList.isEmpty) {
       FollowService.instance.loadData();
     }
@@ -121,6 +133,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     scrollController.addListener(scrollListener);
 
     super.onInit();
+    _positionSubscription = player.stream.position.listen((event) {
+      _lastKnownPlayerPosition = event;
+    });
   }
 
   void scrollListener() {
@@ -389,56 +404,91 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     return qualityLevel;
   }
 
-  void getPlayUrl() async {
-    playUrls.clear();
+  Future<bool> _reloadPlayUrls(
+      {bool resetLine = false, bool silent = false}) async {
+    if (detail.value == null ||
+        currentQuality < 0 ||
+        currentQuality >= qualites.length) {
+      return false;
+    }
     currentQualityInfo.value = qualites[currentQuality].quality;
-    currentLineInfo.value = "";
-    currentLineIndex = -1;
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.urls.isEmpty) {
-      SmartDialog.showToast("无法读取播放地址");
-      return;
+      if (!silent) {
+        SmartDialog.showToast("无法读取播放地址");
+      }
+      return false;
     }
     playUrls.value = playUrl.urls;
     playHeaders = playUrl.headers;
-    currentLineIndex = 0;
+    if (resetLine || currentLineIndex < 0) {
+      currentLineIndex = 0;
+    } else if (currentLineIndex >= playUrls.length) {
+      currentLineIndex = playUrls.length - 1;
+    }
     currentLineInfo.value = "线路${currentLineIndex + 1}";
-    //重置错误次数
-    mediaErrorRetryCount = 0;
-    initPlaylist();
+    return true;
   }
 
-  void changePlayLine(int index) {
+  Future<void> getPlayUrl() async {
+    playUrls.clear();
+    currentLineInfo.value = "";
+    currentLineIndex = -1;
+    if (!await _reloadPlayUrls(resetLine: true)) {
+      return;
+    }
+    //重置错误次数
+    mediaErrorRetryCount = 0;
+    await initPlaylist();
+  }
+
+  Future<void> changePlayLine(int index) async {
     currentLineIndex = index;
     //重置错误次数
     mediaErrorRetryCount = 0;
-    setPlayer();
+    await setPlayer();
   }
 
-  void initPlaylist() async {
-    currentLineInfo.value = "线路${currentLineIndex + 1}";
-    errorMsg.value = "";
+  Future<void> initPlaylist() async {
+    if (_playerReopening ||
+        currentLineIndex < 0 ||
+        currentLineIndex >= playUrls.length) {
+      return;
+    }
+    _playerReopening = true;
+    try {
+      currentLineInfo.value = "线路${currentLineIndex + 1}";
+      errorMsg.value = "";
 
-    final mediaList = playUrls.map((url) {
-      var finalUrl = url;
+      var finalUrl = playUrls[currentLineIndex];
       if (AppSettingsController.instance.playerForceHttps.value) {
         finalUrl = finalUrl.replaceAll("http://", "https://");
       }
-      return Media(finalUrl, httpHeaders: playHeaders);
-    }).toList();
 
-    // 初始化播放器并设置 ao 参数
-    await initializePlayer();
+      // 初始化播放器并设置 ao 参数
+      await initializePlayer();
 
-    await player.open(Playlist(mediaList));
+      await player.open(
+        Media(
+          finalUrl,
+          httpHeaders: playHeaders,
+        ),
+      );
+      Log.d("播放链接\r\n：$finalUrl");
+    } finally {
+      _playerReopening = false;
+    }
   }
 
-  void setPlayer() async {
-    currentLineInfo.value = "线路${currentLineIndex + 1}";
-    errorMsg.value = "";
-
-    await player.jump(currentLineIndex);
+  Future<void> setPlayer({bool refreshUrls = false}) async {
+    if (refreshUrls) {
+      var reloaded = await _reloadPlayUrls(silent: true);
+      if (!reloaded) {
+        return;
+      }
+    }
+    await initPlaylist();
   }
 
   @override
@@ -452,16 +502,22 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
       mediaErrorRetryCount += 1;
       //刷新一次
-      setPlayer();
+      await setPlayer(refreshUrls: site.id == Constant.kHuya);
       return;
     }
 
     Log.d("播放结束");
     // 遍历线路，如果全部链接都断开就是直播结束了
     if (playUrls.length - 1 == currentLineIndex) {
+      if (site.id == Constant.kHuya) {
+        currentLineIndex = 0;
+        mediaErrorRetryCount = 0;
+        await setPlayer(refreshUrls: true);
+        return;
+      }
       liveStatus.value = false;
     } else {
-      changePlayLine(currentLineIndex + 1);
+      await changePlayLine(currentLineIndex + 1);
 
       //setPlayer();
     }
@@ -470,7 +526,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   int mediaErrorRetryCount = 0;
   @override
   void mediaError(String error) async {
-    super.mediaEnd();
+    super.mediaError(error);
     if (mediaErrorRetryCount < 2) {
       Log.d("播放失败，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {
@@ -479,17 +535,23 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
       mediaErrorRetryCount += 1;
       //刷新一次
-      setPlayer();
+      await setPlayer(refreshUrls: site.id == Constant.kHuya);
       return;
     }
 
     if (playUrls.length - 1 == currentLineIndex) {
+      if (site.id == Constant.kHuya) {
+        currentLineIndex = 0;
+        mediaErrorRetryCount = 0;
+        await setPlayer(refreshUrls: true);
+        return;
+      }
       errorMsg.value = "播放失败";
       SmartDialog.showToast("播放失败:$error");
     } else {
       //currentLineIndex += 1;
       //setPlayer();
-      changePlayLine(currentLineIndex + 1);
+      await changePlayLine(currentLineIndex + 1);
     }
   }
 
@@ -1007,17 +1069,78 @@ ${error?.stackTrace}''');
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.paused) {
-      Log.d("进入后台");
-      //进入后台，关闭弹幕
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      Log.d("进入后台:$state");
       danmakuController?.clear();
       isBackground = true;
-    } else
-    //返回前台
-    if (state == AppLifecycleState.resumed) {
+      _backgroundedAt = DateTime.now();
+      _positionBeforeBackground = _lastKnownPlayerPosition;
+    } else if (state == AppLifecycleState.resumed) {
       Log.d("返回前台");
       isBackground = false;
+      var backgroundedAt = _backgroundedAt;
+      var positionBeforeBackground = _positionBeforeBackground;
+      _backgroundedAt = null;
+      _positionBeforeBackground = null;
+      unawaited(
+        _recoverPlaybackAfterForeground(
+          "返回前台",
+          since: backgroundedAt,
+          previousPosition: positionBeforeBackground,
+        ),
+      );
     }
+  }
+
+  Future<void> _recoverPlaybackAfterForeground(
+    String reason, {
+    required DateTime? since,
+    required Duration? previousPosition,
+  }) async {
+    if (!Platform.isWindows ||
+        since == null ||
+        previousPosition == null ||
+        !liveStatus.value ||
+        currentLineIndex < 0 ||
+        playUrls.isEmpty) {
+      return;
+    }
+    if (DateTime.now().difference(since) < const Duration(seconds: 3)) {
+      return;
+    }
+    var currentPosition = _lastKnownPlayerPosition;
+    var stalled = currentPosition <= previousPosition ||
+        player.state.buffering ||
+        player.state.completed ||
+        !player.state.playing;
+    if (!stalled) {
+      return;
+    }
+    Log.d("$reason后检测到播放停滞，尝试恢复");
+    await setPlayer(refreshUrls: site.id == Constant.kHuya);
+  }
+
+  @override
+  void onWindowBlur() {
+    _windowBlurredAt = DateTime.now();
+    _positionBeforeWindowBlur = _lastKnownPlayerPosition;
+  }
+
+  @override
+  void onWindowFocus() {
+    var windowBlurredAt = _windowBlurredAt;
+    var positionBeforeWindowBlur = _positionBeforeWindowBlur;
+    _windowBlurredAt = null;
+    _positionBeforeWindowBlur = null;
+    unawaited(
+      _recoverPlaybackAfterForeground(
+        "窗口重新聚焦",
+        since: windowBlurredAt,
+        previousPosition: positionBeforeWindowBlur,
+      ),
+    );
   }
 
   // 用于启动开播时长计算和更新的函数
@@ -1054,8 +1177,12 @@ ${error?.stackTrace}''');
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isWindows) {
+      windowManager.removeListener(this);
+    }
     scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
+    _positionSubscription?.cancel();
 
     liveDanmaku.stop();
     danmakuController = null;

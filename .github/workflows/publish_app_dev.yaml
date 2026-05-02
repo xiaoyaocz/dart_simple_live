@@ -31,12 +31,7 @@ jobs:
         run: |
           if [[ -n "$KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" && -n "$KEY_ALIAS" ]]; then
             printf '%s' "$KEYSTORE_BASE64" | openssl base64 -d -A > simple_live_app/android/release-keystore.jks
-            cat > simple_live_app/android/key.properties <<EOF
-            storeFile=../release-keystore.jks
-            storePassword=$STORE_PASSWORD
-            keyPassword=$KEY_PASSWORD
-            keyAlias=$KEY_ALIAS
-            EOF
+            printf 'storeFile=../release-keystore.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=%s\n' "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > simple_live_app/android/key.properties
           fi
 
       # 设置JAVA环境

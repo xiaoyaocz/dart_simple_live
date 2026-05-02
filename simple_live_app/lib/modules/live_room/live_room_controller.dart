@@ -115,6 +115,9 @@ class LiveRoomController extends PlayerController
   Duration? _positionBeforeWindowBlur;
   DateTime? _windowBlurredAt;
   bool _playerReopening = false;
+  final Set<String> _superChatFingerprints = <String>{};
+  final Set<Timer> _pendingDanmakuTimers = <Timer>{};
+  Timer? _superChatRefreshTimer;
 
   @override
   void onInit() {
@@ -143,6 +146,124 @@ class LiveRoomController extends PlayerController
         ScrollDirection.forward) {
       disableAutoScroll.value = true;
     }
+  }
+
+  bool _isKeywordShielded(LiveMessage msg) {
+    for (var keyword in AppSettingsController.instance.shieldList) {
+      Pattern? pattern;
+      if (Utils.isRegexFormat(keyword)) {
+        String removedSlash = Utils.removeRegexFormat(keyword);
+        try {
+          pattern = RegExp(removedSlash);
+        } catch (e) {
+          Log.d("鍏抽敭璇嶏細$keyword 姝ｅ垯鏍煎紡閿欒");
+        }
+      } else {
+        pattern = keyword;
+      }
+      if (pattern != null && msg.message.contains(pattern)) {
+        Log.d("鍏抽敭璇嶏細$keyword\n宸插睆钄芥秷鎭唴瀹癸細${msg.message}");
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _cancelPendingDanmakuTimers() {
+    for (final timer in _pendingDanmakuTimers.toList()) {
+      timer.cancel();
+    }
+    _pendingDanmakuTimers.clear();
+  }
+
+  void _scheduleOverlayDanmaku(LiveMessage msg) {
+    void emit() {
+      if (!showDanmakuState.value || !liveStatus.value || isBackground) {
+        return;
+      }
+      final color = Color.fromARGB(
+        255,
+        msg.color.r,
+        msg.color.g,
+        msg.color.b,
+      );
+      rememberDanmakuReplay(
+        msg.message,
+        color,
+      );
+      addDanmaku([
+        DanmakuContentItem(
+          msg.message,
+          color: color,
+        ),
+      ]);
+    }
+
+    if (site.id != Constant.kHuya) {
+      emit();
+      return;
+    }
+
+    Timer? timer;
+    timer = Timer(const Duration(seconds: 1), () {
+      if (timer != null) {
+        _pendingDanmakuTimers.remove(timer);
+      }
+      emit();
+    });
+    _pendingDanmakuTimers.add(timer);
+  }
+
+  String _buildSuperChatFingerprint(LiveSuperChatMessage message) {
+    return [
+      message.userName,
+      message.message,
+      message.price,
+      message.startTime.millisecondsSinceEpoch,
+      message.endTime.millisecondsSinceEpoch,
+    ].join("|");
+  }
+
+  void _appendSuperChats(Iterable<LiveSuperChatMessage> items) {
+    final now = DateTime.now();
+    final added = <LiveSuperChatMessage>[];
+    for (final item in items) {
+      if (!item.endTime.isAfter(now)) {
+        continue;
+      }
+      final fingerprint = _buildSuperChatFingerprint(item);
+      if (_superChatFingerprints.add(fingerprint)) {
+        added.add(item);
+      }
+    }
+    if (added.isNotEmpty) {
+      superChats.addAll(added);
+    }
+  }
+
+  void _refreshSuperChatFingerprints() {
+    _superChatFingerprints
+      ..clear()
+      ..addAll(superChats.map(_buildSuperChatFingerprint));
+  }
+
+  void _restartSuperChatRefreshTimer() {
+    _superChatRefreshTimer?.cancel();
+    if (site.id != Constant.kHuya || !liveStatus.value) {
+      return;
+    }
+    _superChatRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      removeSuperChats();
+      getSuperChatMessage(silent: true);
+    });
+  }
+
+  void _refreshDanmakuOverlay(String reason) {
+    if (!showDanmakuState.value) {
+      return;
+    }
+    Log.d("$reason鍚庨噸寤哄脊骞曞眰");
+    rebuildDanmakuView();
   }
 
   /// 初始化自动关闭倒计时
@@ -198,6 +319,23 @@ class LiveRoomController extends PlayerController
     loadData();
   }
 
+  @override
+  void onClose() async {
+    WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isWindows) {
+      windowManager.removeListener(this);
+    }
+    scrollController.removeListener(scrollListener);
+    autoExitTimer?.cancel();
+    _superChatRefreshTimer?.cancel();
+    _cancelPendingDanmakuTimers();
+    clearDanmakuReplayHistory();
+    _liveDurationTimer?.cancel();
+    _positionSubscription?.cancel();
+    await liveDanmaku.stop();
+    super.onClose();
+  }
+
   /// 聊天栏始终滚动到底部
   void chatScrollToBottom() {
     if (scrollController.hasClients) {
@@ -221,6 +359,10 @@ class LiveRoomController extends PlayerController
     if (msg.type == LiveMessageType.chat) {
       if (messages.length > 200 && !disableAutoScroll.value) {
         messages.removeAt(0);
+      }
+      if (AppSettingsController.instance.isUserShielded(msg.userName)) {
+        Log.d("宸插睆钄界敤鎴凤細${msg.userName}");
+        return;
       }
 
       // 关键词屏蔽检查
@@ -251,22 +393,28 @@ class LiveRoomController extends PlayerController
       if (!liveStatus.value || isBackground) {
         return;
       }
-
-      addDanmaku([
-        DanmakuContentItem(
-          msg.message,
-          color: Color.fromARGB(
-            255,
-            msg.color.r,
-            msg.color.g,
-            msg.color.b,
-          ),
-        ),
-      ]);
+      _scheduleOverlayDanmaku(msg);
+      return;
     } else if (msg.type == LiveMessageType.online) {
       online.value = msg.data;
     } else if (msg.type == LiveMessageType.superChat) {
-      superChats.add(msg.data);
+      if (msg.data is! LiveSuperChatMessage) {
+        return;
+      }
+      final superChat = msg.data as LiveSuperChatMessage;
+      if (AppSettingsController.instance.isUserShielded(superChat.userName)) {
+        return;
+      }
+      if (_isKeywordShielded(LiveMessage(
+        type: LiveMessageType.superChat,
+        userName: superChat.userName,
+        message: superChat.message,
+        color: LiveMessageColor.white,
+      ))) {
+        return;
+      }
+      _appendSuperChats([superChat]);
+      return;
     }
   }
 
@@ -299,6 +447,11 @@ class LiveRoomController extends PlayerController
       loadError.value = false;
       error = null;
       update();
+      await liveDanmaku.stop();
+      liveDanmaku = site.liveSite.getDanmaku();
+      _cancelPendingDanmakuTimers();
+      clearDanmakuReplayHistory();
+      rebuildDanmakuView();
       addSysMsg("正在读取直播间信息");
       detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
 
@@ -336,6 +489,7 @@ class LiveRoomController extends PlayerController
       followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status || detail.value!.isRecord;
+      _restartSuperChatRefreshTimer();
       if (liveStatus.value) {
         getPlayQualites();
       }
@@ -556,13 +710,20 @@ class LiveRoomController extends PlayerController
   }
 
   /// 读取SC
-  void getSuperChatMessage() async {
+  void getSuperChatMessage({bool silent = false}) async {
+    if (detail.value == null) {
+      return;
+    }
     try {
       var sc =
           await site.liveSite.getSuperChatMessage(roomId: detail.value!.roomId);
-      superChats.addAll(sc);
+      _appendSuperChats(sc);
+      removeSuperChats();
     } catch (e) {
       Log.logPrint(e);
+      if (silent) {
+        return;
+      }
       addSysMsg("SC读取失败");
     }
   }
@@ -573,6 +734,7 @@ class LiveRoomController extends PlayerController
     superChats.value = superChats
         .where((x) => x.endTime.millisecondsSinceEpoch > now)
         .toList();
+    _refreshSuperChatFingerprints();
   }
 
   /// 添加历史记录
@@ -812,6 +974,7 @@ class LiveRoomController extends PlayerController
 
   void showDanmuShield() {
     TextEditingController keywordController = TextEditingController();
+    TextEditingController userController = TextEditingController();
 
     void addKeyword() {
       if (keywordController.text.isEmpty) {
@@ -822,6 +985,17 @@ class LiveRoomController extends PlayerController
       AppSettingsController.instance
           .addShieldList(keywordController.text.trim());
       keywordController.text = "";
+    }
+
+    void addUser() {
+      if (userController.text.isEmpty) {
+        SmartDialog.showToast("璇疯緭鍏ョ敤鎴峰悕");
+        return;
+      }
+
+      AppSettingsController.instance
+          .addUserShieldList(userController.text.trim());
+      userController.text = "";
     }
 
     Utils.showBottomSheet(
@@ -863,6 +1037,67 @@ class LiveRoomController extends PlayerController
                       borderRadius: AppStyle.radius24,
                       onTap: () {
                         AppSettingsController.instance.removeShieldList(item);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: AppStyle.radius24,
+                        ),
+                        padding: AppStyle.edgeInsetsH12.copyWith(
+                          top: 4,
+                          bottom: 4,
+                        ),
+                        child: Text(
+                          item,
+                          style: Get.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          AppStyle.vGap24,
+          Text(
+            "Users",
+            style: Get.textTheme.titleSmall,
+          ),
+          AppStyle.vGap12,
+          TextField(
+            controller: userController,
+            decoration: InputDecoration(
+              contentPadding: AppStyle.edgeInsetsH12,
+              border: const OutlineInputBorder(),
+              hintText: "Enter username",
+              suffixIcon: TextButton.icon(
+                onPressed: addUser,
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text("Add"),
+              ),
+            ),
+            onSubmitted: (e) {
+              addUser();
+            },
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Text(
+              "Blocked users: ${AppSettingsController.instance.userShieldList.length} (tap to remove)",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Wrap(
+              runSpacing: 12,
+              spacing: 12,
+              children: AppSettingsController.instance.userShieldList
+                  .map(
+                    (item) => InkWell(
+                      borderRadius: AppStyle.radius24,
+                      onTap: () {
+                        AppSettingsController.instance
+                            .removeUserShieldList(item);
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -1040,10 +1275,15 @@ class LiveRoomController extends PlayerController
     rxRoomId.value = roomId;
 
     // 清除全部消息
-    liveDanmaku.stop();
+    await liveDanmaku.stop();
     messages.clear();
     superChats.clear();
+    _superChatFingerprints.clear();
+    _superChatRefreshTimer?.cancel();
+    _cancelPendingDanmakuTimers();
+    clearDanmakuReplayHistory();
     danmakuController?.clear();
+    rebuildDanmakuView();
 
     // 重新设置LiveDanmaku
     liveDanmaku = site.liveSite.getDanmaku();
@@ -1074,12 +1314,14 @@ ${error?.stackTrace}''');
         state == AppLifecycleState.hidden) {
       Log.d("进入后台:$state");
       danmakuController?.clear();
+      _cancelPendingDanmakuTimers();
       isBackground = true;
       _backgroundedAt = DateTime.now();
       _positionBeforeBackground = _lastKnownPlayerPosition;
     } else if (state == AppLifecycleState.resumed) {
       Log.d("返回前台");
       isBackground = false;
+      _refreshDanmakuOverlay("杩斿洖鍓嶅彴");
       var backgroundedAt = _backgroundedAt;
       var positionBeforeBackground = _positionBeforeBackground;
       _backgroundedAt = null;
@@ -1134,6 +1376,7 @@ ${error?.stackTrace}''');
     var positionBeforeWindowBlur = _positionBeforeWindowBlur;
     _windowBlurredAt = null;
     _positionBeforeWindowBlur = null;
+    _refreshDanmakuOverlay("绐楀彛閲嶆柊鑱氱劍");
     unawaited(
       _recoverPlaybackAfterForeground(
         "窗口重新聚焦",
@@ -1174,8 +1417,8 @@ ${error?.stackTrace}''');
     }
   }
 
-  @override
-  void onClose() {
+  // ignore: unused_element
+  void _legacyOnClose() {
     WidgetsBinding.instance.removeObserver(this);
     if (Platform.isWindows) {
       windowManager.removeListener(this);

@@ -172,8 +172,7 @@ class RemoteSyncRoomController extends BaseController {
         AppSettingsController.instance.clearShieldList();
       }
       for (var item in jsonBody) {
-        // add to Hive
-        AppSettingsController.instance.addShieldList(item);
+        AppSettingsController.instance.importShieldValue(item.toString());
       }
       SmartDialog.showToast('已同步屏蔽词');
     } catch (e) {
@@ -273,7 +272,7 @@ class RemoteSyncRoomController extends BaseController {
       }
       var overlay = await showOverlayDialog();
       SmartDialog.showLoading(msg: "发送中...");
-      var shieldList = AppSettingsController.instance.shieldList;
+      var shieldList = AppSettingsController.instance.allShieldValues;
       var data = json.encode(shieldList.toList());
 
       var resp = await signalR.sendContent(

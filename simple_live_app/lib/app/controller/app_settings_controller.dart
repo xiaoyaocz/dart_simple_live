@@ -12,6 +12,9 @@ class AppSettingsController extends GetxController {
   static AppSettingsController get instance =>
       Get.find<AppSettingsController>();
 
+  static const String _keywordShieldPrefix = "keyword:";
+  static const String _userShieldPrefix = "user:";
+
   /// 缩放模式
   var scaleMode = 0.obs;
 
@@ -83,8 +86,7 @@ class AppSettingsController extends GetxController {
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
 
-    // ignore: invalid_use_of_protected_member
-    shieldList.value = LocalStorageService.instance.shieldBox.values.toSet();
+    _loadShieldList();
 
     scaleMode.value = LocalStorageService.instance.getValue(
       LocalStorageService.kPlayerScaleMode,
@@ -151,7 +153,7 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kUpdateFollowDuration, 10);
 
     updateFollowThreadCount.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kUpdateFollowThreadCount, 0);  // 默认 0 = 自动
+        .getValue(LocalStorageService.kUpdateFollowThreadCount, 0); // 默认 0 = 自动
 
     initSiteSort();
     initHomeSort();
@@ -381,18 +383,107 @@ class AppSettingsController extends GetxController {
   }
 
   RxSet<String> shieldList = <String>{}.obs;
+  RxSet<String> userShieldList = <String>{}.obs;
+
+  Iterable<String> get allShieldValues =>
+      LocalStorageService.instance.shieldBox.values.cast<String>();
+
+  void _loadShieldList() {
+    final keywords = <String>{};
+    final users = <String>{};
+    for (final rawValue in allShieldValues) {
+      final value = rawValue.trim();
+      if (value.isEmpty) {
+        continue;
+      }
+      if (value.startsWith(_userShieldPrefix)) {
+        users.add(value.substring(_userShieldPrefix.length));
+        continue;
+      }
+      if (value.startsWith(_keywordShieldPrefix)) {
+        keywords.add(value.substring(_keywordShieldPrefix.length));
+        continue;
+      }
+      keywords.add(value);
+    }
+    shieldList
+      ..clear()
+      ..addAll(keywords);
+    userShieldList
+      ..clear()
+      ..addAll(users);
+  }
+
+  String _buildShieldStorageValue(
+    String value, {
+    required bool isUser,
+  }) {
+    return "${isUser ? _userShieldPrefix : _keywordShieldPrefix}$value";
+  }
+
+  void importShieldValue(String rawValue) {
+    final value = rawValue.trim();
+    if (value.isEmpty) {
+      return;
+    }
+    if (value.startsWith(_userShieldPrefix)) {
+      addUserShieldList(value.substring(_userShieldPrefix.length));
+      return;
+    }
+    if (value.startsWith(_keywordShieldPrefix)) {
+      addShieldList(value.substring(_keywordShieldPrefix.length));
+      return;
+    }
+    addShieldList(value);
+  }
+
   void addShieldList(String e) {
-    shieldList.add(e);
-    LocalStorageService.instance.shieldBox.put(e, e);
+    final value = e.trim();
+    if (value.isEmpty) {
+      return;
+    }
+    final storageValue = _buildShieldStorageValue(value, isUser: false);
+    shieldList.add(value);
+    LocalStorageService.instance.shieldBox.delete(value);
+    LocalStorageService.instance.shieldBox.put(storageValue, storageValue);
   }
 
   void removeShieldList(String e) {
-    shieldList.remove(e);
-    LocalStorageService.instance.shieldBox.delete(e);
+    final value = e.trim();
+    final storageValue = _buildShieldStorageValue(value, isUser: false);
+    shieldList.remove(value);
+    LocalStorageService.instance.shieldBox.delete(value);
+    LocalStorageService.instance.shieldBox.delete(storageValue);
+  }
+
+  void addUserShieldList(String e) {
+    final value = e.trim();
+    if (value.isEmpty) {
+      return;
+    }
+    final storageValue = _buildShieldStorageValue(value, isUser: true);
+    userShieldList.add(value);
+    LocalStorageService.instance.shieldBox.put(storageValue, storageValue);
+  }
+
+  void removeUserShieldList(String e) {
+    final value = e.trim();
+    final storageValue = _buildShieldStorageValue(value, isUser: true);
+    userShieldList.remove(value);
+    LocalStorageService.instance.shieldBox.delete(storageValue);
+  }
+
+  bool isUserShielded(String userName) {
+    final value = userName.trim();
+    if (value.isEmpty) {
+      return false;
+    }
+    return userShieldList.contains(value);
   }
 
   Future clearShieldList() async {
     shieldList.clear();
+    userShieldList.clear();
     await LocalStorageService.instance.shieldBox.clear();
   }
 

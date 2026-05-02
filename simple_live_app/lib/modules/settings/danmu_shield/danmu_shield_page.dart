@@ -15,6 +15,11 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
+          Text(
+            "关键词屏蔽",
+            style: Get.textTheme.titleMedium,
+          ),
+          AppStyle.vGap8,
           TextField(
             controller: controller.textEditingController,
             decoration: InputDecoration(
@@ -27,13 +32,11 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
                 label: const Text("添加"),
               ),
             ),
-            onSubmitted: (e) {
-              controller.add();
-            },
+            onSubmitted: (_) => controller.add(),
           ),
           AppStyle.vGap4,
           Text(
-            '以"/"开头和结尾将视作正则表达式, 如"/\\d+/"表示屏蔽所有数字',
+            '使用 /.../ 会按正则表达式匹配，例如 /\\d+/ 可屏蔽所有数字。',
             style: Get.textTheme.bodySmall,
           ),
           AppStyle.vGap12,
@@ -45,37 +48,79 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
           ),
           AppStyle.vGap12,
           Obx(
-            () => Wrap(
-              runSpacing: 12,
-              spacing: 12,
-              children: controller.settingsController.shieldList
-                  .map(
-                    (item) => InkWell(
-                      borderRadius: AppStyle.radius24,
-                      onTap: () {
-                        controller.remove(item);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: AppStyle.radius24,
-                        ),
-                        padding: AppStyle.edgeInsetsH12.copyWith(
-                          top: 4,
-                          bottom: 4,
-                        ),
-                        child: Text(
-                          item,
-                          style: Get.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+            () => _buildShieldChips(
+              controller.settingsController.shieldList,
+              controller.remove,
+            ),
+          ),
+          AppStyle.vGap24,
+          Text(
+            "用户屏蔽",
+            style: Get.textTheme.titleMedium,
+          ),
+          AppStyle.vGap8,
+          TextField(
+            controller: controller.userTextEditingController,
+            decoration: InputDecoration(
+              contentPadding: AppStyle.edgeInsetsH12,
+              border: const OutlineInputBorder(),
+              hintText: "请输入要屏蔽的用户名",
+              suffixIcon: TextButton.icon(
+                onPressed: controller.addUser,
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text("添加"),
+              ),
+            ),
+            onSubmitted: (_) => controller.addUser(),
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Text(
+              "已屏蔽${controller.settingsController.userShieldList.length}个用户（点击移除）",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => _buildShieldChips(
+              controller.settingsController.userShieldList,
+              controller.removeUser,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildShieldChips(
+    Iterable<String> items,
+    ValueChanged<String> onRemove,
+  ) {
+    return Wrap(
+      runSpacing: 12,
+      spacing: 12,
+      children: items
+          .map(
+            (item) => InkWell(
+              borderRadius: AppStyle.radius24,
+              onTap: () => onRemove(item),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: AppStyle.radius24,
+                ),
+                padding: AppStyle.edgeInsetsH12.copyWith(
+                  top: 4,
+                  bottom: 4,
+                ),
+                child: Text(
+                  item,
+                  style: Get.textTheme.bodyMedium,
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

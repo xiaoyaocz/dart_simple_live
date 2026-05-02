@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
+import 'package:simple_live_core/src/common/core_error.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/scripts/douyin_sign.dart';
 
@@ -73,20 +74,10 @@ class DouyinSite implements LiveSite {
       header: await getRequestHeaders(),
     );
 
-    var renderData =
-        RegExp(
-          r'\{\\"pathname\\":\\"\/\\",\\"categoryData.*?\]\\n',
-        ).firstMatch(result)?.group(0) ??
-        "";
-    var renderDataJson = json.decode(
-      renderData
-          .trim()
-          .replaceAll('\\"', '"')
-          .replaceAll(r"\\", r"\")
-          .replaceAll(']\\n', ""),
-    );
+    final renderDataJson = _extractCategoryRenderData(result);
+    final categoryData = (renderDataJson["categoryData"] as List?) ?? const [];
 
-    for (var item in renderDataJson["categoryData"]) {
+    for (var item in categoryData) {
       List<LiveSubCategory> subs = [];
       var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
       for (var subItem in item["sub_partition"]) {
@@ -116,6 +107,60 @@ class DouyinSite implements LiveSite {
       categories.add(category);
     }
     return categories;
+  }
+
+  Map<String, dynamic> _extractCategoryRenderData(String html) {
+    const marker = r'\"categoryData\":';
+    final markerIndex = html.indexOf(marker);
+    if (markerIndex < 0) {
+      throw CoreError("鎶栭煶鍒嗙被鏁版嵁瑙ｆ瀽澶辫触");
+    }
+    final arrayStart = html.indexOf("[", markerIndex);
+    if (arrayStart < 0) {
+      throw CoreError("鎶栭煶鍒嗙被鏁版嵁瑙ｆ瀽澶辫触");
+    }
+    final escapedArray = _extractEscapedJsonArray(html, arrayStart);
+    final normalizedJson = '{"categoryData":$escapedArray}'
+        .replaceAll(r'\"', '"')
+        .replaceAll(r"\/", "/")
+        .replaceAll(r"\\", "\\");
+    return json.decode(normalizedJson) as Map<String, dynamic>;
+  }
+
+  String _extractEscapedJsonArray(String source, int startIndex) {
+    final buffer = StringBuffer();
+    var depth = 0;
+    var inString = false;
+    var escaped = false;
+    for (var i = startIndex; i < source.length; i++) {
+      final char = source[i];
+      buffer.write(char);
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char == "\\") {
+        escaped = true;
+        continue;
+      }
+      if (char == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) {
+        continue;
+      }
+      if (char == "[") {
+        depth += 1;
+      } else if (char == "]") {
+        depth -= 1;
+        if (depth == 0) {
+          return buffer.toString();
+        }
+      }
+    }
+    throw CoreError("鎶栭煶鍒嗙被鏁版嵁瑙ｆ瀽澶辫触");
   }
 
   @override

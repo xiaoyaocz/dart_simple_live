@@ -22,6 +22,26 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
+class _DanmakuReplayEntry {
+  final String message;
+  final Color color;
+  final DateTime visibleFrom;
+  final DateTime visibleUntil;
+
+  const _DanmakuReplayEntry({
+    required this.message,
+    required this.color,
+    required this.visibleFrom,
+    required this.visibleUntil,
+  });
+
+  bool isVisibleAt(DateTime now) {
+    return !now.isBefore(visibleFrom) && now.isBefore(visibleUntil);
+  }
+}
+
+const int _kDanmakuReplayLimit = 300;
+
 mixin PlayerMixin {
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
@@ -49,7 +69,7 @@ mixin PlayerMixin {
       }
     }
     // media_kit 仓库更新导致的问题，临时解决办法
-    if(Platform.isAndroid){
+    if (Platform.isAndroid) {
       await pp.setProperty('force-seekable', 'yes');
     }
   }
@@ -121,7 +141,7 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 是否为竖屏直播间
   var isVertical = false.obs;
 
-  Widget? danmakuView;
+  RxInt danmakuViewVersion = 0.obs;
 
   var showQualites = false.obs;
   var showLines = false.obs;
@@ -189,6 +209,8 @@ mixin PlayerStateMixin on PlayerMixin {
 mixin PlayerDanmakuMixin on PlayerStateMixin {
   /// 弹幕控制器
   DanmakuController? danmakuController;
+  final List<_DanmakuReplayEntry> _danmakuReplayHistory = [];
+  bool _danmakuReplayScheduled = false;
 
   void initDanmakuController(DanmakuController e) {
     danmakuController = e;
@@ -212,6 +234,86 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 
   void disposeDanmakuController() {
     danmakuController?.clear();
+    danmakuController = null;
+  }
+
+  void clearDanmakuReplayHistory() {
+    _danmakuReplayHistory.clear();
+  }
+
+  void rememberDanmakuReplay(
+    String message,
+    Color color, {
+    Duration delay = Duration.zero,
+  }) {
+    var durationSeconds =
+        AppSettingsController.instance.danmuSpeed.value.toInt();
+    if (durationSeconds < 1) {
+      durationSeconds = 1;
+    }
+
+    final visibleFrom = DateTime.now().add(delay);
+    _danmakuReplayHistory.add(
+      _DanmakuReplayEntry(
+        message: message,
+        color: color,
+        visibleFrom: visibleFrom,
+        visibleUntil: visibleFrom.add(Duration(seconds: durationSeconds)),
+      ),
+    );
+    _pruneDanmakuReplayHistory();
+  }
+
+  void _pruneDanmakuReplayHistory([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    _danmakuReplayHistory.removeWhere(
+      (item) => !item.visibleUntil.isAfter(current),
+    );
+    if (_danmakuReplayHistory.length > _kDanmakuReplayLimit) {
+      _danmakuReplayHistory.removeRange(
+        0,
+        _danmakuReplayHistory.length - _kDanmakuReplayLimit,
+      );
+    }
+  }
+
+  void _scheduleDanmakuReplay() {
+    if (_danmakuReplayScheduled) {
+      return;
+    }
+    _danmakuReplayScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _danmakuReplayScheduled = false;
+      _replayDanmakuOverlay();
+    });
+  }
+
+  void _replayDanmakuOverlay() {
+    if (!showDanmakuState.value || danmakuController == null) {
+      return;
+    }
+    final now = DateTime.now();
+    _pruneDanmakuReplayHistory(now);
+    for (final item in _danmakuReplayHistory) {
+      if (!item.isVisibleAt(now)) {
+        continue;
+      }
+      danmakuController?.addDanmaku(
+        DanmakuContentItem(
+          item.message,
+          color: item.color,
+        ),
+      );
+    }
+  }
+
+  void rebuildDanmakuView({bool clearCurrent = true}) {
+    if (clearCurrent) {
+      danmakuController?.clear();
+    }
+    globalDanmuKey = GlobalKey();
+    danmakuViewVersion.value += 1;
+    _scheduleDanmakuReplay();
   }
 
   void addDanmaku(List<DanmakuContentItem> items) {
@@ -329,6 +431,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       }
 
       windowManager.setAlwaysOnTop(true);
+      rebuildDanmakuView();
     }
   }
 
@@ -341,6 +444,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       windowManager.setSize(_lastWindowSize!);
       windowManager.setPosition(_lastWindowPosition!);
       windowManager.setAlwaysOnTop(false);
+      rebuildDanmakuView();
       //windowManager.setAlignment(Alignment.center);
     }
   }
@@ -465,6 +569,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       if (event == PiPStatus.disabled) {
         danmakuController?.clear();
         showDanmakuState.value = danmakuStateBeforePIP;
+        if (showDanmakuState.value) {
+          rebuildDanmakuView();
+        }
       }
       Log.w(event.toString());
     });

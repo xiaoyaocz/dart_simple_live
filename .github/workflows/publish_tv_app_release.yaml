@@ -14,20 +14,23 @@ jobs:
       - uses: actions/checkout@v4
 
       #APK签名设置
-      - name: Download Android keystore
-        id: android_tv_keystore
-        if: ${{ secrets.TV_KEYSTORE_BASE64 != '' }}
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: keystore.jks
-          encodedString: ${{ secrets.TV_KEYSTORE_BASE64 }}
-      - name: Create key.properties
-        if: ${{ secrets.TV_KEYSTORE_BASE64 != '' }}
+      - name: Prepare Android keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TV_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TV_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.TV_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TV_KEY_ALIAS }}
         run: |
-          echo "storeFile=${{ steps.android_tv_keystore.outputs.filePath }}" > simple_live_tv_app/android/key.properties
-          echo "storePassword=${{ secrets.TV_STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties
-          echo "keyAlias=${{ secrets.TV_KEY_ALIAS }}" >> simple_live_tv_app/android/key.properties
+          if [[ -n "$KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" && -n "$KEY_ALIAS" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | openssl base64 -d -A > simple_live_tv_app/android/release-keystore.jks
+            cat > simple_live_tv_app/android/key.properties <<EOF
+storeFile=../release-keystore.jks
+storePassword=$STORE_PASSWORD
+keyPassword=$KEY_PASSWORD
+keyAlias=$KEY_ALIAS
+EOF
+          fi
 
       # 设置JAVA环境
       - uses: actions/setup-java@v4

@@ -77,12 +77,15 @@ jobs:
 
       #打包iOS
       - name: Build IPA
+        id: build_ipa
+        continue-on-error: true
         run: |
           cd simple_live_app
           flutter build ios --release --no-codesign
 
       #创建未签名ipa
       - name: Create IPA
+        if: ${{ steps.build_ipa.outcome == 'success' }}
         run: |
           cd simple_live_app
           mkdir build/ios/iphoneos/Payload
@@ -93,6 +96,7 @@ jobs:
 
       #上传IPA至Artifacts
       - name: Upload IPA to Artifacts
+        if: ${{ steps.build_ipa.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: ios
@@ -129,6 +133,7 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ github.token }}
+          fail_on_unmatched_files: false
           files: |
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk

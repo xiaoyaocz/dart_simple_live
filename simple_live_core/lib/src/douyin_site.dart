@@ -805,6 +805,164 @@ class DouyinSite implements LiveSite {
     return Future.value(<LiveSuperChatMessage>[]);
   }
 
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) async {
+    final roomDetail = detail ?? await getRoomDetail(roomId: roomId);
+    final webRid = roomDetail.roomId.isNotEmpty ? roomDetail.roomId : roomId;
+    final danmakuArgs = roomDetail.danmakuData is DouyinDanmakuArgs
+        ? roomDetail.danmakuData as DouyinDanmakuArgs
+        : null;
+
+    final roomInfo = await _getRoomDataByApi(webRid);
+    final roomList = (roomInfo["data"] as List?) ?? const [];
+    if (roomList.isEmpty) {
+      return [];
+    }
+    final roomData = roomList.first;
+    final owner = roomData["owner"] ?? roomInfo["user"] ?? {};
+    final anchorId =
+        owner["id_str"]?.toString() ?? owner["id"]?.toString() ?? "";
+    final secAnchorId = owner["sec_uid"]?.toString() ?? "";
+    final realRoomId =
+        danmakuArgs?.roomId ?? roomData["id_str"]?.toString() ?? "";
+    if (anchorId.isEmpty || secAnchorId.isEmpty || realRoomId.isEmpty) {
+      return [];
+    }
+
+    final requestHeader = await getRequestHeaders();
+    requestHeader["Referer"] = "https://live.douyin.com/$webRid";
+
+    final uri = Uri.parse("https://live.douyin.com/webcast/ranklist/audience/")
+        .replace(
+          queryParameters: {
+            "aid": "6383",
+            "app_name": "douyin_web",
+            "live_id": "1",
+            "device_platform": "web",
+            "language": "zh-CN",
+            "enter_from": "link_share",
+            "cookie_enabled": "true",
+            "screen_width": "1920",
+            "screen_height": "1080",
+            "browser_language": "zh-CN",
+            "browser_platform": "Win32",
+            "browser_name": "Chrome",
+            "browser_version": "125.0.0.0",
+            "os_name": "Windows",
+            "os_version": "10",
+            "webcast_sdk_version": "2450",
+            "room_id": realRoomId,
+            "anchor_id": anchorId,
+            "sec_anchor_id": secAnchorId,
+            "ignoreToast": "true",
+            "rank_type": "30",
+            "msToken": "",
+          },
+        );
+    final requestUrl = DouyinSign.getAbogusUrl(
+      uri.toString(),
+      kDefaultUserAgent,
+    );
+    final result = await HttpClient.instance.getJson(
+      requestUrl,
+      header: requestHeader,
+    );
+    final items = (result["data"]?["ranks"] as List?) ?? const [];
+    return items
+        .map((item) {
+          final user = item["user"] ?? {};
+          final payGrade = user["pay_grade"] ?? {};
+          final fansData = user["fans_club"]?["data"] ?? {};
+          final userLevel = int.tryParse(payGrade["level"].toString());
+          final fansLevel = int.tryParse(fansData["level"].toString());
+          final scoreText = _resolveDouyinRankScore(item);
+          final scoreDescription =
+              item["score_description"]?.toString().trim() ?? "";
+          final exactlyScore = item["exactly_score"]?.toString().trim() ?? "";
+          String? scoreDetail;
+          if (scoreDescription.isNotEmpty && scoreDescription != scoreText) {
+            scoreDetail = scoreDescription;
+          } else if (exactlyScore.isNotEmpty && exactlyScore != scoreText) {
+            scoreDetail = exactlyScore;
+          } else {
+            final gapDescription =
+                item["gap_description"]?.toString().trim() ?? "";
+            scoreDetail = gapDescription.isEmpty ? null : gapDescription;
+          }
+
+          return LiveContributionRankItem(
+            rank: int.tryParse(item["rank"].toString()) ?? 0,
+            userName: user["nickname"]?.toString() ?? "",
+            avatar: _firstImageUrl(user["avatar_thumb"]),
+            scoreText: scoreText,
+            scoreDetail: scoreDetail,
+            userLevel: userLevel,
+            userLevelText: userLevel == null || userLevel <= 0
+                ? null
+                : "财富 $userLevel",
+            userLevelIcon: _firstImageUrl(payGrade["new_im_icon_with_level"]),
+            fansLevel: fansLevel,
+            fansName: fansData["club_name"]?.toString(),
+            fansIcon: _pickDouyinBadgeIcon(fansData["badge"]?["icons"]),
+          );
+        })
+        .where((item) => item.userName.trim().isNotEmpty)
+        .toList();
+  }
+
+  String _firstImageUrl(dynamic data) {
+    if (data is! Map) {
+      return "";
+    }
+    final urls = data["url_list"];
+    if (urls is List && urls.isNotEmpty) {
+      return urls.first.toString();
+    }
+    return "";
+  }
+
+  String? _pickDouyinBadgeIcon(dynamic icons) {
+    if (icons is! Map) {
+      return null;
+    }
+    for (final key in const ["4", "3", "2", "1", "0"]) {
+      final url = _firstImageUrl(icons[key]);
+      if (url.isNotEmpty) {
+        return url;
+      }
+    }
+    for (final value in icons.values) {
+      final url = _firstImageUrl(value);
+      if (url.isNotEmpty) {
+        return url;
+      }
+    }
+    return null;
+  }
+
+  String _resolveDouyinRankScore(Map item) {
+    final exactlyScore = item["exactly_score"]?.toString().trim() ?? "";
+    if (exactlyScore.isNotEmpty) {
+      return exactlyScore;
+    }
+    final scoreDescription = item["score_description"]?.toString().trim() ?? "";
+    if (scoreDescription.isNotEmpty) {
+      return scoreDescription;
+    }
+    final score = item["score"]?.toString().trim() ?? "";
+    if (score.isNotEmpty) {
+      return score;
+    }
+    final delta = item["delta"]?.toString().trim() ?? "";
+    if (delta.isNotEmpty) {
+      return delta;
+    }
+    return "0";
+  }
+
   //生成指定长度的16进制随机字符串
   String generateRandomString(int length) {
     var random = Random.secure();

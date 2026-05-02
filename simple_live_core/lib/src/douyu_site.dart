@@ -10,6 +10,7 @@ import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_play_url.dart';
+import 'package:simple_live_core/src/model/live_contribution_rank.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
 import 'package:simple_live_core/src/model/live_search_result.dart';
 import 'package:simple_live_core/src/model/live_room_detail.dart';
@@ -385,6 +386,32 @@ class DouyuSite implements LiveSite {
   }) {
     //尚不支持
     return Future.value([]);
+  }
+
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) async {
+    var result = await HttpClient.instance.getJson(
+      "https://www.douyu.com/japi/interact/comm/fanshome/rank/top10",
+      queryParameters: {"rid": roomId},
+      header: {
+        'referer': 'https://www.douyu.com/$roomId',
+        'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      },
+    );
+    final items = (result["data"]?["intimacyRank"] as List?) ?? const [];
+    return items.map((item) {
+      return LiveContributionRankItem(
+        rank: int.tryParse(item["rank"].toString()) ?? 0,
+        userName: item["nickname"]?.toString() ?? "",
+        avatar: item["avatar"]?.toString() ?? "",
+        scoreText: item["value"]?.toString() ?? "0",
+        scoreDetail: "亲密度",
+      );
+    }).toList();
   }
 }
 

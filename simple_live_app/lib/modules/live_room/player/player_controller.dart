@@ -375,6 +375,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 进入全屏
   Future<void> enterFullScreen() async {
+    if (smallWindowState.value) {
+      await exitSmallWindow();
+      return;
+    }
     fullScreenState.value = true;
     if (Platform.isAndroid || Platform.isIOS) {
       //全屏
@@ -386,11 +390,15 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     } else {
       _windowMaximizedBeforeFullScreen = await windowManager.isMaximized();
       if (_windowMaximizedBeforeFullScreen) {
-        await windowManager.unmaximize();
+        final maximizedBounds = await windowManager.getBounds();
+        await windowManager.restore();
         await _waitForWindowMaximizedState(false);
-        await Future.delayed(const Duration(milliseconds: 60));
+        await _waitForWindowBoundsToChange(maximizedBounds);
+        await _refreshWindowsWindowBounds();
+        await Future.delayed(const Duration(milliseconds: 120));
       }
       await windowManager.setFullScreen(true);
+      await Future.delayed(const Duration(milliseconds: 16));
       await _refreshWindowsWindowBounds();
     }
     //danmakuController?.clear();
@@ -398,12 +406,17 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 退出全屏
   Future<void> exitFull() async {
+    if (smallWindowState.value) {
+      await exitSmallWindow();
+      return;
+    }
     if (Platform.isAndroid || Platform.isIOS) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge,
           overlays: SystemUiOverlay.values);
       setPortraitOrientation();
     } else {
       await windowManager.setFullScreen(false);
+      await Future.delayed(const Duration(milliseconds: 16));
       await _refreshWindowsWindowBounds();
       if (_windowMaximizedBeforeFullScreen) {
         await windowManager.maximize();
@@ -419,6 +432,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   Size? _lastWindowSize;
   Offset? _lastWindowPosition;
   bool _windowMaximizedBeforeFullScreen = false;
+  bool _windowMaximizedBeforeSmallWindow = false;
 
   Future<void> _waitForWindowMaximizedState(bool value) async {
     if (!Platform.isWindows) {
@@ -428,6 +442,25 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     final deadline = DateTime.now().add(const Duration(milliseconds: 600));
     while (DateTime.now().isBefore(deadline)) {
       if (await windowManager.isMaximized() == value) {
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
+  Future<void> _waitForWindowBoundsToChange(Rect previousBounds) async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    final deadline = DateTime.now().add(const Duration(milliseconds: 800));
+    while (DateTime.now().isBefore(deadline)) {
+      final currentBounds = await windowManager.getBounds();
+      final moved = (currentBounds.left - previousBounds.left).abs() > 0.5 ||
+          (currentBounds.top - previousBounds.top).abs() > 0.5 ||
+          (currentBounds.width - previousBounds.width).abs() > 0.5 ||
+          (currentBounds.height - previousBounds.height).abs() > 0.5;
+      if (moved) {
         return;
       }
       await Future.delayed(const Duration(milliseconds: 16));
@@ -453,45 +486,79 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 
   ///小窗模式()
-  void enterSmallWindow() async {
-    if (!(Platform.isAndroid || Platform.isIOS)) {
-      fullScreenState.value = true;
-      smallWindowState.value = true;
-
-      // 读取窗口大小
-      _lastWindowSize = await windowManager.getSize();
-      _lastWindowPosition = await windowManager.getPosition();
-
-      windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-      // 获取视频窗口大小
-      var width = player.state.width ?? 16;
-      var height = player.state.height ?? 9;
-
-      // 横屏还是竖屏
-      if (height > width) {
-        var aspectRatio = width / height;
-        windowManager.setSize(Size(400, 400 / aspectRatio));
-      } else {
-        var aspectRatio = height / width;
-        windowManager.setSize(Size(280 / aspectRatio, 280));
-      }
-
-      windowManager.setAlwaysOnTop(true);
-      rebuildDanmakuView();
+  Future<void> enterSmallWindow() async {
+    if (Platform.isAndroid || Platform.isIOS || smallWindowState.value) {
+      return;
     }
+
+    _windowMaximizedBeforeSmallWindow = await windowManager.isMaximized();
+    if (_windowMaximizedBeforeSmallWindow) {
+      final maximizedBounds = await windowManager.getBounds();
+      await windowManager.restore();
+      await _waitForWindowMaximizedState(false);
+      await _waitForWindowBoundsToChange(maximizedBounds);
+      await _refreshWindowsWindowBounds();
+      await Future.delayed(const Duration(milliseconds: 120));
+    }
+    fullScreenState.value = true;
+    smallWindowState.value = true;
+
+    // 读取窗口大小
+    _lastWindowSize = await windowManager.getSize();
+    _lastWindowPosition = await windowManager.getPosition();
+
+    await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+    // 获取视频窗口大小
+    var width = player.state.width ?? 16;
+    var height = player.state.height ?? 9;
+
+    // 横屏还是竖屏
+    if (height > width) {
+      var aspectRatio = width / height;
+      await windowManager.setSize(Size(400, 400 / aspectRatio));
+    } else {
+      var aspectRatio = height / width;
+      await windowManager.setSize(Size(280 / aspectRatio, 280));
+    }
+
+    await windowManager.setAlwaysOnTop(true);
+    rebuildDanmakuView();
   }
 
   ///退出小窗模式()
-  void exitSmallWindow() {
-    if (!(Platform.isAndroid || Platform.isIOS)) {
-      fullScreenState.value = false;
-      smallWindowState.value = false;
-      windowManager.setTitleBarStyle(TitleBarStyle.normal);
-      windowManager.setSize(_lastWindowSize!);
-      windowManager.setPosition(_lastWindowPosition!);
-      windowManager.setAlwaysOnTop(false);
-      rebuildDanmakuView();
-      //windowManager.setAlignment(Alignment.center);
+  Future<void> exitSmallWindow() async {
+    if (Platform.isAndroid || Platform.isIOS || !smallWindowState.value) {
+      return;
+    }
+
+    fullScreenState.value = false;
+    smallWindowState.value = false;
+    await windowManager.setAlwaysOnTop(false);
+    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    if (_lastWindowPosition != null) {
+      await windowManager.setPosition(_lastWindowPosition!);
+    }
+    if (_lastWindowSize != null) {
+      await windowManager.setSize(_lastWindowSize!);
+    }
+    if (_windowMaximizedBeforeSmallWindow) {
+      await windowManager.maximize();
+      await _waitForWindowMaximizedState(true);
+    } else {
+      await _refreshWindowsWindowBounds();
+    }
+    _windowMaximizedBeforeSmallWindow = false;
+    rebuildDanmakuView();
+    //windowManager.setAlignment(Alignment.center);
+  }
+
+  Future<void> exitPlayerWindowMode() async {
+    if (smallWindowState.value) {
+      await exitSmallWindow();
+      return;
+    }
+    if (fullScreenState.value) {
+      await exitFull();
     }
   }
 
@@ -663,7 +730,9 @@ mixin PlayerGestureControlMixin
     if (lockControlsState.value) {
       return;
     }
-    if (fullScreenState.value) {
+    if (smallWindowState.value) {
+      exitSmallWindow();
+    } else if (fullScreenState.value) {
       exitFull();
     } else {
       enterFullScreen();
@@ -990,7 +1059,7 @@ class PlayerController extends BaseController
   void onClose() async {
     Log.w("播放器关闭");
     if (smallWindowState.value) {
-      exitSmallWindow();
+      await exitSmallWindow();
     }
     disposeStream();
     disposeDanmakuController();

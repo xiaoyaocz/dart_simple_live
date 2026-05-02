@@ -717,6 +717,14 @@ class HuyaSite implements LiveSite {
     return [];
   }
 
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) {
+    return Future.value(<LiveContributionRankItem>[]);
+  }
+
   Future<List<LiveSuperChatMessage>> _fetchHeadLineMessages(int pid) async {
     final userId = HuyaUserId()..sHuYaUA = HYSDK_UA;
     final req = GetGameEventMessageBoardReq()
@@ -738,7 +746,11 @@ class HuyaSite implements LiveSite {
           final remainingSeconds = item.iCountDown > 0
               ? item.iCountDown
               : totalSeconds;
-          final price = item.iCostPay > 0 ? item.iCostPay : item.iCost;
+          final price = item.iCost > 0
+              ? item.iCost
+              : item.iCostPay > 0
+              ? max(1, (item.iCostPay / 100).round())
+              : 0;
           final endTime = now.add(Duration(seconds: max(1, remainingSeconds)));
           final startTime = endTime.subtract(Duration(seconds: totalSeconds));
           return LiveSuperChatMessage(

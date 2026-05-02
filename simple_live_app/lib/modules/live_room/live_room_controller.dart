@@ -58,6 +58,16 @@ class LiveRoomController extends PlayerController
   var followed = false.obs;
   var liveStatus = false.obs;
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
+  RxList<LiveContributionRankItem> contributionRanks =
+      RxList<LiveContributionRankItem>();
+  var contributionRankLoading = false.obs;
+  Rx<String?> contributionRankError = Rx<String?>(null);
+  Rx<DateTime?> contributionRankUpdatedAt = Rx<DateTime?>(null);
+  bool get supportsContributionRank => const {
+        Constant.kBiliBili,
+        Constant.kDouyu,
+        Constant.kDouyin,
+      }.contains(site.id);
 
   /// 滚动控制
   final ScrollController scrollController = ScrollController();
@@ -319,6 +329,53 @@ class LiveRoomController extends PlayerController
     rebuildDanmakuView();
   }
 
+  void _clearContributionRankState() {
+    contributionRanks.clear();
+    contributionRankLoading.value = false;
+    contributionRankError.value = null;
+    contributionRankUpdatedAt.value = null;
+  }
+
+  Future<void> fetchContributionRank({bool forceRefresh = false}) async {
+    if (!supportsContributionRank || detail.value == null) {
+      return;
+    }
+    if (contributionRankLoading.value) {
+      return;
+    }
+    if (!forceRefresh &&
+        contributionRanks.isNotEmpty &&
+        contributionRankError.value == null) {
+      return;
+    }
+
+    final requestSiteId = site.id;
+    final requestRoomId = roomId;
+    contributionRankLoading.value = true;
+    contributionRankError.value = null;
+    try {
+      final ranks = await site.liveSite.getContributionRank(
+        roomId: detail.value!.roomId,
+        detail: detail.value,
+      );
+      if (site.id != requestSiteId || roomId != requestRoomId) {
+        return;
+      }
+      contributionRanks.assignAll(ranks);
+      contributionRankUpdatedAt.value = DateTime.now();
+    } catch (e) {
+      Log.logPrint(e);
+      if (site.id != requestSiteId || roomId != requestRoomId) {
+        return;
+      }
+      contributionRankError.value = e.toString();
+    } finally {
+      if (site.id == requestSiteId && roomId == requestRoomId) {
+        contributionRankLoading.value = false;
+      }
+    }
+  }
+
   /// 初始化自动关闭倒计时
   void initAutoExit() {
     if (AppSettingsController.instance.autoExitEnable.value) {
@@ -367,6 +424,7 @@ class LiveRoomController extends PlayerController
   void refreshRoom() {
     //messages.clear();
     superChats.clear();
+    _clearContributionRankState();
     liveDanmaku.stop();
 
     loadData();
@@ -481,6 +539,7 @@ class LiveRoomController extends PlayerController
       update();
       await liveDanmaku.stop();
       liveDanmaku = site.liveSite.getDanmaku();
+      _clearContributionRankState();
       _cancelPendingDanmakuTimers();
       clearDanmakuReplayHistory();
       rebuildDanmakuView();
@@ -1171,6 +1230,7 @@ class LiveRoomController extends PlayerController
     await liveDanmaku.stop();
     messages.clear();
     superChats.clear();
+    _clearContributionRankState();
     _superChatFingerprints.clear();
     _superChatRefreshTimer?.cancel();
     _cancelPendingDanmakuTimers();

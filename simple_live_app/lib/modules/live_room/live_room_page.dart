@@ -13,6 +13,7 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
+import 'package:simple_live_app/modules/live_room/widgets/live_contribution_rank_panel.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
@@ -90,7 +91,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           return PopScope(
             canPop: false,
             onPopInvokedWithResult: (e, r) {
-              controller.exitFull();
+              controller.exitPlayerWindowMode();
             },
             child: Scaffold(
               body: buildMediaPlayer(),
@@ -433,9 +434,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMessageArea() {
-    final hasSuperChatTab =
-        controller.site.id == Constant.kBiliBili ||
-            controller.site.id == Constant.kHuya;
+    final hasSuperChatTab = controller.site.id == Constant.kBiliBili ||
+        controller.site.id == Constant.kHuya;
     return Expanded(
       child: DefaultTabController(
         length: hasSuperChatTab ? 4 : 3,
@@ -510,8 +510,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       ],
                     ),
                   ),
-                  if (hasSuperChatTab)
-                    buildSuperChats(),
+                  if (hasSuperChatTab) buildSuperChats(),
                   buildFollowList(),
                   buildSettings(),
                 ],
@@ -548,10 +547,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             onLongPress: () => controller.copyUserName(message.userName),
             child: Text(
               "${message.userName}：",
-              style: userStyle.copyWith(
-                decoration: TextDecoration.underline,
-                decorationColor: userStyle.color,
-              ),
+              style: userStyle,
             ),
           ),
           Text(
@@ -821,6 +817,18 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 controller.refreshRoom();
               },
             ),
+            if (controller.supportsContributionRank)
+              ListTile(
+                leading: const Icon(Icons.leaderboard_outlined),
+                title: Text(
+                  controller.site.id == Constant.kDouyu ? "直播间亲密榜" : "直播间贡献榜",
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  showContributionRankPanel();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.play_circle_outline),
               trailing: const Icon(Icons.chevron_right),
@@ -916,6 +924,25 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           ],
         ),
       ),
+    );
+  }
+
+  void showContributionRankPanel() {
+    controller.fetchContributionRank();
+    final title = controller.site.id == Constant.kDouyu ? "直播间亲密榜" : "直播间贡献榜";
+    final child = LiveContributionRankPanel(controller: controller);
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      Utils.showRightDialog(
+        title: title,
+        width: 420,
+        child: child,
+      );
+      return;
+    }
+    Utils.showBottomSheet(
+      title: title,
+      maxWidth: 720,
+      child: child,
     );
   }
 

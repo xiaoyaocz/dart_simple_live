@@ -232,11 +232,11 @@ jobs:
       # 设置flutter_distributor环境
       - name: Install flutter_distributor
         run: dart pub global activate flutter_distributor
-      # build Windows ZIP\MSIX
+      # build Windows ZIP
       - name: Build Windows
         run: |
           cd simple_live_app
-          flutter_distributor package --platform windows --targets msix,zip --skip-clean
+          flutter_distributor package --platform windows --targets zip --skip-clean
 
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
@@ -244,7 +244,6 @@ jobs:
         with:
           name: windows
           path: |
-            simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
       #获取版本信息（自动从 Git Tag 提取）
@@ -264,7 +263,6 @@ jobs:
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
           token: ${{ github.token }}
           files: |
-            simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
       #完成

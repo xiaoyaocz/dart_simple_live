@@ -86,7 +86,6 @@ class _SuperChatCardState extends State<SuperChatCard> {
                             widget.message.userName,
                             style: const TextStyle(
                               color: AppColors.black333,
-                              decoration: TextDecoration.underline,
                             ),
                           ),
                         ),
@@ -112,7 +111,8 @@ class _SuperChatCardState extends State<SuperChatCard> {
             ),
             Container(
               decoration: BoxDecoration(
-                color: Utils.convertHexColor(widget.message.backgroundBottomColor),
+                color:
+                    Utils.convertHexColor(widget.message.backgroundBottomColor),
               ),
               padding: AppStyle.edgeInsetsA8,
               child: Text(

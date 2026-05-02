@@ -8,6 +8,7 @@ import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
+import 'package:simple_live_core/src/model/live_contribution_rank.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_play_url.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
@@ -429,6 +430,53 @@ class BiliBiliSite implements LiveSite {
       ls.add(message);
     }
     return ls;
+  }
+
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) async {
+    var roomResult = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/room/v1/Room/get_info",
+      queryParameters: {"room_id": roomId},
+      header: await getHeader(),
+    );
+    var roomData = roomResult["data"] ?? {};
+    var uid = roomData["uid"]?.toString() ?? "";
+    var realRoomId = roomData["room_id"]?.toString() ?? roomId;
+    if (uid.isEmpty) {
+      return [];
+    }
+
+    var result = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/xlive/general-interface/v1/rank/queryContributionRank",
+      queryParameters: {
+        "ruid": uid,
+        "room_id": realRoomId,
+        "page": 1,
+        "page_size": 50,
+      },
+      header: await getHeader(),
+    );
+    final items = (result["data"]?["item"] as List?) ?? const [];
+    return items.map((item) {
+      final medalInfo = item["medal_info"];
+      final guardLevel = int.tryParse(item["guard_level"].toString()) ?? 0;
+      return LiveContributionRankItem(
+        rank: int.tryParse(item["rank"].toString()) ?? 0,
+        userName: item["name"]?.toString() ?? "",
+        avatar: item["face"]?.toString() ?? "",
+        scoreText: item["score"]?.toString() ?? "0",
+        userLevel: int.tryParse(item["wealth_level"].toString()),
+        userLevelText: item["wealth_level"] == null
+            ? null
+            : "财富 ${item["wealth_level"]}",
+        fansLevel: int.tryParse(medalInfo?["medal_level"].toString() ?? ""),
+        fansName: medalInfo?["medal_name"]?.toString(),
+        scoreDetail: guardLevel > 0 ? "舰队 $guardLevel" : null,
+      );
+    }).toList();
   }
 
   /// 获取 buvid3 和 buvid4

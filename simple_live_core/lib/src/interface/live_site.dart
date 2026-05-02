@@ -83,8 +83,10 @@ class LiveSite {
   }
 
   /// 读取指定房间的SC
-  Future<List<LiveSuperChatMessage>> getSuperChatMessage(
-      {required String roomId}) {
+  Future<List<LiveSuperChatMessage>> getSuperChatMessage({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) {
     return Future.value([]);
   }
 }

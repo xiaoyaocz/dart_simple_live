@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/models/danmu_shield_preset.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
 import 'package:flutter/material.dart';
@@ -38,6 +40,12 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuSpeed, 10.0);
     danmuEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuEnable, true);
+    danmuShieldEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuShieldEnable, true);
+    danmuKeywordShieldEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuKeywordShieldEnable, true);
+    danmuUserShieldEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuUserShieldEnable, true);
     danmuStrokeWidth.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
     danmuTopMargin.value = LocalStorageService.instance
@@ -85,8 +93,11 @@ class AppSettingsController extends GetxController {
 
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
+    playershowSuperChat.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerShowSuperChat, true);
 
     _loadShieldList();
+    _loadShieldPresetList();
 
     scaleMode.value = LocalStorageService.instance.getValue(
       LocalStorageService.kPlayerScaleMode,
@@ -382,8 +393,30 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kPlayerShowSuperChat, e);
   }
 
+  var danmuShieldEnable = true.obs;
+  void setDanmuShieldEnable(bool e) {
+    danmuShieldEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuShieldEnable, e);
+  }
+
+  var danmuKeywordShieldEnable = true.obs;
+  void setDanmuKeywordShieldEnable(bool e) {
+    danmuKeywordShieldEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuKeywordShieldEnable, e);
+  }
+
+  var danmuUserShieldEnable = true.obs;
+  void setDanmuUserShieldEnable(bool e) {
+    danmuUserShieldEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuUserShieldEnable, e);
+  }
+
   RxSet<String> shieldList = <String>{}.obs;
   RxSet<String> userShieldList = <String>{}.obs;
+  RxList<DanmuShieldPreset> shieldPresetList = <DanmuShieldPreset>[].obs;
 
   Iterable<String> get allShieldValues =>
       LocalStorageService.instance.shieldBox.values.cast<String>();
@@ -412,6 +445,45 @@ class AppSettingsController extends GetxController {
     userShieldList
       ..clear()
       ..addAll(users);
+  }
+
+  void _loadShieldPresetList() {
+    final presets = <DanmuShieldPreset>[];
+    for (final entry
+        in LocalStorageService.instance.shieldPresetBox.toMap().entries) {
+      final name = entry.key.toString().trim();
+      final rawValue = entry.value.toString().trim();
+      if (name.isEmpty || rawValue.isEmpty) {
+        continue;
+      }
+      try {
+        final decoded = jsonDecode(rawValue);
+        if (decoded is! Map) {
+          continue;
+        }
+        final keywordValues = (decoded['keywords'] as List? ?? const [])
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toSet()
+            .toList();
+        final userValues = (decoded['users'] as List? ?? const [])
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toSet()
+            .toList();
+        presets.add(
+          DanmuShieldPreset(
+            name: name,
+            keywords: keywordValues,
+            users: userValues,
+          ),
+        );
+      } catch (e) {
+        Log.d("加载历史屏蔽预设失败: $e");
+      }
+    }
+    presets.sort((a, b) => a.name.compareTo(b.name));
+    shieldPresetList.assignAll(presets);
   }
 
   String _buildShieldStorageValue(
@@ -479,6 +551,72 @@ class AppSettingsController extends GetxController {
       return false;
     }
     return userShieldList.contains(value);
+  }
+
+  bool shouldShieldUser(String userName) {
+    if (!danmuShieldEnable.value || !danmuUserShieldEnable.value) {
+      return false;
+    }
+    return isUserShielded(userName);
+  }
+
+  DanmuShieldPreset? _findShieldPreset(String name) {
+    final value = name.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+    for (final preset in shieldPresetList) {
+      if (preset.name == value) {
+        return preset;
+      }
+    }
+    return null;
+  }
+
+  Future<bool> saveShieldPreset(String name) async {
+    final value = name.trim();
+    if (value.isEmpty) {
+      return false;
+    }
+    final preset = DanmuShieldPreset(
+      name: value,
+      keywords: shieldList.toList(),
+      users: userShieldList.toList(),
+    );
+    await LocalStorageService.instance.shieldPresetBox.put(
+      value,
+      jsonEncode(preset.toJson()),
+    );
+    _loadShieldPresetList();
+    return true;
+  }
+
+  Future<bool> applyShieldPreset(String name) async {
+    final preset = _findShieldPreset(name);
+    if (preset == null) {
+      return false;
+    }
+    await clearShieldList();
+    for (final keyword in preset.keywords) {
+      addShieldList(keyword);
+    }
+    for (final user in preset.users) {
+      addUserShieldList(user);
+    }
+    setDanmuShieldEnable(true);
+    setDanmuKeywordShieldEnable(true);
+    setDanmuUserShieldEnable(true);
+    return true;
+  }
+
+  Future<bool> deleteShieldPreset(String name) async {
+    final value = name.trim();
+    if (value.isEmpty) {
+      return false;
+    }
+    await LocalStorageService.instance.shieldPresetBox.delete(value);
+    _loadShieldPresetList();
+    return true;
   }
 
   Future clearShieldList() async {

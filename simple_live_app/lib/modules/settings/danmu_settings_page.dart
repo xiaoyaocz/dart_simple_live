@@ -54,6 +54,32 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Obx(
+                () => SettingsSwitch(
+                  title: "启用弹幕屏蔽",
+                  subtitle: "关闭后，关键词和用户屏蔽都会暂时失效",
+                  value: controller.danmuShieldEnable.value,
+                  onChanged: controller.setDanmuShieldEnable,
+                ),
+              ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsSwitch(
+                  title: "启用关键词屏蔽",
+                  value: controller.danmuKeywordShieldEnable.value,
+                  onChanged: controller.setDanmuKeywordShieldEnable,
+                ),
+              ),
+              AppStyle.divider,
+              Obx(
+                () => SettingsSwitch(
+                  title: "启用用户屏蔽",
+                  subtitle: "也可以在直播间点击用户名快速屏蔽或取消屏蔽",
+                  value: controller.danmuUserShieldEnable.value,
+                  onChanged: controller.setDanmuUserShieldEnable,
+                ),
+              ),
+              AppStyle.divider,
               SettingsAction(
                 title: "关键词屏蔽",
                 onTap: onTapDanmuShield ??

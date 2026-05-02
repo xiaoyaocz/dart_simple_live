@@ -53,9 +53,7 @@ Widget buildFullControls(
         // 左下角SC显示
         Obx(
           () => Visibility(
-            visible: AppSettingsController.instance.playershowSuperChat.value &&
-                ((!Platform.isAndroid && !Platform.isIOS) ||
-                    controller.fullScreenState.value),
+            visible: AppSettingsController.instance.playershowSuperChat.value,
             child: Positioned(
               left: 24,
               bottom: 24,
@@ -439,9 +437,7 @@ Widget buildControls(
       // 左下角SC显示
       Obx(
         () => Visibility(
-          visible: AppSettingsController.instance.playershowSuperChat.value &&
-              ((!Platform.isAndroid && !Platform.isIOS) ||
-                  controller.fullScreenState.value),
+          visible: AppSettingsController.instance.playershowSuperChat.value,
           child: Positioned(
             left: 24,
             bottom: 24,
@@ -907,10 +903,14 @@ class PlayerSuperChatCard extends StatefulWidget {
   final LiveSuperChatMessage message;
   final VoidCallback onExpire;
   final int duration;
+  final VoidCallback? onUserTap;
+  final VoidCallback? onUserLongPress;
   const PlayerSuperChatCard(
       {required this.message,
       required this.onExpire,
       required this.duration,
+      this.onUserTap,
+      this.onUserLongPress,
       Key? key})
       : super(key: key);
   @override
@@ -950,6 +950,8 @@ class _PlayerSuperChatCardState extends State<PlayerSuperChatCard> {
         widget.message,
         onExpire: () {},
         customCountdown: countdown,
+        onUserTap: widget.onUserTap,
+        onUserLongPress: widget.onUserLongPress,
       ),
     );
   }
@@ -1041,6 +1043,10 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
                 message: localSC.sc,
                 onExpire: () {},
                 duration: localSC.duration,
+                onUserTap: () =>
+                    widget.controller.toggleUserShield(localSC.sc.userName),
+                onUserLongPress: () =>
+                    widget.controller.copyUserName(localSC.sc.userName),
               ),
             ),
           ),

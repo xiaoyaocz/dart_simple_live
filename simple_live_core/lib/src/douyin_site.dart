@@ -800,6 +800,7 @@ class DouyinSite implements LiveSite {
   @override
   Future<List<LiveSuperChatMessage>> getSuperChatMessage({
     required String roomId,
+    LiveRoomDetail? detail,
   }) {
     return Future.value(<LiveSuperChatMessage>[]);
   }

@@ -381,6 +381,7 @@ class DouyuSite implements LiveSite {
   @override
   Future<List<LiveSuperChatMessage>> getSuperChatMessage({
     required String roomId,
+    LiveRoomDetail? detail,
   }) {
     //尚不支持
     return Future.value([]);

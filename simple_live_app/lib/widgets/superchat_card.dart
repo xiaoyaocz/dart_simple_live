@@ -10,10 +10,15 @@ class SuperChatCard extends StatefulWidget {
   final LiveSuperChatMessage message;
   final Function()? onExpire;
   final int? customCountdown;
+  final VoidCallback? onUserTap;
+  final VoidCallback? onUserLongPress;
+
   const SuperChatCard(
     this.message, {
     required this.onExpire,
     this.customCountdown,
+    this.onUserTap,
+    this.onUserLongPress,
     Key? key,
   }) : super(key: key);
 
@@ -23,22 +28,18 @@ class SuperChatCard extends StatefulWidget {
 
 class _SuperChatCardState extends State<SuperChatCard> {
   late Timer timer;
-
   int countdown = 0;
 
   @override
   void initState() {
-    var currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    var endTime = widget.message.endTime.millisecondsSinceEpoch ~/ 1000;
-
-    countdown = endTime - currentTime;
-
-    timer = Timer.periodic(const Duration(seconds: 1), timerCallback);
-
     super.initState();
+    final currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final endTime = widget.message.endTime.millisecondsSinceEpoch ~/ 1000;
+    countdown = endTime - currentTime;
+    timer = Timer.periodic(const Duration(seconds: 1), timerCallback);
   }
 
-  void timerCallback(e) {
+  void timerCallback(Timer _) {
     if (countdown <= 0) {
       widget.onExpire?.call();
       timer.cancel();
@@ -78,10 +79,15 @@ class _SuperChatCardState extends State<SuperChatCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          widget.message.userName,
-                          style: const TextStyle(
-                            color: AppColors.black333,
+                        GestureDetector(
+                          onTap: widget.onUserTap,
+                          onLongPress: widget.onUserLongPress,
+                          child: Text(
+                            widget.message.userName,
+                            style: const TextStyle(
+                              color: AppColors.black333,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                         Text(
@@ -106,8 +112,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
             ),
             Container(
               decoration: BoxDecoration(
-                color:
-                    Utils.convertHexColor(widget.message.backgroundBottomColor),
+                color: Utils.convertHexColor(widget.message.backgroundBottomColor),
               ),
               padding: AppStyle.edgeInsetsA8,
               child: Text(

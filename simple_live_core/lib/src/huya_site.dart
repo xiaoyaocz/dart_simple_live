@@ -6,8 +6,6 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_resp.dart';
-import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
-import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
 import 'package:simple_live_core/src/model/tars/huya_message_board.dart';
 import 'package:simple_live_core/src/model/tars/huya_user_id.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
@@ -669,16 +667,60 @@ class HuyaSite implements LiveSite {
   @override
   Future<List<LiveSuperChatMessage>> getSuperChatMessage({
     required String roomId,
+    LiveRoomDetail? detail,
   }) async {
     //尚不支持
-    final profileRoomId = int.tryParse(roomId) ?? 0;
-    if (profileRoomId <= 0) {
-      return [];
+    final pidCandidates = <int>{};
+    final danmakuArgs = detail?.danmakuData is HuyaDanmakuArgs
+        ? detail!.danmakuData as HuyaDanmakuArgs
+        : null;
+    if (danmakuArgs != null) {
+      if (danmakuArgs.topSid > 0) {
+        pidCandidates.add(danmakuArgs.topSid);
+      }
+      if (danmakuArgs.subSid > 0) {
+        pidCandidates.add(danmakuArgs.subSid);
+      }
     }
 
+    final profileRoomId = int.tryParse(roomId) ?? 0;
+    if (profileRoomId > 0) {
+      pidCandidates.add(profileRoomId);
+    }
+
+    if (pidCandidates.isEmpty ||
+        (pidCandidates.length == 1 && pidCandidates.contains(profileRoomId))) {
+      final roomInfo = await _getRoomInfo(roomId);
+      final topSid = roomInfo["topSid"];
+      final subSid = roomInfo["subSid"];
+      if (topSid is int && topSid > 0) {
+        pidCandidates.add(topSid);
+      }
+      if (subSid is int && subSid > 0) {
+        pidCandidates.add(subSid);
+      }
+    }
+
+    for (final pid in pidCandidates) {
+      if (pid <= 0) {
+        continue;
+      }
+      try {
+        final messages = await _fetchHeadLineMessages(pid);
+        if (messages.isNotEmpty) {
+          return messages;
+        }
+      } catch (e) {
+        CoreLog.error("Huya headline fetch failed for pid=$pid: $e");
+      }
+    }
+    return [];
+  }
+
+  Future<List<LiveSuperChatMessage>> _fetchHeadLineMessages(int pid) async {
     final userId = HuyaUserId()..sHuYaUA = HYSDK_UA;
     final req = GetGameEventMessageBoardReq()
-      ..lPid = profileRoomId
+      ..lPid = pid
       ..tId = userId
       ..iMessageBoardScope = 0
       ..iPageSize = 10;

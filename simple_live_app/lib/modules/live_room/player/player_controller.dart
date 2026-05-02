@@ -386,9 +386,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     } else {
       _windowMaximizedBeforeFullScreen = await windowManager.isMaximized();
       if (_windowMaximizedBeforeFullScreen) {
-        await windowManager.restore();
+        await windowManager.unmaximize();
+        await _waitForWindowMaximizedState(false);
+        await Future.delayed(const Duration(milliseconds: 60));
       }
       await windowManager.setFullScreen(true);
+      await _refreshWindowsWindowBounds();
     }
     //danmakuController?.clear();
   }
@@ -401,8 +404,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       setPortraitOrientation();
     } else {
       await windowManager.setFullScreen(false);
+      await _refreshWindowsWindowBounds();
       if (_windowMaximizedBeforeFullScreen) {
         await windowManager.maximize();
+        await _waitForWindowMaximizedState(true);
       }
       _windowMaximizedBeforeFullScreen = false;
     }
@@ -414,6 +419,38 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   Size? _lastWindowSize;
   Offset? _lastWindowPosition;
   bool _windowMaximizedBeforeFullScreen = false;
+
+  Future<void> _waitForWindowMaximizedState(bool value) async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    final deadline = DateTime.now().add(const Duration(milliseconds: 600));
+    while (DateTime.now().isBefore(deadline)) {
+      if (await windowManager.isMaximized() == value) {
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
+  Future<void> _refreshWindowsWindowBounds() async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    try {
+      final size = await windowManager.getSize();
+      if (size.width <= 1 || size.height <= 1) {
+        return;
+      }
+      final nudgedSize = Size(size.width + 1, size.height + 1);
+      await windowManager.setSize(nudgedSize);
+      await windowManager.setSize(size);
+    } catch (e) {
+      Log.logPrint(e);
+    }
+  }
 
   ///小窗模式()
   void enterSmallWindow() async {

@@ -20,6 +20,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
@@ -149,7 +150,12 @@ class LiveRoomController extends PlayerController
   }
 
   bool _isKeywordShielded(LiveMessage msg) {
-    for (var keyword in AppSettingsController.instance.shieldList) {
+    final settings = AppSettingsController.instance;
+    if (!settings.danmuShieldEnable.value ||
+        !settings.danmuKeywordShieldEnable.value) {
+      return false;
+    }
+    for (var keyword in settings.shieldList) {
       Pattern? pattern;
       if (Utils.isRegexFormat(keyword)) {
         String removedSlash = Utils.removeRegexFormat(keyword);
@@ -167,6 +173,53 @@ class LiveRoomController extends PlayerController
       }
     }
     return false;
+  }
+
+  bool _isUserShielded(String userName) {
+    return AppSettingsController.instance.shouldShieldUser(userName);
+  }
+
+  LiveMessage _superChatToLiveMessage(LiveSuperChatMessage superChat) {
+    return LiveMessage(
+      type: LiveMessageType.superChat,
+      userName: superChat.userName,
+      message: superChat.message,
+      color: LiveMessageColor.white,
+    );
+  }
+
+  String _normalizeUserName(String userName) {
+    return userName.trim();
+  }
+
+  void toggleUserShield(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+
+    final settings = AppSettingsController.instance;
+    if (settings.isUserShielded(value)) {
+      settings.removeUserShieldList(value);
+      SmartDialog.showToast("已取消屏蔽用户：$value");
+      return;
+    }
+
+    settings.setDanmuShieldEnable(true);
+    settings.setDanmuUserShieldEnable(true);
+    settings.addUserShieldList(value);
+    SmartDialog.showToast("已屏蔽用户：$value");
+  }
+
+  void copyUserName(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+    Utils.copyToClipboard(value);
+    SmartDialog.showToast("已复制用户名：$value");
   }
 
   void _cancelPendingDanmakuTimers() {
@@ -360,29 +413,13 @@ class LiveRoomController extends PlayerController
       if (messages.length > 200 && !disableAutoScroll.value) {
         messages.removeAt(0);
       }
-      if (AppSettingsController.instance.isUserShielded(msg.userName)) {
+      if (_isUserShielded(msg.userName)) {
         Log.d("宸插睆钄界敤鎴凤細${msg.userName}");
         return;
       }
 
-      // 关键词屏蔽检查
-      for (var keyword in AppSettingsController.instance.shieldList) {
-        Pattern? pattern;
-        if (Utils.isRegexFormat(keyword)) {
-          String removedSlash = Utils.removeRegexFormat(keyword);
-          try {
-            pattern = RegExp(removedSlash);
-          } catch (e) {
-            // should avoid this during add keyword
-            Log.d("关键词：$keyword 正则格式错误");
-          }
-        } else {
-          pattern = keyword;
-        }
-        if (pattern != null && msg.message.contains(pattern)) {
-          Log.d("关键词：$keyword\n已屏蔽消息内容：${msg.message}");
-          return;
-        }
+      if (_isKeywordShielded(msg)) {
+        return;
       }
 
       messages.add(msg);
@@ -402,15 +439,10 @@ class LiveRoomController extends PlayerController
         return;
       }
       final superChat = msg.data as LiveSuperChatMessage;
-      if (AppSettingsController.instance.isUserShielded(superChat.userName)) {
+      if (_isUserShielded(superChat.userName)) {
         return;
       }
-      if (_isKeywordShielded(LiveMessage(
-        type: LiveMessageType.superChat,
-        userName: superChat.userName,
-        message: superChat.message,
-        color: LiveMessageColor.white,
-      ))) {
+      if (_isKeywordShielded(_superChatToLiveMessage(superChat))) {
         return;
       }
       _appendSuperChats([superChat]);
@@ -715,9 +747,17 @@ class LiveRoomController extends PlayerController
       return;
     }
     try {
-      var sc =
-          await site.liveSite.getSuperChatMessage(roomId: detail.value!.roomId);
-      _appendSuperChats(sc);
+      var sc = await site.liveSite.getSuperChatMessage(
+        roomId: detail.value!.roomId,
+        detail: detail.value,
+      );
+      final filtered = sc.where((item) {
+        if (_isUserShielded(item.userName)) {
+          return false;
+        }
+        return !_isKeywordShielded(_superChatToLiveMessage(item));
+      });
+      _appendSuperChats(filtered);
       removeSuperChats();
     } catch (e) {
       Log.logPrint(e);
@@ -973,154 +1013,7 @@ class LiveRoomController extends PlayerController
   }
 
   void showDanmuShield() {
-    TextEditingController keywordController = TextEditingController();
-    TextEditingController userController = TextEditingController();
-
-    void addKeyword() {
-      if (keywordController.text.isEmpty) {
-        SmartDialog.showToast("请输入关键词");
-        return;
-      }
-
-      AppSettingsController.instance
-          .addShieldList(keywordController.text.trim());
-      keywordController.text = "";
-    }
-
-    void addUser() {
-      if (userController.text.isEmpty) {
-        SmartDialog.showToast("璇疯緭鍏ョ敤鎴峰悕");
-        return;
-      }
-
-      AppSettingsController.instance
-          .addUserShieldList(userController.text.trim());
-      userController.text = "";
-    }
-
-    Utils.showBottomSheet(
-      title: "关键词屏蔽",
-      child: ListView(
-        padding: AppStyle.edgeInsetsA12,
-        children: [
-          TextField(
-            controller: keywordController,
-            decoration: InputDecoration(
-              contentPadding: AppStyle.edgeInsetsH12,
-              border: const OutlineInputBorder(),
-              hintText: "请输入关键词",
-              suffixIcon: TextButton.icon(
-                onPressed: addKeyword,
-                icon: const Icon(Icons.add),
-                label: const Text("添加"),
-              ),
-            ),
-            onSubmitted: (e) {
-              addKeyword();
-            },
-          ),
-          AppStyle.vGap12,
-          Obx(
-            () => Text(
-              "已添加${AppSettingsController.instance.shieldList.length}个关键词（点击移除）",
-              style: Get.textTheme.titleSmall,
-            ),
-          ),
-          AppStyle.vGap12,
-          Obx(
-            () => Wrap(
-              runSpacing: 12,
-              spacing: 12,
-              children: AppSettingsController.instance.shieldList
-                  .map(
-                    (item) => InkWell(
-                      borderRadius: AppStyle.radius24,
-                      onTap: () {
-                        AppSettingsController.instance.removeShieldList(item);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: AppStyle.radius24,
-                        ),
-                        padding: AppStyle.edgeInsetsH12.copyWith(
-                          top: 4,
-                          bottom: 4,
-                        ),
-                        child: Text(
-                          item,
-                          style: Get.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          AppStyle.vGap24,
-          Text(
-            "Users",
-            style: Get.textTheme.titleSmall,
-          ),
-          AppStyle.vGap12,
-          TextField(
-            controller: userController,
-            decoration: InputDecoration(
-              contentPadding: AppStyle.edgeInsetsH12,
-              border: const OutlineInputBorder(),
-              hintText: "Enter username",
-              suffixIcon: TextButton.icon(
-                onPressed: addUser,
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text("Add"),
-              ),
-            ),
-            onSubmitted: (e) {
-              addUser();
-            },
-          ),
-          AppStyle.vGap12,
-          Obx(
-            () => Text(
-              "Blocked users: ${AppSettingsController.instance.userShieldList.length} (tap to remove)",
-              style: Get.textTheme.titleSmall,
-            ),
-          ),
-          AppStyle.vGap12,
-          Obx(
-            () => Wrap(
-              runSpacing: 12,
-              spacing: 12,
-              children: AppSettingsController.instance.userShieldList
-                  .map(
-                    (item) => InkWell(
-                      borderRadius: AppStyle.radius24,
-                      onTap: () {
-                        AppSettingsController.instance
-                            .removeUserShieldList(item);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: AppStyle.radius24,
-                        ),
-                        padding: AppStyle.edgeInsetsH12.copyWith(
-                          top: 4,
-                          bottom: 4,
-                        ),
-                        child: Text(
-                          item,
-                          style: Get.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ],
-      ),
-    );
+    Get.toNamed(RoutePath.kSettingsDanmuShield);
   }
 
   void showFollowUserSheet() {
@@ -1309,9 +1202,12 @@ ${error?.stackTrace}''');
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
+    final shouldTreatInactiveAsBackground =
+        !Platform.isWindows && !Platform.isLinux && !Platform.isMacOS;
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
+        state == AppLifecycleState.hidden ||
+        (state == AppLifecycleState.inactive &&
+            shouldTreatInactiveAsBackground)) {
       Log.d("进入后台:$state");
       danmakuController?.clear();
       _cancelPendingDanmakuTimers();

@@ -12,12 +12,13 @@ class DanmuShieldController extends BaseController {
       Get.find<AppSettingsController>();
 
   void add() {
-    if (textEditingController.text.isEmpty) {
-      SmartDialog.showToast("璇疯緭鍏ュ叧閿瘝");
+    final value = textEditingController.text.trim();
+    if (value.isEmpty) {
+      SmartDialog.showToast("请输入关键词");
       return;
     }
 
-    settingsController.addShieldList(textEditingController.text.trim());
+    settingsController.addShieldList(value);
     textEditingController.text = "";
   }
 
@@ -26,17 +27,38 @@ class DanmuShieldController extends BaseController {
   }
 
   void addUser() {
-    if (userTextEditingController.text.isEmpty) {
-      SmartDialog.showToast("璇疯緭鍏ョ敤鎴峰悕");
+    final value = userTextEditingController.text.trim();
+    if (value.isEmpty) {
+      SmartDialog.showToast("请输入用户名");
       return;
     }
 
-    settingsController.addUserShieldList(userTextEditingController.text.trim());
+    settingsController.addUserShieldList(value);
     userTextEditingController.text = "";
   }
 
   void removeUser(String item) {
     settingsController.removeUserShieldList(item);
+  }
+
+  Future<void> savePreset(String name) async {
+    final value = name.trim();
+    if (value.isEmpty) {
+      SmartDialog.showToast("请输入预设名称");
+      return;
+    }
+    final success = await settingsController.saveShieldPreset(value);
+    SmartDialog.showToast(success ? "已保存屏蔽预设" : "保存屏蔽预设失败");
+  }
+
+  Future<void> applyPreset(String name) async {
+    final success = await settingsController.applyShieldPreset(name);
+    SmartDialog.showToast(success ? "已启用屏蔽预设" : "启用屏蔽预设失败");
+  }
+
+  Future<void> deletePreset(String name) async {
+    final success = await settingsController.deleteShieldPreset(name);
+    SmartDialog.showToast(success ? "已删除屏蔽预设" : "删除屏蔽预设失败");
   }
 
   @override

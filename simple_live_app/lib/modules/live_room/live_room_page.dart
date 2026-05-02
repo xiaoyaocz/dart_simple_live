@@ -433,9 +433,12 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMessageArea() {
+    final hasSuperChatTab =
+        controller.site.id == Constant.kBiliBili ||
+            controller.site.id == Constant.kHuya;
     return Expanded(
       child: DefaultTabController(
-        length: controller.site.id == Constant.kBiliBili ? 4 : 3,
+        length: hasSuperChatTab ? 4 : 3,
         child: Column(
           children: [
             TabBar(
@@ -446,13 +449,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 const Tab(
                   text: "聊天",
                 ),
-                if (controller.site.id == Constant.kBiliBili)
+                if (hasSuperChatTab)
                   Tab(
                     child: Obx(
                       () => Text(
                         controller.superChats.isNotEmpty
-                            ? "SC(${controller.superChats.length})"
-                            : "SC",
+                            ? "${controller.site.id == Constant.kHuya ? "头条" : "SC"}(${controller.superChats.length})"
+                            : controller.site.id == Constant.kHuya
+                                ? "头条"
+                                : "SC",
                       ),
                     ),
                   ),
@@ -505,7 +510,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       ],
                     ),
                   ),
-                  if (controller.site.id == Constant.kBiliBili)
+                  if (hasSuperChatTab)
                     buildSuperChats(),
                   buildFollowList(),
                   buildSettings(),
@@ -531,6 +536,32 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       );
     }
 
+    Widget buildMessageContent({
+      required TextStyle userStyle,
+      required TextStyle messageStyle,
+    }) {
+      return Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          GestureDetector(
+            onTap: () => controller.toggleUserShield(message.userName),
+            onLongPress: () => controller.copyUserName(message.userName),
+            child: Text(
+              "${message.userName}：",
+              style: userStyle.copyWith(
+                decoration: TextDecoration.underline,
+                decorationColor: userStyle.color,
+              ),
+            ),
+          ),
+          Text(
+            message.message,
+            style: messageStyle,
+          ),
+        ],
+      );
+    }
+
     return Obx(
       () => AppSettingsController.instance.chatBubbleStyle.value
           ? Row(
@@ -550,45 +581,31 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                     ),
                     padding:
                         AppStyle.edgeInsetsA4.copyWith(left: 12, right: 12),
-                    child: Text.rich(
-                      TextSpan(
-                        text: "${message.userName}：",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize:
-                              AppSettingsController.instance.chatTextSize.value,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: message.message,
-                            style: TextStyle(
-                              color: Get.isDarkMode
-                                  ? Colors.white
-                                  : AppColors.black333,
-                            ),
-                          )
-                        ],
+                    child: buildMessageContent(
+                      userStyle: TextStyle(
+                        color: Colors.grey,
+                        fontSize:
+                            AppSettingsController.instance.chatTextSize.value,
+                      ),
+                      messageStyle: TextStyle(
+                        color:
+                            Get.isDarkMode ? Colors.white : AppColors.black333,
+                        fontSize:
+                            AppSettingsController.instance.chatTextSize.value,
                       ),
                     ),
                   ),
                 ),
               ],
             )
-          : Text.rich(
-              TextSpan(
-                text: "${message.userName}：",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: AppSettingsController.instance.chatTextSize.value,
-                ),
-                children: [
-                  TextSpan(
-                    text: message.message,
-                    style: TextStyle(
-                      color: Get.isDarkMode ? Colors.white : AppColors.black333,
-                    ),
-                  )
-                ],
+          : buildMessageContent(
+              userStyle: TextStyle(
+                color: Colors.grey,
+                fontSize: AppSettingsController.instance.chatTextSize.value,
+              ),
+              messageStyle: TextStyle(
+                color: Get.isDarkMode ? Colors.white : AppColors.black333,
+                fontSize: AppSettingsController.instance.chatTextSize.value,
               ),
             ),
     );
@@ -608,6 +625,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               onExpire: () {
                 controller.removeSuperChats();
               },
+              onUserTap: () => controller.toggleUserShield(item.userName),
+              onUserLongPress: () => controller.copyUserName(item.userName),
             );
           },
         ),

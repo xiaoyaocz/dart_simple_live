@@ -25,11 +25,11 @@ jobs:
           if [[ -n "$KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" && -n "$KEY_ALIAS" ]]; then
             printf '%s' "$KEYSTORE_BASE64" | openssl base64 -d -A > simple_live_tv_app/android/release-keystore.jks
             cat > simple_live_tv_app/android/key.properties <<EOF
-storeFile=../release-keystore.jks
-storePassword=$STORE_PASSWORD
-keyPassword=$KEY_PASSWORD
-keyAlias=$KEY_ALIAS
-EOF
+            storeFile=../release-keystore.jks
+            storePassword=$STORE_PASSWORD
+            keyPassword=$KEY_PASSWORD
+            keyAlias=$KEY_ALIAS
+            EOF
           fi
 
       # 设置JAVA环境

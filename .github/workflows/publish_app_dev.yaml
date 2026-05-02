@@ -23,11 +23,13 @@ jobs:
       # APK签名设置
       - name: Download Android keystore
         id: android_keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         uses: timheuer/base64-to-file@v1.2
         with:
           fileName: keystore.jks
           encodedString: ${{ secrets.KEYSTORE_BASE64 }}
       - name: Create key.properties
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
           echo "storeFile=${{ steps.android_keystore.outputs.filePath }}" > simple_live_app/android/key.properties
           echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties

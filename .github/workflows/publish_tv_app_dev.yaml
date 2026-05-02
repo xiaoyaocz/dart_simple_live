@@ -16,14 +16,16 @@ jobs:
                   ref: dev
 
             #APK签名设置
-            - name: Download Android keystore
-              id: android_tv_keystore
-              uses: timheuer/base64-to-file@v1.2
+      - name: Download Android keystore
+        id: android_tv_keystore
+        if: ${{ secrets.TV_KEYSTORE_BASE64 != '' }}
+        uses: timheuer/base64-to-file@v1.2
               with:
                   fileName: keystore.jks
                   encodedString: ${{ secrets.TV_KEYSTORE_BASE64 }}
-            - name: Create key.properties
-              run: |
+      - name: Create key.properties
+        if: ${{ secrets.TV_KEYSTORE_BASE64 != '' }}
+        run: |
                   echo "storeFile=${{ steps.android_tv_keystore.outputs.filePath }}" > simple_live_tv_app/android/key.properties
                   echo "storePassword=${{ secrets.TV_STORE_PASSWORD }}" >> simple_live_tv_app/android/key.properties
                   echo "keyPassword=${{ secrets.TV_KEY_PASSWORD }}" >> simple_live_tv_app/android/key.properties

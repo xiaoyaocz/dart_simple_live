@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_page.dart';
@@ -12,6 +13,7 @@ import 'package:simple_live_app/modules/home/home_page.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_page.dart';
 import 'package:simple_live_app/modules/mine/mine_page.dart';
+import 'package:simple_live_app/routes/app_navigation.dart';
 
 class IndexedController extends GetxController {
   RxList<HomePageItem> items = RxList<HomePageItem>([]);
@@ -57,6 +59,7 @@ class IndexedController extends GetxController {
   @override
   void onInit() {
     Future.delayed(Duration.zero, showFirstRun);
+    Future.delayed(Duration.zero, restorePendingLiveRoom);
     items.value = AppSettingsController.instance.homeSort
         .map((key) => Constant.allHomePages[key]!)
         .toList();
@@ -69,6 +72,20 @@ class IndexedController extends GetxController {
     if (settingsController.firstRun) {
       settingsController.setNoFirstRun();
       await Utils.showStatement();
-    } 
+    }
+  }
+
+  void restorePendingLiveRoom() async {
+    final settingsController = Get.find<AppSettingsController>();
+    final lastRoom = await settingsController.consumePendingLastLiveRoom();
+    if (lastRoom == null) {
+      return;
+    }
+    final site = Sites.allSites[lastRoom["siteId"]];
+    final roomId = lastRoom["roomId"];
+    if (site == null || roomId == null || roomId.isEmpty) {
+      return;
+    }
+    AppNavigator.toLiveRoomDetail(site: site, roomId: roomId);
   }
 }

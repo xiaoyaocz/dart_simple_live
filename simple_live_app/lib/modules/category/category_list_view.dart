@@ -57,12 +57,12 @@ class CategoryListView extends StatelessWidget {
                         children: item.showAll.value
                             ? (item.children
                                 .map(
-                                  (e) => buildSubCategory(e),
+                                  (e) => buildSubCategory(context, e),
                                 )
                                 .toList())
                             : (item.take15
                                 .map(
-                                  (e) => buildSubCategory(e),
+                                  (e) => buildSubCategory(context, e),
                                 )
                                 .toList()
                               ..add(buildShowMore(item))),
@@ -78,7 +78,8 @@ class CategoryListView extends StatelessWidget {
     );
   }
 
-  Widget buildSubCategory(LiveSubCategory item) {
+  Widget buildSubCategory(BuildContext context, LiveSubCategory item) {
+    final pic = (item.pic ?? "").trim();
     return ShadowCard(
       onTap: () {
         AppNavigator.toCategoryDetail(site: controller.site, category: item);
@@ -86,12 +87,40 @@ class CategoryListView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          NetImage(
-            item.pic ?? "",
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-          ),
+          pic.isNotEmpty
+              ? NetImage(
+                  pic,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 8,
+                )
+              : Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary.withAlpha(40),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(
+                          context,
+                        ).colorScheme.primary.withAlpha(28),
+                        Theme.of(
+                          context,
+                        ).colorScheme.secondary.withAlpha(44),
+                      ],
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.dashboard_customize_rounded,
+                    size: 22,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
           AppStyle.vGap4,
           Text(
             item.name,

@@ -29,6 +29,13 @@ import 'package:simple_live_core/simple_live_core.dart';
 class LiveRoomPage extends GetView<LiveRoomController> {
   const LiveRoomPage({Key? key}) : super(key: key);
 
+  double _bottomSafeInset(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final viewPadding = mediaQuery.viewPadding.bottom;
+    final padding = mediaQuery.padding.bottom;
+    return viewPadding > padding ? viewPadding : padding;
+  }
+
   @override
   Widget build(BuildContext context) {
     final page = Obx(
@@ -117,10 +124,33 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       builder: (context, orientation) {
         return Scaffold(
           appBar: AppBar(
+            titleSpacing: 0,
             title: Obx(
-              () => Text(controller.detail.value?.title ?? "直播间"),
+              () => SizedBox(
+                height: kToolbarHeight,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 48),
+                      child: Text(
+                        controller.detail.value?.title ?? "直播间",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: showMore,
+                        icon: const Icon(Icons.more_horiz),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            actions: buildAppbarActions(context),
           ),
           body: orientation == Orientation.portrait
               ? buildPhoneUI(context)
@@ -175,7 +205,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
           padding: AppStyle.edgeInsetsV4.copyWith(
-            bottom: AppStyle.bottomBarHeight + 4,
+            bottom: _bottomSafeInset(context) + 4,
           ),
           child: Row(
             children: [
@@ -384,7 +414,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           ),
         ),
       ),
-      padding: EdgeInsets.only(bottom: AppStyle.bottomBarHeight),
+      padding: EdgeInsets.only(bottom: _bottomSafeInset(context)),
       child: Row(
         children: [
           Expanded(
@@ -434,92 +464,98 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMessageArea() {
-    final hasSuperChatTab = controller.site.id == Constant.kBiliBili ||
-        controller.site.id == Constant.kHuya;
-    return Expanded(
-      child: DefaultTabController(
-        length: hasSuperChatTab ? 4 : 3,
-        child: Column(
-          children: [
-            TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelPadding: EdgeInsets.zero,
-              indicatorWeight: 1.0,
-              tabs: [
-                const Tab(
-                  text: "聊天",
-                ),
-                if (hasSuperChatTab)
-                  Tab(
-                    child: Obx(
-                      () => Text(
-                        controller.superChats.isNotEmpty
-                            ? "${controller.site.id == Constant.kHuya ? "头条" : "SC"}(${controller.superChats.length})"
-                            : controller.site.id == Constant.kHuya
-                                ? "头条"
-                                : "SC",
-                      ),
-                    ),
-                  ),
-                const Tab(
-                  text: "关注",
-                ),
-                const Tab(
-                  text: "设置",
-                ),
-              ],
+    return Obx(() {
+      final hasSuperChatTab = controller.site.id == Constant.kBiliBili ||
+          controller.site.id == Constant.kHuya;
+      final hasContributionRankTab = controller.supportsContributionRank &&
+          AppSettingsController.instance.contributionRankEnable.value;
+      final tabs = <Widget>[
+        const Tab(
+          text: "聊天",
+        ),
+        if (hasSuperChatTab)
+          Tab(
+            child: Text(
+              controller.superChats.isNotEmpty
+                  ? "${controller.site.id == Constant.kHuya ? "头条" : "SC"}(${controller.superChats.length})"
+                  : controller.site.id == Constant.kHuya
+                      ? "头条"
+                      : "SC",
             ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  Obx(
-                    () => Stack(
-                      children: [
-                        ListView.separated(
-                          controller: controller.scrollController,
-                          separatorBuilder: (_, i) => Obx(
-                            () => SizedBox(
-                              // *2与原来的EdgeInsets.symmetric(vertical: )做兼容
-                              height: AppSettingsController
-                                      .instance.chatTextGap.value *
-                                  2,
-                            ),
-                          ),
-                          padding: AppStyle.edgeInsetsA12,
-                          itemCount: controller.messages.length,
-                          itemBuilder: (_, i) {
-                            var item = controller.messages[i];
-                            return buildMessageItem(item);
-                          },
-                        ),
-                        Visibility(
-                          visible: controller.disableAutoScroll.value,
-                          child: Positioned(
-                            right: 12,
-                            bottom: 12,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                controller.disableAutoScroll.value = false;
-                                controller.chatScrollToBottom();
-                              },
-                              icon: const Icon(Icons.expand_more),
-                              label: const Text("最新"),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (hasSuperChatTab) buildSuperChats(),
-                  buildFollowList(),
-                  buildSettings(),
-                ],
+          ),
+        if (hasContributionRankTab)
+          Tab(
+            text: controller.site.id == Constant.kDouyu ? "亲密榜" : "贡献榜",
+          ),
+        const Tab(
+          text: "关注",
+        ),
+        const Tab(
+          text: "设置",
+        ),
+      ];
+      final pages = <Widget>[
+        Stack(
+          children: [
+            ListView.separated(
+              controller: controller.scrollController,
+              separatorBuilder: (_, i) => SizedBox(
+                // *2与原来的EdgeInsets.symmetric(vertical: )做兼容
+                height: AppSettingsController.instance.chatTextGap.value * 2,
+              ),
+              padding: AppStyle.edgeInsetsA12,
+              itemCount: controller.messages.length,
+              itemBuilder: (_, i) {
+                var item = controller.messages[i];
+                return buildMessageItem(item);
+              },
+            ),
+            Visibility(
+              visible: controller.disableAutoScroll.value,
+              child: Positioned(
+                right: 12,
+                bottom: 12,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    controller.disableAutoScroll.value = false;
+                    controller.chatScrollToBottom();
+                  },
+                  icon: const Icon(Icons.expand_more),
+                  label: const Text("最新"),
+                ),
               ),
             ),
           ],
         ),
-      ),
-    );
+        if (hasSuperChatTab) buildSuperChats(),
+        if (hasContributionRankTab)
+          KeepAliveWrapper(
+            child: LiveContributionRankPanel(controller: controller),
+          ),
+        buildFollowList(),
+        buildSettings(),
+      ];
+      return Expanded(
+        child: DefaultTabController(
+          length: tabs.length,
+          child: Column(
+            children: [
+              TabBar(
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelPadding: EdgeInsets.zero,
+                indicatorWeight: 1.0,
+                tabs: tabs,
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: pages,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget buildMessageItem(LiveMessage message) {
@@ -539,22 +575,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       required TextStyle userStyle,
       required TextStyle messageStyle,
     }) {
-      return Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          GestureDetector(
-            onTap: () => controller.toggleUserShield(message.userName),
-            onLongPress: () => controller.copyUserName(message.userName),
-            child: Text(
-              "${message.userName}：",
-              style: userStyle,
-            ),
-          ),
-          Text(
-            message.message,
-            style: messageStyle,
-          ),
-        ],
+      final remark = controller.getUserRemark(message.userName);
+      return _InteractiveChatText(
+        userName: message.userName,
+        remark: remark,
+        message: message.message,
+        userStyle: userStyle,
+        messageStyle: messageStyle,
+        onUserTap: () => controller.showUserActions(message.userName),
+        onUserLongPress: () => controller.copyUserName(message.userName),
       );
     }
 
@@ -618,10 +647,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             var item = controller.superChats[i];
             return SuperChatCard(
               item,
+              remark: controller.getUserRemark(item.userName),
+              key: ValueKey(
+                item.id ??
+                    "${item.userName}|${item.message}|${item.price}|${item.startTime.millisecondsSinceEpoch}",
+              ),
               onExpire: () {
                 controller.removeSuperChats();
               },
-              onUserTap: () => controller.toggleUserShield(item.userName),
+              onUserTap: () => controller.showUserActions(item.userName),
               onUserLongPress: () => controller.copyUserName(item.userName),
             );
           },
@@ -702,6 +736,26 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   },
                 ),
               ),
+              if (controller.supportsContributionRank) ...[
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    title: controller.site.id == Constant.kDouyu
+                        ? "显示亲密榜"
+                        : "显示贡献榜",
+                    subtitle: "关闭后会隐藏排行榜标签页，降低对官方功能的替代感",
+                    value: AppSettingsController
+                        .instance.contributionRankEnable.value,
+                    onChanged: (e) {
+                      AppSettingsController.instance
+                          .setContributionRankEnable(e);
+                      if (e) {
+                        controller.fetchContributionRank(forceRefresh: true);
+                      }
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -784,17 +838,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     );
   }
 
-  List<Widget> buildAppbarActions(BuildContext context) {
-    return [
-      IconButton(
-        onPressed: () {
-          showMore();
-        },
-        icon: const Icon(Icons.more_horiz),
-      ),
-    ];
-  }
-
   void showMore() {
     showModalBottomSheet(
       context: Get.context!,
@@ -817,22 +860,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 controller.refreshRoom();
               },
             ),
-            if (controller.supportsContributionRank)
-              ListTile(
-                leading: const Icon(Icons.leaderboard_outlined),
-                title: Text(
-                  controller.site.id == Constant.kDouyu ? "直播间亲密榜" : "直播间贡献榜",
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Get.back();
-                  showContributionRankPanel();
-                },
-              ),
             ListTile(
               leading: const Icon(Icons.play_circle_outline),
-              trailing: const Icon(Icons.chevron_right),
               title: const Text("切换清晰度"),
+              trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Get.back();
                 controller.showQualitySheet();
@@ -886,6 +917,28 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.history_outlined),
+              title: const Text("观看历史"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                controller.openHistoryPage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.interests_outlined),
+              title: const Text("同类推荐"),
+              subtitle: Text(controller.currentRecommendationSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              enabled: controller.hasCategoryRecommendation,
+              onTap: !controller.hasCategoryRecommendation
+                  ? null
+                  : () {
+                      Get.back();
+                      controller.openCategoryRecommendation();
+                    },
+            ),
+            ListTile(
               leading: const Icon(Icons.share_sharp),
               title: const Text("分享直播间"),
               trailing: const Icon(Icons.chevron_right),
@@ -927,25 +980,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     );
   }
 
-  void showContributionRankPanel() {
-    controller.fetchContributionRank();
-    final title = controller.site.id == Constant.kDouyu ? "直播间亲密榜" : "直播间贡献榜";
-    final child = LiveContributionRankPanel(controller: controller);
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      Utils.showRightDialog(
-        title: title,
-        width: 420,
-        child: child,
-      );
-      return;
-    }
-    Utils.showBottomSheet(
-      title: title,
-      maxWidth: 720,
-      child: child,
-    );
-  }
-
   String parseDuration(int sec) {
     // 转为时分秒
     var h = sec ~/ 3600;
@@ -958,5 +992,114 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       return "${m.toString().padLeft(2, '0')}分钟${s.toString().padLeft(2, '0')}秒";
     }
     return "${s.toString().padLeft(2, '0')}秒";
+  }
+}
+
+class _InteractiveChatText extends StatelessWidget {
+  final String userName;
+  final String? remark;
+  final String message;
+  final TextStyle userStyle;
+  final TextStyle messageStyle;
+  final VoidCallback onUserTap;
+  final VoidCallback onUserLongPress;
+
+  const _InteractiveChatText({
+    required this.userName,
+    this.remark,
+    required this.message,
+    required this.userStyle,
+    required this.messageStyle,
+    required this.onUserTap,
+    required this.onUserLongPress,
+  });
+
+  static const _userSuffix = '：';
+
+  TextSpan _buildTextSpan() {
+    return TextSpan(
+      style: messageStyle,
+      children: [
+        TextSpan(
+          text: '$userName$_userSuffix',
+          style: userStyle,
+        ),
+        if ((remark ?? "").trim().isNotEmpty)
+          TextSpan(
+            text: '[${remark!.trim()}] ',
+            style: userStyle.copyWith(
+              color: userStyle.color?.withAlpha(180),
+              fontSize: (userStyle.fontSize ?? 14) - 1,
+            ),
+          ),
+        TextSpan(text: message),
+      ],
+    );
+  }
+
+  bool _isUserNameHit({
+    required BuildContext context,
+    required BoxConstraints constraints,
+    required Offset offset,
+  }) {
+    final userTextLength = '$userName$_userSuffix'.length;
+    if (userTextLength == 0) {
+      return false;
+    }
+
+    final maxWidth = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : MediaQuery.sizeOf(context).width;
+    final painter = TextPainter(
+      text: _buildTextSpan(),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      textWidthBasis: TextWidthBasis.parent,
+    )..layout(maxWidth: maxWidth);
+
+    final boxes = painter.getBoxesForSelection(
+      TextSelection(
+        baseOffset: 0,
+        extentOffset: userTextLength,
+      ),
+    );
+
+    return boxes.any((box) => box.toRect().contains(offset));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textSpan = _buildTextSpan();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool userHitTest(Offset offset) {
+          return _isUserNameHit(
+            context: context,
+            constraints: constraints,
+            offset: offset,
+          );
+        }
+
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTapUp: (details) {
+            if (userHitTest(details.localPosition)) {
+              onUserTap();
+            }
+          },
+          onLongPressStart: (details) {
+            if (userHitTest(details.localPosition)) {
+              onUserLongPress();
+            }
+          },
+          child: Text.rich(
+            textSpan,
+            softWrap: true,
+            textWidthBasis: TextWidthBasis.parent,
+          ),
+        );
+      },
+    );
   }
 }

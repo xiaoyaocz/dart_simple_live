@@ -9,24 +9,31 @@ import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
-class LiveContributionRankPanel extends StatelessWidget {
+class LiveContributionRankPanel extends StatefulWidget {
   final LiveRoomController controller;
+
   const LiveContributionRankPanel({
     super.key,
     required this.controller,
   });
 
   @override
+  State<LiveContributionRankPanel> createState() =>
+      _LiveContributionRankPanelState();
+}
+
+class _LiveContributionRankPanelState extends State<LiveContributionRankPanel> {
+  String _filter = "all";
+
+  LiveRoomController get controller => widget.controller;
+
+  @override
   Widget build(BuildContext context) {
     return Obx(() {
       final items = controller.contributionRanks.toList();
+      final filteredItems = _applyFilter(items);
       final loading = controller.contributionRankLoading.value;
       final error = controller.contributionRankError.value;
-      if (!loading && items.isEmpty && error == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          controller.fetchContributionRank();
-        });
-      }
 
       return RefreshIndicator(
         onRefresh: () => controller.fetchContributionRank(forceRefresh: true),
@@ -34,8 +41,17 @@ class LiveContributionRankPanel extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: AppStyle.edgeInsetsA12,
           children: [
-            _buildHero(context, items.length, loading),
+            _buildHero(
+              context,
+              visibleCount: filteredItems.length,
+              totalCount: items.length,
+              loading: loading,
+            ),
             AppStyle.vGap12,
+            if (items.isNotEmpty) ...[
+              _buildFilterBar(context),
+              AppStyle.vGap12,
+            ],
             if (error != null && items.isNotEmpty) ...[
               _buildInlineError(context, error),
               AppStyle.vGap12,
@@ -44,16 +60,21 @@ class LiveContributionRankPanel extends StatelessWidget {
             if (!loading && error != null && items.isEmpty)
               _buildError(context, error),
             if (!loading && error == null && items.isEmpty)
-              _buildEmpty(context),
-            if (items.isNotEmpty) ...[
-              _buildTopThree(context, items),
-              if (items.length > 3) AppStyle.vGap12,
-              ...items.skip(3).map((item) {
-                return Padding(
-                  padding: AppStyle.edgeInsetsB8,
-                  child: _buildRankTile(context, item),
-                );
-              }),
+              _buildEmpty(context, "当前没有可显示的$_panelTitle"),
+            if (!loading &&
+                error == null &&
+                items.isNotEmpty &&
+                filteredItems.isEmpty)
+              _buildEmpty(context, "当前筛选条件下没有符合要求的用户"),
+            if (filteredItems.isNotEmpty) ...[
+              _buildTopThree(context, filteredItems),
+              if (filteredItems.length > 3) AppStyle.vGap12,
+              ...filteredItems.skip(3).map(
+                    (item) => Padding(
+                      padding: AppStyle.edgeInsetsB8,
+                      child: _buildRankTile(context, item),
+                    ),
+                  ),
             ],
           ],
         ),
@@ -61,10 +82,16 @@ class LiveContributionRankPanel extends StatelessWidget {
     });
   }
 
-  Widget _buildHero(BuildContext context, int count, bool loading) {
+  Widget _buildHero(
+    BuildContext context, {
+    required int visibleCount,
+    required int totalCount,
+    required bool loading,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final detail = controller.detail.value;
     final updatedAt = controller.contributionRankUpdatedAt.value;
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -138,12 +165,19 @@ class LiveContributionRankPanel extends StatelessWidget {
               _buildInfoChip(
                 context,
                 icon: Remix.medal_line,
-                label: count > 0 ? "已载入 $count 位" : "下拉可刷新",
+                label: totalCount > 0
+                    ? "显示 $visibleCount / $totalCount 位"
+                    : "下拉可刷新",
               ),
               _buildInfoChip(
                 context,
                 icon: Remix.bar_chart_grouped_line,
                 label: _scoreLabel,
+              ),
+              _buildInfoChip(
+                context,
+                icon: Remix.filter_3_line,
+                label: _filterLabel,
               ),
               if (updatedAt != null)
                 _buildInfoChip(
@@ -155,6 +189,36 @@ class LiveContributionRankPanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterBar(BuildContext context) {
+    const options = [
+      ("all", "全部"),
+      ("top10", "前十"),
+      ("fans", "粉丝牌"),
+      ("high", "高贡献"),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options
+          .map(
+            (item) => ChoiceChip(
+              selected: _filter == item.$1,
+              label: Text(item.$2),
+              onSelected: (_) {
+                if (_filter == item.$1) {
+                  return;
+                }
+                setState(() {
+                  _filter = item.$1;
+                });
+              },
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -175,9 +239,10 @@ class LiveContributionRankPanel extends StatelessWidget {
   }
 
   Widget _buildError(BuildContext context, String error) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
+        color: colorScheme.errorContainer,
         borderRadius: AppStyle.radius12,
       ),
       padding: AppStyle.edgeInsetsA16,
@@ -187,14 +252,14 @@ class LiveContributionRankPanel extends StatelessWidget {
           Text(
             "榜单加载失败",
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  color: colorScheme.onErrorContainer,
                 ),
           ),
           AppStyle.vGap8,
           Text(
             error,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  color: colorScheme.onErrorContainer,
                 ),
           ),
           AppStyle.vGap12,
@@ -209,7 +274,7 @@ class LiveContributionRankPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildEmpty(BuildContext context) {
+  Widget _buildEmpty(BuildContext context, String text) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -225,7 +290,7 @@ class LiveContributionRankPanel extends StatelessWidget {
           ),
           AppStyle.vGap12,
           Text(
-            "当前没有可显示的$_panelTitle",
+            text,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -247,7 +312,7 @@ class LiveContributionRankPanel extends StatelessWidget {
           AppStyle.hGap8,
           Expanded(
             child: Text(
-              "刷新失败，当前展示的是上一次成功获取的榜单。\n$error",
+              "刷新失败，当前显示的是上一次成功获取的榜单。\n$error",
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -274,18 +339,20 @@ class LiveContributionRankPanel extends StatelessWidget {
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: displayOrder.map((item) {
-        return Expanded(
-          child: Padding(
-            padding: AppStyle.edgeInsetsH4,
-            child: _buildTopCard(
-              context,
-              item,
-              height: heights[item.rank] ?? 136,
+      children: displayOrder
+          .map(
+            (item) => Expanded(
+              child: Padding(
+                padding: AppStyle.edgeInsetsH4,
+                child: _buildTopCard(
+                  context,
+                  item,
+                  height: heights[item.rank] ?? 136,
+                ),
+              ),
             ),
-          ),
-        );
-      }).toList(),
+          )
+          .toList(),
     );
   }
 
@@ -295,185 +362,205 @@ class LiveContributionRankPanel extends StatelessWidget {
     required double height,
   }) {
     final colors = _rankColors(item.rank, context);
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: AppStyle.radius24,
-        boxShadow: [
-          BoxShadow(
-            color: colors.last.withAlpha(60),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      padding: AppStyle.edgeInsetsA12,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          CircleAvatar(
-            radius: item.rank == 1 ? 30 : 24,
-            backgroundColor: Colors.white,
-            child: ClipOval(
-              child: NetImage(
-                item.avatar,
-                width: item.rank == 1 ? 56 : 44,
-                height: item.rank == 1 ? 56 : 44,
-              ),
+        onTap: () => controller.showUserActions(item.userName),
+        onLongPress: () => controller.copyUserName(item.userName),
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
+            borderRadius: AppStyle.radius24,
+            boxShadow: [
+              BoxShadow(
+                color: colors.last.withAlpha(60),
+                blurRadius: 20,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-          AppStyle.vGap8,
-          Text(
-            "#${item.rank}",
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+          padding: AppStyle.edgeInsetsA12,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              CircleAvatar(
+                radius: item.rank == 1 ? 30 : 24,
+                backgroundColor: Colors.white,
+                child: ClipOval(
+                  child: NetImage(
+                    item.avatar,
+                    width: item.rank == 1 ? 56 : 44,
+                    height: item.rank == 1 ? 56 : 44,
+                  ),
                 ),
+              ),
+              AppStyle.vGap8,
+              Text(
+                "#${item.rank}",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              AppStyle.vGap4,
+              Text(
+                item.userName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              AppStyle.vGap4,
+              Text(
+                _formatMetric(item.scoreText),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withAlpha(220),
+                    ),
+              ),
+            ],
           ),
-          AppStyle.vGap4,
-          Text(
-            item.userName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          AppStyle.vGap4,
-          Text(
-            _formatMetric(item.scoreText),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withAlpha(220),
-                ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildRankTile(BuildContext context, LiveContributionRankItem item) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: AppStyle.radius12,
-        border: Border.all(color: Colors.grey.withAlpha(24)),
-      ),
-      padding: AppStyle.edgeInsetsA12,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: AppStyle.radius12,
-            ),
-            child: Text(
-              item.rank.toString(),
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
+        onTap: () => controller.showUserActions(item.userName),
+        onLongPress: () => controller.copyUserName(item.userName),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: AppStyle.radius12,
+            border: Border.all(color: Colors.grey.withAlpha(24)),
           ),
-          AppStyle.hGap12,
-          NetImage(
-            item.avatar,
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-          ),
-          AppStyle.hGap12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall,
+          padding: AppStyle.edgeInsetsA12,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: AppStyle.radius12,
                 ),
-                AppStyle.vGap8,
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                child: Text(
+                  item.rank.toString(),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              AppStyle.hGap12,
+              NetImage(
+                item.avatar,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+              ),
+              AppStyle.hGap12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if ((item.userLevelIcon ?? "").isNotEmpty)
-                      ClipRRect(
-                        borderRadius: AppStyle.radius8,
-                        child: NetImage(
-                          item.userLevelIcon!,
-                          width: 32,
-                          height: 16,
-                          fit: BoxFit.contain,
-                        ),
-                      )
-                    else if ((item.userLevelText ?? "").isNotEmpty)
-                      _buildTag(
-                        context,
-                        label: item.userLevelText!,
-                        icon: Remix.vip_crown_2_line,
-                      ),
-                    if ((item.fansIcon ?? "").isNotEmpty)
-                      ClipRRect(
-                        borderRadius: AppStyle.radius8,
-                        child: NetImage(
-                          item.fansIcon!,
-                          width: 32,
-                          height: 16,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    if ((item.fansName ?? "").isNotEmpty ||
-                        (item.fansLevel ?? 0) > 0)
-                      _buildTag(
-                        context,
-                        label: [
-                          if ((item.fansName ?? "").isNotEmpty) item.fansName!,
-                          if ((item.fansLevel ?? 0) > 0) "Lv.${item.fansLevel}",
-                        ].join(" "),
-                        icon: Remix.heart_3_line,
-                      ),
+                    Text(
+                      item.userName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    AppStyle.vGap8,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if ((item.userLevelIcon ?? "").isNotEmpty)
+                          ClipRRect(
+                            borderRadius: AppStyle.radius8,
+                            child: NetImage(
+                              item.userLevelIcon!,
+                              width: 32,
+                              height: 16,
+                              fit: BoxFit.contain,
+                            ),
+                          )
+                        else if ((item.userLevelText ?? "").isNotEmpty)
+                          _buildTag(
+                            context,
+                            label: item.userLevelText!,
+                            icon: Remix.vip_crown_2_line,
+                          ),
+                        if ((item.fansIcon ?? "").isNotEmpty)
+                          ClipRRect(
+                            borderRadius: AppStyle.radius8,
+                            child: NetImage(
+                              item.fansIcon!,
+                              width: 32,
+                              height: 16,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        if ((item.fansName ?? "").isNotEmpty ||
+                            (item.fansLevel ?? 0) > 0)
+                          _buildTag(
+                            context,
+                            label: [
+                              if ((item.fansName ?? "").isNotEmpty)
+                                item.fansName!,
+                              if ((item.fansLevel ?? 0) > 0)
+                                "Lv.${item.fansLevel}",
+                            ].join(" "),
+                            icon: Remix.heart_3_line,
+                          ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          AppStyle.hGap12,
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _formatMetric(item.scoreText),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
               ),
-              if ((item.scoreDetail ?? "").isNotEmpty) ...[
-                AppStyle.vGap4,
-                Text(
-                  item.scoreDetail!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ],
+              AppStyle.hGap12,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatMetric(item.scoreText),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  if ((item.scoreDetail ?? "").isNotEmpty) ...[
+                    AppStyle.vGap4,
+                    Text(
+                      item.scoreDetail!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -542,6 +629,68 @@ class LiveContributionRankPanel extends StatelessWidget {
     }
   }
 
+  List<LiveContributionRankItem> _applyFilter(
+    List<LiveContributionRankItem> items,
+  ) {
+    switch (_filter) {
+      case "top10":
+        return items.take(10).toList();
+      case "fans":
+        return items
+            .where(
+              (item) =>
+                  (item.fansName ?? "").trim().isNotEmpty ||
+                  (item.fansIcon ?? "").trim().isNotEmpty ||
+                  (item.fansLevel ?? 0) > 0,
+            )
+            .toList();
+      case "high":
+        final parsedScores = items
+            .map((item) => _parseScoreValue(item.scoreText))
+            .whereType<double>()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+        if (parsedScores.isEmpty) {
+          return items.take(10).toList();
+        }
+        final index = ((parsedScores.length * 0.3).ceil() - 1)
+            .clamp(0, parsedScores.length - 1);
+        final threshold = parsedScores[index];
+        return items.where((item) {
+          final score = _parseScoreValue(item.scoreText);
+          return score != null && score >= threshold;
+        }).toList();
+      case "all":
+      default:
+        return items;
+    }
+  }
+
+  double? _parseScoreValue(String text) {
+    final raw = text.trim().toLowerCase().replaceAll(",", "");
+    if (raw.isEmpty) {
+      return null;
+    }
+    final match = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(raw);
+    if (match == null) {
+      return null;
+    }
+    final value = double.tryParse(match.group(1) ?? "");
+    if (value == null) {
+      return null;
+    }
+    if (raw.contains("亿")) {
+      return value * 100000000;
+    }
+    if (raw.contains("万") || raw.contains("w")) {
+      return value * 10000;
+    }
+    if (raw.contains("k")) {
+      return value * 1000;
+    }
+    return value;
+  }
+
   String get _panelTitle {
     if (controller.site.id == Constant.kDouyu) {
       return "直播间亲密榜";
@@ -554,6 +703,20 @@ class LiveContributionRankPanel extends StatelessWidget {
       return "亲密度";
     }
     return "贡献值";
+  }
+
+  String get _filterLabel {
+    switch (_filter) {
+      case "top10":
+        return "前十";
+      case "fans":
+        return "粉丝牌";
+      case "high":
+        return "高贡献";
+      case "all":
+      default:
+        return "全部";
+    }
   }
 
   String _formatMetric(String value) {

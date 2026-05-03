@@ -43,6 +43,21 @@ class LiveRoomDetail {
   /// 显示时间
   final String? showTime;
 
+  /// 当前直播间所属分区 ID
+  final String? categoryId;
+
+  /// 当前直播间所属分区名称
+  final String? categoryName;
+
+  /// 当前直播间所属父分区 ID
+  final String? categoryParentId;
+
+  /// 当前直播间所属父分区名称
+  final String? categoryParentName;
+
+  /// 当前直播间所属分区图标
+  final String? categoryPic;
+
   LiveRoomDetail({
     required this.roomId,
     required this.title,
@@ -58,6 +73,11 @@ class LiveRoomDetail {
     required this.url,
     this.isRecord = false,
     this.showTime,
+    this.categoryId,
+    this.categoryName,
+    this.categoryParentId,
+    this.categoryParentName,
+    this.categoryPic,
   });
 
   @override
@@ -77,6 +97,11 @@ class LiveRoomDetail {
       "url": url,
       "isRecord": isRecord,
       "showTime": showTime,
+      "categoryId": categoryId,
+      "categoryName": categoryName,
+      "categoryParentId": categoryParentId,
+      "categoryParentName": categoryParentName,
+      "categoryPic": categoryPic,
     });
   }
 }

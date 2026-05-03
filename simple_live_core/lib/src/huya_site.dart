@@ -12,6 +12,12 @@ import 'package:tars_dart/tars/net/base_tars_http.dart';
 
 class HuyaSite implements LiveSite {
   static const baseUrl = "https://m.huya.com/";
+  static const Map<int, String> _bussTypeNames = {
+    1: "网游",
+    2: "单机",
+    3: "手游",
+    8: "娱乐",
+  };
   final String kUserAgent =
       "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
 
@@ -44,6 +50,41 @@ class HuyaSite implements LiveSite {
 
   @override
   LiveDanmaku getDanmaku() => HuyaDanmaku();
+
+  String? _resolveHuyaCategoryId(Map<dynamic, dynamic> liveInfo) {
+    final gid = int.tryParse(liveInfo["iGid"]?.toString() ?? "");
+    if (gid != null && gid > 0) {
+      return gid.toString();
+    }
+    final gameId = int.tryParse(liveInfo["iGameId"]?.toString() ?? "");
+    if (gameId != null && gameId > 0) {
+      return gameId.toString();
+    }
+    return null;
+  }
+
+  String? _resolveHuyaCategoryPic(String? categoryId) {
+    if (categoryId == null || categoryId.isEmpty) {
+      return null;
+    }
+    return "https://huyaimg.msstatic.com/cdnimage/game/$categoryId-MS.jpg";
+  }
+
+  String? _resolveHuyaParentCategoryId(Map<dynamic, dynamic> liveInfo) {
+    final bussType = int.tryParse(liveInfo["iBussType"]?.toString() ?? "");
+    if (bussType == null || bussType <= 0) {
+      return null;
+    }
+    return bussType.toString();
+  }
+
+  String? _resolveHuyaParentCategoryName(Map<dynamic, dynamic> liveInfo) {
+    final bussType = int.tryParse(liveInfo["iBussType"]?.toString() ?? "");
+    if (bussType == null) {
+      return null;
+    }
+    return _bussTypeNames[bussType];
+  }
 
   @override
   Future<List<LiveCategory>> getCategores() async {
@@ -387,6 +428,10 @@ class HuyaSite implements LiveSite {
 
     var topSid = roomInfo["topSid"];
     var subSid = roomInfo["subSid"];
+    final categoryId = _resolveHuyaCategoryId(tLiveInfo);
+    final categoryName = tLiveInfo["sGameFullName"]?.toString().trim();
+    final categoryParentId = _resolveHuyaParentCategoryId(tLiveInfo);
+    final categoryParentName = _resolveHuyaParentCategoryName(tLiveInfo);
 
     return LiveRoomDetail(
       cover: tLiveInfo["sScreenshot"].toString(),
@@ -411,6 +456,11 @@ class HuyaSite implements LiveSite {
         subSid: subSid ?? 0,
       ),
       url: "https://www.huya.com/$roomId",
+      categoryId: categoryId,
+      categoryName: categoryName?.isEmpty ?? true ? null : categoryName,
+      categoryParentId: categoryParentId,
+      categoryParentName: categoryParentName,
+      categoryPic: _resolveHuyaCategoryPic(categoryId),
     );
   }
 
@@ -740,30 +790,44 @@ class HuyaSite implements LiveSite {
 
     final now = DateTime.now();
     return rsp.tMessageBoardPanel.vGameEventMessageBoardInfo
-        .where((item) => item.sContent.isNotEmpty)
         .map((item) {
-          final totalSeconds = item.iTotalSec > 0 ? item.iTotalSec : 15;
+          final content = item.sContent.trim();
+          if (content.isEmpty) {
+            return null;
+          }
+
           final remainingSeconds = item.iCountDown > 0
               ? item.iCountDown
-              : totalSeconds;
+              : item.iTotalSec;
+          if (remainingSeconds <= 0) {
+            return null;
+          }
+
+          final totalSeconds = item.iTotalSec > 0
+              ? item.iTotalSec
+              : remainingSeconds;
           final price = item.iCost > 0
               ? item.iCost
               : item.iCostPay > 0
               ? max(1, (item.iCostPay / 100).round())
               : 0;
           final endTime = now.add(Duration(seconds: max(1, remainingSeconds)));
-          final startTime = endTime.subtract(Duration(seconds: totalSeconds));
+          final startTime = endTime.subtract(
+            Duration(seconds: max(1, totalSeconds)),
+          );
           return LiveSuperChatMessage(
+            id: item.lMessageId > 0 ? item.lMessageId.toString() : null,
             backgroundBottomColor: "#F97316",
             backgroundColor: "#FED7AA",
             endTime: endTime,
             face: item.tMessageUser.sAvatar,
-            message: item.sContent,
+            message: content,
             price: price,
             startTime: startTime,
-            userName: item.tMessageUser.sNick,
+            userName: item.tMessageUser.sNick.trim(),
           );
         })
+        .whereType<LiveSuperChatMessage>()
         .toList();
   }
 }

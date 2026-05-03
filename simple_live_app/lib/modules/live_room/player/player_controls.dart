@@ -50,7 +50,7 @@ Widget buildFullControls(
         Container(),
         buildDanmuView(videoState, controller),
 
-        // 左下角SC显示
+        // 閻庡綊娼荤紓姘辩箔閸涱垱鍠嗛柟鐢殿暛闂佸搫瀚晶浠嬫晸?
         Obx(
           () => Visibility(
             visible: AppSettingsController.instance.playershowSuperChat.value,
@@ -63,7 +63,7 @@ Widget buildFullControls(
         ),
 
         Center(
-          child: // 中间
+          child: // 婵炴垶鎼╅崣鍐晸?
               StreamBuilder(
             stream: videoState.widget.controller.player.stream.buffering,
             initialData: videoState.widget.controller.player.state.buffering,
@@ -83,13 +83,21 @@ Widget buildFullControls(
               if (controller.lockControlsState.value) {
                 return;
               }
-              showFollowUser(controller);
+              showQuickAccess(controller);
             },
             onVerticalDragStart: controller.onVerticalDragStart,
             onVerticalDragUpdate: controller.onVerticalDragUpdate,
             onVerticalDragEnd: controller.onVerticalDragEnd,
-            child: MouseRegion(
+            child: Obx(
+              () => MouseRegion(
+                cursor: controller.hideMouseCursorState.value
+                    ? SystemMouseCursors.none
+                    : SystemMouseCursors.basic,
+                onEnter: controller.onEnter,
+                onExit: controller.onExit,
               onHover: (PointerHoverEvent event) {
+                controller.resetHideMouseCursorTimer();
+                controller.showMouseCursor();
                 controller.onHover(event, videoState.context);
               },
               child: Container(
@@ -97,7 +105,7 @@ Widget buildFullControls(
                 height: double.infinity,
                 color: Colors.transparent,
                 // child: Visibility(
-                //   //拖拽区域
+                //   //闂佸綊鏀遍悧妤冣偓姘健瀹曠娀宕崟顓炲箥
                 //   visible: controller.smallWindowState.value,
                 //   child: DragToMoveArea(
                 //       child: Container(
@@ -110,8 +118,9 @@ Widget buildFullControls(
             ),
           ),
         ),
+        ),
 
-        // 顶部
+        // 婵＄偑鍊曢悥濂告晸?
         Obx(
           () => AnimatedPositioned(
             left: 0,
@@ -176,7 +185,7 @@ Widget buildFullControls(
                   ),
                   IconButton(
                     onPressed: () {
-                      showFollowUser(controller);
+                      showQuickAccess(controller);
                     },
                     icon: const Icon(
                       Remix.play_list_2_line,
@@ -212,7 +221,7 @@ Widget buildFullControls(
             ),
           ),
         ),
-        // 底部
+        // 闁圭厧鐡ㄥú鐔兼晸?
         Obx(
           () => AnimatedPositioned(
             left: 0,
@@ -349,7 +358,7 @@ Widget buildFullControls(
           ),
         ),
 
-        // 右侧锁定
+        // 闂佸憡鐟ラ崢鏍疾閸洘鐓ュù锝呮憸閺?
         Obx(
           () => AnimatedPositioned(
             top: 0,
@@ -361,7 +370,7 @@ Widget buildFullControls(
             child: buildLockButton(controller),
           ),
         ),
-        // 左侧锁定
+        // 閻庡綊娼荤紓姘跺疾閸洘鐓ュù锝呮憸閺?
         Obx(
           () => AnimatedPositioned(
             top: 0,
@@ -434,7 +443,7 @@ Widget buildControls(
       Container(),
       buildDanmuView(videoState, controller),
 
-      // 左下角SC显示
+      // 閻庡綊娼荤紓姘辩箔閸涱垱鍠嗛柟鐢殿暛闂佸搫瀚晶浠嬫晸?
       Obx(
         () => Visibility(
           visible: AppSettingsController.instance.playershowSuperChat.value,
@@ -446,7 +455,7 @@ Widget buildControls(
         ),
       ),
 
-      // 中间
+      // 婵炴垶鎼╅崣鍐晸?
       Center(
         child: StreamBuilder(
           stream: videoState.widget.controller.player.stream.buffering,
@@ -467,17 +476,27 @@ Widget buildControls(
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
           //onLongPress: controller.showDebugInfo,
-          child: MouseRegion(
-            onEnter: controller.onEnter,
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.transparent,
+          child: Obx(
+            () => MouseRegion(
+              cursor: controller.hideMouseCursorState.value
+                  ? SystemMouseCursors.none
+                  : SystemMouseCursors.basic,
+              onEnter: (event) {
+                controller.onEnter(event);
+                controller.resetHideMouseCursorTimer();
+                controller.showMouseCursor();
+              },
+              onExit: controller.onExit,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.transparent,
+              ),
             ),
           ),
         ),
-      ),
-      Obx(
+        ),
+        Obx(
         () => AnimatedPositioned(
           left: 0,
           right: 0,
@@ -659,19 +678,30 @@ Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
                         AppSettingsController.instance.danmuBottomMargin.value,
                   )
                 : EdgeInsets.zero,
-            child: DanmakuScreen(
-              key: controller.globalDanmuKey,
-              createdController: controller.initDanmakuController,
-              option: DanmakuOption(
-                fontSize: AppSettingsController.instance.danmuSize.value,
-                area: AppSettingsController.instance.danmuArea.value,
-                duration:
-                    AppSettingsController.instance.danmuSpeed.value.toInt(),
-                opacity: AppSettingsController.instance.danmuOpacity.value,
-                //strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
-                fontWeight:
-                    AppSettingsController.instance.danmuFontWeight.value,
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final viewportHeight = constraints.maxHeight > 0
+                    ? constraints.maxHeight
+                    : MediaQuery.sizeOf(context).height;
+                controller.updateDanmakuViewportHeight(viewportHeight);
+                final settings = AppSettingsController.instance;
+                return DanmakuScreen(
+                  key: controller.globalDanmuKey,
+                  createdController: controller.initDanmakuController,
+                  option: DanmakuOption(
+                    fontSize: settings.danmuSize.value,
+                    area: settings.resolveDanmuEffectiveArea(
+                      viewportHeight: viewportHeight,
+                      area: settings.danmuArea.value,
+                      fontSize: settings.danmuSize.value,
+                      lineCount: settings.danmuLineCount.value,
+                    ),
+                    duration: settings.danmuSpeed.value.toInt(),
+                    opacity: settings.danmuOpacity.value,
+                    fontWeight: settings.danmuFontWeight.value,
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -686,7 +716,7 @@ void showLinesInfo(LiveRoomController controller) {
     return;
   }
   Utils.showRightDialog(
-    title: "线路",
+    title: "线路选择",
     useSystem: true,
     child: ListView.builder(
       padding: EdgeInsets.zero,
@@ -777,6 +807,8 @@ void showDanmakuSettings(LiveRoomController controller) {
       children: [
         DanmuSettingsView(
           danmakuController: controller.danmakuController,
+          siteId: controller.site.id,
+          previewViewportHeight: controller.danmakuViewportHeight.value,
         ),
       ],
     ),
@@ -812,19 +844,19 @@ void showPlayerSettings(LiveRoomController controller) {
             const RadioListTile(
               value: 0,
               contentPadding: AppStyle.edgeInsetsH4,
-              title: Text("适应"),
+              title: Text("Fit"),
               visualDensity: VisualDensity.compact,
             ),
             const RadioListTile(
               value: 1,
               contentPadding: AppStyle.edgeInsetsH4,
-              title: Text("拉伸"),
+              title: Text("Stretch"),
               visualDensity: VisualDensity.compact,
             ),
             const RadioListTile(
               value: 2,
               contentPadding: AppStyle.edgeInsetsH4,
-              title: Text("铺满"),
+              title: Text("Cover"),
               visualDensity: VisualDensity.compact,
             ),
             const RadioListTile(
@@ -842,6 +874,54 @@ void showPlayerSettings(LiveRoomController controller) {
           ],
         ),
       ),
+    ),
+  );
+}
+
+void showQuickAccess(LiveRoomController controller) {
+  if (controller.isVertical.value) {
+    controller.showQuickAccessSheet();
+    return;
+  }
+
+  Utils.showRightDialog(
+    title: "快捷入口",
+    width: 320,
+    useSystem: true,
+    child: ListView(
+      padding: AppStyle.edgeInsetsV12,
+      children: [
+        ListTile(
+          leading: const Icon(Remix.play_list_2_line),
+          title: const Text("关注列表"),
+          subtitle: const Text("快速切到已关注的直播间"),
+          onTap: () {
+            Utils.hideRightDialog();
+            showFollowUser(controller);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Remix.history_line),
+          title: const Text("观看历史"),
+          subtitle: const Text("打开已经看过的直播间记录"),
+          onTap: () {
+            Utils.hideRightDialog();
+            controller.openHistoryPage();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Remix.apps_2_line),
+          title: const Text("同类推荐"),
+          subtitle: Text(controller.currentRecommendationSubtitle),
+          enabled: controller.hasCategoryRecommendation,
+          onTap: !controller.hasCategoryRecommendation
+              ? null
+              : () {
+                  Utils.hideRightDialog();
+                  controller.openCategoryRecommendation();
+                },
+        ),
+      ],
     ),
   );
 }
@@ -918,27 +998,41 @@ class PlayerSuperChatCard extends StatefulWidget {
 }
 
 class _PlayerSuperChatCardState extends State<PlayerSuperChatCard> {
-  late Timer timer;
+  Timer? timer;
   late int countdown;
   @override
   void initState() {
     super.initState();
+    _restartCountdown();
+  }
+
+  void _restartCountdown() {
+    timer?.cancel();
     countdown = widget.duration;
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (countdown <= 1) {
         widget.onExpire();
-        timer.cancel();
+        timer?.cancel();
         return;
       }
       setState(() {
-        countdown -= 1;
+        countdown = (countdown - 1).clamp(0, 1 << 30).toInt();
       });
     });
   }
 
   @override
+  void didUpdateWidget(covariant PlayerSuperChatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.message != widget.message ||
+        oldWidget.duration != widget.duration) {
+      _restartCountdown();
+    }
+  }
+
+  @override
   void dispose() {
-    timer.cancel();
+    timer?.cancel();
     super.dispose();
   }
 
@@ -962,6 +1056,14 @@ class LocalDisplaySC {
   final DateTime expireAt;
   final int duration;
   LocalDisplaySC(this.sc, this.expireAt, this.duration);
+
+  String get fingerprint {
+    final id = sc.id?.trim();
+    if (id != null && id.isNotEmpty) {
+      return "id:$id";
+    }
+    return "${sc.userName}|${sc.message}|${sc.price}|${sc.startTime.millisecondsSinceEpoch}";
+  }
 }
 
 class PlayerSuperChatOverlay extends StatefulWidget {
@@ -977,16 +1079,41 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
   final Map<LocalDisplaySC, Timer> _timers = {};
   late Worker _worker;
 
+  String _fingerprintOf(LiveSuperChatMessage sc) {
+    final id = sc.id?.trim();
+    if (id != null && id.isNotEmpty) {
+      return "id:$id";
+    }
+    return "${sc.userName}|${sc.message}|${sc.price}|${sc.startTime.millisecondsSinceEpoch}";
+  }
+
+  void _removeLocalSC(LocalDisplaySC localSC) {
+    _displayed.remove(localSC);
+    _timers.remove(localSC)?.cancel();
+  }
+
   void _addSC(LiveSuperChatMessage sc, {int? customSeconds}) {
-    if (_displayed.any((e) => e.sc == sc)) return;
-    int showSeconds = customSeconds ?? 15;
+    final fingerprint = _fingerprintOf(sc);
+    int showSeconds = (customSeconds ?? 15).clamp(1, 1 << 30).toInt();
+    final currentIndex = _displayed.indexWhere(
+      (e) => e.fingerprint == fingerprint,
+    );
+    if (currentIndex >= 0) {
+      final current = _displayed[currentIndex];
+      _displayed[currentIndex] = LocalDisplaySC(
+        sc,
+        current.expireAt,
+        current.duration,
+      );
+      setState(() {});
+      return;
+    }
     final expireAt = DateTime.now().add(Duration(seconds: showSeconds));
     final localSC = LocalDisplaySC(sc, expireAt, showSeconds);
     _displayed.add(localSC);
     _timers[localSC] = Timer(Duration(seconds: showSeconds), () {
       setState(() {
-        _displayed.remove(localSC);
-        _timers.remove(localSC)?.cancel();
+        _removeLocalSC(localSC);
       });
     });
     setState(() {});
@@ -995,7 +1122,7 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
   @override
   void initState() {
     super.initState();
-    // 首次进房时同步已有SC
+    // 婵☆偓绲鹃悧妤咁敃閸忓吋浜ゆ繛鎴炵懃閻擄綁鏌￠崘顓熺【闁诡喗鎸搁～銏ゅΨ閵夈儱娈ラ梺鍝勭墕椤㈡保
     final now = DateTime.now().millisecondsSinceEpoch;
     for (var sc in widget.controller.superChats) {
       int remain = (sc.endTime.millisecondsSinceEpoch - now) ~/ 1000;
@@ -1003,17 +1130,21 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
         _addSC(sc, customSeconds: remain < 15 ? remain : 15);
       }
     }
-    // 监听SC列表变化
+    // 闂佺儵鏅滈崹鐢稿箚婵夋渿闂佸憡甯楅〃澶愬Υ閸愵喖鐭楁俊顖氭惈椤?
     _worker =
         ever<List<LiveSuperChatMessage>>(widget.controller.superChats, (list) {
-      // 新增
+      // 闂佸搫鍊瑰姗€鏁?
       for (var sc in list) {
-        if (!_displayed.any((e) => e.sc == sc)) {
-          _addSC(sc);
+        final remain = sc.endTime.difference(DateTime.now()).inSeconds;
+        _addSC(sc, customSeconds: remain > 0 && remain < 15 ? remain : 15);
+      }
+      // 缂備礁顦…鐑芥晸?
+      final latestFingerprints = list.map(_fingerprintOf).toSet();
+      for (final localSC in _displayed.toList()) {
+        if (!latestFingerprints.contains(localSC.fingerprint)) {
+          _removeLocalSC(localSC);
         }
       }
-      // 移除
-      _displayed.removeWhere((e) => !list.contains(e.sc));
       setState(() {});
     });
   }
@@ -1036,10 +1167,12 @@ class _PlayerSuperChatOverlayState extends State<PlayerSuperChatOverlay> {
       children: [
         for (var localSC in sorted)
           Padding(
+            key: ValueKey(localSC.fingerprint),
             padding: const EdgeInsets.only(bottom: 12),
             child: SizedBox(
               width: 240,
               child: PlayerSuperChatCard(
+                key: ValueKey(localSC.fingerprint),
                 message: localSC.sc,
                 onExpire: () {},
                 duration: localSC.duration,

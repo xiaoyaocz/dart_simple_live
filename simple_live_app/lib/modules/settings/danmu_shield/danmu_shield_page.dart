@@ -64,7 +64,7 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
               Obx(
                 () => SettingsSwitch(
                   title: "启用用户屏蔽",
-                  subtitle: "也可以在直播间点击用户名快速屏蔽或取消屏蔽",
+                  subtitle: "可按平台分别管理，也可在直播间点击用户名快速处理",
                   value: settings.danmuUserShieldEnable.value,
                   onChanged: settings.setDanmuUserShieldEnable,
                 ),
@@ -80,9 +80,24 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          "关键词屏蔽",
-          style: Get.textTheme.titleMedium,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                "关键词屏蔽",
+                style: Get.textTheme.titleMedium,
+              ),
+            ),
+            Obx(
+              () => FilledButton.tonalIcon(
+                onPressed: controller.settingsController.shieldList.isEmpty
+                    ? null
+                    : controller.clearKeywords,
+                icon: const Icon(Icons.delete_sweep_outlined),
+                label: const Text("一键清空"),
+              ),
+            ),
+          ],
         ),
         AppStyle.vGap8,
         TextField(
@@ -107,15 +122,16 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
         AppStyle.vGap12,
         Obx(
           () => Text(
-            "已添加${controller.settingsController.shieldList.length}个关键词（点击移除）",
+            "已添加 ${controller.settingsController.shieldList.length} 个关键词（点击即可移除）",
             style: Get.textTheme.titleSmall,
           ),
         ),
         AppStyle.vGap12,
         Obx(
           () => _buildShieldChips(
-            controller.settingsController.shieldList,
-            controller.remove,
+            items: controller.settingsController.shieldList,
+            onRemove: controller.remove,
+            emptyText: "当前还没有过滤关键词",
           ),
         ),
       ],
@@ -123,12 +139,44 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
   }
 
   Widget _buildUserSection() {
+    final settings = controller.settingsController;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          "用户屏蔽",
-          style: Get.textTheme.titleMedium,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                "用户屏蔽",
+                style: Get.textTheme.titleMedium,
+              ),
+            ),
+            Obx(
+              () => FilledButton.tonalIcon(
+                onPressed: controller.currentUserShieldValues.isEmpty
+                    ? null
+                    : controller.clearUsers,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text("清空当前分组"),
+              ),
+            ),
+          ],
+        ),
+        AppStyle.vGap8,
+        Obx(
+          () => Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: controller.userShieldSiteIds
+                .map(
+                  (siteId) => FilterChip(
+                    selected: controller.selectedUserSiteId.value == siteId,
+                    label: Text(settings.resolveShieldSiteLabel(siteId)),
+                    onSelected: (_) => controller.setSelectedUserSite(siteId),
+                  ),
+                )
+                .toList(),
+          ),
         ),
         AppStyle.vGap8,
         TextField(
@@ -147,21 +195,59 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
         ),
         AppStyle.vGap4,
         Text(
-          "直播间里点击用户名可直接屏蔽，再点一次可取消；长按用户名可复制。",
+          "当前分组只影响对应平台；“全平台”分组会在所有平台一起生效。",
+          style: Get.textTheme.bodySmall,
+        ),
+        AppStyle.vGap4,
+        Text(
+          "直播间里点击用户名还能直接屏蔽、临时禁言、备注或复制。",
           style: Get.textTheme.bodySmall,
         ),
         AppStyle.vGap12,
-        Obx(
-          () => Text(
-            "已屏蔽${controller.settingsController.userShieldList.length}个用户（点击移除）",
-            style: Get.textTheme.titleSmall,
-          ),
-        ),
+        Obx(() {
+          final currentCount = controller.currentUserShieldValues.length;
+          final globalCount = settings
+              .getUserShieldValues(
+                siteId: controller.currentUserSiteId,
+                includeGlobal: true,
+              )
+              .length;
+          final isGlobal = controller.currentUserSiteId ==
+              controller.userShieldSiteIds.first;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "当前分组已屏蔽 $currentCount 个用户（点击即可移除）",
+                style: Get.textTheme.titleSmall,
+              ),
+              if (!isGlobal) ...[
+                AppStyle.vGap4,
+                Text(
+                  "算上“全平台”分组后，本平台实际会命中 $globalCount 个用户名。",
+                  style: Get.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ],
+          );
+        }),
         AppStyle.vGap12,
         Obx(
           () => _buildShieldChips(
-            controller.settingsController.userShieldList,
-            controller.removeUser,
+            items: controller.currentUserShieldValues,
+            onRemove: (item) => controller.removeUser(item),
+            emptyText: "当前分组还没有屏蔽用户名",
+          ),
+        ),
+        AppStyle.vGap8,
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => controller.clearUsers(clearAll: true),
+            icon: const Icon(Icons.warning_amber_outlined),
+            label: const Text("清空全部平台"),
           ),
         ),
       ],
@@ -176,7 +262,7 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
           children: [
             Expanded(
               child: Text(
-                "历史屏蔽预设",
+                "屏蔽预设",
                 style: Get.textTheme.titleMedium,
               ),
             ),
@@ -185,28 +271,66 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
               icon: const Icon(Icons.bookmark_add_outlined),
               label: const Text("保存当前"),
             ),
+            AppStyle.hGap8,
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case "export_file":
+                    controller.exportPresetFile();
+                    break;
+                  case "export_text":
+                    controller.exportPresetText();
+                    break;
+                  case "import_file":
+                    controller.importPresetFile();
+                    break;
+                  case "import_text":
+                    controller.importPresetText();
+                    break;
+                  default:
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: "export_file",
+                  child: Text("导出到文件"),
+                ),
+                PopupMenuItem(
+                  value: "export_text",
+                  child: Text("导出为文本"),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: "import_file",
+                  child: Text("从文件导入"),
+                ),
+                PopupMenuItem(
+                  value: "import_text",
+                  child: Text("从文本导入"),
+                ),
+              ],
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.import_export),
+              ),
+            ),
           ],
         ),
         AppStyle.vGap8,
         Text(
-          "你可以把当前关键词和用户保存成一套预设，下次直接启用。",
+          "导出时会带上当前关键词、当前分平台用户名单以及已保存的全部预设，方便多设备迁移。",
+          style: Get.textTheme.bodySmall,
+        ),
+        AppStyle.vGap4,
+        Text(
+          "如果你先把当前关键词或用户分组调整好，再点某个预设的“编辑保存”，就能直接覆盖原预设内容。",
           style: Get.textTheme.bodySmall,
         ),
         AppStyle.vGap12,
         Obx(() {
           final presets = controller.settingsController.shieldPresetList;
           if (presets.isEmpty) {
-            return Container(
-              padding: AppStyle.edgeInsetsA12,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withAlpha(60)),
-                borderRadius: AppStyle.radius8,
-              ),
-              child: Text(
-                "还没有保存过预设",
-                style: Get.textTheme.bodyMedium?.copyWith(color: Colors.grey),
-              ),
-            );
+            return _buildEmptyBox("还没有保存过屏蔽预设");
           }
 
           return SettingsCard(
@@ -226,6 +350,10 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
   }
 
   Widget _buildPresetItem(DanmuShieldPreset preset) {
+    final userTotal = preset.userGroups.values.fold<int>(
+      0,
+      (sum, values) => sum + values.length,
+    );
     return Padding(
       padding: AppStyle.edgeInsetsA12,
       child: Row(
@@ -241,7 +369,7 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
                 ),
                 AppStyle.vGap4,
                 Text(
-                  "关键词 ${preset.keywords.length} 个，用户 ${preset.users.length} 个",
+                  "关键词 ${preset.keywords.length} 个，用户 $userTotal 个，分组 ${preset.userGroups.length} 个",
                   style: Get.textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
               ],
@@ -252,6 +380,10 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
             child: const Text("启用"),
           ),
           TextButton(
+            onPressed: () => _showEditPresetDialog(preset.name),
+            child: const Text("编辑保存"),
+          ),
+          TextButton(
             onPressed: () => _showDeletePresetDialog(preset.name),
             child: const Text("删除"),
           ),
@@ -260,14 +392,20 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
     );
   }
 
-  Widget _buildShieldChips(
-    Iterable<String> items,
-    ValueChanged<String> onRemove,
-  ) {
+  Widget _buildShieldChips({
+    required Iterable<String> items,
+    required ValueChanged<String> onRemove,
+    required String emptyText,
+  }) {
+    final values = items.toList();
+    if (values.isEmpty) {
+      return _buildEmptyBox(emptyText);
+    }
+
     return Wrap(
       runSpacing: 12,
       spacing: 12,
-      children: items
+      children: values
           .map(
             (item) => InkWell(
               borderRadius: AppStyle.radius24,
@@ -289,6 +427,20 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
             ),
           )
           .toList(),
+    );
+  }
+
+  Widget _buildEmptyBox(String text) {
+    return Container(
+      padding: AppStyle.edgeInsetsA12,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.withAlpha(60)),
+        borderRadius: AppStyle.radius8,
+      ),
+      child: Text(
+        text,
+        style: Get.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+      ),
     );
   }
 
@@ -327,11 +479,57 @@ class DanmuShieldPage extends GetView<DanmuShieldController> {
     );
   }
 
+  void _showEditPresetDialog(String name) {
+    final textController = TextEditingController(text: name);
+    Get.dialog(
+      AlertDialog(
+        title: const Text("编辑并覆盖预设"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "会用当前页面里的关键词和用户分组，覆盖这个预设。",
+            ),
+            AppStyle.vGap12,
+            TextField(
+              controller: textController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: "预设名称",
+              ),
+              onSubmitted: (_) async {
+                final nextName = textController.text;
+                Get.back();
+                await controller.editPreset(name, nextName);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: const Text("取消"),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final nextName = textController.text;
+              Get.back();
+              await controller.editPreset(name, nextName);
+            },
+            child: const Text("覆盖保存"),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showDeletePresetDialog(String name) {
     Get.dialog(
       AlertDialog(
         title: const Text("删除屏蔽预设"),
-        content: Text("确定删除“$name”吗？"),
+        content: Text('确定要删除“$name”吗？'),
         actions: [
           TextButton(
             onPressed: Get.back,

@@ -256,31 +256,8 @@ class BiliBiliSite implements LiveSite {
         .toList();
 
     //var buvid = await getBuvid();
-    // 从 roomInfo 中提取 live_start_time
     String? liveStartTime = roomInfo["room_info"]?["live_start_time"]
         ?.toString();
-
-    // 计算开播时长并打印到控制台 (参考斗鱼的实现)
-    if (liveStartTime != null &&
-        liveStartTime.isNotEmpty &&
-        liveStartTime != "0") {
-      // 检查是否为0，0可能表示未开播或无此信息
-      try {
-        int startTimeStamp = int.parse(liveStartTime);
-        int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        int durationInSeconds = currentTimeStamp - startTimeStamp;
-
-        int hours = durationInSeconds ~/ 3600;
-        int minutes = (durationInSeconds % 3600) ~/ 60;
-        int seconds = durationInSeconds % 60;
-
-        String formattedDuration =
-            '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-        print('Bilibili直播间 $roomId 开播时长: $formattedDuration');
-      } catch (e) {
-        print('计算 Bilibili 开播时长出错: $e');
-      }
-    }
 
     return LiveRoomDetail(
       roomId: realRoomId,
@@ -304,6 +281,10 @@ class BiliBiliSite implements LiveSite {
         cookie: cookie,
       ),
       showTime: liveStartTime, // 将 liveStartTime 赋值给 showTime 字段
+      categoryId: roomInfo["room_info"]["area_id"]?.toString(),
+      categoryName: roomInfo["room_info"]["area_name"]?.toString(),
+      categoryParentId: roomInfo["room_info"]["parent_area_id"]?.toString(),
+      categoryParentName: roomInfo["room_info"]["parent_area_name"]?.toString(),
     );
   }
 
@@ -316,7 +297,6 @@ class BiliBiliSite implements LiveSite {
       queryParameters: queryParams,
       header: await getHeader(),
     );
-    print("【B站接口返回】roomId=$roomId, result=$result");
     return result["data"];
   }
 
@@ -437,12 +417,16 @@ class BiliBiliSite implements LiveSite {
     required String roomId,
     LiveRoomDetail? detail,
   }) async {
-    var roomResult = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/room/v1/Room/get_info",
-      queryParameters: {"room_id": roomId},
-      header: await getHeader(),
-    );
-    var roomData = roomResult["data"] ?? {};
+    final roomInfo = await getRoomInfo(roomId: roomId);
+    final roomRankItems =
+        (roomInfo["room_rank_info"]?["user_rank_entry"]?["user_contribution_rank_entry"]?["item"]
+            as List?) ??
+        const [];
+    if (roomRankItems.isNotEmpty) {
+      return roomRankItems.map(_mapContributionRankItem).toList();
+    }
+
+    var roomData = roomInfo["room_info"] ?? {};
     var uid = roomData["uid"]?.toString() ?? "";
     var realRoomId = roomData["room_id"]?.toString() ?? roomId;
     if (uid.isEmpty) {
@@ -460,23 +444,39 @@ class BiliBiliSite implements LiveSite {
       header: await getHeader(),
     );
     final items = (result["data"]?["item"] as List?) ?? const [];
-    return items.map((item) {
-      final medalInfo = item["medal_info"];
-      final guardLevel = int.tryParse(item["guard_level"].toString()) ?? 0;
-      return LiveContributionRankItem(
-        rank: int.tryParse(item["rank"].toString()) ?? 0,
-        userName: item["name"]?.toString() ?? "",
-        avatar: item["face"]?.toString() ?? "",
-        scoreText: item["score"]?.toString() ?? "0",
-        userLevel: int.tryParse(item["wealth_level"].toString()),
-        userLevelText: item["wealth_level"] == null
-            ? null
-            : "财富 ${item["wealth_level"]}",
-        fansLevel: int.tryParse(medalInfo?["medal_level"].toString() ?? ""),
-        fansName: medalInfo?["medal_name"]?.toString(),
-        scoreDetail: guardLevel > 0 ? "舰队 $guardLevel" : null,
-      );
-    }).toList();
+    return items.map(_mapContributionRankItem).toList();
+  }
+
+  LiveContributionRankItem _mapContributionRankItem(dynamic item) {
+    final medalInfo = item["medal_info"] ?? item["uinfo"]?["medal"];
+    final wealthLevelRaw =
+        item["wealth_level"] ?? item["uinfo"]?["wealth"]?["level"];
+    final wealthLevel = int.tryParse(wealthLevelRaw?.toString() ?? "");
+    final guardLevel = int.tryParse(item["guard_level"].toString()) ?? 0;
+
+    return LiveContributionRankItem(
+      rank: int.tryParse(item["rank"].toString()) ?? 0,
+      userName:
+          item["name"]?.toString() ??
+          item["uinfo"]?["base"]?["name"]?.toString() ??
+          "",
+      avatar:
+          item["face"]?.toString() ??
+          item["uinfo"]?["base"]?["face"]?.toString() ??
+          "",
+      scoreText: item["score"]?.toString() ?? "0",
+      userLevel: wealthLevel,
+      userLevelText: wealthLevel == null || wealthLevel <= 0
+          ? null
+          : "财富 $wealthLevel",
+      fansLevel: int.tryParse(
+        (medalInfo?["level"] ?? medalInfo?["medal_level"]).toString(),
+      ),
+      fansName:
+          medalInfo?["name"]?.toString() ??
+          medalInfo?["medal_name"]?.toString(),
+      scoreDetail: guardLevel > 0 ? "舰队 $guardLevel" : null,
+    );
   }
 
   /// 获取 buvid3 和 buvid4

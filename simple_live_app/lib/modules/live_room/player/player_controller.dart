@@ -108,6 +108,8 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 是否显示控制器
   RxBool showControlsState = false.obs;
 
+  RxBool hideMouseCursorState = false.obs;
+
   /// 是否显示设置窗口
   RxBool showSettingState = false.obs;
 
@@ -135,6 +137,9 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 自动隐藏控制器计时器
   Timer? hideControlsTimer;
 
+  /// 鑷姩闅愯棌榧犳爣璁℃椂鍣?
+  Timer? hideMouseCursorTimer;
+
   /// 自动隐藏提示计时器
   Timer? hideSeekTipTimer;
 
@@ -150,6 +155,7 @@ mixin PlayerStateMixin on PlayerMixin {
   void hideControls() {
     showControlsState.value = false;
     hideControlsTimer?.cancel();
+    hideMouseCursor();
   }
 
   void setLockState() {
@@ -164,7 +170,27 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 显示控制器
   void showControls() {
     showControlsState.value = true;
+    showMouseCursor();
     resetHideControlsTimer();
+    resetHideMouseCursorTimer();
+  }
+
+  /// 鏄剧ず榧犳爣
+  void showMouseCursor() {
+    if (!Platform.isWindows) {
+      return;
+    }
+    hideMouseCursorTimer?.cancel();
+    hideMouseCursorState.value = false;
+  }
+
+  /// 闅愯棌榧犳爣
+  void hideMouseCursor() {
+    if (!Platform.isWindows) {
+      return;
+    }
+    hideMouseCursorTimer?.cancel();
+    hideMouseCursorState.value = true;
   }
 
   /// 开始隐藏控制器计时
@@ -177,6 +203,21 @@ mixin PlayerStateMixin on PlayerMixin {
         seconds: 5,
       ),
       hideControls,
+    );
+  }
+
+  /// 寮€濮嬮殣钘忔爣绛惧叆鐨勯紶鏍?
+  void resetHideMouseCursorTimer() {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    hideMouseCursorTimer?.cancel();
+    hideMouseCursorTimer = Timer(
+      const Duration(
+        seconds: 5,
+      ),
+      hideMouseCursor,
     );
   }
 
@@ -411,9 +452,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       return;
     }
     if (Platform.isAndroid || Platform.isIOS) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge,
-          overlays: SystemUiOverlay.values);
-      setPortraitOrientation();
+      await SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.edgeToEdge,
+        overlays: SystemUiOverlay.values,
+      );
+      await setPortraitOrientation();
+      await Future.delayed(const Duration(milliseconds: 32));
     } else {
       await windowManager.setFullScreen(false);
       await Future.delayed(const Duration(milliseconds: 16));
@@ -703,18 +747,24 @@ mixin PlayerGestureControlMixin
 
   //桌面端操控
   void onEnter(PointerEnterEvent event) {
+    showMouseCursor();
+    resetHideMouseCursorTimer();
     if (!showControlsState.value) {
       showControls();
     }
   }
 
   void onExit(PointerExitEvent event) {
+    hideMouseCursorTimer?.cancel();
     if (showControlsState.value) {
       hideControls();
     }
+    showMouseCursor();
   }
 
   void onHover(PointerHoverEvent event, BuildContext context) {
+    showMouseCursor();
+    resetHideMouseCursorTimer();
     final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
     if (event.position.dy <= targetPosition ||
@@ -749,6 +799,8 @@ mixin PlayerGestureControlMixin
 
   /// 竖向手势开始
   void onVerticalDragStart(DragStartDetails details) async {
+    showMouseCursor();
+    resetHideMouseCursorTimer();
     if (lockControlsState.value && fullScreenState.value) {
       return;
     }

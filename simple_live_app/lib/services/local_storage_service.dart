@@ -14,6 +14,8 @@ class LocalStorageService extends GetxService {
   static const String kDanmuSize = "DanmuSize";
   static const String kDanmuSpeed = "DanmuSpeed";
   static const String kDanmuArea = "DanmuArea";
+  static const String kDanmuLineCount = "DanmuLineCount";
+  static const String kDanmuDelay = "DanmuDelay";
   static const String kDanmuOpacity = "DanmuOpacity";
   static const String kDanmuStrokeWidth = "DanmuStrokeWidth";
   static const String kDanmuHideScroll = "DanmuHideScroll";
@@ -26,6 +28,7 @@ class LocalStorageService extends GetxService {
   static const String kDanmuKeywordShieldEnable = "DanmuKeywordShieldEnable";
   static const String kDanmuUserShieldEnable = "DanmuUserShieldEnable";
   static const String kDanmuFontWeight = "DanmuFontWeight";
+  static const String kContributionRankEnable = "ContributionRankEnable";
   static const String kHardwareDecode = "HardwareDecode";
   static const String kChatTextSize = "ChatTextSize";
   static const String kChatTextGap = "ChatTextGap";
@@ -56,6 +59,9 @@ class LocalStorageService extends GetxService {
   static const String kAutoUpdateFollowEnable = "AutoUpdateFollowEnable";
   static const String kUpdateFollowDuration = "AutoUpdateFollowDuration";
   static const String kUpdateFollowThreadCount = "UpdateFollowThreadCount";
+  static const String kUserRemarks = "UserRemarks";
+  static const String kLastLiveRoom = "LastLiveRoom";
+  static const String kLastLiveRoomResumePending = "LastLiveRoomResumePending";
   static const String kWebDAVUri = "WebDAVUri";
   static const String kWebDAVUser = "WebDAVUser";
   static const String kWebDAVPassword = "kWebDAVPassword";

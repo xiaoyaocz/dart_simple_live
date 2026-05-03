@@ -8,6 +8,7 @@
 - Linux 优先用 GitHub Actions 正式构建
 - 如果确实需要本地重新打 Linux 包，只把 WSL 当 Linux 构建环境，不要求在 WSL 里运行图形界面
 - 所有最终成品统一归档到 `C:\softwares\dart_simple_live\release`
+- 日常开发以私有 `own` 仓库为准，公开 `fork` 仓库只做阶段性对外发布
 
 `macOS` 当前只保留手动入口，不参与正式自动发布判断。
 
@@ -42,7 +43,44 @@
 
 如果这些路径改了，先同步修改对应脚本或命令。
 
-## 3. 当前 GitHub Actions 工作流
+## 3. 双仓库分工
+
+当前建议固定为三套远程：
+
+- `origin`
+  - 指向私有仓库：`June6699/dart_simple_live_own`
+  - 这是日常开发主仓，也是本地默认 push 目标
+- `fork`
+  - 指向公开仓库：`June6699/dart_simple_live`
+  - 这个仓库保留 fork 标签，只在需要对外公开时更新
+- `upstream`
+  - 指向原作者仓库：`xiaoyaocz/dart_simple_live`
+  - 只作为历史与参考上游，不直接往这里 push
+
+推荐策略：
+
+1. 所有日常开发都在本地仓库完成，然后先 push 到私有 `origin`
+2. 私有 `origin` 可以比公开 `fork` 更新得更频繁
+3. 公开 `fork` 不需要每次开发都同步，只在你准备阶段性公开或发 release 时再同步
+4. 不要把公开 `fork` 当成日常开发主仓
+
+你现在提出的节奏是可行的，而且是推荐做法：
+
+- `own` 作为“持续更新的私有主仓”
+- `public fork` 作为“隔一段时间发布一次的公开镜像”
+
+唯一需要补的一条规则是：
+
+- 从 `own` 同步到 `public fork` 时，不是直接原样推过去，而是先做一次“公开裁剪”
+
+当前公开仓库不应包含这些文件：
+
+- `build_android_apk.bat`
+- `deploy_windows.bat`
+- `UPDATE.md`
+- `RELEASE_BUILD_FLOW.md`
+
+## 4. 当前 GitHub Actions 工作流
 
 当前主应用发布相关工作流拆成 4 个文件：
 
@@ -63,7 +101,7 @@
   - 触发方式：`workflow_dispatch`
   - 默认不参与正式发布
 
-## 4. 发布前原则
+## 5. 发布前原则
 
 1. 尽量不要用脏工作区直接打“最终正式包”。
 2. 最稳的正式发版方式仍然是：
@@ -77,8 +115,10 @@
    - Linux 只看 Linux
 4. 不要再让 macOS 成败阻塞正式发版。
 5. 本地 `debug`、临时预编译目录、解压目录不要混进正式 `release` 归档。
+6. 私有 `origin` 和公开 `fork` 的 tag 可以同名，但允许指向不同提交。
+7. 公开 `fork` 的源码和 source zip 必须基于“公开裁剪后的提交”生成，不能直接拿 `own` 的完整提交导出。
 
-## 5. 版本号与 tag
+## 6. 版本号与 tag
 
 主应用版本号在：
 
@@ -103,7 +143,7 @@ git tag -f v1.12.0
 git push origin v1.12.0 --force
 ```
 
-## 6. 本地预验证
+## 7. 本地预验证
 
 ### 6.1 Android
 
@@ -162,7 +202,7 @@ cd C:\softwares\dart_simple_live
 - `Windows 挂载目录 /mnt/c/...` 不适合直接做最终 `deb` 打包，因为权限会变成 `777`，`dpkg-deb` 可能报控制目录权限错误
 - 正确做法是把仓库同步到 WSL 自己的 Linux 文件系统，再在那里打包
 
-## 7. Linux 本地构建实战规则
+## 8. Linux 本地构建实战规则
 
 这部分是这次实际构建后确认过的经验，后面再本地打 Linux 包，尽量按这个来。
 
@@ -325,9 +365,55 @@ FormatException: advisoriesUpdated must be a String
 
 因此目前把它视作“噪音警告”，不是正式阻塞项。
 
-## 8. 标准正式 Release 流程
+## 9. 日常开发与公开发布策略
 
-### 8.1 提交代码并推送
+推荐长期按下面这套来：
+
+### 9.1 日常开发
+
+日常开发默认流程：
+
+1. 在本地仓库修改
+2. 提交到本地 `master`
+3. push 到私有 `origin`
+
+示例：
+
+```powershell
+cd C:\softwares\dart_simple_live
+git status
+git add .
+git commit -m "your commit"
+git push origin master
+```
+
+这一步不会影响公开 `fork`。
+
+### 9.2 阶段性公开
+
+当你准备对外公开一版时，再把私有仓库的某个稳定点同步到 `fork`。
+
+推荐规则：
+
+1. 永远先在 `own` 上完成开发和验证
+2. 只把“你愿意公开”的稳定版本同步到 `fork`
+3. 同步前先移除公开仓库不该带的文件
+4. 公开 release 的 source zip 也要基于公开裁剪后的版本生成
+
+### 9.3 这套思路是否可行
+
+可行，而且比较适合你：
+
+- `own` 更频繁 push，作为私有开发真源
+- `fork` 更低频更新，作为公开发布窗口
+
+只要你坚持“公开同步前先裁剪”这条规则，就不会乱。
+
+## 10. 私有仓库正式发布流程
+
+私有 `own` 仓库的正式流程如下。
+
+### 10.1 提交代码并推送
 
 ```powershell
 cd C:\softwares\dart_simple_live
@@ -337,7 +423,7 @@ git commit -m "Release v1.12.0"
 git push origin master
 ```
 
-### 8.2 打 tag 触发 3 条自动工作流
+### 10.2 打 tag 触发 3 条自动工作流
 
 ```powershell
 cd C:\softwares\dart_simple_live
@@ -353,7 +439,7 @@ git push origin v1.12.0 --force
 
 不会自动触发 macOS。
 
-### 8.3 查看工作流状态
+### 10.3 查看工作流状态
 
 ```powershell
 $env:PATH='C:\softwares\GitHubCli;C:\softwares\Git\cmd;'+$env:PATH
@@ -374,7 +460,42 @@ gh run list --repo June6699/dart_simple_live --workflow publish_app_release_wind
 gh run list --repo June6699/dart_simple_live --workflow publish_app_release_linux.yml --limit 10
 ```
 
-## 9. `release` 目录归档规则
+## 11. 公开 fork 发布流程
+
+公开 `fork` 不建议直接拿私有 `master` 原样强推。
+
+正确做法是：
+
+1. 从私有稳定提交创建一个临时公开分支
+2. 删除公开不该带的文件
+3. 生成一个“公开裁剪提交”
+4. 强推这个提交到 `fork/master`
+5. 强制更新 `fork` 的 `vX.Y.Z` tag
+6. 用这个公开裁剪提交生成 source zip
+7. 上传 Android / Windows / Linux / source 资产到 `fork` release
+
+公开仓库当前必须删除的文件：
+
+- `build_android_apk.bat`
+- `deploy_windows.bat`
+- `UPDATE.md`
+- `RELEASE_BUILD_FLOW.md`
+
+示意流程：
+
+```powershell
+cd C:\softwares\dart_simple_live
+git switch -c public-export-v1.12.0
+git rm build_android_apk.bat deploy_windows.bat UPDATE.md RELEASE_BUILD_FLOW.md
+git commit -m "chore: prepare public fork release v1.12.0"
+git push fork HEAD:master --force
+git tag -f v1.12.0 HEAD
+git push fork refs/tags/v1.12.0 --force
+```
+
+然后再基于这个公开裁剪提交生成公开 source zip。
+
+## 12. `release` 目录归档规则
 
 每个版本都整理到：
 
@@ -407,7 +528,7 @@ release\
 3. 不要把旧版本覆盖到新版本目录
 4. 不要把临时解压文件长期留在 `android / linux / windows / source` 目录里
 
-## 10. 当前正式资产命名
+## 13. 当前正式资产命名
 
 当前目标保留这些文件：
 
@@ -425,7 +546,7 @@ release\
 - `simple_live_app-1.12.0+11200-linux.deb`
 - `dart_simple_live-v1.12.0-source.zip`
 
-## 11. 本地归档命令示例
+## 14. 本地归档命令示例
 
 ### 11.1 归档 Android
 
@@ -473,7 +594,7 @@ cd C:\softwares\dart_simple_live
 git archive --format=zip --output=C:\softwares\dart_simple_live\release\v1.12.0\source\dart_simple_live-v1.12.0-source.zip v1.12.0
 ```
 
-## 12. CI 成功后的常规收尾
+## 15. CI 成功后的常规收尾
 
 如果 3 条自动工作流都成功，则通常只需要：
 
@@ -492,7 +613,7 @@ gh release download v1.12.0 --repo June6699/dart_simple_live -p "simple_live_app
 gh release download v1.12.0 --repo June6699/dart_simple_live -p "simple_live_app-1.12.0+11200-linux.deb" -D C:\softwares\dart_simple_live\release\v1.12.0\linux
 ```
 
-## 13. 兜底流程
+## 16. 兜底流程
 
 如果某条工作流已经成功构建，但 release 上传阶段异常，可以补救。
 
@@ -520,7 +641,7 @@ gh release upload v1.12.0 --repo June6699/dart_simple_live --clobber `
   C:\softwares\dart_simple_live\release\v1.12.0\source\dart_simple_live-v1.12.0-source.zip
 ```
 
-## 14. 上传失败时的代理处理
+## 17. 上传失败时的代理处理
 
 如果：
 
@@ -547,7 +668,16 @@ $env:HTTP_PROXY='http://127.0.0.1:10808'
 $env:HTTPS_PROXY='http://127.0.0.1:10808'
 ```
 
-## 15. Release 页面清理规则
+这次实际踩到的坑：
+
+1. `gh release upload` 很可能不是权限问题，而是 `uploads.github.com` 没走代理
+2. 需要显式加上代理环境变量后重传
+3. 重新上传已有资产时要带 `--clobber`
+4. 公开仓库和私有仓库如果共用同名 tag，要分别确认 tag 指向的提交是不是你想要的那个
+5. 公开仓库 release 的 source zip 不能直接复用私有仓库导出的版本
+6. 公开仓库如果已经被错误推入了私有文件，需要通过新的公开裁剪提交重新覆盖
+
+## 18. Release 页面清理规则
 
 发版完成后应保证：
 
@@ -563,7 +693,7 @@ gh release list --repo June6699/dart_simple_live --limit 20
 gh release view v1.12.0 --repo June6699/dart_simple_live --json assets,url
 ```
 
-## 16. 最终核对清单
+## 19. 最终核对清单
 
 1. [simple_live_app/pubspec.yaml](/C:/softwares/dart_simple_live/simple_live_app/pubspec.yaml) 版本号正确
 2. Git tag 正确，格式为 `vX.Y.Z`
@@ -580,8 +710,10 @@ gh release view v1.12.0 --repo June6699/dart_simple_live --json assets,url
 5. 本地 `release\vX.Y.Z` 已归档完成
 6. `C:\softwares\SimpleLive` 已刷新为该版本 Windows 预编译目录
 7. `release` 目录里没有把 debug 输出、临时文件混进去
+8. 如果这次要同步公开 `fork`，确认公开仓库不含 `bat / UPDATE.md / RELEASE_BUILD_FLOW.md`
+9. 如果这次要同步公开 `fork`，确认公开 source zip 是基于公开裁剪提交生成的
 
-## 17. 建议的最短执行顺序
+## 20. 建议的最短执行顺序
 
 赶时间时，按这套顺序走：
 
@@ -589,12 +721,13 @@ gh release view v1.12.0 --repo June6699/dart_simple_live --json assets,url
 2. 本地验证：
    - `.\build_android_apk.bat --no-pause C:\softwares\SimpleLiveAndroid`
    - `.\deploy_windows.bat --no-pause C:\softwares\SimpleLive`
-3. 提交并 push `master`
-4. 打 `vX.Y.Z` tag 并 push
+3. 提交并 push 到私有 `origin/master`
+4. 私有仓库打 `vX.Y.Z` tag 并 push
 5. 分别看 Android、Windows、Linux 三条工作流
 6. 检查正式 Release 资产是否齐全
 7. 本地归档到 `release\vX.Y.Z`
 8. 刷新 `C:\softwares\SimpleLive`
+9. 如果这次需要公开，再额外执行一次公开裁剪并同步到 `fork`
 
 如果 Linux 这次不能复用旧 release，又不想等线上 release，也可以插入一个本地 Linux 构建步骤：
 
@@ -603,4 +736,4 @@ gh release view v1.12.0 --repo June6699/dart_simple_live --json assets,url
 3. 本地打出新的 `linux.zip` 和 `linux.deb`
 4. 复制回 `release\vX.Y.Z\linux`
 
-照这份流程执行，当前仓库已经可以稳定完成一轮 `Windows / Android / Linux` 预编译与正式发版。
+照这份流程执行，当前仓库已经可以稳定完成一轮 `Windows / Android / Linux` 预编译与正式发版，同时也能把私有开发仓和公开 fork 仓库长期分开维护。

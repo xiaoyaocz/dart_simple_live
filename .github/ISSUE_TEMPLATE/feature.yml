@@ -1,15 +1,14 @@
-name: 功能请求
-title: "[Feature] 请填写简短易读的标题"
-description: "请求开发新的功能/优化某项功能"
-assignees: xiaoyaocz
+name: Enhance / 功能建议
+title: "[ENHANCE] 请填写简短易读的标题"
+description: "请求新增功能、优化体验或补完已有能力"
 labels:
   - "enhancement"
 body:
   - type: markdown
     attributes:
       value: |
-        你的Issue大概率会搁置很久，除非是那种我能随手解决的。
-        暂时不会添加新的平台支持（因为我自己用不上）。如果你有开发能力，建议的自行开发后提交个PR。
+        请把一个建议拆成一个 `Enhance`，不要把多个完全不同的需求塞进同一个 Issue。
+        如果你只是想分享使用妙招、配置经验或一般性提问，请改用 `Discussions`。
 
   - type: checkboxes
     id: terms
@@ -25,8 +24,8 @@ body:
     validations:
       required: true
     attributes:
-      label: 功能描述
-      description: 请填写功能描述，如果你有多个建议、请求，请分开提交Issue
+      label: 需求描述
+      description: 请说明你想解决什么问题、目前哪里不方便、理想结果是什么
 
   - type: checkboxes
     id: platform
@@ -41,9 +40,23 @@ body:
         - label: Linux
         - label: Android TV
 
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: 建议类型
+      description: 请选择更接近你这次反馈的类型
+      options:
+        - 体验优化
+        - 新增功能
+        - 平台适配
+        - 文案 / 图标 / UI 调整
+        - 发布 / 构建 / 文档
+    validations:
+      required: true
+
   - type: textarea
     id: additional
     attributes:
       label: 附加信息
-      description: 可以附加相关截图、视频或链接（好让我知道要我抄哪个APP）
+      description: 可以附加相关截图、视频、链接或参考产品
 

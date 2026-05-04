@@ -23,10 +23,13 @@ import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
+import 'package:simple_live_app/widgets/status/app_empty_widget.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class LiveRoomPage extends GetView<LiveRoomController> {
+  static const double _desktopSidePanelWidth = 300.0;
+
   const LiveRoomPage({Key? key}) : super(key: key);
 
   double _bottomSafeInset(BuildContext context) {
@@ -122,6 +125,8 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildPageUI() {
     return OrientationBuilder(
       builder: (context, orientation) {
+        final hasDesktopActionPanel = orientation == Orientation.landscape &&
+            (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
         return Scaffold(
           appBar: AppBar(
             titleSpacing: 0,
@@ -132,7 +137,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   alignment: Alignment.center,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48),
+                      padding: EdgeInsets.only(
+                        left: 48,
+                        right: 48 +
+                            (hasDesktopActionPanel
+                                ? _desktopSidePanelWidth
+                                : 0),
+                      ),
                       child: Text(
                         controller.detail.value?.title ?? "直播间",
                         maxLines: 1,
@@ -184,7 +195,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 child: buildMediaPlayer(),
               ),
               SizedBox(
-                width: 300,
+                width: _desktopSidePanelWidth,
                 child: Column(
                   children: [
                     buildUserProfile(context),
@@ -639,27 +650,34 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget buildSuperChats() {
     return KeepAliveWrapper(
       child: Obx(
-        () => ListView.separated(
-          padding: AppStyle.edgeInsetsA12,
-          itemCount: controller.superChats.length,
-          separatorBuilder: (_, i) => AppStyle.vGap12,
-          itemBuilder: (_, i) {
-            var item = controller.superChats[i];
-            return SuperChatCard(
-              item,
-              remark: controller.getUserRemark(item.userName),
-              key: ValueKey(
-                item.id ??
-                    "${item.userName}|${item.message}|${item.price}|${item.startTime.millisecondsSinceEpoch}",
+        () => controller.superChats.isEmpty
+            ? AppEmptyWidget(
+                message: controller.site.id == Constant.kHuya
+                    ? "当前直播间无头条内容"
+                    : "当前直播间无 SC 内容",
+              )
+            : ListView.separated(
+                padding: AppStyle.edgeInsetsA12,
+                itemCount: controller.superChats.length,
+                separatorBuilder: (_, i) => AppStyle.vGap12,
+                itemBuilder: (_, i) {
+                  var item = controller.superChats[i];
+                  return SuperChatCard(
+                    item,
+                    remark: controller.getUserRemark(item.userName),
+                    key: ValueKey(
+                      item.id ??
+                          "${item.userName}|${item.message}|${item.price}|${item.startTime.millisecondsSinceEpoch}",
+                    ),
+                    onExpire: () {
+                      controller.removeSuperChats();
+                    },
+                    onUserTap: () => controller.showUserActions(item.userName),
+                    onUserLongPress: () =>
+                        controller.copyUserName(item.userName),
+                  );
+                },
               ),
-              onExpire: () {
-                controller.removeSuperChats();
-              },
-              onUserTap: () => controller.showUserActions(item.userName),
-              onUserLongPress: () => controller.copyUserName(item.userName),
-            );
-          },
-        ),
       ),
     );
   }

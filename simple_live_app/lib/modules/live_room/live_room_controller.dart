@@ -24,6 +24,7 @@ import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -1509,48 +1510,100 @@ class LiveRoomController extends PlayerController
     );
   }
 
-  void showFollowUserSheet() {
-    Utils.showBottomSheet(
-      title: "关注列表",
-      child: Obx(
-        () => Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: FollowService.instance.loadData,
-              child: ListView.builder(
-                itemCount: FollowService.instance.liveList.length,
-                itemBuilder: (_, i) {
-                  var item = FollowService.instance.liveList[i];
-                  return Obx(
-                    () => FollowUserItem(
-                      item: item,
-                      playing: rxSite.value.id == item.siteId &&
-                          rxRoomId.value == item.roomId,
-                      onTap: () {
-                        Get.back();
-                        resetRoom(
-                          Sites.allSites[item.siteId]!,
-                          item.roomId,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: Obx(
-                  () => DesktopRefreshButton(
-                    refreshing: FollowService.instance.updating.value,
-                    onPressed: FollowService.instance.loadData,
+  List<FollowUser> _followUsersByFilterMode(int filterMode) {
+    switch (filterMode) {
+      case 1:
+        return FollowService.instance.liveList;
+      case 2:
+        return FollowService.instance.notLiveList;
+      default:
+        return FollowService.instance.followList;
+    }
+  }
+
+  Widget buildFollowUserSelection({
+    required VoidCallback onClose,
+  }) {
+    final filterMode = 0.obs;
+    const options = ["全部", "直播中", "未开播"];
+    return Obx(() {
+      final followUsers = _followUsersByFilterMode(filterMode.value);
+      return Stack(
+        children: [
+          Column(
+            children: [
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(bottom: 0),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(options.length, (index) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index == options.length - 1 ? 0 : 12,
+                        ),
+                        child: FilterButton(
+                          text: options[index],
+                          selected: filterMode.value == index,
+                          onTap: () {
+                            filterMode.value = index;
+                          },
+                        ),
+                      );
+                    }),
                   ),
                 ),
               ),
-          ],
-        ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: FollowService.instance.loadData,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: AppStyle.edgeInsetsV8,
+                    itemCount: followUsers.length,
+                    itemBuilder: (_, i) {
+                      var item = followUsers[i];
+                      return Obx(
+                        () => FollowUserItem(
+                          item: item,
+                          playing: rxSite.value.id == item.siteId &&
+                              rxRoomId.value == item.roomId,
+                          onTap: () {
+                            onClose();
+                            resetRoom(
+                              Sites.allSites[item.siteId]!,
+                              item.roomId,
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Obx(
+                () => DesktopRefreshButton(
+                  refreshing: FollowService.instance.updating.value,
+                  onPressed: FollowService.instance.loadData,
+                ),
+              ),
+            ),
+        ],
+      );
+    });
+  }
+
+  void showFollowUserSheet() {
+    Utils.showBottomSheet(
+      title: "关注列表",
+      child: buildFollowUserSelection(
+        onClose: Get.back,
       ),
     );
   }
@@ -1741,8 +1794,7 @@ ${error?.stackTrace}''');
     required DateTime? since,
     required Duration? previousPosition,
   }) async {
-    if (!Platform.isWindows ||
-        since == null ||
+    if (since == null ||
         previousPosition == null ||
         !liveStatus.value ||
         currentLineIndex < 0 ||
@@ -1750,6 +1802,10 @@ ${error?.stackTrace}''');
       return;
     }
     if (DateTime.now().difference(since) < const Duration(seconds: 3)) {
+      return;
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (isBackground) {
       return;
     }
     var currentPosition = _lastKnownPlayerPosition;

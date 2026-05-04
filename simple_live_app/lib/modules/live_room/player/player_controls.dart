@@ -45,8 +45,20 @@ Widget buildFullControls(
   var padding = MediaQuery.of(videoState.context).padding;
   GlobalKey volumeButtonkey = GlobalKey();
   return DragToMoveArea(
-    child: Stack(
-      children: [
+    child: Obx(
+      () => MouseRegion(
+        cursor: controller.hideMouseCursorState.value
+            ? SystemMouseCursors.none
+            : SystemMouseCursors.basic,
+        onEnter: controller.onEnter,
+        onExit: controller.onExit,
+        onHover: (PointerHoverEvent event) {
+          controller.resetHideMouseCursorTimer();
+          controller.showMouseCursor();
+          controller.onHover(event, videoState.context);
+        },
+        child: Stack(
+          children: [
         Container(),
         buildDanmuView(videoState, controller),
 
@@ -88,22 +100,10 @@ Widget buildFullControls(
             onVerticalDragStart: controller.onVerticalDragStart,
             onVerticalDragUpdate: controller.onVerticalDragUpdate,
             onVerticalDragEnd: controller.onVerticalDragEnd,
-            child: Obx(
-              () => MouseRegion(
-                cursor: controller.hideMouseCursorState.value
-                    ? SystemMouseCursors.none
-                    : SystemMouseCursors.basic,
-                onEnter: controller.onEnter,
-                onExit: controller.onExit,
-              onHover: (PointerHoverEvent event) {
-                controller.resetHideMouseCursorTimer();
-                controller.showMouseCursor();
-                controller.onHover(event, videoState.context);
-              },
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.transparent,
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.transparent,
                 // child: Visibility(
                 //   //闂佸綊鏀遍悧妤冣偓姘健瀹曠娀宕崟顓炲箥
                 //   visible: controller.smallWindowState.value,
@@ -400,7 +400,9 @@ Widget buildFullControls(
             ),
           ),
         ),
-      ],
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -438,10 +440,22 @@ Widget buildControls(
   LiveRoomController controller,
 ) {
   GlobalKey volumeButtonkey = GlobalKey();
-  return Stack(
-    children: [
-      Container(),
-      buildDanmuView(videoState, controller),
+  return Obx(
+    () => MouseRegion(
+      cursor: controller.hideMouseCursorState.value
+          ? SystemMouseCursors.none
+          : SystemMouseCursors.basic,
+      onEnter: controller.onEnter,
+      onExit: controller.onExit,
+      onHover: (PointerHoverEvent event) {
+        controller.resetHideMouseCursorTimer();
+        controller.showMouseCursor();
+        controller.onHover(event, videoState.context);
+      },
+      child: Stack(
+        children: [
+          Container(),
+          buildDanmuView(videoState, controller),
 
       // 閻庡綊娼荤紓姘辩箔閸涱垱鍠嗛柟鐢殿暛闂佸搫瀚晶浠嬫晸?
       Obx(
@@ -476,23 +490,10 @@ Widget buildControls(
           onVerticalDragUpdate: controller.onVerticalDragUpdate,
           onVerticalDragEnd: controller.onVerticalDragEnd,
           //onLongPress: controller.showDebugInfo,
-          child: Obx(
-            () => MouseRegion(
-              cursor: controller.hideMouseCursorState.value
-                  ? SystemMouseCursors.none
-                  : SystemMouseCursors.basic,
-              onEnter: (event) {
-                controller.onEnter(event);
-                controller.resetHideMouseCursorTimer();
-                controller.showMouseCursor();
-              },
-              onExit: controller.onExit,
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.transparent,
-              ),
-            ),
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.transparent,
           ),
         ),
         ),
@@ -656,7 +657,9 @@ Widget buildControls(
           ),
         ),
       ),
-    ],
+        ],
+      ),
+    ),
   );
 }
 
@@ -711,7 +714,7 @@ Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
 }
 
 void showLinesInfo(LiveRoomController controller) {
-  if (controller.isVertical.value) {
+  if (controller.useBottomSheetPlayerMenus) {
     controller.showPlayUrlsSheet();
     return;
   }
@@ -763,7 +766,7 @@ void showLinesInfo(LiveRoomController controller) {
 }
 
 void showQualitesInfo(LiveRoomController controller) {
-  if (controller.isVertical.value) {
+  if (controller.useBottomSheetPlayerMenus) {
     controller.showQualitySheet();
     return;
   }
@@ -794,7 +797,7 @@ void showQualitesInfo(LiveRoomController controller) {
 }
 
 void showDanmakuSettings(LiveRoomController controller) {
-  if (controller.isVertical.value) {
+  if (controller.useBottomSheetPlayerMenus) {
     controller.showDanmuSettingsSheet();
     return;
   }
@@ -816,7 +819,7 @@ void showDanmakuSettings(LiveRoomController controller) {
 }
 
 void showPlayerSettings(LiveRoomController controller) {
-  if (controller.isVertical.value) {
+  if (controller.useBottomSheetPlayerMenus) {
     controller.showPlayerSettingsSheet();
     return;
   }
@@ -879,7 +882,7 @@ void showPlayerSettings(LiveRoomController controller) {
 }
 
 void showQuickAccess(LiveRoomController controller) {
-  if (controller.isVertical.value) {
+  if (controller.useBottomSheetPlayerMenus) {
     controller.showQuickAccessSheet();
     return;
   }
@@ -927,7 +930,7 @@ void showQuickAccess(LiveRoomController controller) {
 }
 
 void showFollowUser(LiveRoomController controller) {
-  if (controller.isVertical.value) {
+  if (controller.useBottomSheetPlayerMenus) {
     controller.showFollowUserSheet();
     return;
   }
@@ -936,45 +939,8 @@ void showFollowUser(LiveRoomController controller) {
     title: "关注列表",
     width: 400,
     useSystem: true,
-    child: Obx(
-      () => Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: FollowService.instance.loadData,
-            child: ListView.builder(
-              itemCount: FollowService.instance.liveList.length,
-              itemBuilder: (_, i) {
-                var item = FollowService.instance.liveList[i];
-                return Obx(
-                  () => FollowUserItem(
-                    item: item,
-                    playing: controller.rxSite.value.id == item.siteId &&
-                        controller.rxRoomId.value == item.roomId,
-                    onTap: () {
-                      Utils.hideRightDialog();
-                      controller.resetRoom(
-                        Sites.allSites[item.siteId]!,
-                        item.roomId,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Obx(
-                () => DesktopRefreshButton(
-                  refreshing: FollowService.instance.updating.value,
-                  onPressed: FollowService.instance.loadData,
-                ),
-              ),
-            ),
-        ],
-      ),
+    child: controller.buildFollowUserSelection(
+      onClose: Utils.hideRightDialog,
     ),
   );
 }

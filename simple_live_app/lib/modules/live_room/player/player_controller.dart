@@ -151,6 +151,8 @@ mixin PlayerStateMixin on PlayerMixin {
   var showQualites = false.obs;
   var showLines = false.obs;
 
+  bool get useBottomSheetPlayerMenus => Platform.isAndroid || Platform.isIOS;
+
   /// 隐藏控制器
   void hideControls() {
     showControlsState.value = false;
@@ -765,6 +767,7 @@ mixin PlayerGestureControlMixin
   void onHover(PointerHoverEvent event, BuildContext context) {
     showMouseCursor();
     resetHideMouseCursorTimer();
+    resetHideControlsTimer();
     final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
     if (event.position.dy <= targetPosition ||

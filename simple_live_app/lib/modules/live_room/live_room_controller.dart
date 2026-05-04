@@ -20,15 +20,20 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
+import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:window_manager/window_manager.dart';
 
-class LiveRoomController extends PlayerController with WidgetsBindingObserver {
+class LiveRoomController extends PlayerController
+    with WidgetsBindingObserver, WindowListener {
   final Site pSite;
   final String pRoomId;
   late LiveDanmaku liveDanmaku;
@@ -39,7 +44,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     rxSite = pSite.obs;
     rxRoomId = pRoomId.obs;
     liveDanmaku = site.liveSite.getDanmaku();
-    // 抖音应该默认是竖屏的
+    // 鎶栭煶搴旇榛樿鏄珫灞忕殑
     if (site.id == "douyin") {
       isVertical.value = true;
     }
@@ -55,61 +60,87 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   var followed = false.obs;
   var liveStatus = false.obs;
   RxList<LiveSuperChatMessage> superChats = RxList<LiveSuperChatMessage>();
+  RxList<LiveContributionRankItem> contributionRanks =
+      RxList<LiveContributionRankItem>();
+  var contributionRankLoading = false.obs;
+  var contributionRankFetched = false.obs;
+  Rx<String?> contributionRankError = Rx<String?>(null);
+  Rx<DateTime?> contributionRankUpdatedAt = Rx<DateTime?>(null);
+  RxDouble danmakuViewportHeight = 0.0.obs;
+  RxSet<String> tempMutedUsers = <String>{}.obs;
+  bool get supportsContributionRank => const {
+        Constant.kBiliBili,
+        Constant.kDouyu,
+        Constant.kDouyin,
+      }.contains(site.id);
 
-  /// 滚动控制
+  /// 婊氬姩鎺у埗
   final ScrollController scrollController = ScrollController();
 
-  /// 聊天信息
+  /// 鑱婂ぉ淇℃伅
   RxList<LiveMessage> messages = RxList<LiveMessage>();
 
-  /// 清晰度数据
+  /// 娓呮櫚搴︽暟鎹?
   RxList<LivePlayQuality> qualites = RxList<LivePlayQuality>();
 
-  /// 当前清晰度
+  /// 褰撳墠娓呮櫚搴?
   var currentQuality = -1;
   var currentQualityInfo = "".obs;
 
-  /// 线路数据
+  /// 绾胯矾鏁版嵁
   RxList<String> playUrls = RxList<String>();
 
   Map<String, String>? playHeaders;
 
-  /// 当前线路
+  /// 褰撳墠绾胯矾
   var currentLineIndex = -1;
   var currentLineInfo = "".obs;
 
-  /// 退出倒计时
+  /// 閫€鍑哄€掕鏃?
   var countdown = 60.obs;
 
   Timer? autoExitTimer;
 
-  /// 设置的自动关闭时间（分钟）
+  /// 璁剧疆鐨勮嚜鍔ㄥ叧闂椂闂达紙鍒嗛挓锛?
   var autoExitMinutes = 60.obs;
 
-  ///是否延迟自动关闭
+  ///鏄惁寤惰繜鑷姩鍏抽棴
   var delayAutoExit = false.obs;
 
-  /// 是否启用自动关闭
+  /// 鏄惁鍚敤鑷姩鍏抽棴
   var autoExitEnable = false.obs;
 
-  /// 是否禁用自动滚动聊天栏
-  /// - 当用户向上滚动聊天栏时，不再自动滚动
+  /// 鏄惁绂佺敤鑷姩婊氬姩鑱婂ぉ鏍?
+  /// - 褰撶敤鎴峰悜涓婃粴鍔ㄨ亰澶╂爮鏃讹紝涓嶅啀鑷姩婊氬姩
   var disableAutoScroll = false.obs;
 
-  /// 是否处于后台
+  /// 鏄惁澶勪簬鍚庡彴
   var isBackground = false;
 
-  /// 直播间加载失败
+  /// 鐩存挱闂村姞杞藉け璐?
   var loadError = false.obs;
   Error? error;
 
-  // 开播时长状态变量
+  // 寮€鎾椂闀跨姸鎬佸彉閲?
   var liveDuration = "00:00:00".obs;
   Timer? _liveDurationTimer;
+  StreamSubscription<Duration>? _positionSubscription;
+  Duration _lastKnownPlayerPosition = Duration.zero;
+  Duration? _positionBeforeBackground;
+  DateTime? _backgroundedAt;
+  Duration? _positionBeforeWindowBlur;
+  DateTime? _windowBlurredAt;
+  bool _playerReopening = false;
+  final Set<String> _superChatFingerprints = <String>{};
+  final Set<Timer> _pendingDanmakuTimers = <Timer>{};
+  Timer? _superChatRefreshTimer;
 
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
+    if (Platform.isWindows) {
+      windowManager.addListener(this);
+    }
     if (FollowService.instance.followList.isEmpty) {
       FollowService.instance.loadData();
     }
@@ -121,16 +152,544 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     scrollController.addListener(scrollListener);
 
     super.onInit();
+    _positionSubscription = player.stream.position.listen((event) {
+      _lastKnownPlayerPosition = event;
+    });
   }
 
   void scrollListener() {
+    if (!scrollController.hasClients) {
+      return;
+    }
+    if (_isChatNearBottom()) {
+      disableAutoScroll.value = false;
+      return;
+    }
     if (scrollController.position.userScrollDirection ==
         ScrollDirection.forward) {
       disableAutoScroll.value = true;
     }
   }
 
-  /// 初始化自动关闭倒计时
+  bool _isChatNearBottom() {
+    if (!scrollController.hasClients) {
+      return true;
+    }
+    return scrollController.position.extentAfter <= 24;
+  }
+
+  bool _isKeywordShielded(LiveMessage msg) {
+    final settings = AppSettingsController.instance;
+    if (!settings.danmuShieldEnable.value ||
+        !settings.danmuKeywordShieldEnable.value) {
+      return false;
+    }
+    for (var keyword in settings.shieldList) {
+      Pattern? pattern;
+      if (Utils.isRegexFormat(keyword)) {
+        String removedSlash = Utils.removeRegexFormat(keyword);
+        try {
+          pattern = RegExp(removedSlash);
+        } catch (e) {
+          Log.d("正则屏蔽词 $keyword 无法编译，已跳过");
+        }
+      } else {
+        pattern = keyword;
+      }
+      if (pattern != null && msg.message.contains(pattern)) {
+        Log.d("閸忔娊鏁拠宥忕窗$keyword\n瀹告彃鐫嗛拕鑺ョХ閹垰鍞寸€圭櫢绱?{msg.message}");
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isUserShielded(String userName) {
+    return AppSettingsController.instance.shouldShieldUser(
+      userName,
+      siteId: site.id,
+    );
+  }
+
+  String _normalizeMessageText(String message) {
+    return message.trim();
+  }
+
+  LiveRoomDetail _sanitizeRoomDetail(LiveRoomDetail detail) {
+    return LiveRoomDetail(
+      roomId: detail.roomId.trim(),
+      title: detail.title.trim(),
+      cover: detail.cover,
+      userName: _normalizeUserName(detail.userName),
+      userAvatar: detail.userAvatar,
+      online: detail.online,
+      introduction: detail.introduction?.trim(),
+      notice: detail.notice?.trim(),
+      status: detail.status,
+      data: detail.data,
+      danmakuData: detail.danmakuData,
+      url: detail.url,
+      isRecord: detail.isRecord,
+      showTime: detail.showTime?.trim(),
+      categoryId: detail.categoryId?.trim(),
+      categoryName: detail.categoryName?.trim(),
+      categoryParentId: detail.categoryParentId?.trim(),
+      categoryParentName: detail.categoryParentName?.trim(),
+      categoryPic: detail.categoryPic?.trim(),
+    );
+  }
+
+  LiveMessage _sanitizeLiveMessage(LiveMessage message) {
+    final normalizedUserName = message.userName == "LiveSysMessage"
+        ? message.userName
+        : _normalizeUserName(message.userName);
+    final normalizedMessage = _normalizeMessageText(message.message);
+    if (normalizedUserName == message.userName &&
+        normalizedMessage == message.message) {
+      return message;
+    }
+
+    return LiveMessage(
+      type: message.type,
+      userName: normalizedUserName,
+      message: normalizedMessage,
+      data: message.data,
+      color: message.color,
+    );
+  }
+
+  LiveMessage _superChatToLiveMessage(LiveSuperChatMessage superChat) {
+    return LiveMessage(
+      type: LiveMessageType.superChat,
+      userName: superChat.userName,
+      message: superChat.message,
+      color: LiveMessageColor.white,
+    );
+  }
+
+  String _normalizeUserName(String userName) {
+    return userName.trim();
+  }
+
+  LiveSuperChatMessage _sanitizeSuperChatMessage(LiveSuperChatMessage message) {
+    final normalizedUserName = _normalizeUserName(message.userName);
+    final normalizedMessage = _normalizeMessageText(message.message);
+    if (normalizedUserName == message.userName &&
+        normalizedMessage == message.message) {
+      return message;
+    }
+
+    return LiveSuperChatMessage(
+      id: message.id,
+      backgroundBottomColor: message.backgroundBottomColor,
+      backgroundColor: message.backgroundColor,
+      endTime: message.endTime,
+      face: message.face,
+      message: normalizedMessage,
+      price: message.price,
+      startTime: message.startTime,
+      userName: normalizedUserName,
+    );
+  }
+
+  LiveContributionRankItem _sanitizeContributionRankItem(
+    LiveContributionRankItem item,
+  ) {
+    return LiveContributionRankItem(
+      rank: item.rank,
+      userName: _normalizeUserName(item.userName),
+      avatar: item.avatar,
+      scoreText: item.scoreText.trim(),
+      scoreDetail: item.scoreDetail?.trim(),
+      userLevel: item.userLevel,
+      userLevelText: item.userLevelText?.trim(),
+      userLevelIcon: item.userLevelIcon,
+      fansLevel: item.fansLevel,
+      fansName: item.fansName?.trim(),
+      fansIcon: item.fansIcon,
+    );
+  }
+
+  void toggleUserShield(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+
+    final settings = AppSettingsController.instance;
+    if (settings.isUserShielded(value, siteId: site.id)) {
+      settings.removeUserShieldList(value, siteId: site.id);
+      SmartDialog.showToast("已取消屏蔽用户：$value");
+      return;
+    }
+
+    settings.setDanmuShieldEnable(true);
+    settings.setDanmuUserShieldEnable(true);
+    settings.addUserShieldList(value, siteId: site.id);
+    SmartDialog.showToast("已屏蔽用户：$value");
+  }
+
+  bool isTempMutedUser(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      return false;
+    }
+    return tempMutedUsers.contains(value);
+  }
+
+  void toggleTempMuteUser(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+    if (tempMutedUsers.contains(value)) {
+      tempMutedUsers.remove(value);
+      tempMutedUsers.refresh();
+      SmartDialog.showToast("已取消临时禁言：$value");
+      return;
+    }
+    tempMutedUsers.add(value);
+    tempMutedUsers.refresh();
+    SmartDialog.showToast("已加入临时禁言：$value");
+  }
+
+  void clearTempMutedUsers() {
+    if (tempMutedUsers.isEmpty) {
+      SmartDialog.showToast("当前没有临时禁言用户");
+      return;
+    }
+    tempMutedUsers.clear();
+    tempMutedUsers.refresh();
+    SmartDialog.showToast("已恢复全部临时禁言用户");
+  }
+
+  String? getUserRemark(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      return null;
+    }
+    return AppSettingsController.instance.getUserRemark(
+      value,
+      siteId: site.id,
+    );
+  }
+
+  Future<void> editUserRemark(String userName) async {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+    final currentRemark = getUserRemark(value) ?? "";
+    final result = await Utils.showEditTextDialog(
+      currentRemark,
+      title: "备注用户",
+      hintText: "留空表示删除备注",
+    );
+    if (result == null) {
+      return;
+    }
+    await AppSettingsController.instance.setUserRemark(
+      siteId: site.id,
+      userName: value,
+      remark: result,
+    );
+    SmartDialog.showToast(
+      result.trim().isEmpty ? "已删除备注" : "已更新备注：${result.trim()}",
+    );
+  }
+
+  void showUserActions(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+    final isShielded = AppSettingsController.instance.isUserShielded(
+      value,
+      siteId: site.id,
+    );
+    final isTempMuted = tempMutedUsers.contains(value);
+    final remark = getUserRemark(value);
+
+    Utils.showBottomSheet(
+      title: value,
+      child: ListView(
+        children: [
+          if (remark != null && remark.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.edit_note),
+              title: Text("当前备注：$remark"),
+              dense: true,
+            ),
+          ListTile(
+            leading: Icon(
+              isShielded ? Icons.visibility_outlined : Icons.block_outlined,
+            ),
+            title: Text(isShielded ? "取消平台屏蔽" : "屏蔽当前平台"),
+            subtitle: Text("仅对 ${site.name} 生效，不会误伤其他平台同名用户"),
+            onTap: () {
+              Get.back();
+              toggleUserShield(value);
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              isTempMuted ? Icons.volume_up_outlined : Icons.volume_off_outlined,
+            ),
+            title: Text(isTempMuted ? "取消临时禁言" : "加入临时禁言"),
+            subtitle: const Text("只在当前直播间本次会话内有效"),
+            onTap: () {
+              Get.back();
+              toggleTempMuteUser(value);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.sticky_note_2_outlined),
+            title: const Text("快捷备注"),
+            onTap: () async {
+              Get.back();
+              await editUserRemark(value);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.copy_outlined),
+            title: const Text("复制用户名"),
+            onTap: () {
+              Get.back();
+              copyUserName(value);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.restore_outlined),
+            title: const Text("批量恢复临时禁言"),
+            enabled: tempMutedUsers.isNotEmpty,
+            onTap: tempMutedUsers.isEmpty
+                ? null
+                : () {
+                    Get.back();
+                    clearTempMutedUsers();
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void copyUserName(String userName) {
+    final value = _normalizeUserName(userName);
+    if (value.isEmpty) {
+      SmartDialog.showToast("用户名不能为空");
+      return;
+    }
+    Utils.copyToClipboard(value);
+    SmartDialog.showToast("已复制用户名：$value");
+  }
+
+  void updateDanmakuViewportHeight(double value) {
+    if (value <= 0) {
+      return;
+    }
+    if ((danmakuViewportHeight.value - value).abs() < 0.5) {
+      return;
+    }
+    danmakuViewportHeight.value = value;
+  }
+
+  void _cancelPendingDanmakuTimers() {
+    for (final timer in _pendingDanmakuTimers.toList()) {
+      timer.cancel();
+    }
+    _pendingDanmakuTimers.clear();
+  }
+
+  void _scheduleOverlayDanmaku(LiveMessage msg) {
+    final color = Color.fromARGB(
+      255,
+      msg.color.r,
+      msg.color.g,
+      msg.color.b,
+    );
+    final baseDelayMs = AppSettingsController.instance.getDanmuDelayMs(site.id);
+    final totalDelayMs =
+        baseDelayMs + (site.id == Constant.kHuya ? 1000 : 0);
+    final delay = Duration(milliseconds: totalDelayMs.clamp(0, 6000));
+    rememberDanmakuReplay(
+      msg.message,
+      color,
+      delay: delay,
+    );
+
+    void emit() {
+      if (!showDanmakuState.value || !liveStatus.value || isBackground) {
+        return;
+      }
+      addDanmaku([
+        DanmakuContentItem(
+          msg.message,
+          color: color,
+        ),
+      ]);
+    }
+
+    if (delay == Duration.zero) {
+      emit();
+      return;
+    }
+
+    Timer? timer;
+    timer = Timer(delay, () {
+      if (timer != null) {
+        _pendingDanmakuTimers.remove(timer);
+      }
+      emit();
+    });
+    _pendingDanmakuTimers.add(timer);
+  }
+
+  String _buildSuperChatFingerprint(LiveSuperChatMessage message) {
+    final id = message.id?.trim();
+    if (id != null && id.isNotEmpty) {
+      return "id:$id";
+    }
+
+    return [
+      message.userName,
+      message.message,
+      message.price,
+      message.startTime.millisecondsSinceEpoch,
+      message.endTime.millisecondsSinceEpoch,
+    ].join("|");
+  }
+
+  bool _shouldUpdateSuperChat(
+    LiveSuperChatMessage current,
+    LiveSuperChatMessage next,
+  ) {
+    if ((current.endTime.difference(next.endTime).inSeconds).abs() > 1) {
+      return true;
+    }
+
+    return current.startTime != next.startTime ||
+        current.face != next.face ||
+        current.message != next.message ||
+        current.price != next.price ||
+        current.userName != next.userName ||
+        current.backgroundColor != next.backgroundColor ||
+        current.backgroundBottomColor != next.backgroundBottomColor;
+  }
+
+  void _appendSuperChats(Iterable<LiveSuperChatMessage> items) {
+    final now = DateTime.now();
+    final added = <LiveSuperChatMessage>[];
+    for (final item in items) {
+      if (!item.endTime.isAfter(now)) {
+        continue;
+      }
+      final fingerprint = _buildSuperChatFingerprint(item);
+      final existingIndex = superChats.indexWhere(
+        (existing) => _buildSuperChatFingerprint(existing) == fingerprint,
+      );
+      if (existingIndex >= 0) {
+        if (_shouldUpdateSuperChat(superChats[existingIndex], item)) {
+          superChats[existingIndex] = item;
+        }
+        continue;
+      }
+      if (_superChatFingerprints.add(fingerprint)) {
+        added.add(item);
+      }
+    }
+    if (added.isNotEmpty) {
+      superChats.addAll(added);
+    }
+  }
+
+  void _refreshSuperChatFingerprints() {
+    _superChatFingerprints
+      ..clear()
+      ..addAll(superChats.map(_buildSuperChatFingerprint));
+  }
+
+  void _restartSuperChatRefreshTimer() {
+    _superChatRefreshTimer?.cancel();
+    if (site.id != Constant.kHuya || !liveStatus.value) {
+      return;
+    }
+    _superChatRefreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      removeSuperChats();
+      getSuperChatMessage(silent: true);
+    });
+  }
+
+  void _clearSuperChatState() {
+    superChats.clear();
+    _superChatFingerprints.clear();
+    _superChatRefreshTimer?.cancel();
+  }
+
+  void _refreshDanmakuOverlay(String reason) {
+    if (!showDanmakuState.value) {
+      return;
+    }
+    Log.d("$reason 后刷新了弹幕覆盖层");
+    rebuildDanmakuView();
+  }
+
+  void _clearContributionRankState() {
+    contributionRanks.clear();
+    contributionRankFetched.value = false;
+    contributionRankLoading.value = false;
+    contributionRankError.value = null;
+    contributionRankUpdatedAt.value = null;
+  }
+
+  Future<void> fetchContributionRank({bool forceRefresh = false}) async {
+    if (!AppSettingsController.instance.contributionRankEnable.value ||
+        !supportsContributionRank ||
+        detail.value == null) {
+      return;
+    }
+    if (contributionRankLoading.value) {
+      return;
+    }
+    if (!forceRefresh &&
+        contributionRanks.isNotEmpty &&
+        contributionRankError.value == null) {
+      return;
+    }
+
+    final requestSiteId = site.id;
+    final requestRoomId = roomId;
+    contributionRankLoading.value = true;
+    contributionRankError.value = null;
+    try {
+      final ranks = await site.liveSite.getContributionRank(
+        roomId: detail.value!.roomId,
+        detail: detail.value,
+      );
+      if (site.id != requestSiteId || roomId != requestRoomId) {
+        return;
+      }
+      contributionRanks.assignAll(ranks.map(_sanitizeContributionRankItem));
+      contributionRankFetched.value = true;
+      contributionRankUpdatedAt.value = DateTime.now();
+    } catch (e) {
+      Log.logPrint(e);
+      if (site.id != requestSiteId || roomId != requestRoomId) {
+        return;
+      }
+      contributionRankError.value = e.toString();
+    } finally {
+      if (site.id == requestSiteId && roomId == requestRoomId) {
+        contributionRankLoading.value = false;
+      }
+    }
+  }
+
+  /// 鍒濆鍖栬嚜鍔ㄥ叧闂€掕鏃?
   void initAutoExit() {
     if (AppSettingsController.instance.autoExitEnable.value) {
       autoExitEnable.value = true;
@@ -158,8 +717,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           exit(0);
         });
         autoExitTimer?.cancel();
-        var delay = await Utils.showAlertDialog("定时关闭已到时,是否延迟关闭?",
-            title: "延迟关闭", confirm: "延迟", cancel: "关闭", selectable: true);
+        var delay = await Utils.showAlertDialog("瀹氭椂鍏抽棴宸插埌鏃?鏄惁寤惰繜鍏抽棴?",
+            title: "寤惰繜鍏抽棴", confirm: "寤惰繜", cancel: "鍏抽棴", selectable: true);
         if (delay) {
           timer.cancel();
           delayAutoExit.value = true;
@@ -173,20 +732,41 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
     });
   }
-  // 弹窗逻辑
+  // 寮圭獥閫昏緫
 
   void refreshRoom() {
     //messages.clear();
-    superChats.clear();
+    _clearSuperChatState();
+    _clearContributionRankState();
     liveDanmaku.stop();
 
     loadData();
   }
 
-  /// 聊天栏始终滚动到底部
+  @override
+  void onClose() async {
+    WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isWindows) {
+      windowManager.removeListener(this);
+    }
+    scrollController.removeListener(scrollListener);
+    autoExitTimer?.cancel();
+    _superChatRefreshTimer?.cancel();
+    _cancelPendingDanmakuTimers();
+    clearDanmakuReplayHistory();
+    _liveDurationTimer?.cancel();
+    _positionSubscription?.cancel();
+    unawaited(
+      AppSettingsController.instance.setLastLiveRoomResumePending(false),
+    );
+    await liveDanmaku.stop();
+    super.onClose();
+  }
+
+  /// 鑱婂ぉ鏍忓缁堟粴鍔ㄥ埌搴曢儴
   void chatScrollToBottom() {
     if (scrollController.hasClients) {
-      // 如果手动上拉过，就不自动滚动到底部
+      // 濡傛灉鎵嬪姩涓婃媺杩囷紝灏变笉鑷姩婊氬姩鍒板簳閮?
       if (disableAutoScroll.value) {
         return;
       }
@@ -194,38 +774,27 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
   }
 
-  /// 初始化弹幕接收事件
+  /// 鍒濆鍖栧脊骞曟帴鏀朵簨浠?
   void initDanmau() {
     liveDanmaku.onMessage = onWSMessage;
     liveDanmaku.onClose = onWSClose;
     liveDanmaku.onReady = onWSReady;
   }
 
-  /// 接收到WebSocket信息
+  /// 鎺ユ敹鍒癢ebSocket淇℃伅
   void onWSMessage(LiveMessage msg) {
+    msg = _sanitizeLiveMessage(msg);
     if (msg.type == LiveMessageType.chat) {
       if (messages.length > 200 && !disableAutoScroll.value) {
         messages.removeAt(0);
       }
+      if (_isUserShielded(msg.userName) || isTempMutedUser(msg.userName)) {
+        Log.d("瀹告彃鐫嗛拕鐣屾暏閹村嚖绱?{msg.userName}");
+        return;
+      }
 
-      // 关键词屏蔽检查
-      for (var keyword in AppSettingsController.instance.shieldList) {
-        Pattern? pattern;
-        if (Utils.isRegexFormat(keyword)) {
-          String removedSlash = Utils.removeRegexFormat(keyword);
-          try {
-            pattern = RegExp(removedSlash);
-          } catch (e) {
-            // should avoid this during add keyword
-            Log.d("关键词：$keyword 正则格式错误");
-          }
-        } else {
-          pattern = keyword;
-        }
-        if (pattern != null && msg.message.contains(pattern)) {
-          Log.d("关键词：$keyword\n已屏蔽消息内容：${msg.message}");
-          return;
-        }
+      if (_isKeywordShielded(msg)) {
+        return;
       }
 
       messages.add(msg);
@@ -236,66 +805,78 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       if (!liveStatus.value || isBackground) {
         return;
       }
-
-      addDanmaku([
-        DanmakuContentItem(
-          msg.message,
-          color: Color.fromARGB(
-            255,
-            msg.color.r,
-            msg.color.g,
-            msg.color.b,
-          ),
-        ),
-      ]);
+      _scheduleOverlayDanmaku(msg);
+      return;
     } else if (msg.type == LiveMessageType.online) {
       online.value = msg.data;
     } else if (msg.type == LiveMessageType.superChat) {
-      superChats.add(msg.data);
+      if (msg.data is! LiveSuperChatMessage) {
+        return;
+      }
+      final superChat =
+          _sanitizeSuperChatMessage(msg.data as LiveSuperChatMessage);
+      if (_isUserShielded(superChat.userName) ||
+          isTempMutedUser(superChat.userName)) {
+        return;
+      }
+      if (_isKeywordShielded(_superChatToLiveMessage(superChat))) {
+        return;
+      }
+      _appendSuperChats([superChat]);
+      return;
     }
   }
 
-  /// 添加一条系统消息
+  /// 娣诲姞涓€鏉＄郴缁熸秷鎭?
   void addSysMsg(String msg) {
     messages.add(
       LiveMessage(
         type: LiveMessageType.chat,
         userName: "LiveSysMessage",
-        message: msg,
+        message: _normalizeMessageText(msg),
         color: LiveMessageColor.white,
       ),
     );
   }
 
-  /// 接收到WebSocket关闭信息
+  /// 鎺ユ敹鍒癢ebSocket鍏抽棴淇℃伅
   void onWSClose(String msg) {
     addSysMsg(msg);
   }
 
-  /// WebSocket准备就绪
+  /// WebSocket鍑嗗灏辩华
   void onWSReady() {
-    addSysMsg("弹幕服务器连接正常");
+    addSysMsg("弹幕服务器连接成功");
   }
 
-  /// 加载直播间信息
+  /// 鍔犺浇鐩存挱闂翠俊鎭?
   void loadData() async {
     try {
       SmartDialog.showLoading(msg: "");
       loadError.value = false;
       error = null;
       update();
+      await liveDanmaku.stop();
+      liveDanmaku = site.liveSite.getDanmaku();
+      _clearContributionRankState();
+      _clearSuperChatState();
+      _cancelPendingDanmakuTimers();
+      clearDanmakuReplayHistory();
+      rebuildDanmakuView();
       addSysMsg("正在读取直播间信息");
-      detail.value = await site.liveSite.getRoomDetail(roomId: roomId);
+      detail.value = _sanitizeRoomDetail(
+        await site.liveSite.getRoomDetail(roomId: roomId),
+      );
 
       if (site.id == Constant.kDouyin) {
-        // 1.6.0之前收藏的WebRid
-        // 1.6.0收藏的RoomID
-        // 1.6.0之后改回WebRid
+        // 1.6.0涔嬪墠鏀惰棌鐨刉ebRid
+        // 1.6.0鏀惰棌鐨凴oomID
+        // 1.6.0涔嬪悗鏀瑰洖WebRid
         if (detail.value!.roomId != roomId) {
           var oldId = roomId;
           rxRoomId.value = detail.value!.roomId;
           if (followed.value) {
-            // 更新关注列表
+            // 鏇存柊关注列表
             DBService.instance.deleteFollow("${site.id}_$oldId");
             DBService.instance.addFollow(
               FollowUser(
@@ -313,24 +894,34 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           }
         }
       }
+      unawaited(
+        AppSettingsController.instance.saveLastLiveRoom(
+          siteId: site.id,
+          roomId: roomId,
+        ),
+      );
 
       getSuperChatMessage();
+      if (AppSettingsController.instance.contributionRankEnable.value) {
+        fetchContributionRank();
+      }
 
       addHistory();
-      // 确认房间关注状态
+      // 纭鎴块棿鍏虫敞鐘舵€?
       followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status || detail.value!.isRecord;
+      _restartSuperChatRefreshTimer();
       if (liveStatus.value) {
         getPlayQualites();
       }
       if (detail.value!.isRecord) {
-        addSysMsg("当前主播未开播，正在轮播录像");
+        addSysMsg("当前主播未开播，正在转播录像");
       }
-      addSysMsg("开始连接弹幕服务器");
+      addSysMsg("正在连接弹幕服务器");
       initDanmau();
       liveDanmaku.start(detail.value?.danmakuData);
-      startLiveDurationTimer(); // 启动开播时长定时器
+      startLiveDurationTimer(); // 鍚姩寮€鎾椂闀垮畾鏃跺櫒
     } catch (e) {
       Log.logPrint(e);
       //SmartDialog.showToast(e.toString());
@@ -341,7 +932,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
   }
 
-  /// 初始化播放器
+  /// 鍒濆鍖栨挱鏀惧櫒
   void getPlayQualites() async {
     qualites.clear();
     currentQuality = -1;
@@ -357,13 +948,13 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       qualites.value = playQualites;
       var qualityLevel = await getQualityLevel();
       if (qualityLevel == 2) {
-        //最高
+        //鏈€楂?
         currentQuality = 0;
       } else if (qualityLevel == 0) {
-        //最低
+        //鏈€浣?
         currentQuality = playQualites.length - 1;
       } else {
-        //中间值
+        //涓棿鍊?
         int middle = (playQualites.length / 2).floor();
         currentQuality = middle;
       }
@@ -389,56 +980,91 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     return qualityLevel;
   }
 
-  void getPlayUrl() async {
-    playUrls.clear();
+  Future<bool> _reloadPlayUrls(
+      {bool resetLine = false, bool silent = false}) async {
+    if (detail.value == null ||
+        currentQuality < 0 ||
+        currentQuality >= qualites.length) {
+      return false;
+    }
     currentQualityInfo.value = qualites[currentQuality].quality;
-    currentLineInfo.value = "";
-    currentLineIndex = -1;
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.urls.isEmpty) {
-      SmartDialog.showToast("无法读取播放地址");
-      return;
+      if (!silent) {
+        SmartDialog.showToast("鏃犳硶璇诲彇鎾斁鍦板潃");
+      }
+      return false;
     }
     playUrls.value = playUrl.urls;
     playHeaders = playUrl.headers;
-    currentLineIndex = 0;
+    if (resetLine || currentLineIndex < 0) {
+      currentLineIndex = 0;
+    } else if (currentLineIndex >= playUrls.length) {
+      currentLineIndex = playUrls.length - 1;
+    }
     currentLineInfo.value = "线路${currentLineIndex + 1}";
-    //重置错误次数
-    mediaErrorRetryCount = 0;
-    initPlaylist();
+    return true;
   }
 
-  void changePlayLine(int index) {
+  Future<void> getPlayUrl() async {
+    playUrls.clear();
+    currentLineInfo.value = "";
+    currentLineIndex = -1;
+    if (!await _reloadPlayUrls(resetLine: true)) {
+      return;
+    }
+    //閲嶇疆閿欒娆℃暟
+    mediaErrorRetryCount = 0;
+    await initPlaylist();
+  }
+
+  Future<void> changePlayLine(int index) async {
     currentLineIndex = index;
-    //重置错误次数
+    //閲嶇疆閿欒娆℃暟
     mediaErrorRetryCount = 0;
-    setPlayer();
+    await setPlayer();
   }
 
-  void initPlaylist() async {
-    currentLineInfo.value = "线路${currentLineIndex + 1}";
-    errorMsg.value = "";
+  Future<void> initPlaylist() async {
+    if (_playerReopening ||
+        currentLineIndex < 0 ||
+        currentLineIndex >= playUrls.length) {
+      return;
+    }
+    _playerReopening = true;
+    try {
+      currentLineInfo.value = "线路${currentLineIndex + 1}";
+      errorMsg.value = "";
 
-    final mediaList = playUrls.map((url) {
-      var finalUrl = url;
+      var finalUrl = playUrls[currentLineIndex];
       if (AppSettingsController.instance.playerForceHttps.value) {
         finalUrl = finalUrl.replaceAll("http://", "https://");
       }
-      return Media(finalUrl, httpHeaders: playHeaders);
-    }).toList();
 
-    // 初始化播放器并设置 ao 参数
-    await initializePlayer();
+      // 鍒濆鍖栨挱鏀惧櫒骞惰缃?ao 鍙傛暟
+      await initializePlayer();
 
-    await player.open(Playlist(mediaList));
+      await player.open(
+        Media(
+          finalUrl,
+          httpHeaders: playHeaders,
+        ),
+      );
+      Log.d("鎾斁閾炬帴\r\n锛?finalUrl");
+    } finally {
+      _playerReopening = false;
+    }
   }
 
-  void setPlayer() async {
-    currentLineInfo.value = "线路${currentLineIndex + 1}";
-    errorMsg.value = "";
-
-    await player.jump(currentLineIndex);
+  Future<void> setPlayer({bool refreshUrls = false}) async {
+    if (refreshUrls) {
+      var reloaded = await _reloadPlayUrls(silent: true);
+      if (!reloaded) {
+        return;
+      }
+    }
+    await initPlaylist();
   }
 
   @override
@@ -447,21 +1073,27 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (mediaErrorRetryCount < 2) {
       Log.d("播放结束，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {
-        //延迟一秒再刷新
+        //寤惰繜涓€绉掑啀鍒锋柊
         await Future.delayed(const Duration(seconds: 1));
       }
       mediaErrorRetryCount += 1;
-      //刷新一次
-      setPlayer();
+      //鍒锋柊涓€娆?
+      await setPlayer(refreshUrls: site.id == Constant.kHuya);
       return;
     }
 
-    Log.d("播放结束");
-    // 遍历线路，如果全部链接都断开就是直播结束了
+    Log.d("鎾斁缁撴潫");
+    // 閬嶅巻绾胯矾锛屽鏋滃叏閮ㄩ摼鎺ラ兘鏂紑灏辨槸鐩存挱缁撴潫浜?
     if (playUrls.length - 1 == currentLineIndex) {
+      if (site.id == Constant.kHuya) {
+        currentLineIndex = 0;
+        mediaErrorRetryCount = 0;
+        await setPlayer(refreshUrls: true);
+        return;
+      }
       liveStatus.value = false;
     } else {
-      changePlayLine(currentLineIndex + 1);
+      await changePlayLine(currentLineIndex + 1);
 
       //setPlayer();
     }
@@ -470,50 +1102,72 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   int mediaErrorRetryCount = 0;
   @override
   void mediaError(String error) async {
-    super.mediaEnd();
+    super.mediaError(error);
     if (mediaErrorRetryCount < 2) {
       Log.d("播放失败，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {
-        //延迟一秒再刷新
+        //寤惰繜涓€绉掑啀鍒锋柊
         await Future.delayed(const Duration(seconds: 1));
       }
       mediaErrorRetryCount += 1;
-      //刷新一次
-      setPlayer();
+      //鍒锋柊涓€娆?
+      await setPlayer(refreshUrls: site.id == Constant.kHuya);
       return;
     }
 
     if (playUrls.length - 1 == currentLineIndex) {
-      errorMsg.value = "播放失败";
-      SmartDialog.showToast("播放失败:$error");
+      if (site.id == Constant.kHuya) {
+        currentLineIndex = 0;
+        mediaErrorRetryCount = 0;
+        await setPlayer(refreshUrls: true);
+        return;
+      }
+      errorMsg.value = "鎾斁澶辫触";
+      SmartDialog.showToast("鎾斁澶辫触:$error");
     } else {
       //currentLineIndex += 1;
       //setPlayer();
-      changePlayLine(currentLineIndex + 1);
+      await changePlayLine(currentLineIndex + 1);
     }
   }
 
-  /// 读取SC
-  void getSuperChatMessage() async {
+  /// 璇诲彇SC
+  void getSuperChatMessage({bool silent = false}) async {
+    if (detail.value == null) {
+      return;
+    }
     try {
-      var sc =
-          await site.liveSite.getSuperChatMessage(roomId: detail.value!.roomId);
-      superChats.addAll(sc);
+      var sc = await site.liveSite.getSuperChatMessage(
+        roomId: detail.value!.roomId,
+        detail: detail.value,
+      );
+      final filtered = sc.map(_sanitizeSuperChatMessage).where((item) {
+        if (_isUserShielded(item.userName) || isTempMutedUser(item.userName)) {
+          return false;
+        }
+        return !_isKeywordShielded(_superChatToLiveMessage(item));
+      });
+      _appendSuperChats(filtered);
+      removeSuperChats();
     } catch (e) {
       Log.logPrint(e);
-      addSysMsg("SC读取失败");
+      if (silent) {
+        return;
+      }
+      addSysMsg("SC璇诲彇澶辫触");
     }
   }
 
-  /// 移除掉已到期的SC
+  /// 绉婚櫎鎺夊凡鍒版湡鐨凷C
   void removeSuperChats() async {
     var now = DateTime.now().millisecondsSinceEpoch;
     superChats.value = superChats
         .where((x) => x.endTime.millisecondsSinceEpoch > now)
         .toList();
+    _refreshSuperChatFingerprints();
   }
 
-  /// 添加历史记录
+  /// 娣诲姞鍘嗗彶璁板綍
   void addHistory() {
     if (detail.value == null) {
       return;
@@ -535,7 +1189,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     DBService.instance.addOrUpdateHistory(history);
   }
 
-  /// 关注用户
+  /// 鍏虫敞鐢ㄦ埛
   void followUser() {
     if (detail.value == null) {
       return;
@@ -555,12 +1209,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     EventBus.instance.emit(Constant.kUpdateFollow, id);
   }
 
-  /// 取消关注用户
+  /// 鍙栨秷鍏虫敞鐢ㄦ埛
   void removeFollowUser() async {
     if (detail.value == null) {
       return;
     }
-    if (!await Utils.showAlertDialog("确定要取消关注该用户吗？", title: "取消关注")) {
+    if (!await Utils.showAlertDialog("纭畾瑕佸彇娑堝叧娉ㄨ鐢ㄦ埛鍚楋紵", title: "鍙栨秷鍏虫敞")) {
       return;
     }
 
@@ -582,34 +1236,36 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
     Utils.copyToClipboard(detail.value!.url);
-    SmartDialog.showToast("已复制直播间链接");
+    SmartDialog.showToast("宸插鍒剁洿鎾棿閾炬帴");
   }
 
-  /// 复制新生成的直播流
+  /// 澶嶅埗鏂扮敓鎴愮殑鐩存挱娴?
   void copyPlayUrl() async {
-    // 未开播不复制
+    // 鏈紑鎾笉澶嶅埗
     if (!liveStatus.value) {
       return;
     }
     var playUrl = await site.liveSite
         .getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.urls.isEmpty) {
-      SmartDialog.showToast("无法读取播放地址");
+      SmartDialog.showToast("鏃犳硶璇诲彇鎾斁鍦板潃");
       return;
     }
     Utils.copyToClipboard(playUrl.urls.first);
     SmartDialog.showToast("已复制播放直链");
   }
 
-  /// 底部打开播放器设置
+  /// 搴曢儴鎵撳紑鎾斁鍣ㄨ缃?
   void showDanmuSettingsSheet() {
     Utils.showBottomSheet(
-      title: "弹幕设置",
+      title: "寮瑰箷璁剧疆",
       child: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
           DanmuSettingsView(
             danmakuController: danmakuController,
+            siteId: site.id,
+            previewViewportHeight: danmakuViewportHeight.value,
             onTapDanmuShield: () {
               Get.back();
               showDanmuShield();
@@ -678,7 +1334,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   void showPlayUrlsSheet() {
     Utils.showBottomSheet(
-      title: "切换线路",
+      title: "线路选择",
       child: RadioGroup(
         groupValue: currentLineIndex,
         onChanged: (e) {
@@ -705,7 +1361,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   void showPlayerSettingsSheet() {
     Utils.showBottomSheet(
-      title: "画面尺寸",
+      title: "鐢婚潰灏哄",
       child: Obx(
         () => RadioGroup(
           groupValue: AppSettingsController.instance.scaleMode.value,
@@ -718,17 +1374,17 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
             children: const [
               RadioListTile(
                 value: 0,
-                title: Text("适应"),
+                title: Text("閫傚簲"),
                 visualDensity: VisualDensity.compact,
               ),
               RadioListTile(
                 value: 1,
-                title: Text("拉伸"),
+                title: Text("鎷変几"),
                 visualDensity: VisualDensity.compact,
               ),
               RadioListTile(
                 value: 2,
-                title: Text("铺满"),
+                title: Text("閾烘弧"),
                 visualDensity: VisualDensity.compact,
               ),
               RadioListTile(
@@ -749,125 +1405,205 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void showDanmuShield() {
-    TextEditingController keywordController = TextEditingController();
+    Get.toNamed(RoutePath.kSettingsDanmuShield);
+  }
 
-    void addKeyword() {
-      if (keywordController.text.isEmpty) {
-        SmartDialog.showToast("请输入关键词");
-        return;
-      }
-
-      AppSettingsController.instance
-          .addShieldList(keywordController.text.trim());
-      keywordController.text = "";
+  LiveSubCategory? _buildRecommendationCategory() {
+    final roomDetail = detail.value;
+    if (roomDetail == null) {
+      return null;
     }
+    final categoryId = (roomDetail.categoryId ?? "").trim();
+    final categoryName = (roomDetail.categoryName ?? "").trim();
+    final parentId = (roomDetail.categoryParentId ?? "").trim();
+    final parentName = (roomDetail.categoryParentName ?? "").trim();
+    if (categoryId.isEmpty && parentId.isEmpty) {
+      return null;
+    }
+    final resolvedId = categoryId.isNotEmpty ? categoryId : parentId;
+    final resolvedParentId = parentId.isNotEmpty ? parentId : resolvedId;
+    final resolvedName = categoryName.isNotEmpty
+        ? categoryName
+        : parentName.isNotEmpty
+            ? parentName
+            : roomDetail.title.trim();
+    if (resolvedId.isEmpty || resolvedName.isEmpty) {
+      return null;
+    }
+    final pic = roomDetail.categoryPic?.trim();
+    return LiveSubCategory(
+      id: resolvedId,
+      name: resolvedName,
+      parentId: resolvedParentId,
+      pic: pic == null || pic.isEmpty ? null : pic,
+    );
+  }
 
+  bool get hasCategoryRecommendation => _buildRecommendationCategory() != null;
+
+  String get currentRecommendationSubtitle {
+    final roomDetail = detail.value;
+    final category = _buildRecommendationCategory();
+    if (roomDetail == null || category == null) {
+      return "当前直播间暂时还没有可用的分区标签";
+    }
+    final parentName = (roomDetail.categoryParentName ?? "").trim();
+    if (parentName.isNotEmpty && parentName != category.name) {
+      return "${site.name} / $parentName / ${category.name}";
+    }
+    return "${site.name} / ${category.name}";
+  }
+
+  void openHistoryPage() {
+    Get.toNamed(RoutePath.kHistory);
+  }
+
+  void openCategoryRecommendation() {
+    final category = _buildRecommendationCategory();
+    if (category == null) {
+      SmartDialog.showToast("当前直播间还没有可用的分区标签");
+      return;
+    }
+    AppNavigator.toCategoryDetail(
+      site: site,
+      category: category,
+    );
+  }
+
+  void showQuickAccessSheet() {
     Utils.showBottomSheet(
-      title: "关键词屏蔽",
+      title: "快捷入口",
       child: ListView(
-        padding: AppStyle.edgeInsetsA12,
         children: [
-          TextField(
-            controller: keywordController,
-            decoration: InputDecoration(
-              contentPadding: AppStyle.edgeInsetsH12,
-              border: const OutlineInputBorder(),
-              hintText: "请输入关键词",
-              suffixIcon: TextButton.icon(
-                onPressed: addKeyword,
-                icon: const Icon(Icons.add),
-                label: const Text("添加"),
-              ),
-            ),
-            onSubmitted: (e) {
-              addKeyword();
+          ListTile(
+            leading: const Icon(Icons.playlist_play_outlined),
+            title: const Text("关注列表"),
+            subtitle: const Text("快速切到已关注的直播间"),
+            onTap: () {
+              Get.back();
+              showFollowUserSheet();
             },
           ),
-          AppStyle.vGap12,
-          Obx(
-            () => Text(
-              "已添加${AppSettingsController.instance.shieldList.length}个关键词（点击移除）",
-              style: Get.textTheme.titleSmall,
-            ),
+          ListTile(
+            leading: const Icon(Icons.history_outlined),
+            title: const Text("观看历史"),
+            subtitle: const Text("打开已经看过的直播间记录"),
+            onTap: () {
+              Get.back();
+              openHistoryPage();
+            },
           ),
-          AppStyle.vGap12,
-          Obx(
-            () => Wrap(
-              runSpacing: 12,
-              spacing: 12,
-              children: AppSettingsController.instance.shieldList
-                  .map(
-                    (item) => InkWell(
-                      borderRadius: AppStyle.radius24,
-                      onTap: () {
-                        AppSettingsController.instance.removeShieldList(item);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: AppStyle.radius24,
-                        ),
-                        padding: AppStyle.edgeInsetsH12.copyWith(
-                          top: 4,
-                          bottom: 4,
-                        ),
-                        child: Text(
-                          item,
-                          style: Get.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
+          ListTile(
+            leading: const Icon(Icons.interests_outlined),
+            title: const Text("同类推荐"),
+            subtitle: Text(currentRecommendationSubtitle),
+            enabled: hasCategoryRecommendation,
+            onTap: !hasCategoryRecommendation
+                ? null
+                : () {
+                    Get.back();
+                    openCategoryRecommendation();
+                  },
           ),
         ],
       ),
     );
   }
 
-  void showFollowUserSheet() {
-    Utils.showBottomSheet(
-      title: "关注列表",
-      child: Obx(
-        () => Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: FollowService.instance.loadData,
-              child: ListView.builder(
-                itemCount: FollowService.instance.liveList.length,
-                itemBuilder: (_, i) {
-                  var item = FollowService.instance.liveList[i];
-                  return Obx(
-                    () => FollowUserItem(
-                      item: item,
-                      playing: rxSite.value.id == item.siteId &&
-                          rxRoomId.value == item.roomId,
-                      onTap: () {
-                        Get.back();
-                        resetRoom(
-                          Sites.allSites[item.siteId]!,
-                          item.roomId,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: Obx(
-                  () => DesktopRefreshButton(
-                    refreshing: FollowService.instance.updating.value,
-                    onPressed: FollowService.instance.loadData,
+  List<FollowUser> _followUsersByFilterMode(int filterMode) {
+    switch (filterMode) {
+      case 1:
+        return FollowService.instance.liveList;
+      case 2:
+        return FollowService.instance.notLiveList;
+      default:
+        return FollowService.instance.followList;
+    }
+  }
+
+  Widget buildFollowUserSelection({
+    required VoidCallback onClose,
+  }) {
+    final filterMode = 0.obs;
+    const options = ["全部", "直播中", "未开播"];
+    return Obx(() {
+      final followUsers = _followUsersByFilterMode(filterMode.value);
+      return Stack(
+        children: [
+          Column(
+            children: [
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(bottom: 0),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(options.length, (index) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index == options.length - 1 ? 0 : 12,
+                        ),
+                        child: FilterButton(
+                          text: options[index],
+                          selected: filterMode.value == index,
+                          onTap: () {
+                            filterMode.value = index;
+                          },
+                        ),
+                      );
+                    }),
                   ),
                 ),
               ),
-          ],
-        ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: FollowService.instance.loadData,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: AppStyle.edgeInsetsV8,
+                    itemCount: followUsers.length,
+                    itemBuilder: (_, i) {
+                      var item = followUsers[i];
+                      return Obx(
+                        () => FollowUserItem(
+                          item: item,
+                          playing: rxSite.value.id == item.siteId &&
+                              rxRoomId.value == item.roomId,
+                          onTap: () {
+                            onClose();
+                            resetRoom(
+                              Sites.allSites[item.siteId]!,
+                              item.roomId,
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Obx(
+                () => DesktopRefreshButton(
+                  refreshing: FollowService.instance.updating.value,
+                  onPressed: FollowService.instance.loadData,
+                ),
+              ),
+            ),
+        ],
+      );
+    });
+  }
+
+  void showFollowUserSheet() {
+    Utils.showBottomSheet(
+      title: "关注列表",
+      child: buildFollowUserSelection(
+        onClose: Get.back,
       ),
     );
   }
@@ -875,17 +1611,17 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void showAutoExitSheet() {
     if (AppSettingsController.instance.autoExitEnable.value &&
         !delayAutoExit.value) {
-      SmartDialog.showToast("已设置了全局定时关闭");
+      SmartDialog.showToast("宸茶缃簡鍏ㄥ眬瀹氭椂鍏抽棴");
       return;
     }
     Utils.showBottomSheet(
-      title: "定时关闭",
+      title: "瀹氭椂鍏抽棴",
       child: ListView(
         children: [
           Obx(
             () => SwitchListTile(
               title: Text(
-                "启用定时关闭",
+                "鍚敤瀹氭椂鍏抽棴",
                 style: Get.textTheme.titleMedium,
               ),
               value: autoExitEnable.value,
@@ -901,7 +1637,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
             () => ListTile(
               enabled: autoExitEnable.value,
               title: Text(
-                "自动关闭时间：${autoExitMinutes.value ~/ 60}小时${autoExitMinutes.value % 60}分钟",
+                "鑷姩鍏抽棴鏃堕棿锛?{autoExitMinutes.value ~/ 60}灏忔椂${autoExitMinutes.value % 60}鍒嗛挓",
                 style: Get.textTheme.titleMedium,
               ),
               trailing: const Icon(Icons.chevron_right),
@@ -964,7 +1700,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       await launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);
     } catch (e) {
       Log.logPrint(e);
-      SmartDialog.showToast("无法打开APP，将使用浏览器打开");
+      SmartDialog.showToast("鏃犳硶鎵撳紑APP锛屽皢浣跨敤娴忚鍣ㄦ墦寮€");
       await launchUrlString(webUrl, mode: LaunchMode.externalApplication);
     }
   }
@@ -976,27 +1712,33 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     rxSite.value = site;
     rxRoomId.value = roomId;
+    tempMutedUsers.clear();
+    danmakuViewportHeight.value = 0;
 
-    // 清除全部消息
-    liveDanmaku.stop();
+    // 娓呴櫎鍏ㄩ儴娑堟伅
+    await liveDanmaku.stop();
     messages.clear();
-    superChats.clear();
+    _clearSuperChatState();
+    _clearContributionRankState();
+    _cancelPendingDanmakuTimers();
+    clearDanmakuReplayHistory();
     danmakuController?.clear();
+    rebuildDanmakuView();
 
-    // 重新设置LiveDanmaku
+    // 閲嶆柊璁剧疆LiveDanmaku
     liveDanmaku = site.liveSite.getDanmaku();
 
-    // 停止播放
+    // 鍋滄鎾斁
     await player.stop();
 
-    // 刷新信息
+    // 鍒锋柊淇℃伅
     loadData();
   }
 
   void copyErrorDetail() {
-    Utils.copyToClipboard('''直播平台：${rxSite.value.name}
-房间号：${rxRoomId.value}
-错误信息：
+    Utils.copyToClipboard('''鐩存挱骞冲彴锛?{rxSite.value.name}
+鎴块棿鍙凤細${rxRoomId.value}
+閿欒淇℃伅锛?
 ${error?.toString()}
 ----------------
 ${error?.stackTrace}''');
@@ -1007,33 +1749,113 @@ ${error?.stackTrace}''');
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.paused) {
-      Log.d("进入后台");
-      //进入后台，关闭弹幕
+    final shouldTreatInactiveAsBackground =
+        !Platform.isWindows && !Platform.isLinux && !Platform.isMacOS;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        (state == AppLifecycleState.inactive &&
+            shouldTreatInactiveAsBackground)) {
+      Log.d("杩涘叆鍚庡彴:$state");
       danmakuController?.clear();
+      _cancelPendingDanmakuTimers();
       isBackground = true;
-    } else
-    //返回前台
-    if (state == AppLifecycleState.resumed) {
-      Log.d("返回前台");
+      _backgroundedAt = DateTime.now();
+      _positionBeforeBackground = _lastKnownPlayerPosition;
+      unawaited(
+        AppSettingsController.instance.saveLastLiveRoom(
+          siteId: site.id,
+          roomId: roomId,
+          resumePending: true,
+        ),
+      );
+    } else if (state == AppLifecycleState.resumed) {
+      Log.d("杩斿洖鍓嶅彴");
       isBackground = false;
+      unawaited(
+        AppSettingsController.instance.setLastLiveRoomResumePending(false),
+      );
+      _refreshDanmakuOverlay("鏉╂柨娲栭崜宥呭酱");
+      var backgroundedAt = _backgroundedAt;
+      var positionBeforeBackground = _positionBeforeBackground;
+      _backgroundedAt = null;
+      _positionBeforeBackground = null;
+      unawaited(
+        _recoverPlaybackAfterForeground(
+          "杩斿洖鍓嶅彴",
+          since: backgroundedAt,
+          previousPosition: positionBeforeBackground,
+        ),
+      );
     }
   }
 
-  // 用于启动开播时长计算和更新的函数
+  Future<void> _recoverPlaybackAfterForeground(
+    String reason, {
+    required DateTime? since,
+    required Duration? previousPosition,
+  }) async {
+    if (since == null ||
+        previousPosition == null ||
+        !liveStatus.value ||
+        currentLineIndex < 0 ||
+        playUrls.isEmpty) {
+      return;
+    }
+    if (DateTime.now().difference(since) < const Duration(seconds: 3)) {
+      return;
+    }
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (isBackground) {
+      return;
+    }
+    var currentPosition = _lastKnownPlayerPosition;
+    var stalled = currentPosition <= previousPosition ||
+        player.state.buffering ||
+        player.state.completed ||
+        !player.state.playing;
+    if (!stalled) {
+      return;
+    }
+    Log.d("$reason 后检测到播放停滞，尝试恢复");
+    await setPlayer(refreshUrls: site.id == Constant.kHuya);
+  }
+
+  @override
+  void onWindowBlur() {
+    _windowBlurredAt = DateTime.now();
+    _positionBeforeWindowBlur = _lastKnownPlayerPosition;
+  }
+
+  @override
+  void onWindowFocus() {
+    var windowBlurredAt = _windowBlurredAt;
+    var positionBeforeWindowBlur = _positionBeforeWindowBlur;
+    _windowBlurredAt = null;
+    _positionBeforeWindowBlur = null;
+    _refreshDanmakuOverlay("窗口重新聚焦");
+    unawaited(
+      _recoverPlaybackAfterForeground(
+        "绐楀彛閲嶆柊鑱氱劍",
+        since: windowBlurredAt,
+        previousPosition: positionBeforeWindowBlur,
+      ),
+    );
+  }
+
+  // 鐢ㄤ簬鍚姩寮€鎾椂闀胯绠楀拰鏇存柊鐨勫嚱鏁?
   void startLiveDurationTimer() {
-    // 如果不是直播状态或者 showTime 为空，则不启动定时器
+    // 濡傛灉涓嶆槸鐩存挱鐘舵€佹垨鑰?showTime 涓虹┖锛屽垯涓嶅惎鍔ㄥ畾鏃跺櫒
     if (!(detail.value?.status ?? false) || detail.value?.showTime == null) {
-      liveDuration.value = "00:00:00"; // 未开播时显示 00:00:00
+      liveDuration.value = "00:00:00"; // 鏈紑鎾椂鏄剧ず 00:00:00
       _liveDurationTimer?.cancel();
       return;
     }
 
     try {
       int startTimeStamp = int.parse(detail.value!.showTime!);
-      // 取消之前的定时器
+      // 鍙栨秷涔嬪墠鐨勫畾鏃跺櫒
       _liveDurationTimer?.cancel();
-      // 创建新的定时器，每秒更新一次
+      // 鍒涘缓鏂扮殑瀹氭椂鍣紝姣忕鏇存柊涓€娆?
       _liveDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         int durationInSeconds = currentTimeStamp - startTimeStamp;
@@ -1047,19 +1869,23 @@ ${error?.stackTrace}''');
         liveDuration.value = formattedDuration;
       });
     } catch (e) {
-      liveDuration.value = "--:--:--"; // 错误时显示 --:--:--
+      liveDuration.value = "--:--:--"; // 閿欒鏃舵樉绀?--:--:--
     }
   }
 
-  @override
-  void onClose() {
+  // ignore: unused_element
+  void _legacyOnClose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isWindows) {
+      windowManager.removeListener(this);
+    }
     scrollController.removeListener(scrollListener);
     autoExitTimer?.cancel();
+    _positionSubscription?.cancel();
 
     liveDanmaku.stop();
     danmakuController = null;
-    _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
+    _liveDurationTimer?.cancel(); // 椤甸潰鍏抽棴鏃跺彇娑堝畾鏃跺櫒
     super.onClose();
   }
 }

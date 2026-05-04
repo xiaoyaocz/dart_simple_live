@@ -1,0 +1,97 @@
+name: app-build-macos-manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build, for example master or v1.12.0"
+        required: false
+        default: "master"
+      upload_release:
+        description: "Upload build outputs to the matching GitHub Release when ref is a tag"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.x"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install appdmg
+        run: npm install -g appdmg
+
+      - name: Install flutter_distributor
+        run: dart pub global activate flutter_distributor
+
+      - name: Resolve ref info
+        id: ref_info
+        shell: bash
+        run: |
+          ref_name="${{ inputs.ref }}"
+          if [[ "$ref_name" == refs/tags/* ]]; then
+            ref_name="${ref_name#refs/tags/}"
+          fi
+          is_tag="false"
+          if [[ "$ref_name" == v* ]]; then
+            is_tag="true"
+          fi
+          echo "ref_name=$ref_name" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Build MacOS
+        id: build_macos
+        continue-on-error: true
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform macos --targets dmg,zip --skip-clean
+
+      - name: Upload MacOS to Artifacts
+        if: ${{ steps.build_macos.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: |
+            simple_live_app/build/dist/*/*.dmg
+            simple_live_app/build/dist/*/*.zip
+
+      - name: Upload Release
+        if: ${{ steps.build_macos.outcome == 'success' && inputs.upload_release && steps.ref_info.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ steps.ref_info.outputs.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(steps.ref_info.outputs.ref_name, 'beta') || contains(steps.ref_info.outputs.ref_name, 'alpha') }}
+          token: ${{ github.token }}
+          fail_on_unmatched_files: false
+          files: |
+            simple_live_app/build/dist/*/*.dmg
+            simple_live_app/build/dist/*/*.zip
+
+      - name: Summarize manual macOS build
+        shell: bash
+        run: |
+          if [[ "${{ steps.build_macos.outcome }}" == "success" ]]; then
+            echo "macOS manual build finished successfully."
+          else
+            echo "macOS manual build failed, but this workflow is non-blocking by design."
+          fi

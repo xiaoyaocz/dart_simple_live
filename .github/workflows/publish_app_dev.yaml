@@ -21,18 +21,18 @@ jobs:
           ref: dev
 
       # APK签名设置
-      - name: Download Android keystore
-        id: android_keystore
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: keystore.jks
-          encodedString: ${{ secrets.KEYSTORE_BASE64 }}
-      - name: Create key.properties
+      - name: Prepare Android keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          echo "storeFile=${{ steps.android_keystore.outputs.filePath }}" > simple_live_app/android/key.properties
-          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
+          if [[ -n "$KEYSTORE_BASE64" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" && -n "$KEY_ALIAS" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | openssl base64 -d -A > simple_live_app/android/release-keystore.jks
+            printf 'storeFile=../release-keystore.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=%s\n' "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > simple_live_app/android/key.properties
+          fi
 
       # 设置JAVA环境
       - uses: actions/setup-java@v4
@@ -84,12 +84,15 @@ jobs:
 
       #打包iOS
       - name: Build IPA
+        id: build_ipa
+        continue-on-error: true
         run: |
           cd simple_live_app
           flutter build ios --release --no-codesign
 
       #创建未签名ipa
       - name: Create IPA
+        if: ${{ steps.build_ipa.outcome == 'success' }}
         run: |
           cd simple_live_app
           mkdir build/ios/iphoneos/Payload
@@ -100,6 +103,7 @@ jobs:
 
       # 上传IPA至Artifacts
       - name: Upload IPA to Artifacts
+        if: ${{ steps.build_ipa.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: ios

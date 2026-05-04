@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+  - name: 使用技巧 / 配置经验 / 一般提问
+    url: https://github.com/June6699/dart_simple_live/discussions/new?category=q-a
+    about: 非 Bug、非功能请求的使用经验、提问、妙招分享，请发到 Discussions
+  - name: 先看功能边界与禁止事项
+    url: https://github.com/June6699/dart_simple_live/discussions/1
+    about: 提交前请先阅读置顶说明，了解本项目不会做哪些功能

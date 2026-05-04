@@ -192,7 +192,7 @@ class RemoteSyncWebDAVController extends BaseController {
       await userHistoriesJsonFile.writeAsString(jsonEncode(dataHistoriesMap));
 
       // blocked_word
-      var userShieldList = AppSettingsController.instance.shieldList;
+      var userShieldList = AppSettingsController.instance.allShieldValues;
       var dataShieldListMap = {'data': userShieldList.toList()};
       final userBlockedWordJsonFile =
           File(join(profile.path, _userBlockedWordJsonName));
@@ -284,7 +284,8 @@ class RemoteSyncWebDAVController extends BaseController {
           isSyncBlockWord.value) {
         try {
           for (var keyword in jsonData) {
-            AppSettingsController.instance.addShieldList(keyword.trim());
+            AppSettingsController.instance
+                .importShieldValue(keyword.toString().trim());
           }
           Log.i('已同步用户屏蔽词');
         } catch (e) {

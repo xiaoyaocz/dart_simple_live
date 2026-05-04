@@ -22,6 +22,26 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
+class _DanmakuReplayEntry {
+  final String message;
+  final Color color;
+  final DateTime visibleFrom;
+  final DateTime visibleUntil;
+
+  const _DanmakuReplayEntry({
+    required this.message,
+    required this.color,
+    required this.visibleFrom,
+    required this.visibleUntil,
+  });
+
+  bool isVisibleAt(DateTime now) {
+    return !now.isBefore(visibleFrom) && now.isBefore(visibleUntil);
+  }
+}
+
+const int _kDanmakuReplayLimit = 300;
+
 mixin PlayerMixin {
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
@@ -49,7 +69,7 @@ mixin PlayerMixin {
       }
     }
     // media_kit 仓库更新导致的问题，临时解决办法
-    if(Platform.isAndroid){
+    if (Platform.isAndroid) {
       await pp.setProperty('force-seekable', 'yes');
     }
   }
@@ -88,6 +108,8 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 是否显示控制器
   RxBool showControlsState = false.obs;
 
+  RxBool hideMouseCursorState = false.obs;
+
   /// 是否显示设置窗口
   RxBool showSettingState = false.obs;
 
@@ -115,21 +137,27 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 自动隐藏控制器计时器
   Timer? hideControlsTimer;
 
+  /// 鑷姩闅愯棌榧犳爣璁℃椂鍣?
+  Timer? hideMouseCursorTimer;
+
   /// 自动隐藏提示计时器
   Timer? hideSeekTipTimer;
 
   /// 是否为竖屏直播间
   var isVertical = false.obs;
 
-  Widget? danmakuView;
+  RxInt danmakuViewVersion = 0.obs;
 
   var showQualites = false.obs;
   var showLines = false.obs;
+
+  bool get useBottomSheetPlayerMenus => Platform.isAndroid || Platform.isIOS;
 
   /// 隐藏控制器
   void hideControls() {
     showControlsState.value = false;
     hideControlsTimer?.cancel();
+    hideMouseCursor();
   }
 
   void setLockState() {
@@ -144,7 +172,27 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 显示控制器
   void showControls() {
     showControlsState.value = true;
+    showMouseCursor();
     resetHideControlsTimer();
+    resetHideMouseCursorTimer();
+  }
+
+  /// 鏄剧ず榧犳爣
+  void showMouseCursor() {
+    if (!Platform.isWindows) {
+      return;
+    }
+    hideMouseCursorTimer?.cancel();
+    hideMouseCursorState.value = false;
+  }
+
+  /// 闅愯棌榧犳爣
+  void hideMouseCursor() {
+    if (!Platform.isWindows) {
+      return;
+    }
+    hideMouseCursorTimer?.cancel();
+    hideMouseCursorState.value = true;
   }
 
   /// 开始隐藏控制器计时
@@ -157,6 +205,21 @@ mixin PlayerStateMixin on PlayerMixin {
         seconds: 5,
       ),
       hideControls,
+    );
+  }
+
+  /// 寮€濮嬮殣钘忔爣绛惧叆鐨勯紶鏍?
+  void resetHideMouseCursorTimer() {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    hideMouseCursorTimer?.cancel();
+    hideMouseCursorTimer = Timer(
+      const Duration(
+        seconds: 5,
+      ),
+      hideMouseCursor,
     );
   }
 
@@ -189,6 +252,8 @@ mixin PlayerStateMixin on PlayerMixin {
 mixin PlayerDanmakuMixin on PlayerStateMixin {
   /// 弹幕控制器
   DanmakuController? danmakuController;
+  final List<_DanmakuReplayEntry> _danmakuReplayHistory = [];
+  bool _danmakuReplayScheduled = false;
 
   void initDanmakuController(DanmakuController e) {
     danmakuController = e;
@@ -212,6 +277,86 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
 
   void disposeDanmakuController() {
     danmakuController?.clear();
+    danmakuController = null;
+  }
+
+  void clearDanmakuReplayHistory() {
+    _danmakuReplayHistory.clear();
+  }
+
+  void rememberDanmakuReplay(
+    String message,
+    Color color, {
+    Duration delay = Duration.zero,
+  }) {
+    var durationSeconds =
+        AppSettingsController.instance.danmuSpeed.value.toInt();
+    if (durationSeconds < 1) {
+      durationSeconds = 1;
+    }
+
+    final visibleFrom = DateTime.now().add(delay);
+    _danmakuReplayHistory.add(
+      _DanmakuReplayEntry(
+        message: message,
+        color: color,
+        visibleFrom: visibleFrom,
+        visibleUntil: visibleFrom.add(Duration(seconds: durationSeconds)),
+      ),
+    );
+    _pruneDanmakuReplayHistory();
+  }
+
+  void _pruneDanmakuReplayHistory([DateTime? now]) {
+    final current = now ?? DateTime.now();
+    _danmakuReplayHistory.removeWhere(
+      (item) => !item.visibleUntil.isAfter(current),
+    );
+    if (_danmakuReplayHistory.length > _kDanmakuReplayLimit) {
+      _danmakuReplayHistory.removeRange(
+        0,
+        _danmakuReplayHistory.length - _kDanmakuReplayLimit,
+      );
+    }
+  }
+
+  void _scheduleDanmakuReplay() {
+    if (_danmakuReplayScheduled) {
+      return;
+    }
+    _danmakuReplayScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _danmakuReplayScheduled = false;
+      _replayDanmakuOverlay();
+    });
+  }
+
+  void _replayDanmakuOverlay() {
+    if (!showDanmakuState.value || danmakuController == null) {
+      return;
+    }
+    final now = DateTime.now();
+    _pruneDanmakuReplayHistory(now);
+    for (final item in _danmakuReplayHistory) {
+      if (!item.isVisibleAt(now)) {
+        continue;
+      }
+      danmakuController?.addDanmaku(
+        DanmakuContentItem(
+          item.message,
+          color: item.color,
+        ),
+      );
+    }
+  }
+
+  void rebuildDanmakuView({bool clearCurrent = true}) {
+    if (clearCurrent) {
+      danmakuController?.clear();
+    }
+    globalDanmuKey = GlobalKey();
+    danmakuViewVersion.value += 1;
+    _scheduleDanmakuReplay();
   }
 
   void addDanmaku(List<DanmakuContentItem> items) {
@@ -272,7 +417,11 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 
   /// 进入全屏
-  void enterFullScreen() {
+  Future<void> enterFullScreen() async {
+    if (smallWindowState.value) {
+      await exitSmallWindow();
+      return;
+    }
     fullScreenState.value = true;
     if (Platform.isAndroid || Platform.isIOS) {
       //全屏
@@ -282,19 +431,44 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         setLandscapeOrientation();
       }
     } else {
-      windowManager.setFullScreen(true);
+      _windowMaximizedBeforeFullScreen = await windowManager.isMaximized();
+      if (_windowMaximizedBeforeFullScreen) {
+        final maximizedBounds = await windowManager.getBounds();
+        await windowManager.restore();
+        await _waitForWindowMaximizedState(false);
+        await _waitForWindowBoundsToChange(maximizedBounds);
+        await _refreshWindowsWindowBounds();
+        await Future.delayed(const Duration(milliseconds: 120));
+      }
+      await windowManager.setFullScreen(true);
+      await Future.delayed(const Duration(milliseconds: 16));
+      await _refreshWindowsWindowBounds();
     }
     //danmakuController?.clear();
   }
 
   /// 退出全屏
-  void exitFull() {
+  Future<void> exitFull() async {
+    if (smallWindowState.value) {
+      await exitSmallWindow();
+      return;
+    }
     if (Platform.isAndroid || Platform.isIOS) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge,
-          overlays: SystemUiOverlay.values);
-      setPortraitOrientation();
+      await SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.edgeToEdge,
+        overlays: SystemUiOverlay.values,
+      );
+      await setPortraitOrientation();
+      await Future.delayed(const Duration(milliseconds: 32));
     } else {
-      windowManager.setFullScreen(false);
+      await windowManager.setFullScreen(false);
+      await Future.delayed(const Duration(milliseconds: 16));
+      await _refreshWindowsWindowBounds();
+      if (_windowMaximizedBeforeFullScreen) {
+        await windowManager.maximize();
+        await _waitForWindowMaximizedState(true);
+      }
+      _windowMaximizedBeforeFullScreen = false;
     }
     fullScreenState.value = false;
 
@@ -303,45 +477,134 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   Size? _lastWindowSize;
   Offset? _lastWindowPosition;
+  bool _windowMaximizedBeforeFullScreen = false;
+  bool _windowMaximizedBeforeSmallWindow = false;
 
-  ///小窗模式()
-  void enterSmallWindow() async {
-    if (!(Platform.isAndroid || Platform.isIOS)) {
-      fullScreenState.value = true;
-      smallWindowState.value = true;
+  Future<void> _waitForWindowMaximizedState(bool value) async {
+    if (!Platform.isWindows) {
+      return;
+    }
 
-      // 读取窗口大小
-      _lastWindowSize = await windowManager.getSize();
-      _lastWindowPosition = await windowManager.getPosition();
-
-      windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-      // 获取视频窗口大小
-      var width = player.state.width ?? 16;
-      var height = player.state.height ?? 9;
-
-      // 横屏还是竖屏
-      if (height > width) {
-        var aspectRatio = width / height;
-        windowManager.setSize(Size(400, 400 / aspectRatio));
-      } else {
-        var aspectRatio = height / width;
-        windowManager.setSize(Size(280 / aspectRatio, 280));
+    final deadline = DateTime.now().add(const Duration(milliseconds: 600));
+    while (DateTime.now().isBefore(deadline)) {
+      if (await windowManager.isMaximized() == value) {
+        return;
       }
-
-      windowManager.setAlwaysOnTop(true);
+      await Future.delayed(const Duration(milliseconds: 16));
     }
   }
 
+  Future<void> _waitForWindowBoundsToChange(Rect previousBounds) async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    final deadline = DateTime.now().add(const Duration(milliseconds: 800));
+    while (DateTime.now().isBefore(deadline)) {
+      final currentBounds = await windowManager.getBounds();
+      final moved = (currentBounds.left - previousBounds.left).abs() > 0.5 ||
+          (currentBounds.top - previousBounds.top).abs() > 0.5 ||
+          (currentBounds.width - previousBounds.width).abs() > 0.5 ||
+          (currentBounds.height - previousBounds.height).abs() > 0.5;
+      if (moved) {
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
+  Future<void> _refreshWindowsWindowBounds() async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    try {
+      final size = await windowManager.getSize();
+      if (size.width <= 1 || size.height <= 1) {
+        return;
+      }
+      final nudgedSize = Size(size.width + 1, size.height + 1);
+      await windowManager.setSize(nudgedSize);
+      await windowManager.setSize(size);
+    } catch (e) {
+      Log.logPrint(e);
+    }
+  }
+
+  ///小窗模式()
+  Future<void> enterSmallWindow() async {
+    if (Platform.isAndroid || Platform.isIOS || smallWindowState.value) {
+      return;
+    }
+
+    _windowMaximizedBeforeSmallWindow = await windowManager.isMaximized();
+    if (_windowMaximizedBeforeSmallWindow) {
+      final maximizedBounds = await windowManager.getBounds();
+      await windowManager.restore();
+      await _waitForWindowMaximizedState(false);
+      await _waitForWindowBoundsToChange(maximizedBounds);
+      await _refreshWindowsWindowBounds();
+      await Future.delayed(const Duration(milliseconds: 120));
+    }
+    fullScreenState.value = true;
+    smallWindowState.value = true;
+
+    // 读取窗口大小
+    _lastWindowSize = await windowManager.getSize();
+    _lastWindowPosition = await windowManager.getPosition();
+
+    await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+    // 获取视频窗口大小
+    var width = player.state.width ?? 16;
+    var height = player.state.height ?? 9;
+
+    // 横屏还是竖屏
+    if (height > width) {
+      var aspectRatio = width / height;
+      await windowManager.setSize(Size(400, 400 / aspectRatio));
+    } else {
+      var aspectRatio = height / width;
+      await windowManager.setSize(Size(280 / aspectRatio, 280));
+    }
+
+    await windowManager.setAlwaysOnTop(true);
+    rebuildDanmakuView();
+  }
+
   ///退出小窗模式()
-  void exitSmallWindow() {
-    if (!(Platform.isAndroid || Platform.isIOS)) {
-      fullScreenState.value = false;
-      smallWindowState.value = false;
-      windowManager.setTitleBarStyle(TitleBarStyle.normal);
-      windowManager.setSize(_lastWindowSize!);
-      windowManager.setPosition(_lastWindowPosition!);
-      windowManager.setAlwaysOnTop(false);
-      //windowManager.setAlignment(Alignment.center);
+  Future<void> exitSmallWindow() async {
+    if (Platform.isAndroid || Platform.isIOS || !smallWindowState.value) {
+      return;
+    }
+
+    fullScreenState.value = false;
+    smallWindowState.value = false;
+    await windowManager.setAlwaysOnTop(false);
+    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    if (_lastWindowPosition != null) {
+      await windowManager.setPosition(_lastWindowPosition!);
+    }
+    if (_lastWindowSize != null) {
+      await windowManager.setSize(_lastWindowSize!);
+    }
+    if (_windowMaximizedBeforeSmallWindow) {
+      await windowManager.maximize();
+      await _waitForWindowMaximizedState(true);
+    } else {
+      await _refreshWindowsWindowBounds();
+    }
+    _windowMaximizedBeforeSmallWindow = false;
+    rebuildDanmakuView();
+    //windowManager.setAlignment(Alignment.center);
+  }
+
+  Future<void> exitPlayerWindowMode() async {
+    if (smallWindowState.value) {
+      await exitSmallWindow();
+      return;
+    }
+    if (fullScreenState.value) {
+      await exitFull();
     }
   }
 
@@ -465,6 +728,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       if (event == PiPStatus.disabled) {
         danmakuController?.clear();
         showDanmakuState.value = danmakuStateBeforePIP;
+        if (showDanmakuState.value) {
+          rebuildDanmakuView();
+        }
       }
       Log.w(event.toString());
     });
@@ -483,18 +749,25 @@ mixin PlayerGestureControlMixin
 
   //桌面端操控
   void onEnter(PointerEnterEvent event) {
+    showMouseCursor();
+    resetHideMouseCursorTimer();
     if (!showControlsState.value) {
       showControls();
     }
   }
 
   void onExit(PointerExitEvent event) {
+    hideMouseCursorTimer?.cancel();
     if (showControlsState.value) {
       hideControls();
     }
+    showMouseCursor();
   }
 
   void onHover(PointerHoverEvent event, BuildContext context) {
+    showMouseCursor();
+    resetHideMouseCursorTimer();
+    resetHideControlsTimer();
     final screenHeight = MediaQuery.of(context).size.height;
     final targetPosition = screenHeight * 0.25; // 计算屏幕顶部25%的位置
     if (event.position.dy <= targetPosition ||
@@ -510,7 +783,9 @@ mixin PlayerGestureControlMixin
     if (lockControlsState.value) {
       return;
     }
-    if (fullScreenState.value) {
+    if (smallWindowState.value) {
+      exitSmallWindow();
+    } else if (fullScreenState.value) {
       exitFull();
     } else {
       enterFullScreen();
@@ -527,6 +802,8 @@ mixin PlayerGestureControlMixin
 
   /// 竖向手势开始
   void onVerticalDragStart(DragStartDetails details) async {
+    showMouseCursor();
+    resetHideMouseCursorTimer();
     if (lockControlsState.value && fullScreenState.value) {
       return;
     }
@@ -837,7 +1114,7 @@ class PlayerController extends BaseController
   void onClose() async {
     Log.w("播放器关闭");
     if (smallWindowState.value) {
-      exitSmallWindow();
+      await exitSmallWindow();
     }
     disposeStream();
     disposeDanmakuController();

@@ -86,6 +86,7 @@ class LiveMessageColor {
 }
 
 class LiveSuperChatMessage {
+  final String? id;
   final String userName;
   final String face;
   final String message;
@@ -95,6 +96,7 @@ class LiveSuperChatMessage {
   final String backgroundColor;
   final String backgroundBottomColor;
   LiveSuperChatMessage({
+    this.id,
     required this.backgroundBottomColor,
     required this.backgroundColor,
     required this.endTime,
@@ -108,6 +110,7 @@ class LiveSuperChatMessage {
   @override
   String toString() {
     return json.encode({
+      "id": id,
       "userName": userName,
       "face": face,
       "message": message,

@@ -1,10 +1,15 @@
 name: BUG报告
 title: "[BUG] 请填写简短易读的标题"
 description: "使用过程中遇到了BUG"
-assignees: xiaoyaocz
 labels:
   - "bug"
 body:
+  - type: markdown
+    attributes:
+      value: |
+        请只提交一个明确的 `BUG`。
+        如果你想分享使用妙招、配置经验或一般性提问，请改用 `Discussions`。
+
   - type: checkboxes
     id: terms
     attributes:
@@ -103,6 +108,13 @@ body:
       placeholder: ex. PC / iPhone 12 Pro Max
     validations:
       required: true
+
+  - type: input
+    id: live-platform
+    attributes:
+      label: 直播平台 / 房间信息
+      description: 如果问题与某个直播平台或具体直播间有关，请尽量写清楚
+      placeholder: ex. B站 / 抖音 / 虎牙 / 具体房间链接
 
   - type: textarea
     id: remark

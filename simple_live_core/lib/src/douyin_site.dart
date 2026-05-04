@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
+import 'package:simple_live_core/src/common/core_error.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/scripts/douyin_sign.dart';
 
@@ -73,20 +74,10 @@ class DouyinSite implements LiveSite {
       header: await getRequestHeaders(),
     );
 
-    var renderData =
-        RegExp(
-          r'\{\\"pathname\\":\\"\/\\",\\"categoryData.*?\]\\n',
-        ).firstMatch(result)?.group(0) ??
-        "";
-    var renderDataJson = json.decode(
-      renderData
-          .trim()
-          .replaceAll('\\"', '"')
-          .replaceAll(r"\\", r"\")
-          .replaceAll(']\\n', ""),
-    );
+    final renderDataJson = _extractCategoryRenderData(result);
+    final categoryData = (renderDataJson["categoryData"] as List?) ?? const [];
 
-    for (var item in renderDataJson["categoryData"]) {
+    for (var item in categoryData) {
       List<LiveSubCategory> subs = [];
       var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
       for (var subItem in item["sub_partition"]) {
@@ -94,7 +85,8 @@ class DouyinSite implements LiveSite {
           id: '${subItem["partition"]["id_str"]},${subItem["partition"]["type"]}',
           name: asT<String?>(subItem["partition"]["title"]) ?? "",
           parentId: id,
-          pic: "",
+          pic: _pickPartitionImageUrl(subItem["partition"]) ??
+              _pickPartitionImageUrl(item["partition"]),
         );
         subs.add(subCategory);
       }
@@ -110,12 +102,196 @@ class DouyinSite implements LiveSite {
           id: category.id,
           name: category.name,
           parentId: category.id,
-          pic: "",
+          pic: _pickPartitionImageUrl(item["partition"]),
         ),
       );
       categories.add(category);
     }
     return categories;
+  }
+
+  String? _pickPartitionImageUrl(dynamic data) {
+    if (data == null) {
+      return null;
+    }
+    if (data is String) {
+      final value = data.trim();
+      return value.isEmpty ? null : value;
+    }
+    if (data is List) {
+      for (final item in data) {
+        final value = _pickPartitionImageUrl(item);
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+      return null;
+    }
+    if (data is! Map) {
+      return null;
+    }
+
+    for (final key in const [
+      "icon",
+      "icons",
+      "cover",
+      "background",
+      "avatar_thumb",
+      "image",
+      "image_url",
+      "url",
+      "url_list",
+      "static_icon",
+    ]) {
+      final value = _pickPartitionImageUrl(data[key]);
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    for (final value in data.values) {
+      final resolved = _pickPartitionImageUrl(value);
+      if (resolved != null && resolved.isNotEmpty) {
+        return resolved;
+      }
+    }
+    return null;
+  }
+
+  String? _resolveCategoryValue(
+    dynamic source,
+    List<String> keys, {
+    int depth = 0,
+  }) {
+    if (depth > 6) {
+      return null;
+    }
+    if (source is List) {
+      for (final item in source) {
+        final value = _resolveCategoryValue(item, keys, depth: depth + 1);
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+      return null;
+    }
+    if (source is! Map) {
+      return null;
+    }
+    for (final key in keys) {
+      final value = source[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+    for (final value in source.values) {
+      final resolved = _resolveCategoryValue(value, keys, depth: depth + 1);
+      if (resolved != null && resolved.isNotEmpty) {
+        return resolved;
+      }
+    }
+    return null;
+  }
+
+  Map<String, String?> _resolveDouyinCategoryInfo(dynamic roomData) {
+    final room = roomData is Map ? roomData : <String, dynamic>{};
+    final partitionRoadMap =
+        room["partition_road_map"] ?? room["partitionRoadMap"];
+    final partition =
+        room["partition"] ??
+        room["room_partition"] ??
+        room["partitionInfo"] ??
+        (partitionRoadMap is List && partitionRoadMap.isNotEmpty
+            ? partitionRoadMap.last
+            : null);
+    final parentPartition =
+        room["parent_partition"] ??
+        room["partition_parent"] ??
+        (partition is Map
+            ? partition["parent_partition"] ??
+                partition["partition_parent"] ??
+                partition["parent"]
+            : null) ??
+        (partitionRoadMap is List && partitionRoadMap.length > 1
+            ? partitionRoadMap.first
+            : null) ??
+        room["partitionInfo"];
+
+    return {
+      "categoryId": _resolveCategoryValue(
+        partition,
+        const ["id_str", "id", "partition_id", "partition"],
+      ),
+      "categoryName": _resolveCategoryValue(
+        partition,
+        const ["title", "name", "partition_title"],
+      ),
+      "categoryParentId": _resolveCategoryValue(
+        parentPartition,
+        const ["id_str", "id", "partition_id", "partition"],
+      ),
+      "categoryParentName": _resolveCategoryValue(
+        parentPartition,
+        const ["title", "name", "partition_title"],
+      ),
+      "categoryPic":
+          _pickPartitionImageUrl(partition) ??
+          _pickPartitionImageUrl(parentPartition),
+    };
+  }
+
+  Map<String, dynamic> _extractCategoryRenderData(String html) {
+    const marker = r'\"categoryData\":';
+    final markerIndex = html.indexOf(marker);
+    if (markerIndex < 0) {
+      throw CoreError("鎶栭煶鍒嗙被鏁版嵁瑙ｆ瀽澶辫触");
+    }
+    final arrayStart = html.indexOf("[", markerIndex);
+    if (arrayStart < 0) {
+      throw CoreError("鎶栭煶鍒嗙被鏁版嵁瑙ｆ瀽澶辫触");
+    }
+    final escapedArray = _extractEscapedJsonArray(html, arrayStart);
+    final normalizedJson = '{"categoryData":$escapedArray}'
+        .replaceAll(r'\"', '"')
+        .replaceAll(r"\/", "/")
+        .replaceAll(r"\\", "\\");
+    return json.decode(normalizedJson) as Map<String, dynamic>;
+  }
+
+  String _extractEscapedJsonArray(String source, int startIndex) {
+    final buffer = StringBuffer();
+    var depth = 0;
+    var inString = false;
+    var escaped = false;
+    for (var i = startIndex; i < source.length; i++) {
+      final char = source[i];
+      buffer.write(char);
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char == "\\") {
+        escaped = true;
+        continue;
+      }
+      if (char == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) {
+        continue;
+      }
+      if (char == "[") {
+        depth += 1;
+      } else if (char == "]") {
+        depth -= 1;
+        if (depth == 0) {
+          return buffer.toString();
+        }
+      }
+    }
+    throw CoreError("鎶栭煶鍒嗙被鏁版嵁瑙ｆ瀽澶辫触");
   }
 
   @override
@@ -268,6 +444,7 @@ class DouyinSite implements LiveSite {
 
     var room = roomData["data"]["room"];
     var owner = room["owner"];
+    final categoryInfo = _resolveDouyinCategoryInfo(room);
 
     var status = asT<int?>(room["status"]) ?? 0;
 
@@ -295,6 +472,11 @@ class DouyinSite implements LiveSite {
       url: "https://live.douyin.com/$webRid",
       introduction: owner["signature"].toString(),
       notice: "",
+      categoryId: categoryInfo["categoryId"],
+      categoryName: categoryInfo["categoryName"],
+      categoryParentId: categoryInfo["categoryParentId"],
+      categoryParentName: categoryInfo["categoryParentName"],
+      categoryPic: categoryInfo["categoryPic"],
       danmakuData: DouyinDanmakuArgs(
         webRid: webRid,
         roomId: roomId,
@@ -328,6 +510,7 @@ class DouyinSite implements LiveSite {
     var roomData = data["data"][0];
     var userData = data["user"];
     var roomId = roomData["id_str"].toString();
+    final categoryInfo = _resolveDouyinCategoryInfo(roomData);
 
     // 读取用户唯一ID，用于弹幕连接
     // 似乎这个参数不是必须的，先随机生成一个
@@ -357,6 +540,11 @@ class DouyinSite implements LiveSite {
       url: "https://live.douyin.com/$webRid",
       introduction: owner?["signature"]?.toString() ?? "",
       notice: "",
+      categoryId: categoryInfo["categoryId"],
+      categoryName: categoryInfo["categoryName"],
+      categoryParentId: categoryInfo["categoryParentId"],
+      categoryParentName: categoryInfo["categoryParentName"],
+      categoryPic: categoryInfo["categoryPic"],
       danmakuData: DouyinDanmakuArgs(
         webRid: webRid,
         roomId: roomId,
@@ -379,6 +567,7 @@ class DouyinSite implements LiveSite {
     var room = roomData["roomStore"]["roomInfo"]["room"];
     var owner = room["owner"];
     var anchor = roomData["roomStore"]["roomInfo"]["anchor"];
+    final categoryInfo = _resolveDouyinCategoryInfo(room);
     var roomStatus = (asT<int?>(room["status"]) ?? 0) == 2;
 
     // 主要是为了获取cookie,用于弹幕websocket连接
@@ -401,6 +590,11 @@ class DouyinSite implements LiveSite {
       url: "https://live.douyin.com/$webRid",
       introduction: owner?["signature"]?.toString() ?? "",
       notice: "",
+      categoryId: categoryInfo["categoryId"],
+      categoryName: categoryInfo["categoryName"],
+      categoryParentId: categoryInfo["categoryParentId"],
+      categoryParentName: categoryInfo["categoryParentName"],
+      categoryPic: categoryInfo["categoryPic"],
       danmakuData: DouyinDanmakuArgs(
         webRid: webRid,
         roomId: roomId,
@@ -755,8 +949,167 @@ class DouyinSite implements LiveSite {
   @override
   Future<List<LiveSuperChatMessage>> getSuperChatMessage({
     required String roomId,
+    LiveRoomDetail? detail,
   }) {
     return Future.value(<LiveSuperChatMessage>[]);
+  }
+
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) async {
+    final roomDetail = detail ?? await getRoomDetail(roomId: roomId);
+    final webRid = roomDetail.roomId.isNotEmpty ? roomDetail.roomId : roomId;
+    final danmakuArgs = roomDetail.danmakuData is DouyinDanmakuArgs
+        ? roomDetail.danmakuData as DouyinDanmakuArgs
+        : null;
+
+    final roomInfo = await _getRoomDataByApi(webRid);
+    final roomList = (roomInfo["data"] as List?) ?? const [];
+    if (roomList.isEmpty) {
+      return [];
+    }
+    final roomData = roomList.first;
+    final owner = roomData["owner"] ?? roomInfo["user"] ?? {};
+    final anchorId =
+        owner["id_str"]?.toString() ?? owner["id"]?.toString() ?? "";
+    final secAnchorId = owner["sec_uid"]?.toString() ?? "";
+    final realRoomId =
+        danmakuArgs?.roomId ?? roomData["id_str"]?.toString() ?? "";
+    if (anchorId.isEmpty || secAnchorId.isEmpty || realRoomId.isEmpty) {
+      return [];
+    }
+
+    final requestHeader = await getRequestHeaders();
+    requestHeader["Referer"] = "https://live.douyin.com/$webRid";
+
+    final uri = Uri.parse("https://live.douyin.com/webcast/ranklist/audience/")
+        .replace(
+          queryParameters: {
+            "aid": "6383",
+            "app_name": "douyin_web",
+            "live_id": "1",
+            "device_platform": "web",
+            "language": "zh-CN",
+            "enter_from": "link_share",
+            "cookie_enabled": "true",
+            "screen_width": "1920",
+            "screen_height": "1080",
+            "browser_language": "zh-CN",
+            "browser_platform": "Win32",
+            "browser_name": "Chrome",
+            "browser_version": "125.0.0.0",
+            "os_name": "Windows",
+            "os_version": "10",
+            "webcast_sdk_version": "2450",
+            "room_id": realRoomId,
+            "anchor_id": anchorId,
+            "sec_anchor_id": secAnchorId,
+            "ignoreToast": "true",
+            "rank_type": "30",
+            "msToken": "",
+          },
+        );
+    final requestUrl = DouyinSign.getAbogusUrl(
+      uri.toString(),
+      kDefaultUserAgent,
+    );
+    final result = await HttpClient.instance.getJson(
+      requestUrl,
+      header: requestHeader,
+    );
+    final items = (result["data"]?["ranks"] as List?) ?? const [];
+    return items
+        .map((item) {
+          final user = item["user"] ?? {};
+          final payGrade = user["pay_grade"] ?? {};
+          final fansData = user["fans_club"]?["data"] ?? {};
+          final userLevel = int.tryParse(payGrade["level"].toString());
+          final fansLevel = int.tryParse(fansData["level"].toString());
+          final scoreText = _resolveDouyinRankScore(item);
+          final scoreDescription =
+              item["score_description"]?.toString().trim() ?? "";
+          final exactlyScore = item["exactly_score"]?.toString().trim() ?? "";
+          String? scoreDetail;
+          if (scoreDescription.isNotEmpty && scoreDescription != scoreText) {
+            scoreDetail = scoreDescription;
+          } else if (exactlyScore.isNotEmpty && exactlyScore != scoreText) {
+            scoreDetail = exactlyScore;
+          } else {
+            final gapDescription =
+                item["gap_description"]?.toString().trim() ?? "";
+            scoreDetail = gapDescription.isEmpty ? null : gapDescription;
+          }
+
+          return LiveContributionRankItem(
+            rank: int.tryParse(item["rank"].toString()) ?? 0,
+            userName: user["nickname"]?.toString() ?? "",
+            avatar: _firstImageUrl(user["avatar_thumb"]),
+            scoreText: scoreText,
+            scoreDetail: scoreDetail,
+            userLevel: userLevel,
+            userLevelText: userLevel == null || userLevel <= 0
+                ? null
+                : "财富 $userLevel",
+            userLevelIcon: _firstImageUrl(payGrade["new_im_icon_with_level"]),
+            fansLevel: fansLevel,
+            fansName: fansData["club_name"]?.toString(),
+            fansIcon: _pickDouyinBadgeIcon(fansData["badge"]?["icons"]),
+          );
+        })
+        .where((item) => item.userName.trim().isNotEmpty)
+        .toList();
+  }
+
+  String _firstImageUrl(dynamic data) {
+    if (data is! Map) {
+      return "";
+    }
+    final urls = data["url_list"];
+    if (urls is List && urls.isNotEmpty) {
+      return urls.first.toString();
+    }
+    return "";
+  }
+
+  String? _pickDouyinBadgeIcon(dynamic icons) {
+    if (icons is! Map) {
+      return null;
+    }
+    for (final key in const ["4", "3", "2", "1", "0"]) {
+      final url = _firstImageUrl(icons[key]);
+      if (url.isNotEmpty) {
+        return url;
+      }
+    }
+    for (final value in icons.values) {
+      final url = _firstImageUrl(value);
+      if (url.isNotEmpty) {
+        return url;
+      }
+    }
+    return null;
+  }
+
+  String _resolveDouyinRankScore(Map item) {
+    final exactlyScore = item["exactly_score"]?.toString().trim() ?? "";
+    if (exactlyScore.isNotEmpty) {
+      return exactlyScore;
+    }
+    final scoreDescription = item["score_description"]?.toString().trim() ?? "";
+    if (scoreDescription.isNotEmpty) {
+      return scoreDescription;
+    }
+    final score = item["score"]?.toString().trim() ?? "";
+    if (score.isNotEmpty) {
+      return score;
+    }
+    final delta = item["delta"]?.toString().trim() ?? "";
+    if (delta.isNotEmpty) {
+      return delta;
+    }
+    return "0";
   }
 
   //生成指定长度的16进制随机字符串

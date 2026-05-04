@@ -10,6 +10,7 @@ import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_play_url.dart';
+import 'package:simple_live_core/src/model/live_contribution_rank.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
 import 'package:simple_live_core/src/model/live_search_result.dart';
 import 'package:simple_live_core/src/model/live_room_detail.dart';
@@ -220,24 +221,6 @@ class DouyuSite implements LiveSite {
     );
     var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
 
-    if (showTime != null && showTime.isNotEmpty) {
-      try {
-        int startTimeStamp = int.parse(showTime);
-        int currentTimeStamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        int durationInSeconds = currentTimeStamp - startTimeStamp;
-
-        int hours = durationInSeconds ~/ 3600;
-        int minutes = (durationInSeconds % 3600) ~/ 60;
-        int seconds = durationInSeconds % 60;
-
-        String formattedDuration =
-            '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-        print('斗鱼直播间 $roomId 开播时长: $formattedDuration');
-      } catch (e) {
-        print('计算开播时长出错: $e');
-      }
-    }
-
     return LiveRoomDetail(
       cover: roomInfo["room_pic"].toString(),
       online: int.tryParse(roomInfo["room_biz_all"]["hot"].toString()) ?? 0,
@@ -253,6 +236,22 @@ class DouyuSite implements LiveSite {
       url: "https://www.douyu.com/$roomId",
       isRecord: roomInfo["videoLoop"] == 1,
       showTime: showTime,
+      categoryId:
+          roomInfo["cate2Id"]?.toString() ??
+          roomInfo["cate_id"]?.toString() ??
+          roomInfo["cid1"]?.toString(),
+      categoryName:
+          roomInfo["cate2Name"]?.toString() ??
+          roomInfo["game_name"]?.toString() ??
+          roomInfo["cate_name"]?.toString(),
+      categoryParentId:
+          roomInfo["cate1Id"]?.toString() ?? roomInfo["cid2"]?.toString(),
+      categoryParentName:
+          roomInfo["cate1Name"]?.toString() ??
+          roomInfo["parent_cate_name"]?.toString(),
+      categoryPic:
+          roomInfo["game_icon"]?.toString() ??
+          roomInfo["game_icon_url"]?.toString(),
     );
   }
 
@@ -381,9 +380,36 @@ class DouyuSite implements LiveSite {
   @override
   Future<List<LiveSuperChatMessage>> getSuperChatMessage({
     required String roomId,
+    LiveRoomDetail? detail,
   }) {
     //尚不支持
     return Future.value([]);
+  }
+
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) async {
+    var result = await HttpClient.instance.getJson(
+      "https://www.douyu.com/japi/interact/comm/fanshome/rank/top10",
+      queryParameters: {"rid": roomId},
+      header: {
+        'referer': 'https://www.douyu.com/$roomId',
+        'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      },
+    );
+    final items = (result["data"]?["intimacyRank"] as List?) ?? const [];
+    return items.map((item) {
+      return LiveContributionRankItem(
+        rank: int.tryParse(item["rank"].toString()) ?? 0,
+        userName: item["nickname"]?.toString() ?? "",
+        avatar: item["avatar"]?.toString() ?? "",
+        scoreText: item["value"]?.toString() ?? "0",
+        scoreDetail: "亲密度",
+      );
+    }).toList();
   }
 }
 

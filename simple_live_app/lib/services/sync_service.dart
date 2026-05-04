@@ -274,10 +274,11 @@ class SyncService extends GetxService {
   }
 
   /// 同步标签列表
-  Future<shelf.Response> _syncFollowUserTagRequest(shelf.Request request) async {
+  Future<shelf.Response> _syncFollowUserTagRequest(
+      shelf.Request request) async {
     try {
       var overlay =
-      int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
 
       var body = await request.readAsString();
       Log.d('_syncFollowUserTagRequest: $body');
@@ -353,7 +354,8 @@ class SyncService extends GetxService {
         AppSettingsController.instance.clearShieldList();
       }
       for (var keyword in jsonBody) {
-        AppSettingsController.instance.addShieldList(keyword.trim());
+        AppSettingsController.instance
+            .importShieldValue(keyword.toString().trim());
       }
       SmartDialog.showToast('已同步弹幕屏蔽词');
       return toJsonResponse({

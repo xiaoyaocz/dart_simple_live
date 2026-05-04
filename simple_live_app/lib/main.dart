@@ -71,6 +71,7 @@ Future migrateData() async {
     "followusertag",
     "localstorage",
     "danmushield",
+    "danmushieldpreset",
   ];
   try {
     var newDir = await getApplicationSupportDirectory();

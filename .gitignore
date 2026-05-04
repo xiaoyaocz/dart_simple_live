@@ -1,5 +1,8 @@
 simple_live_app/.vscode/settings.json
 simple_live_tv_app/.vscode/settings.json
 
+# local release artifacts
+release/
+
 # macOS Spotlight Search index file
 *.DS_Store

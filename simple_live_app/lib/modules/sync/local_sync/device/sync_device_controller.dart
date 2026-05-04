@@ -67,7 +67,7 @@ class SyncDeviceController extends BaseController {
     try {
       var overlay = await showOverlayDialog();
       SmartDialog.showLoading(msg: "同步中...");
-      var shieldList = AppSettingsController.instance.shieldList;
+      var shieldList = AppSettingsController.instance.allShieldValues;
       var data = json.encode(shieldList.toList());
       await request.syncBlockedWord(client, data, overlay: overlay);
       SmartDialog.showToast("已同步屏蔽词");

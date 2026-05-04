@@ -4,7 +4,12 @@ import 'package:lottie/lottie.dart';
 
 class AppEmptyWidget extends StatelessWidget {
   final Function()? onRefresh;
-  const AppEmptyWidget({this.onRefresh, Key? key}) : super(key: key);
+  final String message;
+  const AppEmptyWidget({
+    this.onRefresh,
+    this.message = "这里什么都没有",
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +29,10 @@ class AppEmptyWidget extends StatelessWidget {
                 height: 200,
                 repeat: false,
               ),
-              const Text(
-                "这里什么都没有",
+              Text(
+                message,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),

@@ -1079,7 +1079,8 @@ mixin PlayerGestureControlMixin
 
   Future _realSetVolume(int volume) async {
     Log.logPrint(volume);
-    await setSessionPlayerVolume(volume.toDouble());
+    // 手势仅控制系统音量，不修改播放器内部音量，避免双重叠乘导致响度异常
+    // (Player音量 × 系统音量 叠乘会使有效响度变为二次函数而非线性)
     await VolumeController.instance.setVolume(volume / 100);
   }
 

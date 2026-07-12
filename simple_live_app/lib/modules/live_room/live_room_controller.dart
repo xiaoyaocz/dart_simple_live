@@ -1009,7 +1009,8 @@ ${error?.stackTrace}''');
 
     if (state == AppLifecycleState.paused) {
       Log.d("进入后台");
-      //进入后台，关闭弹幕
+      // 进入后台，暂停并清空弹幕。
+      danmakuController?.pause();
       danmakuController?.clear();
       isBackground = true;
     } else
@@ -1017,6 +1018,9 @@ ${error?.stackTrace}''');
     if (state == AppLifecycleState.resumed) {
       Log.d("返回前台");
       isBackground = false;
+      // canvas_danmaku 会在应用进入后台时暂停，但不会自行恢复。
+      // 直播流刷新不会重建弹幕视图，因此需要在这里显式恢复动画。
+      danmakuController?.resume();
     }
   }
 

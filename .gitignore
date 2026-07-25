@@ -4,6 +4,7 @@ simple_live_tv_app/.vscode/settings.json
 
 # Local workspace metadata
 .codex/
+.agents/
 
 # Local release and build artifacts
 release/
@@ -24,6 +25,7 @@ deploy_windows.bat
 fix-guide.md
 tmp_*.png
 tmp_*.xml
+images/todo/
 
 # macOS metadata
 *.DS_Store

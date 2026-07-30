@@ -310,6 +310,8 @@ class Utils {
     List<T> contents,
     T value, {
     String title = '',
+    Widget Function(T value)? titleBuilder,
+    Widget Function(T value)? subtitleBuilder,
   }) async {
     var result = await Get.dialog(
       RadioGroup(
@@ -322,7 +324,8 @@ class Utils {
           children: contents
               .map(
                 (e) => RadioListTile<T>(
-                  title: Text(e.toString()),
+                  title: titleBuilder?.call(e) ?? Text(e.toString()),
+                  subtitle: subtitleBuilder?.call(e),
                   value: e,
                 ),
               )

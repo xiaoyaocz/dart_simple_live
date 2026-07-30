@@ -86,6 +86,10 @@ class MainFlutterWindow: NSWindow {
       return "keyB"
     case 45:
       return "keyN"
+    case 126:
+      return "arrowUp"
+    case 125:
+      return "arrowDown"
     default:
       return nil
     }

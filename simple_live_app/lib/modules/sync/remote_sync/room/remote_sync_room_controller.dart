@@ -514,8 +514,10 @@ class RemoteSyncRoomController extends BaseController {
             textAlign: TextAlign.center,
             style: Get.textTheme.titleLarge,
           ),
-          const Text(
-            "请使用其他Simple Live客户端扫描上方二维码\n建立连接后可选择需要同步的数据",
+          Text(
+            "当前服务：${SignalRService.configuredServerLabel}\n"
+            "请让另一台设备选择相同服务后扫码\n"
+            "自建服务器与 Cloudflare 的房间不互通",
             textAlign: TextAlign.center,
           ),
         ],

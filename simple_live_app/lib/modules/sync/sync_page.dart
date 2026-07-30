@@ -48,6 +48,17 @@ class SyncPage extends StatelessWidget {
             ),
           ),
           SettingsCard(
+            child: ListTile(
+              leading: const Icon(Remix.cloud_line),
+              title: Text("当前服务：${SignalRService.configuredServerLabel}"),
+              subtitle: Text(
+                "${SignalRService.configuredUrl}\n"
+                "两台设备必须选择相同服务；自建服务器与 Cloudflare 的房间不互通。",
+              ),
+            ),
+          ),
+          AppStyle.vGap12,
+          SettingsCard(
             child: Column(
               children: [
                 ListTile(
@@ -85,7 +96,8 @@ class SyncPage extends StatelessWidget {
                           SmartDialog.showToast("房间号不能为空");
                           return false;
                         }
-                        if (text.trim().length != SignalRService.kRoomIdLength) {
+                        if (text.trim().length !=
+                            SignalRService.kRoomIdLength) {
                           SmartDialog.showToast(
                               "请输入${SignalRService.kRoomIdLength}位房间号");
                           return false;

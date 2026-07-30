@@ -258,38 +258,135 @@ class OtherSettingsController extends BaseController {
   }
 
   String get syncServerUrl => SignalRService.configuredUrl;
-  String get syncServerUrlLabel {
-    final configured = SignalRService.configuredUrl;
-    final isDefault = configured == SignalRService.kDefaultUrl;
-    final host = Uri.tryParse(configured)?.host ?? "";
-    if (host.isEmpty) {
-      return isDefault ? "默认服务" : "自定义服务";
-    }
-    return isDefault ? "默认服务" : "自定义: $host";
-  }
-
-  String get syncServerUrlSubtitle {
-    final configured = SignalRService.configuredUrl;
-    final isDefault = configured == SignalRService.kDefaultUrl;
-    return isDefault ? "远程同步使用默认 WebSocket 服务" : configured;
-  }
+  String get syncServerUrlLabel => SignalRService.configuredServerLabel;
+  String get syncServerUrlSubtitle => SignalRService.configuredUrl;
 
   String get syncProxyUrl => SignalRService.proxyDisplayName;
 
   void editSyncServerUrl() async {
-    var value = await Utils.showEditTextDialog(
-      SignalRService.configuredUrl,
-      title: "同步服务地址",
-      hintText: SignalRService.kDefaultUrl,
+    final customUrl = SignalRService.configuredServerOption ==
+            SignalRService.kCustomServerOption
+        ? SignalRService.configuredUrl
+        : "";
+    final optionUrls = <String, String>{
+      SignalRService.kDefaultServerOption: SignalRService.kDefaultUrl,
+      SignalRService.kCloudflareServerOption: SignalRService.kCloudflareUrl,
+      SignalRService.kCustomServerOption: customUrl,
+    };
+    final probeResults = <String, ValueNotifier<SyncServerProbeResult?>>{
+      for (final entry in optionUrls.entries)
+        entry.key: ValueNotifier(
+          entry.value.isEmpty
+              ? const SyncServerProbeResult.notConfigured()
+              : null,
+        ),
+    };
+    for (final entry in optionUrls.entries) {
+      if (entry.value.isEmpty) {
+        continue;
+      }
+      SignalRService.probeServer(
+        entry.value,
+      ).then((result) => probeResults[entry.key]!.value = result);
+    }
+
+    final option = await Utils.showOptionDialog<String>(
+      SignalRService.kServerOptions,
+      SignalRService.configuredServerOption,
+      title: "选择同步服务",
+      titleBuilder: (value) => _buildSyncServerOptionTitle(
+        value,
+        probeResults[value]!,
+      ),
+      subtitleBuilder: (value) => Text(
+        _syncServerOptionDescription(value, optionUrls[value]!),
+      ),
+    );
+    if (option == null) {
+      return;
+    }
+    if (option == SignalRService.kDefaultServerOption) {
+      await SignalRService.setConfiguredUrl("");
+      SmartDialog.showToast("已切换到自建服务器");
+    } else if (option == SignalRService.kCloudflareServerOption) {
+      await SignalRService.setConfiguredUrl(SignalRService.kCloudflareUrl);
+      SmartDialog.showToast("已切换到 Cloudflare Worker");
+    } else {
+      final saved = await _editCustomSyncServerUrl();
+      if (!saved) {
+        return;
+      }
+    }
+    update();
+  }
+
+  Widget _buildSyncServerOptionTitle(
+    String option,
+    ValueNotifier<SyncServerProbeResult?> probeResult,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            option,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        ValueListenableBuilder<SyncServerProbeResult?>(
+          valueListenable: probeResult,
+          builder: (context, result, _) {
+            if (result == null) {
+              return const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 6),
+                  Text("检测中"),
+                ],
+              );
+            }
+            final color = result.isReachable
+                ? Colors.green
+                : result.label == "未配置"
+                    ? Theme.of(context).textTheme.bodySmall?.color
+                    : Colors.red;
+            return Text(
+              result.label,
+              style: TextStyle(color: color),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _syncServerOptionDescription(String option, String url) {
+    if (option == SignalRService.kDefaultServerOption) {
+      return "$url\n默认直连；设置代理后使用代理";
+    }
+    if (option == SignalRService.kCloudflareServerOption) {
+      return "$url\n备用服务，部分网络需要代理";
+    }
+    final address = url.isEmpty ? "选择后填写 ws:// 或 wss:// 地址" : url;
+    return "$address\n按当前同步代理设置检测";
+  }
+
+  Future<bool> _editCustomSyncServerUrl() async {
+    final current = SignalRService.configuredServerOption ==
+            SignalRService.kCustomServerOption
+        ? SignalRService.configuredUrl
+        : "";
+    final value = await Utils.showEditTextDialog(
+      current,
+      title: "自定义同步服务",
+      hintText: "wss://example.com/sync",
       validate: (text) {
-        final url = text.trim();
-        if (url.isEmpty) {
-          return true;
-        }
-        final uri = Uri.tryParse(url);
-        if (uri == null ||
-            !(uri.scheme == "wss" || uri.scheme == "ws") ||
-            uri.host.isEmpty) {
+        if (!SignalRService.isValidServerUrl(text)) {
           SmartDialog.showToast("请输入 ws:// 或 wss:// 开头的同步服务地址");
           return false;
         }
@@ -297,11 +394,11 @@ class OtherSettingsController extends BaseController {
       },
     );
     if (value == null) {
-      return;
+      return false;
     }
     await SignalRService.setConfiguredUrl(value);
-    SmartDialog.showToast(value.trim().isEmpty ? "已恢复默认同步服务" : "已保存");
-    update();
+    SmartDialog.showToast("已保存自定义同步服务");
+    return true;
   }
 
   void resetSyncServerUrl() async {
@@ -314,7 +411,7 @@ class OtherSettingsController extends BaseController {
     var value = await Utils.showEditTextDialog(
       SignalRService.configuredProxyUrl,
       title: "同步代理地址",
-      hintText: "留空自动检测 ${SignalRService.kDefaultLocalProxy}",
+      hintText: "留空直连，例如 ${SignalRService.kDefaultLocalProxy}",
       validate: (text) {
         final value = text.trim();
         if (!SignalRService.isValidProxyConfig(value)) {
@@ -330,7 +427,7 @@ class OtherSettingsController extends BaseController {
       return;
     }
     await SignalRService.setConfiguredProxyUrl(value);
-    SmartDialog.showToast(value.trim().isEmpty ? "已恢复自动检测代理" : "已保存");
+    SmartDialog.showToast(value.trim().isEmpty ? "已切换为直连" : "已保存");
     update();
   }
 

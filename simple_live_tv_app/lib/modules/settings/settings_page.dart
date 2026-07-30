@@ -859,7 +859,8 @@ class SettingsPage extends GetView<SettingsController> {
           HighlightListTile(
             focusNode: AppFocusNode(),
             title: "同步服务",
-            subtitle: SignalRService.configuredUrl,
+            subtitle:
+                "${SignalRService.configuredServerLabel}\n${SignalRService.configuredUrl}",
             onTap: controller.editSyncServerUrl,
           ),
           AppStyle.vGap24,

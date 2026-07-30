@@ -22,6 +22,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
+import 'package:simple_live_app/modules/live_room/live_status_refresh_policy.dart';
 import 'package:simple_live_app/modules/live_room/widgets/live_contribution_rank_panel.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
@@ -211,6 +212,9 @@ class LiveRoomController extends PlayerController
   Timer? _chatBottomRestoreTimer;
   Timer? _onlineRefreshTimer;
   bool _onlineRefreshInFlight = false;
+  final LiveStatusRefreshPolicy _onlineStatusRefreshPolicy =
+      LiveStatusRefreshPolicy();
+  bool _volumeSliderPointerEntered = false;
   bool _autoPipAttempting = false;
 
   @override
@@ -899,6 +903,7 @@ class LiveRoomController extends PlayerController
   void _restartOnlineRefreshTimer() {
     _onlineRefreshTimer?.cancel();
     _onlineRefreshInFlight = false;
+    _onlineStatusRefreshPolicy.reset();
     if (!liveStatus.value) {
       return;
     }
@@ -926,14 +931,33 @@ class LiveRoomController extends PlayerController
             roomId != refreshRoomId) {
           return;
         }
-        online.value = roomDetail.online;
-        liveStatus.value = roomDetail.status || roomDetail.isRecord;
-        if (!liveStatus.value) {
-          _onlineRefreshTimer?.cancel();
-          _onlineRefreshTimer = null;
-          _restartSuperChatRefreshTimer();
+        final reportedLive = roomDetail.status || roomDetail.isRecord;
+        if (reportedLive) {
+          _onlineStatusRefreshPolicy.reset();
+          online.value = roomDetail.online;
+          liveStatus.value = true;
+          return;
         }
+        final confirmedOffline = _onlineStatusRefreshPolicy.confirmOffline(
+          reportedLive: false,
+          hasActivePlaybackEvidence:
+              player.state.playing || player.state.buffering,
+        );
+        if (!confirmedOffline) {
+          Log.d(
+            "刷新${site.name}状态暂未确认下播: "
+            "${_onlineStatusRefreshPolicy.consecutiveOfflineCount}/"
+            "${_onlineStatusRefreshPolicy.requiredOfflineConfirmations}",
+          );
+          return;
+        }
+        online.value = roomDetail.online;
+        liveStatus.value = false;
+        _onlineRefreshTimer?.cancel();
+        _onlineRefreshTimer = null;
+        _restartSuperChatRefreshTimer();
       } catch (e) {
+        _onlineStatusRefreshPolicy.reset();
         Log.d("刷新${site.name}热度失败: $e");
       } finally {
         if (_isCurrentLoad(refreshGeneration)) {
@@ -1275,6 +1299,7 @@ class LiveRoomController extends PlayerController
     _superChatRefreshTimer?.cancel();
     _liveEventFlowTimer?.cancel();
     _onlineRefreshTimer?.cancel();
+    _onlineStatusRefreshPolicy.reset();
     _chatBottomRestoreTimer?.cancel();
     _cancelPendingDanmakuTimers();
     clearDanmakuReplayHistory();
@@ -2146,21 +2171,42 @@ class LiveRoomController extends PlayerController
     );
   }
 
+  void _cancelVolumeSliderDismiss() {
+    hidevolumeTimer?.cancel();
+    hidevolumeTimer = null;
+  }
+
+  void _scheduleVolumeSliderDismiss(Duration delay) {
+    _cancelVolumeSliderDismiss();
+    hidevolumeTimer = Timer(delay, () {
+      hidevolumeTimer = null;
+      _volumeSliderPointerEntered = false;
+      SmartDialog.dismiss(tag: volumeSliderDialogTag);
+    });
+  }
+
   void showVolumeSlider(
     BuildContext targetContext, {
     bool keepAlive = false,
   }) {
-    hidevolumeTimer?.cancel();
+    _cancelVolumeSliderDismiss();
+    _volumeSliderPointerEntered = false;
+    _scheduleVolumeSliderDismiss(
+      keepAlive ? const Duration(seconds: 6) : const Duration(seconds: 4),
+    );
     SmartDialog.showAttach(
       targetContext: targetContext,
       alignment: Alignment.topCenter,
-      displayTime: keepAlive ? null : const Duration(seconds: 4),
+      displayTime: null,
       maskColor: const Color(0x00000000),
       tag: volumeSliderDialogTag,
       keepSingle: true,
       builder: (context) {
         return MouseRegion(
-          onEnter: (_) => hidevolumeTimer?.cancel(),
+          onEnter: (_) {
+            _volumeSliderPointerEntered = true;
+            _cancelVolumeSliderDismiss();
+          },
           onExit: (_) => hideVolumeSlider(),
           child: Container(
             decoration: BoxDecoration(
@@ -2175,6 +2221,7 @@ class LiveRoomController extends PlayerController
                   min: 0,
                   max: 100,
                   value: AppSettingsController.instance.playerVolume.value,
+                  onChangeStart: (_) => _cancelVolumeSliderDismiss(),
                   onChanged: (newValue) {
                     setSessionPlayerVolume(newValue, persist: true);
                   },
@@ -2185,19 +2232,13 @@ class LiveRoomController extends PlayerController
         );
       },
     );
-    if (keepAlive) {
-      hidevolumeTimer = Timer(const Duration(seconds: 6), () {
-        hidevolumeTimer = null;
-        SmartDialog.dismiss(tag: volumeSliderDialogTag);
-      });
-    }
   }
 
   void hideVolumeSlider() {
-    hidevolumeTimer?.cancel();
-    hidevolumeTimer = Timer(const Duration(milliseconds: 220), () {
-      SmartDialog.dismiss(tag: volumeSliderDialogTag);
-    });
+    if (!_volumeSliderPointerEntered) {
+      return;
+    }
+    _scheduleVolumeSliderDismiss(const Duration(milliseconds: 600));
   }
 
   void showQualitySheet() {

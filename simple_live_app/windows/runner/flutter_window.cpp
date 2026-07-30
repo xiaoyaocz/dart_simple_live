@@ -204,6 +204,10 @@ std::string FlutterWindow::ShortcutKeyForWindowsKey(WPARAM wparam,
       return "keyB";
     case 0x31:
       return "keyN";
+    case 0x48:
+      return "arrowUp";
+    case 0x50:
+      return "arrowDown";
     default:
       break;
   }
@@ -231,6 +235,10 @@ std::string FlutterWindow::ShortcutKeyForWindowsKey(WPARAM wparam,
       return "keyB";
     case 'N':
       return "keyN";
+    case VK_UP:
+      return "arrowUp";
+    case VK_DOWN:
+      return "arrowDown";
     default:
       return "";
   }

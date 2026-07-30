@@ -43,6 +43,10 @@ static const gchar* shortcut_key_for_event(GdkEventKey* event) {
       return "keyB";
     case 57:
       return "keyN";
+    case 111:
+      return "arrowUp";
+    case 116:
+      return "arrowDown";
     default:
       break;
   }
@@ -81,6 +85,10 @@ static const gchar* shortcut_key_for_event(GdkEventKey* event) {
     case GDK_KEY_n:
     case GDK_KEY_N:
       return "keyN";
+    case GDK_KEY_Up:
+      return "arrowUp";
+    case GDK_KEY_Down:
+      return "arrowDown";
     default:
       return nullptr;
   }

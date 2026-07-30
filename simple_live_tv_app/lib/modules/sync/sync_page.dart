@@ -69,6 +69,13 @@ class SyncPage extends GetView<SyncController> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      AppStyle.vGap12,
+                      Text(
+                        "当前服务：${SignalRService.configuredServerLabel}\n"
+                        "两台设备必须选择相同服务；自建服务器与 Cloudflare 的房间不互通",
+                        style: AppStyle.subTextStyleWhite,
+                        textAlign: TextAlign.center,
+                      ),
                       AppStyle.vGap16,
                       Obx(
                         () => Visibility(

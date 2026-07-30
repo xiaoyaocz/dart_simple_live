@@ -128,6 +128,27 @@ class KuaishouSite extends LiveSite {
     return '';
   }
 
+  static Map? selectLiveRoomFromPlayList(
+    Iterable<dynamic> playList,
+    String roomId,
+  ) {
+    final rooms = playList.whereType<Map>().toList(growable: false);
+    if (rooms.isEmpty) {
+      return null;
+    }
+    final targetRoomId = roomId.trim();
+    final matchingRooms = targetRoomId.isEmpty
+        ? rooms
+        : rooms
+              .where((room) => _matchesRoomId(room, targetRoomId))
+              .toList(growable: false);
+    final candidates = matchingRooms.isEmpty ? rooms : matchingRooms;
+    return candidates.firstWhere(
+      resolveLiveStatus,
+      orElse: () => candidates.first,
+    );
+  }
+
   static bool resolveLiveStatus(Map room) {
     if (_isLiveFlag(room["isLiving"]) || _isLiveFlag(room["living"])) {
       return true;
@@ -136,30 +157,21 @@ class KuaishouSite extends LiveSite {
         ? room["liveStream"] as Map
         : room;
     final liveStreamId = liveStream["id"]?.toString().trim() ?? '';
-    return liveStreamId.isNotEmpty &&
-        _containsPlayableUrl(liveStream["playUrls"]);
+    // 快手在切换 CDN 或刷新推流地址时会短暂省略 playUrls，但有效的
+    // liveStream id 仍代表当前房间正在直播。
+    return liveStreamId.isNotEmpty;
+  }
+
+  static bool _matchesRoomId(Map room, String roomId) {
+    final author = room["author"] is Map ? room["author"] as Map : const {};
+    return author["id"]?.toString().trim() == roomId;
   }
 
   static bool _isLiveFlag(dynamic value) {
     return value == true ||
         value == 1 ||
-        value?.toString().toLowerCase() == "true";
-  }
-
-  static bool _containsPlayableUrl(dynamic value) {
-    if (value is String) {
-      final url = value.trim().toLowerCase();
-      return url.startsWith("http://") ||
-          url.startsWith("https://") ||
-          url.startsWith("rtmp://");
-    }
-    if (value is Map) {
-      return value.values.any(_containsPlayableUrl);
-    }
-    if (value is Iterable) {
-      return value.any(_containsPlayableUrl);
-    }
-    return false;
+        value?.toString().toLowerCase() == "true" ||
+        value?.toString() == "1";
   }
 
   @override
@@ -549,8 +561,9 @@ class KuaishouSite extends LiveSite {
       return anonymousDetail!;
     }
 
+    LiveRoomDetail? cookieDetail;
     if (_currentCookieHeader().isNotEmpty) {
-      final cookieDetail = await _loadRoomDetail(
+      cookieDetail = await _loadRoomDetail(
         url: url,
         roomId: roomId,
         headers: _headersWithCookie,
@@ -561,7 +574,13 @@ class KuaishouSite extends LiveSite {
       }
     }
 
-    return anonymousDetail ?? _offlineDetail(roomId);
+    if (anonymousDetail != null) {
+      return anonymousDetail;
+    }
+    if (cookieDetail != null) {
+      return cookieDetail;
+    }
+    throw StateError("快手直播间状态暂时不可用");
   }
 
   Future<LiveRoomDetail?> _loadRoomDetail({
@@ -596,12 +615,22 @@ class KuaishouSite extends LiveSite {
 
       final transferData = text.replaceAll("undefined", "null");
       final jsonObj = jsonDecode(transferData);
-      final playList = jsonObj["liveroom"]["playList"];
-      if (playList is! List || playList.isEmpty || playList.first is! Map) {
+      if (jsonObj is! Map || jsonObj["liveroom"] is! Map) {
         return null;
       }
+      final liveroom = jsonObj["liveroom"] as Map;
+      final playList = liveroom["playList"];
+      if (playList is! List) {
+        return null;
+      }
+      if (playList.isEmpty) {
+        return _offlineDetail(roomId);
+      }
 
-      final first = playList.first as Map;
+      final first = selectLiveRoomFromPlayList(playList, roomId);
+      if (first == null) {
+        return null;
+      }
       final liveStream = first["liveStream"] is Map
           ? first["liveStream"] as Map
           : const {};
@@ -612,13 +641,13 @@ class KuaishouSite extends LiveSite {
       final isLiving = resolveLiveStatus(first);
       final liveStreamId = liveStream["id"]?.toString() ?? '';
       var websocketUrls = <String>[];
-      for (final item in jsonObj["liveroom"]["websocketUrls"] ?? []) {
+      for (final item in liveroom["websocketUrls"] ?? []) {
         final websocketUrl = item?.toString() ?? '';
         if (websocketUrl.isNotEmpty) {
           websocketUrls.add(websocketUrl);
         }
       }
-      var danmakuToken = jsonObj["liveroom"]["token"]?.toString() ?? '';
+      var danmakuToken = liveroom["token"]?.toString() ?? '';
       final websocketInfo = first["websocketInfo"] is Map
           ? first["websocketInfo"] as Map
           : const {};
@@ -704,12 +733,8 @@ class KuaishouSite extends LiveSite {
 
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
-    try {
-      final detail = await getRoomDetail(roomId: roomId);
-      return detail.status;
-    } catch (_) {
-      return false;
-    }
+    final detail = await getRoomDetail(roomId: roomId);
+    return detail.status;
   }
 
   // ==================== 清晰度 ====================

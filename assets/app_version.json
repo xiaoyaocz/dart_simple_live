@@ -1,7 +1,7 @@
 {
-  "version": "1.12.7",
-  "version_num": 11207,
-  "version_desc": "- 明确小窗支持范围：当前仅 Android 支持系统画中画，iOS 暂不支持画中画。\n- 修复 iOS 全屏退出后竖屏无法恢复的问题。\n- 修复桌面端音量按钮闪烁、点按无响应的问题。\n- 优化关注页卡片在全屏 / 宽屏下的标题展示，避免主播名和直播间标题被挤没。\n- 优化直播间连续切换房间时的重入控制，降低快速切台导致的闪退风险。",
+  "version": "1.12.8",
+  "version_num": 11208,
+  "version_desc": "- 修复 Android、iOS 全屏锁定控制后无法重新显示解锁按钮的问题。\n- 修复快手直播状态刷新时，临时缺少播放地址或返回异常会误判下播的问题。\n- 修复 Windows 桌面端音量滑条过快自动关闭的问题。\n- 新增桌面端直播间音量增减快捷键，默认使用上、下方向键，每次调整 5%。",
   "prerelease": false,
-  "download_url": "https://github.com/June6699/dart_simple_live/releases/tag/v1.12.7"
+  "download_url": "https://github.com/June6699/dart_simple_live/releases/tag/v1.12.8"
 }

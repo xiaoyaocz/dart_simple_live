@@ -159,6 +159,8 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 自动隐藏鼠标光标计时器
   Timer? hideMouseCursorTimer;
 
+  Timer? _mobileLockRevealTimer;
+
   /// 自动隐藏提示计时器
   Timer? hideSeekTipTimer;
 
@@ -198,6 +200,9 @@ mixin PlayerStateMixin on PlayerMixin {
   void clearTransientPlayerOverlays() {
     clearGestureTip();
     cancelVerticalDrag();
+    _mobileLockRevealTimer?.cancel();
+    _mobileLockRevealTimer = null;
+    showLockEdgeState.value = false;
     hidevolumeTimer?.cancel();
     hidevolumeTimer = null;
     SmartDialog.dismiss(tag: liveRoomVolumeSliderDialogTag);
@@ -215,6 +220,8 @@ mixin PlayerStateMixin on PlayerMixin {
 
   void setLockState() {
     clearGestureTip();
+    _mobileLockRevealTimer?.cancel();
+    _mobileLockRevealTimer = null;
     lockControlsState.value = !lockControlsState.value;
     showLockEdgeState.value = false;
     if (lockControlsState.value) {
@@ -222,6 +229,19 @@ mixin PlayerStateMixin on PlayerMixin {
     } else {
       showControlsState.value = true;
     }
+  }
+
+  void revealMobileLockControls() {
+    if (!lockControlsState.value || !(Platform.isAndroid || Platform.isIOS)) {
+      return;
+    }
+    showLockEdgeState.value = true;
+    _mobileLockRevealTimer?.cancel();
+    _mobileLockRevealTimer = Timer(const Duration(seconds: 3), () {
+      if (lockControlsState.value) {
+        showLockEdgeState.value = false;
+      }
+    });
   }
 
   /// 显示控制器
@@ -812,6 +832,16 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
   }
 
+  Future<void> adjustDesktopPlayerVolume(int delta) async {
+    if (delta == 0 || Platform.isAndroid || Platform.isIOS) {
+      return;
+    }
+    final current = player.state.volume.clamp(0.0, 100.0).toDouble();
+    final target = (current + delta).clamp(0.0, 100.0).toDouble();
+    await setSessionPlayerVolume(target, persist: true);
+    showGestureTipText("音量 ${target.round()}%");
+  }
+
   /// 设置横屏
   Future setLandscapeOrientation() async {
     if (await beforeIOS16()) {
@@ -1183,6 +1213,10 @@ mixin PlayerGestureControlMixin
     on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
   /// 单击显示/隐藏控制器
   void onTap() {
+    if (lockControlsState.value) {
+      revealMobileLockControls();
+      return;
+    }
     if (showControlsState.value) {
       hideControls();
     } else {

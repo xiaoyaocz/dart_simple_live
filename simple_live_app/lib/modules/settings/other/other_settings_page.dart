@@ -116,7 +116,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
               children: [
                 GetBuilder<OtherSettingsController>(
                   builder: (controller) => SettingsAction(
-                    title: "同步服务地址",
+                    title: "同步服务",
                     subtitle: controller.syncServerUrlSubtitle,
                     value: controller.syncServerUrlLabel,
                     onTap: controller.editSyncServerUrl,
@@ -126,7 +126,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 GetBuilder<OtherSettingsController>(
                   builder: (controller) => SettingsAction(
                     title: "同步代理地址",
-                    subtitle: "默认自动检测本机 127.0.0.1:51888；需要直连可填写 direct",
+                    subtitle: "留空为直连；填写后所有同步服务统一使用该代理",
                     value: controller.syncProxyUrl,
                     onTap: controller.editSyncProxyUrl,
                   ),

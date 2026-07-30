@@ -742,6 +742,12 @@ class MyApp extends StatelessWidget {
       if (shortcut == LogicalKeyboardKey.keyN.keyId) {
         return physicalKey == PhysicalKeyboardKey.keyN;
       }
+      if (shortcut == LogicalKeyboardKey.arrowUp.keyId) {
+        return physicalKey == PhysicalKeyboardKey.arrowUp;
+      }
+      if (shortcut == LogicalKeyboardKey.arrowDown.keyId) {
+        return physicalKey == PhysicalKeyboardKey.arrowDown;
+      }
       return false;
     }
 
@@ -755,6 +761,16 @@ class MyApp extends StatelessWidget {
     }
     if (matches(settings.liveRoomShortcutMute.value)) {
       await liveRoomController.toggleMute();
+      return;
+    }
+    if (_isDesktopPlatform &&
+        matches(settings.liveRoomShortcutVolumeUp.value)) {
+      await liveRoomController.adjustDesktopPlayerVolume(5);
+      return;
+    }
+    if (_isDesktopPlatform &&
+        matches(settings.liveRoomShortcutVolumeDown.value)) {
+      await liveRoomController.adjustDesktopPlayerVolume(-5);
       return;
     }
     if (matches(settings.liveRoomShortcutRefresh.value)) {
@@ -829,6 +845,10 @@ class MyApp extends StatelessWidget {
           return shortcut == LogicalKeyboardKey.keyB.keyId;
         case "keyN":
           return shortcut == LogicalKeyboardKey.keyN.keyId;
+        case "arrowUp":
+          return shortcut == LogicalKeyboardKey.arrowUp.keyId;
+        case "arrowDown":
+          return shortcut == LogicalKeyboardKey.arrowDown.keyId;
         default:
           return false;
       }
@@ -844,6 +864,14 @@ class MyApp extends StatelessWidget {
     }
     if (matchesDesktopShortcut(settings.liveRoomShortcutMute.value)) {
       await liveRoomController.toggleMute();
+      return;
+    }
+    if (matchesDesktopShortcut(settings.liveRoomShortcutVolumeUp.value)) {
+      await liveRoomController.adjustDesktopPlayerVolume(5);
+      return;
+    }
+    if (matchesDesktopShortcut(settings.liveRoomShortcutVolumeDown.value)) {
+      await liveRoomController.adjustDesktopPlayerVolume(-5);
       return;
     }
     if (matchesDesktopShortcut(settings.liveRoomShortcutRefresh.value)) {

@@ -13,10 +13,45 @@ enum SignalRConnectionState {
   disconnected,
 }
 
+class SyncServerProbeResult {
+  final bool isReachable;
+  final int? latencyMs;
+  final String label;
+
+  const SyncServerProbeResult._({
+    required this.isReachable,
+    required this.label,
+    this.latencyMs,
+  });
+
+  factory SyncServerProbeResult.reachable(int latencyMs) {
+    return SyncServerProbeResult._(
+      isReachable: true,
+      latencyMs: latencyMs,
+      label: "$latencyMs ms",
+    );
+  }
+
+  const SyncServerProbeResult.unreachable()
+      : this._(isReachable: false, label: "不可用");
+
+  const SyncServerProbeResult.notConfigured()
+      : this._(isReachable: false, label: "未配置");
+}
+
 class SignalRService {
   static const int kRoomIdLength = 6;
-  static const String kDefaultUrl =
+  static const String kDefaultUrl = "wss://sync.furry.mo.cn/sync";
+  static const String kCloudflareUrl =
       "wss://simple-live-sync.3439394104.workers.dev/sync";
+  static const String kDefaultServerOption = "自建服务器（默认）";
+  static const String kCloudflareServerOption = "Cloudflare Worker（备用）";
+  static const String kCustomServerOption = "自定义地址";
+  static const List<String> kServerOptions = [
+    kDefaultServerOption,
+    kCloudflareServerOption,
+    kCustomServerOption,
+  ];
   static const String kDefaultLocalProxy = "127.0.0.1:51888";
   static const String kDirectProxyValue = "direct";
 
@@ -66,11 +101,84 @@ class SignalRService {
   final Map<String, Completer<Resp<dynamic>>> _pendingRequests = {};
 
   static String get configuredUrl {
-    final value = LocalStorageService.instance.getValue(
-      LocalStorageService.kSyncServerUrl,
-      "",
-    );
-    return value.trim().isEmpty ? kDefaultUrl : value.trim();
+    final value = configuredValue;
+    return value.isEmpty ? kDefaultUrl : value;
+  }
+
+  static String get configuredValue {
+    return LocalStorageService.instance
+        .getValue(
+          LocalStorageService.kSyncServerUrl,
+          "",
+        )
+        .trim();
+  }
+
+  static String get configuredServerOption {
+    final url = configuredUrl;
+    if (url == kDefaultUrl) {
+      return kDefaultServerOption;
+    }
+    if (url == kCloudflareUrl) {
+      return kCloudflareServerOption;
+    }
+    return kCustomServerOption;
+  }
+
+  static String get configuredServerLabel => configuredServerOption;
+
+  static bool isValidServerUrl(String value) {
+    final uri = Uri.tryParse(value.trim());
+    return uri != null &&
+        (uri.scheme == "wss" || uri.scheme == "ws") &&
+        uri.host.isNotEmpty;
+  }
+
+  static Future<SyncServerProbeResult> probeServer(
+    String value, {
+    bool forceDirect = false,
+  }) async {
+    final url = value.trim();
+    if (!isValidServerUrl(url)) {
+      return const SyncServerProbeResult.notConfigured();
+    }
+
+    final stopwatch = Stopwatch()..start();
+    HttpClient? client;
+    IOWebSocketChannel? channel;
+    try {
+      client = await _createWebSocketHttpClient(forceDirect: forceDirect);
+      channel = IOWebSocketChannel.connect(
+        url,
+        pingInterval: const Duration(seconds: 4),
+        connectTimeout: const Duration(seconds: 8),
+        customClient: client,
+      );
+      await channel.ready.timeout(const Duration(seconds: 8));
+      const requestId = "connectivity_probe";
+      final pong = channel.stream
+          .map((event) => json.decode(event.toString()))
+          .where(
+            (event) =>
+                event is Map &&
+                event["type"] == "pong" &&
+                event["requestId"] == requestId,
+          )
+          .first
+          .timeout(const Duration(seconds: 5));
+      channel.sink.add(json.encode({
+        "type": "ping",
+        "requestId": requestId,
+      }));
+      await pong;
+      stopwatch.stop();
+      return SyncServerProbeResult.reachable(stopwatch.elapsedMilliseconds);
+    } catch (_) {
+      return const SyncServerProbeResult.unreachable();
+    } finally {
+      await channel?.sink.close();
+      client?.close(force: true);
+    }
   }
 
   static Future<void> setConfiguredUrl(String value) {
@@ -89,7 +197,7 @@ class SignalRService {
   static String get proxyDisplayName {
     final value = configuredProxyUrl;
     if (value.isEmpty) {
-      return "自动检测 $kDefaultLocalProxy";
+      return "直连（未设置代理）";
     }
     if (value.toLowerCase() == kDirectProxyValue) {
       return "直连";
@@ -384,32 +492,29 @@ class SignalRService {
     _heartbeatTimer = null;
   }
 
-  Future<HttpClient?> _createWebSocketHttpClient() async {
+  static Future<HttpClient> _createWebSocketHttpClient({
+    bool forceDirect = false,
+  }) async {
+    final client = HttpClient();
+    if (forceDirect) {
+      client.findProxy = (_) => "DIRECT";
+      return client;
+    }
     final proxyAddress = await _resolveProxyAddress();
     if (proxyAddress == null) {
-      return null;
+      return client;
     }
     Log.d("远程同步使用代理: $proxyAddress");
-    final client = HttpClient();
-    client.findProxy = (_) => "PROXY $proxyAddress; DIRECT";
+    client.findProxy = (_) => "PROXY $proxyAddress";
     return client;
   }
 
-  Future<String?> _resolveProxyAddress() async {
+  static Future<String?> _resolveProxyAddress() async {
     final configured = configuredProxyUrl;
-    if (configured.toLowerCase() == kDirectProxyValue) {
+    if (configured.isEmpty || configured.toLowerCase() == kDirectProxyValue) {
       return null;
     }
-    if (configured.isNotEmpty) {
-      return _normalizeProxyAddress(configured);
-    }
-    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
-      return null;
-    }
-    if (await _isTcpPortOpen("127.0.0.1", 51888)) {
-      return kDefaultLocalProxy;
-    }
-    return null;
+    return _normalizeProxyAddress(configured);
   }
 
   static String? _normalizeProxyAddress(String value) {
@@ -432,20 +537,6 @@ class SignalRService {
       return null;
     }
     return "${uri.host}:${uri.port}";
-  }
-
-  Future<bool> _isTcpPortOpen(String host, int port) async {
-    try {
-      final socket = await Socket.connect(
-        host,
-        port,
-        timeout: const Duration(milliseconds: 400),
-      );
-      socket.destroy();
-      return true;
-    } catch (_) {
-      return false;
-    }
   }
 
   Map<String, String> _clientInfo() => {
@@ -483,8 +574,7 @@ class SignalRService {
     final text = error.toString();
     if (error is TimeoutException || text.contains("TimeoutException")) {
       return "同步服务连接超时，请检查网络或同步服务地址。"
-          "当前默认 workers.dev 域名在部分网络下可能无法访问。"
-          "如果本机代理可用，请确认同步代理地址为自动或 http://$kDefaultLocalProxy。";
+          "两台设备必须选择相同的同步服务；Cloudflare Worker 在部分网络下可能需要代理。";
     }
     if (text.contains("SocketException")) {
       return "无法连接同步服务，请检查网络或同步服务地址";

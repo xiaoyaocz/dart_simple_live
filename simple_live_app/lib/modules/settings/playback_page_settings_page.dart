@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -94,79 +96,105 @@ class PlaybackPageSettingsPage extends GetView<IndexedSettingsController> {
               ),
             ),
           ),
-          Padding(
-            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
-            child: Text(
-              "桌面快捷键",
-              style: Get.textTheme.titleSmall,
+          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "桌面快捷键",
+                style: Get.textTheme.titleSmall,
+              ),
             ),
-          ),
-          SettingsCard(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "切换全屏",
-                    subtitle: "仅在直播间且输入框未聚焦时生效，桌面端中文输入法下也支持",
-                    value: AppSettingsController
-                        .instance.liveRoomShortcutFullScreen.value,
-                    valueMap: AppSettingsController.liveRoomShortcutOptions,
-                    onChanged: AppSettingsController
-                        .instance.setLiveRoomShortcutFullScreen,
+            SettingsCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "切换全屏",
+                      subtitle: "仅在直播间且输入框未聚焦时生效，桌面端中文输入法下也支持",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutFullScreen.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutFullScreen,
+                    ),
                   ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "显示/隐藏弹幕",
-                    subtitle: "仅在直播间且输入框未聚焦时生效",
-                    value: AppSettingsController
-                        .instance.liveRoomShortcutDanmaku.value,
-                    valueMap: AppSettingsController.liveRoomShortcutOptions,
-                    onChanged: AppSettingsController
-                        .instance.setLiveRoomShortcutDanmaku,
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "显示/隐藏弹幕",
+                      subtitle: "仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutDanmaku.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutDanmaku,
+                    ),
                   ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "静音/取消静音",
-                    subtitle: "仅在直播间且输入框未聚焦时生效",
-                    value: AppSettingsController
-                        .instance.liveRoomShortcutMute.value,
-                    valueMap: AppSettingsController.liveRoomShortcutOptions,
-                    onChanged:
-                        AppSettingsController.instance.setLiveRoomShortcutMute,
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "静音/取消静音",
+                      subtitle: "仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutMute.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutMute,
+                    ),
                   ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "刷新直播间",
-                    subtitle: "仅在直播间且输入框未聚焦时生效",
-                    value: AppSettingsController
-                        .instance.liveRoomShortcutRefresh.value,
-                    valueMap: AppSettingsController.liveRoomShortcutOptions,
-                    onChanged: AppSettingsController
-                        .instance.setLiveRoomShortcutRefresh,
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "刷新直播间",
+                      subtitle: "仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutRefresh.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutRefresh,
+                    ),
                   ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "收起/展开聊天区",
-                    subtitle: "仅在直播间且输入框未聚焦时生效",
-                    value: AppSettingsController
-                        .instance.liveRoomShortcutToggleChat.value,
-                    valueMap: AppSettingsController.liveRoomShortcutOptions,
-                    onChanged: AppSettingsController
-                        .instance.setLiveRoomShortcutToggleChat,
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "收起/展开聊天区",
+                      subtitle: "仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutToggleChat.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutToggleChat,
+                    ),
                   ),
-                ),
-              ],
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "调高音量",
+                      subtitle: "每次增加 5%，仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutVolumeUp.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutVolumeUp,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "调低音量",
+                      subtitle: "每次减少 5%，仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutVolumeDown.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutVolumeDown,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

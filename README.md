@@ -54,12 +54,13 @@ Release 资产会在 Windows、Android 和 TV 模拟环境完成基础验证后�
 
 ## 远程同步服务
 
-当前远程同步使用自建 Cloudflare Workers 临时房间服务：
+当前远程同步使用临时房间服务，默认直连自建服务器，并保留 Cloudflare Worker 作为备用：
 
-- 服务状态页：`https://simple-live-sync.3439394104.workers.dev`
-- App 内 WebSocket 地址：`wss://simple-live-sync.3439394104.workers.dev/sync`
+- 默认服务状态页：`https://sync.furry.mo.cn/health`
+- 默认 WebSocket 地址：`wss://sync.furry.mo.cn/sync`
+- Cloudflare 备用地址：`wss://simple-live-sync.3439394104.workers.dev/sync`
 
-普通用户不需要自己配置服务器；创建房间、扫码或输入房间号即可同步。浏览器直接打开 `/sync` 显示 `websocket upgrade required` 是正常的，因为 `/sync` 只给 App 的 WebSocket 使用。
+普通用户不需要自己配置服务器；创建房间、扫码或输入房间号即可同步。自建服务器和 Cloudflare Worker 是两个独立后端，房间状态不共享，两台设备必须选择同一个同步服务。浏览器直接打开 `/sync` 显示 `websocket upgrade required` 是正常的，因为 `/sync` 只给 App 的 WebSocket 使用。
 
 已知限制：
 
@@ -69,14 +70,14 @@ Release 资产会在 Windows、Android 和 TV 模拟环境完成基础验证后�
 - 单条同步消息最大 1 MB。
 - 服务只做临时转发，不保存关注、历史、Cookie、屏蔽词等内容。
 - 这不是账号云同步；不会跨天、跨设备持续自动同步。
-- 如果用户所在网络无法访问 `workers.dev` 或拦截 WebSocket，远程同步可能连接失败，可改用局域网同步、WebDAV，或在设置里填写自建同步服务地址。后续建议绑定自定义域名，减少 `workers.dev` 在部分网络下不可达的问题。
+- 如果默认服务暂时不可用，可在设置里切换到 Cloudflare Worker 备用服务、自定义服务、局域网同步或 WebDAV。使用 Cloudflare Worker 时，部分网络环境仍可能需要代理。
 
 可配置项：
 
-- 主 App：`其他设置 -> 同步服务地址` 可以填写自建 `ws://` 或 `wss://` 地址，留空则使用内置默认服务。
-- 主 App：`其他设置 -> 同步代理地址` 可以填写代理地址，例如 `127.0.0.1:51888` 或 `http://127.0.0.1:51888`；留空会在桌面端自动检测本机 `127.0.0.1:51888`，填写 `direct` 表示强制直连。
+- 主 App 和 TV App：同步服务可选择“自建服务器（默认）”“Cloudflare Worker（备用）”或“自定义地址”。打开选择窗口后会自动执行 WebSocket ping/pong 检测，并在每项右侧显示延迟或不可用状态。
+- 未设置同步代理时，三个同步服务都直接连接；填写代理地址后，自建、Cloudflare 和自定义服务都会统一使用该代理。Cloudflare 备用服务在部分网络下可能需要代理。
+- 主 App：`其他设置 -> 同步代理地址` 可以填写代理地址，例如 `127.0.0.1:51888` 或 `http://127.0.0.1:51888`；留空或填写 `direct` 都表示直连。
 - 代理端口不是固定值，请在自己的代理软件里查看本机 HTTP 代理端口。比如 v2rayN、Clash、Mihomo 等软件一般会在设置或端口页面显示 `HTTP Port` / `Mixed Port`。
-- TV App：设置页“关于”里显示当前同步服务地址；默认使用内置服务。
 
 ## 配置导入
 

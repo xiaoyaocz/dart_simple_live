@@ -183,22 +183,11 @@ void main() {
       expect(KuaishouSite.resolveLiveStatus({'living': 1}), isTrue);
     });
 
-    test('uses playable stream evidence when the flag is stale', () {
+    test('uses stream identity when play URLs are temporarily absent', () {
       expect(
         KuaishouSite.resolveLiveStatus({
           'isLiving': false,
-          'liveStream': {
-            'id': 'stream-id',
-            'playUrls': {
-              'h264': {
-                'adaptationSet': {
-                  'representation': [
-                    {'url': 'https://example.com/live.flv'},
-                  ],
-                },
-              },
-            },
-          },
+          'liveStream': {'id': 'stream-id', 'playUrls': const {}},
         }),
         isTrue,
       );
@@ -212,6 +201,29 @@ void main() {
         }),
         isFalse,
       );
+    });
+
+    test('selects a live entry for the requested room from a playlist', () {
+      final room = KuaishouSite.selectLiveRoomFromPlayList([
+        {
+          'author': {'id': 'target-room'},
+          'isLiving': false,
+          'liveStream': {'id': ''},
+        },
+        {
+          'author': {'id': 'target-room'},
+          'isLiving': false,
+          'liveStream': {'id': 'active-stream'},
+        },
+        {
+          'author': {'id': 'other-room'},
+          'isLiving': true,
+          'liveStream': {'id': 'other-stream'},
+        },
+      ], 'target-room');
+
+      expect(room, isNotNull);
+      expect((room!['liveStream'] as Map)['id'], 'active-stream');
     });
   });
 }

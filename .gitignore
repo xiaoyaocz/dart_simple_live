@@ -5,6 +5,8 @@ simple_live_tv_app/.vscode/settings.json
 # Local workspace metadata
 .codex/
 .agents/
+.uploads/
+.vscode/
 
 # Local release and build artifacts
 release/
@@ -14,6 +16,7 @@ issue_logs/
 experience/
 graphify-out/
 **/android/app/build/
+**/android/.kotlin/
 tools/
 
 # Local scripts

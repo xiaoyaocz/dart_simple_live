@@ -540,7 +540,13 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         if (androidFreeformState.value ||
             (androidInMultiWindowState.value && !androidInPipState.value)) {
           // A system freeform/split window owns its bounds. Only switch the
-          // Flutter page to the player and leave orientation/system bars alone.
+          // Flutter page to the player and leave its system bars alone. Some
+          // OEM freeform windows do honour orientation requests, so let a
+          // landscape stream request landscape instead of leaving it trapped
+          // in the portrait floating window.
+          if (androidFreeformState.value && !isVertical.value) {
+            await setLandscapeOrientation();
+          }
           return;
         }
       }
@@ -1082,10 +1088,28 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     androidInPipState.value = inPip;
     androidInMultiWindowState.value = inMultiWindow;
     androidFreeformState.value = isFreeform;
+    unawaited(_syncAndroidFreeformLandscapeOrientation());
     if (inPip && !wasInPip) {
       _applyPipEnteredState();
     } else if (!inPip && wasInPip) {
       _restorePipExitedState();
+    }
+  }
+
+  /// ColorOS-like system freeform windows are often created using the app's
+  /// default portrait task orientation. Re-apply the active landscape player
+  /// orientation as soon as Android reports the freeform transition.
+  Future<void> _syncAndroidFreeformLandscapeOrientation() async {
+    if (!Platform.isAndroid ||
+        !androidFreeformState.value ||
+        !fullScreenState.value ||
+        isVertical.value) {
+      return;
+    }
+    try {
+      await setLandscapeOrientation();
+    } catch (e) {
+      Log.d("系统自由窗请求横屏失败: $e");
     }
   }
 
@@ -1791,6 +1815,7 @@ class PlayerController extends BaseController
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
       unawaited(refreshAutoPipOnVideoSize());
+      unawaited(_syncAndroidFreeformLandscapeOrientation());
     });
     _heightSubscription = player.stream.height.listen((event) {
       Log.d(
@@ -1808,6 +1833,7 @@ class PlayerController extends BaseController
       isVertical.value =
           (player.state.height ?? 9) > (player.state.width ?? 16);
       unawaited(refreshAutoPipOnVideoSize());
+      unawaited(_syncAndroidFreeformLandscapeOrientation());
     });
 
     // Fix Issue #57: 启动Surface健康检查

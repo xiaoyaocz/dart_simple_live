@@ -16,6 +16,7 @@ Simple Live 会继续保持开源和免费使用。感谢赞助维护、提供�
 - 感谢 @[gtjoe0219](https://github.com/gtjoe0219) 多个`issue`的建议和赞助。
 - 感谢 @[xuanxuan123xuan](https://github.com/xuanxuan123xuan) 在 [ENHANCE 快手直播支持 · Issue #67](https://github.com/June6699/dart_simple_live/issues/67)中提供的快手全套支持，大幅减轻了我的工作量，加快了 [release v1.12.6](https://github.com/June6699/dart_simple_live/releases/tag/v1.12.6) 的开发和发布。其项目在 [xuanxuan123xuan/simple-live-kuaishou: 五平台直播聚合客户端（B站/斗鱼/虎牙/抖音/快手），基于 SimpleLive 维护，完整适配快手直播与弹幕](https://github.com/xuanxuan123xuan/simple-live-kuaishou)。
 - 感谢一位匿名微信用户赞助支持，并协助排查抖音 Cookie 登录问题。
+- 感谢群内多位用户赞助的 sync 域名（一年）。
 
 ## 资源参考
 

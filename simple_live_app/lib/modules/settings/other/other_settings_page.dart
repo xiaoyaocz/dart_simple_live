@@ -114,24 +114,6 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
           SettingsCard(
             child: Column(
               children: [
-                GetBuilder<OtherSettingsController>(
-                  builder: (controller) => SettingsAction(
-                    title: "同步服务",
-                    subtitle: controller.syncServerUrlSubtitle,
-                    value: controller.syncServerUrlLabel,
-                    onTap: controller.editSyncServerUrl,
-                  ),
-                ),
-                AppStyle.divider,
-                GetBuilder<OtherSettingsController>(
-                  builder: (controller) => SettingsAction(
-                    title: "同步代理地址",
-                    subtitle: "留空为直连；填写后所有同步服务统一使用该代理",
-                    value: controller.syncProxyUrl,
-                    onTap: controller.editSyncProxyUrl,
-                  ),
-                ),
-                AppStyle.divider,
                 Obx(
                   () => SettingsMenu(
                     title: "mpv 性能档位",

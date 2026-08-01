@@ -271,12 +271,24 @@ class _DesktopWindowLifecycle with WindowListener {
       }
       final width = bounds.width.clamp(280.0, displayRect.width).toDouble();
       final height = bounds.height.clamp(280.0, displayRect.height).toDouble();
-      final left = bounds.left
-          .clamp(displayRect.left, displayRect.right - width)
-          .toDouble();
-      final top = bounds.top
-          .clamp(displayRect.top, displayRect.bottom - height)
-          .toDouble();
+
+      // Windows DWM may report edge-snapped frames a few pixels outside the
+      // visible work area (commonly around -7/-8). Keep that relative overhang
+      // so restoring an edge-snapped window does not leave an 8px gap.
+      const maxDwmOverhang = 16.0;
+      final minLeft =
+          displayRect.left - (Platform.isWindows ? maxDwmOverhang : 0.0);
+      final maxLeft = displayRect.right -
+          width +
+          (Platform.isWindows ? maxDwmOverhang : 0.0);
+      final minTop =
+          displayRect.top - (Platform.isWindows ? maxDwmOverhang : 0.0);
+      final maxTop = displayRect.bottom -
+          height +
+          (Platform.isWindows ? maxDwmOverhang : 0.0);
+
+      final left = bounds.left.clamp(minLeft, maxLeft).toDouble();
+      final top = bounds.top.clamp(minTop, maxTop).toDouble();
       return Rect.fromLTWH(left, top, width, height);
     }
     return null;

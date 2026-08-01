@@ -156,6 +156,9 @@ mixin PlayerStateMixin on PlayerMixin {
   /// 自动隐藏控制器计时器
   Timer? hideControlsTimer;
 
+  /// 音量滑条浮层正在显示，播放器底层鼠标离开时不能隐藏控制器。
+  bool volumeSliderVisible = false;
+
   /// 自动隐藏鼠标光标计时器
   Timer? hideMouseCursorTimer;
 
@@ -205,6 +208,7 @@ mixin PlayerStateMixin on PlayerMixin {
     showLockEdgeState.value = false;
     hidevolumeTimer?.cancel();
     hidevolumeTimer = null;
+    volumeSliderVisible = false;
     SmartDialog.dismiss(tag: liveRoomVolumeSliderDialogTag);
   }
 
@@ -865,10 +869,26 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
   }
 
-  /// 退出移动端全屏后主动回到竖屏，避免 iOS 保持横屏方向不切回。
+  /// Restore the orientation policy after leaving mobile fullscreen.
+  /// Compact phones return to portrait; tablets and system-managed windows keep
+  /// automatic orientation so landscape layouts are not forced through portrait.
   Future resetPreferredOrientation() async {
     if (Platform.isIOS) {
       await setPortraitOrientation();
+      return;
+    }
+    if (Platform.isAndroid) {
+      final context = Get.context;
+      final shortestSide = context == null
+          ? double.infinity
+          : MediaQuery.maybeOf(context)?.size.shortestSide ?? double.infinity;
+      if (shortestSide < 600 &&
+          !androidFreeformState.value &&
+          !androidInMultiWindowState.value) {
+        await setPortraitOrientation();
+      } else {
+        await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+      }
       return;
     }
     if (await beforeIOS16()) {
@@ -1213,6 +1233,9 @@ mixin PlayerGestureControlMixin
     on PlayerStateMixin, PlayerMixin, PlayerSystemMixin {
   /// 单击显示/隐藏控制器
   void onTap() {
+    if (volumeSliderVisible) {
+      return;
+    }
     if (lockControlsState.value) {
       revealMobileLockControls();
       return;
@@ -1240,6 +1263,9 @@ mixin PlayerGestureControlMixin
     hideMouseCursorTimer?.cancel();
     hideControlsTimer?.cancel();
     showLockEdgeState.value = false;
+    if (volumeSliderVisible) {
+      return;
+    }
     if (lockControlsState.value) {
       return;
     }
@@ -1259,6 +1285,9 @@ mixin PlayerGestureControlMixin
   void onHover(PointerHoverEvent event, BuildContext context) {
     showMouseCursor();
     resetHideMouseCursorTimer();
+    if (volumeSliderVisible) {
+      return;
+    }
     if (lockControlsState.value) {
       final width = context.size?.width ?? 0;
       showLockEdgeState.value = fullScreenState.value &&
@@ -1588,6 +1617,8 @@ class PlayerController extends BaseController
     )) {
       return false;
     }
+    _surfaceRecoveryGraceUntil =
+        DateTime.now().add(_surfaceRecoveryGraceDuration);
     final opening = Future<void>.microtask(() => player.open(media));
     _playbackOpenFuture = opening;
     try {
@@ -1641,8 +1672,19 @@ class PlayerController extends BaseController
   int? _streamErrorGeneration;
   Timer? _streamErrorStablePlaybackTimer;
   Timer? _surfaceHealthCheckTimer;
+  bool _surfaceRecoveryInFlight = false;
+  int _surfaceRecoveryAttempts = 0;
+  int? _surfaceRecoveryLoadGeneration;
+  int? _surfaceRecoveryMediaGeneration;
+  int _surfaceRecoveryToken = 0;
+  DateTime? _lastSurfaceRecoveryAt;
+  DateTime? _surfaceRecoveryGraceUntil;
 
   static const _stablePlaybackDuration = Duration(seconds: 30);
+  static const _surfaceRecoveryCooldown = Duration(seconds: 3);
+  static const _surfaceRecoveryGraceDuration = Duration(seconds: 8);
+  static const _surfaceRecoveryValidationDelay = Duration(milliseconds: 600);
+  static const _maxSurfaceRecoveryAttempts = 3;
 
   void _syncStreamErrorGeneration(int generation) {
     if (_streamErrorGeneration == generation) {
@@ -1672,6 +1714,10 @@ class PlayerController extends BaseController
       if (_streamErrorGeneration == generation) {
         _streamErrorRetryCount = 0;
         _lastStreamErrorTime = null;
+        if (_surfaceRecoveryLoadGeneration == generation) {
+          _surfaceRecoveryAttempts = 0;
+          _lastSurfaceRecoveryAt = null;
+        }
         Log.d("播放器已稳定播放，重置流错误重试计数");
       }
     });
@@ -1707,6 +1753,8 @@ class PlayerController extends BaseController
       final generation = playbackLoadGeneration;
       _syncStreamErrorGeneration(generation);
       if (event) {
+        _surfaceRecoveryGraceUntil =
+            DateTime.now().add(_surfaceRecoveryGraceDuration);
         unawaited(_applyResolvedPlayerVolume());
         WakelockPlus.enable();
         unawaited(_syncBackgroundPlaybackService(true));
@@ -1735,7 +1783,7 @@ class PlayerController extends BaseController
       if (event == null || event <= 0) {
         if (player.state.playing) {
           Log.w("播放器宽度异常: $event (播放中)，可能是Surface失效");
-          _handleInvalidVideoSize();
+          unawaited(_handleInvalidVideoSize());
         }
         return;
       }
@@ -1752,7 +1800,7 @@ class PlayerController extends BaseController
       if (event == null || event <= 0) {
         if (player.state.playing) {
           Log.w("播放器高度异常: $event (播放中)，可能是Surface失效");
-          _handleInvalidVideoSize();
+          unawaited(_handleInvalidVideoSize());
         }
         return;
       }
@@ -1776,6 +1824,14 @@ class PlayerController extends BaseController
     _pipSubscription?.cancel();
     _playingSubscription?.cancel();
     _surfaceHealthCheckTimer?.cancel();
+    _surfaceHealthCheckTimer = null;
+    _surfaceRecoveryToken += 1;
+    _surfaceRecoveryInFlight = false;
+    _surfaceRecoveryAttempts = 0;
+    _surfaceRecoveryLoadGeneration = null;
+    _surfaceRecoveryMediaGeneration = null;
+    _lastSurfaceRecoveryAt = null;
+    _surfaceRecoveryGraceUntil = null;
   }
 
   // Fix Issue #57: 判断是否为流错误（网络/解码错误）
@@ -1907,20 +1963,117 @@ class PlayerController extends BaseController
     await player.setVolume(_resolvedPlayerVolume());
   }
 
-  // Fix Issue #57: 处理异常的视频尺寸（Surface失效）
+  // Fix Issue #57 & #97: 处理异常的视频尺寸（Surface失效）。
+  // Recovery is bounded and serialized so startup events cannot storm the decoder.
   Future<void> _handleInvalidVideoSize() async {
-    Log.w("检测到视频尺寸异常，尝试恢复Surface");
+    final generation = playbackLoadGeneration;
+    final mediaGeneration = playbackMediaGeneration;
+    if (!isPlaybackLoadGenerationCurrent(generation) ||
+        !player.state.playing ||
+        _playerClosing) {
+      return;
+    }
+    if (_streamErrorRetrying && _streamErrorRetryGeneration == generation) {
+      return;
+    }
 
-    // 短暂暂停再恢复，触发Surface重建
+    final now = DateTime.now();
+    if (_surfaceRecoveryGraceUntil != null &&
+        now.isBefore(_surfaceRecoveryGraceUntil!)) {
+      return;
+    }
+    if (_surfaceRecoveryInFlight) {
+      return;
+    }
+    if (_surfaceRecoveryLoadGeneration != generation ||
+        _surfaceRecoveryMediaGeneration != mediaGeneration) {
+      _surfaceRecoveryLoadGeneration = generation;
+      _surfaceRecoveryMediaGeneration = mediaGeneration;
+      _surfaceRecoveryAttempts = 0;
+      _lastSurfaceRecoveryAt = null;
+    }
+    if (_surfaceRecoveryAttempts >= _maxSurfaceRecoveryAttempts) {
+      Log.w("Surface恢复次数已达上限（$_maxSurfaceRecoveryAttempts次），暂不重复重启");
+      return;
+    }
+    if (_lastSurfaceRecoveryAt != null &&
+        now.difference(_lastSurfaceRecoveryAt!) < _surfaceRecoveryCooldown) {
+      return;
+    }
+
+    final media = player.state.playlist.medias.isNotEmpty
+        ? player.state.playlist.medias[player.state.playlist.index]
+        : null;
+    final mediaUri = media?.uri;
+    if (media == null || mediaUri == null || mediaUri.isEmpty) {
+      return;
+    }
+
+    _surfaceRecoveryInFlight = true;
+    _surfaceRecoveryAttempts += 1;
+    _lastSurfaceRecoveryAt = now;
+    final recoveryToken = ++_surfaceRecoveryToken;
+    Log.w(
+      "检测到视频尺寸异常，尝试恢复Surface "
+      "($_surfaceRecoveryAttempts/$_maxSurfaceRecoveryAttempts)",
+    );
+
     try {
-      if (player.state.playing && !_playerClosing) {
-        await player.pause();
-        await Future.delayed(const Duration(milliseconds: 300));
-        await player.play();
+      await player.pause();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (recoveryToken != _surfaceRecoveryToken ||
+          !isPlaybackLoadGenerationCurrent(generation) ||
+          mediaGeneration != playbackMediaGeneration ||
+          _playerClosing) {
+        return;
+      }
+      await player.play();
+      await Future.delayed(_surfaceRecoveryValidationDelay);
+      if (recoveryToken != _surfaceRecoveryToken ||
+          !isPlaybackLoadGenerationCurrent(generation) ||
+          mediaGeneration != playbackMediaGeneration ||
+          _playerClosing) {
+        return;
+      }
+      if (!_hasInvalidVideoSize() || !player.state.playing) {
+        return;
+      }
+
+      final currentMedia = player.state.playlist.medias.isNotEmpty
+          ? player.state.playlist.medias[player.state.playlist.index]
+          : null;
+      if (currentMedia?.uri != mediaUri) {
+        return;
+      }
+      Log.w("Surface恢复失败，重开当前媒体");
+      final reopened = await openPlaybackMedia(
+        currentMedia!,
+        loadGeneration: generation,
+        mediaGeneration: mediaGeneration,
+        isStillOwner: () {
+          final activeMedia = player.state.playlist.medias.isNotEmpty
+              ? player.state.playlist.medias[player.state.playlist.index]
+              : null;
+          return activeMedia?.uri == mediaUri;
+        },
+      );
+      if (reopened) {
+        _surfaceRecoveryGraceUntil =
+            DateTime.now().add(_surfaceRecoveryGraceDuration);
       }
     } catch (e, stackTrace) {
       Log.e("恢复Surface失败: $e", stackTrace);
+    } finally {
+      if (recoveryToken == _surfaceRecoveryToken) {
+        _surfaceRecoveryInFlight = false;
+      }
     }
+  }
+
+  bool _hasInvalidVideoSize() {
+    final width = player.state.width;
+    final height = player.state.height;
+    return width == null || width <= 0 || height == null || height <= 0;
   }
 
   // Fix Issue #57: Surface健康检查（每3秒检查一次）
@@ -1939,13 +2092,12 @@ class PlayerController extends BaseController
         }
 
         // 检测：播放中但尺寸为null = Surface异常
-        if (player.state.playing &&
-            (player.state.width == null || player.state.height == null)) {
+        if (player.state.playing && _hasInvalidVideoSize()) {
           Log.w(
             "Surface健康检查失败: playing=${player.state.playing} "
             "width=${player.state.width} height=${player.state.height}",
           );
-          _handleInvalidVideoSize();
+          unawaited(_handleInvalidVideoSize());
         }
       },
     );

@@ -52,7 +52,7 @@ class SignalRService {
     kCloudflareServerOption,
     kCustomServerOption,
   ];
-  static const String kDefaultLocalProxy = "127.0.0.1:51888";
+  static const String kDefaultLocalProxy = "51888";
   static const String kDirectProxyValue = "direct";
 
   SignalRConnectionState state = SignalRConnectionState.connecting;
@@ -189,26 +189,27 @@ class SignalRService {
   }
 
   static String get configuredProxyUrl {
-    return LocalStorageService.instance
+    final stored = LocalStorageService.instance
         .getValue(LocalStorageService.kSyncProxyUrl, "")
-        .trim();
+        .toString();
+    return _normalizeProxyPort(stored) ?? "";
   }
 
   static String get proxyDisplayName {
     final value = configuredProxyUrl;
     if (value.isEmpty) {
-      return "直连（未设置代理）";
+      return "直连";
     }
     if (value.toLowerCase() == kDirectProxyValue) {
       return "直连";
     }
-    return value;
+    return "本地代理端口 $value";
   }
 
   static Future<void> setConfiguredProxyUrl(String value) {
     return LocalStorageService.instance.setValue(
       LocalStorageService.kSyncProxyUrl,
-      value.trim(),
+      _normalizeProxyPort(value) ?? "",
     );
   }
 
@@ -217,7 +218,8 @@ class SignalRService {
     if (text.isEmpty || text.toLowerCase() == kDirectProxyValue) {
       return true;
     }
-    return _normalizeProxyAddress(text) != null;
+    final port = int.tryParse(text);
+    return port != null && port >= 1 && port <= 65535;
   }
 
   Future<void> connect() async {
@@ -510,22 +512,31 @@ class SignalRService {
   }
 
   static Future<String?> _resolveProxyAddress() async {
-    final configured = configuredProxyUrl;
-    if (configured.isEmpty || configured.toLowerCase() == kDirectProxyValue) {
+    final port = int.tryParse(configuredProxyUrl);
+    if (port == null) {
       return null;
     }
-    return _normalizeProxyAddress(configured);
+    return "127.0.0.1:$port";
   }
 
-  static String? _normalizeProxyAddress(String value) {
+  static String? _normalizeProxyPort(String value) {
     var text = value.trim();
-    if (text.isEmpty) {
+    if (text.isEmpty || text.toLowerCase() == kDirectProxyValue) {
       return null;
     }
+    final directPort = int.tryParse(text);
+    if (directPort != null && directPort >= 1 && directPort <= 65535) {
+      return directPort.toString();
+    }
+
+    // Migrate the old host:port / URL format to the new local-port-only form.
     if (!text.contains("://")) {
       final parts = text.split(":");
-      if (parts.length == 2 && int.tryParse(parts[1]) != null) {
-        return text;
+      if (parts.length == 2) {
+        final port = int.tryParse(parts[1]);
+        if (port != null && port >= 1 && port <= 65535) {
+          return port.toString();
+        }
       }
       return null;
     }
@@ -536,7 +547,7 @@ class SignalRService {
         !uri.hasPort) {
       return null;
     }
-    return "${uri.host}:${uri.port}";
+    return uri.port.toString();
   }
 
   Map<String, String> _clientInfo() => {

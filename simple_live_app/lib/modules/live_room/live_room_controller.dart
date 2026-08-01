@@ -159,6 +159,7 @@ class LiveRoomController extends PlayerController
   var countdown = 60.obs;
 
   Timer? autoExitTimer;
+  Timer? _autoExitDeadlineTimer;
   final AutoExitSession _autoExitSession = AutoExitSession();
   final autoExitSource = AutoExitSource.none.obs;
   bool _autoExitCompleting = false;
@@ -1098,7 +1099,7 @@ class LiveRoomController extends PlayerController
   /// 初始化自动关闭计时器
   void initAutoExit() {
     final settings = AppSettingsController.instance;
-    autoExitTimer?.cancel();
+    _cancelAutoExitTimers();
     _autoExitSession.stop();
     autoExitSource.value = AutoExitSource.none;
     _autoExitCompleting = false;
@@ -1114,6 +1115,7 @@ class LiveRoomController extends PlayerController
       minutes: autoExitMinutes.value,
     );
     autoExitSource.value = AutoExitSource.global;
+    Log.i("定时关闭已启用，将在${autoExitMinutes.value}分钟后关闭");
     _startAutoExitTicker();
   }
 
@@ -1127,17 +1129,50 @@ class LiveRoomController extends PlayerController
       minutes: autoExitMinutes.value,
     );
     autoExitSource.value = AutoExitSource.roomOverride;
+    Log.i("定时关闭（房间覆盖）已设置，将在${autoExitMinutes.value}分钟后关闭");
     _startAutoExitTicker();
   }
 
-  void _startAutoExitTicker() {
+  void _cancelAutoExitTimers() {
     autoExitTimer?.cancel();
+    autoExitTimer = null;
+    _autoExitDeadlineTimer?.cancel();
+    _autoExitDeadlineTimer = null;
+  }
+
+  void _scheduleAutoExitDeadline() {
+    _autoExitDeadlineTimer?.cancel();
+    _autoExitDeadlineTimer = null;
+    if (!autoExitEnable.value || !_autoExitSession.enabled) {
+      return;
+    }
+    final deadline = _autoExitSession.deadline;
+    if (deadline == null) {
+      return;
+    }
+    final delay =
+        deadline.difference(DateTime.now()) + const Duration(milliseconds: 80);
+    if (delay <= Duration.zero) {
+      unawaited(_completeAutoExit());
+      return;
+    }
+    _autoExitDeadlineTimer = Timer(delay, () {
+      _autoExitDeadlineTimer = null;
+      _refreshAutoExitCountdown();
+    });
+  }
+
+  void _startAutoExitTicker() {
+    _cancelAutoExitTimers();
     _autoExitCompleting = false;
     _refreshAutoExitCountdown();
+    // Keep a 1s UI tick for the countdown label, and also schedule a one-shot
+    // timer to the absolute deadline so a delayed periodic tick cannot miss it.
     autoExitTimer = Timer.periodic(
       const Duration(seconds: 1),
       (_) => _refreshAutoExitCountdown(),
     );
+    _scheduleAutoExitDeadline();
   }
 
   void _refreshAutoExitCountdown() {
@@ -1147,9 +1182,12 @@ class LiveRoomController extends PlayerController
     final now = DateTime.now();
     final remaining = _autoExitSession.remaining(now);
     countdown.value = remaining == Duration.zero ? 0 : remaining.inSeconds + 1;
+
     if (_autoExitSession.isDue(now)) {
       unawaited(_completeAutoExit());
+      return;
     }
+    _scheduleAutoExitDeadline();
   }
 
   Future<void> _completeAutoExit() async {
@@ -1157,18 +1195,20 @@ class LiveRoomController extends PlayerController
       return;
     }
     _autoExitCompleting = true;
-    autoExitTimer?.cancel();
+    _cancelAutoExitTimers();
     _autoExitSession.stop();
     autoExitSource.value = AutoExitSource.none;
     autoExitEnable.value = false;
     countdown.value = 0;
     Log.i(
         "定时关闭到点：platform=${Platform.operatingSystem} room=${site.id}/$roomId");
+    Log.i("定时关闭开始执行，准备关闭播放器和服务");
     await _runAutoExitStep("取消自动画中画", cancelAutoPipOnLeave);
     await _runAutoExitStep("停止后台播放服务", stopBackgroundPlaybackService);
     await _runAutoExitStep("停止弹幕", liveDanmaku.stop);
     await _runAutoExitStep("停止播放器", player.stop);
     await _runAutoExitStep("释放唤醒锁", WakelockPlus.disable);
+    Log.i("定时关闭准备退出应用");
     await _finishAutoExit();
   }
 
@@ -1227,7 +1267,7 @@ class LiveRoomController extends PlayerController
 
   void stopAutoExit() {
     autoExitEnable.value = false;
-    autoExitTimer?.cancel();
+    _cancelAutoExitTimers();
     _autoExitSession.stop();
     autoExitSource.value = AutoExitSource.none;
     _autoExitCompleting = false;
@@ -1294,7 +1334,7 @@ class LiveRoomController extends PlayerController
     liveRoomFollowDialogScrollController.dispose();
     liveRoomHistoryScrollController.dispose();
     liveRoomRecommendationScrollController.dispose();
-    autoExitTimer?.cancel();
+    _cancelAutoExitTimers();
     _autoExitSession.stop();
     _superChatRefreshTimer?.cancel();
     _liveEventFlowTimer?.cancel();
@@ -2181,6 +2221,7 @@ class LiveRoomController extends PlayerController
     hidevolumeTimer = Timer(delay, () {
       hidevolumeTimer = null;
       _volumeSliderPointerEntered = false;
+      volumeSliderVisible = false;
       SmartDialog.dismiss(tag: volumeSliderDialogTag);
     });
   }
@@ -2189,7 +2230,13 @@ class LiveRoomController extends PlayerController
     BuildContext targetContext, {
     bool keepAlive = false,
   }) {
+    // The attach dialog uses a full-screen mask. Keep the player controls from
+    // treating that mask transition as a pointer exit and dismissing the
+    // slider immediately after it opens.
+    hideControlsTimer?.cancel();
+    hideControlsTimer = null;
     _cancelVolumeSliderDismiss();
+    volumeSliderVisible = true;
     _volumeSliderPointerEntered = false;
     _scheduleVolumeSliderDismiss(
       keepAlive ? const Duration(seconds: 6) : const Duration(seconds: 4),
@@ -2199,6 +2246,9 @@ class LiveRoomController extends PlayerController
       alignment: Alignment.topCenter,
       displayTime: null,
       maskColor: const Color(0x00000000),
+      clickMaskDismiss: false,
+      usePenetrate: true,
+      useAnimation: false,
       tag: volumeSliderDialogTag,
       keepSingle: true,
       builder: (context) {
@@ -3298,7 +3348,7 @@ ${errorStackTrace ?? ""}''');
       windowManager.removeListener(this);
     }
     scrollController.removeListener(scrollListener);
-    autoExitTimer?.cancel();
+    _cancelAutoExitTimers();
     _positionSubscription?.cancel();
 
     liveDanmaku.stop();

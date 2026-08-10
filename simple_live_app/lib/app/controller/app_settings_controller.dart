@@ -116,6 +116,10 @@ class AppSettingsController extends GetxController {
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
+    iosOriginalQualityPowerSaving.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kIosOriginalQualityPowerSaving,
+      true,
+    );
     chatTextSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextSize, 14.0);
 
@@ -594,6 +598,15 @@ class AppSettingsController extends GetxController {
     hardwareDecode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kHardwareDecode, e);
+  }
+
+  var iosOriginalQualityPowerSaving = true.obs;
+  void setIosOriginalQualityPowerSaving(bool e) {
+    iosOriginalQualityPowerSaving.value = e;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kIosOriginalQualityPowerSaving,
+      e,
+    );
   }
 
   var chatTextSize = 14.0.obs;

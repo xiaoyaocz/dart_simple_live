@@ -11,6 +11,7 @@ import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/bulk_data_import_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
+import 'package:simple_live_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_app/services/profile_backup_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_app/widgets/sync_progress_dialog.dart';
@@ -242,6 +243,29 @@ class SyncDeviceController extends BaseController {
     } catch (e) {
       SmartDialog.showToast("同步失败：${exceptionToString(e)}");
       Log.e("同步抖音账号失败：$e", StackTrace.current);
+    } finally {
+      SyncProgressDialog.dismiss();
+    }
+  }
+
+  void syncKuaishouAccount() async {
+    try {
+      final account = KuaishouAccountService.instance;
+      if (!account.hasCookie.value) {
+        SmartDialog.showToast("未配置快手 Cookie");
+        return;
+      }
+      SyncProgressDialog.show(const SyncProgress(stage: "同步快手账号"));
+      await request.syncKuaishouAccount(
+        client,
+        account.cookie,
+        account.kww,
+        account.cookieExpiresAtMs.value,
+      );
+      SmartDialog.showToast("已同步快手账号");
+    } catch (e) {
+      SmartDialog.showToast("同步失败：${exceptionToString(e)}");
+      Log.e("同步快手账号失败：$e", StackTrace.current);
     } finally {
       SyncProgressDialog.dismiss();
     }

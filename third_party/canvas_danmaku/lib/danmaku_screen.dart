@@ -72,6 +72,13 @@ class _DanmakuScreenState extends State<DanmakuScreen>
 
   /// 运行状态
   bool _running = true;
+  bool _cleanupLoopRunning = false;
+
+  bool get _hasDanmakuItems =>
+      _scrollDanmakuItems.isNotEmpty ||
+      _topDanmakuItems.isNotEmpty ||
+      _bottomDanmakuItems.isNotEmpty ||
+      _specialDanmakuItems.isNotEmpty;
 
   final Map<String, ui.Image> _emojiImageCache = {};
   final Set<String> _loadingEmojiImageUrls = {};
@@ -79,8 +86,6 @@ class _DanmakuScreenState extends State<DanmakuScreen>
   @override
   void initState() {
     super.initState();
-    // 计时器初始化
-    _startTick();
     _option = widget.option;
     _controller = DanmakuController(
       onAddDanmaku: addDanmaku,
@@ -95,7 +100,7 @@ class _DanmakuScreenState extends State<DanmakuScreen>
     _animationController = AnimationController(
       vsync: this,
       duration: Duration(seconds: _option.duration),
-    )..repeat();
+    );
 
     _staticAnimationController = AnimationController(
       vsync: this,
@@ -354,9 +359,7 @@ class _DanmakuScreenState extends State<DanmakuScreen>
       case DanmakuItemType.top:
       case DanmakuItemType.bottom:
         // 重绘静态弹幕
-        setState(() {
-          _staticAnimationController.value = 0;
-        });
+        setState(() {});
         break;
       case DanmakuItemType.scroll:
       case DanmakuItemType.special:
@@ -366,6 +369,9 @@ class _DanmakuScreenState extends State<DanmakuScreen>
           _animationController.repeat();
         }
         break;
+    }
+    if (_hasDanmakuItems) {
+      _startTick();
     }
   }
 
@@ -394,11 +400,11 @@ class _DanmakuScreenState extends State<DanmakuScreen>
         _running = true;
         _controller.running = true;
       });
-      if (!_animationController.isAnimating) {
+      if (!_animationController.isAnimating &&
+          (_scrollDanmakuItems.isNotEmpty || _specialDanmakuItems.isNotEmpty)) {
         _animationController.repeat();
-        // 重启计时器
-        _startTick();
       }
+      _startTick();
     }
   }
 
@@ -465,7 +471,8 @@ class _DanmakuScreenState extends State<DanmakuScreen>
         }
       }
     }
-    if (needRestart) {
+    if (needRestart &&
+        (_scrollDanmakuItems.isNotEmpty || _specialDanmakuItems.isNotEmpty)) {
       _animationController.repeat();
     }
     setState(() {});
@@ -499,6 +506,7 @@ class _DanmakuScreenState extends State<DanmakuScreen>
       _specialDanmakuItems.clear();
     });
     _animationController.stop();
+    _stopwatch.stop();
   }
 
   /// 确定滚动弹幕是否可以添加
@@ -544,47 +552,54 @@ class _DanmakuScreenState extends State<DanmakuScreen>
 
   // 基于Stopwatch的计时器同步
   void _startTick() async {
-    // _stopwatch.reset();
+    if (_cleanupLoopRunning || !_running || !_hasDanmakuItems) {
+      return;
+    }
+    _cleanupLoopRunning = true;
     _stopwatch.start();
 
     final staticDuration = _option.duration * 1000;
 
-    while (_running && mounted) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      // 移除屏幕外滚动弹幕
-      _scrollDanmakuItems.removeWhere(
-        (item) => item.xPosition + item.width < 0,
-      );
-      // 移除顶部弹幕
-      _topDanmakuItems.removeWhere(
-        (item) => (_tick - item.creationTime) >= staticDuration,
-      );
-      // 移除底部弹幕
-      _bottomDanmakuItems.removeWhere(
-        (item) => (_tick - item.creationTime) >= staticDuration,
-      );
-      // 移除高级弹幕
-      _specialDanmakuItems.removeWhere(
-        (item) =>
-            (_tick - item.creationTime) >=
-            (item.content as SpecialDanmakuContentItem).duration,
-      );
-      // 暂停动画
-      if (_scrollDanmakuItems.isEmpty &&
-          _specialDanmakuItems.isEmpty &&
-          _animationController.isAnimating) {
-        _animationController.stop();
+    try {
+      while (_running && mounted && _hasDanmakuItems) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (!_running || !mounted) {
+          break;
+        }
+        _scrollDanmakuItems.removeWhere(
+          (item) => item.xPosition + item.width < 0,
+        );
+        final previousStaticCount =
+            _topDanmakuItems.length + _bottomDanmakuItems.length;
+        _topDanmakuItems.removeWhere(
+          (item) => (_tick - item.creationTime) >= staticDuration,
+        );
+        _bottomDanmakuItems.removeWhere(
+          (item) => (_tick - item.creationTime) >= staticDuration,
+        );
+        _specialDanmakuItems.removeWhere(
+          (item) =>
+              (_tick - item.creationTime) >=
+              (item.content as SpecialDanmakuContentItem).duration,
+        );
+        if (_scrollDanmakuItems.isEmpty &&
+            _specialDanmakuItems.isEmpty &&
+            _animationController.isAnimating) {
+          _animationController.stop();
+        }
+        final staticCount =
+            _topDanmakuItems.length + _bottomDanmakuItems.length;
+        if (staticCount != previousStaticCount && mounted) {
+          setState(() {});
+        }
       }
-
-      /// 重绘静态弹幕
-      if (mounted) {
-        setState(() {
-          _staticAnimationController.value = 0;
-        });
+    } finally {
+      _cleanupLoopRunning = false;
+      _stopwatch.stop();
+      if (_running && mounted && _hasDanmakuItems) {
+        _startTick();
       }
     }
-
-    _stopwatch.stop();
   }
 
   @override

@@ -40,14 +40,26 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               children: [
                 Obx(
                   () => SettingsSwitch(
-                    title: "硬件解码",
+                    title: Platform.isIOS ? "硬件加速" : "硬件解码",
                     value: controller.hardwareDecode.value,
-                    subtitle: "播放失败可尝试关闭此选项",
+                    subtitle: Platform.isIOS
+                        ? "建议保持开启；关闭后更耗电，仅在排查黑屏时临时使用"
+                        : "播放失败可尝试关闭此选项",
                     onChanged: (e) {
                       controller.setHardwareDecode(e);
                     },
                   ),
                 ),
+                if (Platform.isIOS) AppStyle.divider,
+                if (Platform.isIOS)
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "原画省电优化",
+                      subtitle: "限制渲染纹理不超过屏幕实际像素，不降低直播源清晰度；异常时可关闭",
+                      value: controller.iosOriginalQualityPowerSaving.value,
+                      onChanged: controller.setIosOriginalQualityPowerSaving,
+                    ),
+                  ),
                 if (Platform.isAndroid) AppStyle.divider,
                 Obx(
                   () => Visibility(

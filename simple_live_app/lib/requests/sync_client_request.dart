@@ -154,4 +154,27 @@ class SyncClientRequest {
       throw data["message"];
     }
   }
+
+  Future<bool> syncKuaishouAccount(
+    SyncClinet client,
+    String cookie,
+    String kww,
+    int cookieExpiresAt,
+  ) async {
+    var url = "http://${client.address}:${client.port}/sync/account/kuaishou";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: {
+        "cookie": cookie,
+        "kww": kww,
+        "cookieExpiresAt": cookieExpiresAt,
+      },
+    );
+
+    if (data["status"]) {
+      return true;
+    } else {
+      throw data["message"];
+    }
+  }
 }

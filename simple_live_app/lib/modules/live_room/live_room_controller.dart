@@ -3206,6 +3206,12 @@ ${errorStackTrace ?? ""}''');
   }
 
   @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    refreshIosVideoOutputLimit(force: true);
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 

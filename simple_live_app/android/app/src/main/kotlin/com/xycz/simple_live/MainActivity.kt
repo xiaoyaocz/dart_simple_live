@@ -136,11 +136,11 @@ class MainActivity : FlutterActivity() {
         return mapOf(
             "inPip" to inPip,
             "inMultiWindow" to inMultiWindow,
-            "isFreeform" to isFreeformWindow(inPip, inMultiWindow),
+            "isFreeform" to isFreeformWindow(inPip),
         )
     }
 
-    private fun isFreeformWindow(inPip: Boolean, inMultiWindow: Boolean): Boolean {
+    private fun isFreeformWindow(inPip: Boolean): Boolean {
         if (inPip) {
             return false
         }
@@ -158,19 +158,23 @@ class MainActivity : FlutterActivity() {
         } catch (_: Throwable) {
             null
         }
-        if (reflectedMode != null) {
+        if (reflectedMode == WINDOWING_MODE_FREEFORM) {
             // WindowConfiguration.WINDOWING_MODE_FREEFORM is 5.
-            return reflectedMode == WINDOWING_MODE_FREEFORM
+            return true
         }
 
-        if (!inMultiWindow) {
-            return false
-        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val current = windowManager.currentWindowMetrics.bounds
             val maximum = windowManager.maximumWindowMetrics.bounds
-            return current.width() < maximum.width() &&
-                current.height() < maximum.height()
+            // Some OEM "small window" implementations do not expose the
+            // standard freeform mode (and occasionally do not set
+            // isInMultiWindowMode), but their task is constrained on both
+            // axes. Keep the threshold below normal system-bar/cutout insets
+            // while recognising a genuinely floating task.
+            val constrainedOnBothAxes =
+                current.width() * 100 < maximum.width() * 95 &&
+                    current.height() * 100 < maximum.height() * 95
+            return constrainedOnBothAxes
         }
         return false
     }

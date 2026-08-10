@@ -116,8 +116,10 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
               children: [
                 Obx(
                   () => SettingsMenu(
-                    title: "mpv 性能档位",
-                    subtitle: "流畅适合核显/低功耗，均衡为默认，画质适合高性能显卡",
+                    title: Platform.isIOS ? "mpv 性能档位（桌面端）" : "mpv 性能档位",
+                    subtitle: Platform.isIOS
+                        ? "iOS 仅使用其中的自动硬解设置，不影响画质与功耗"
+                        : "流畅适合核显/低功耗，均衡为默认，画质适合高性能显卡",
                     value: AppSettingsController.instance.mpvProfile.value,
                     valueMap: MpvOptionsService.profileLabels,
                     onChanged: (e) {

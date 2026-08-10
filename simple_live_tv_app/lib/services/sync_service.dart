@@ -16,6 +16,7 @@ import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/services/bilibili_account_service.dart';
 import 'package:simple_live_tv_app/services/bulk_data_import_service.dart';
 import 'package:simple_live_tv_app/services/douyin_account_service.dart';
+import 'package:simple_live_tv_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_tv_app/widgets/sync_progress_dialog.dart';
 import 'package:udp/udp.dart';
 import 'package:uuid/uuid.dart';
@@ -166,7 +167,8 @@ class SyncService extends GetxService {
         ..post('/sync/history', _syncHistoryRequest)
         ..post('/sync/blocked_word', _syncBlockedWordRequest)
         ..post('/sync/account/bilibili', _syncBiliAccountRequest)
-        ..post('/sync/account/douyin', _syncDouyinAccountRequest);
+        ..post('/sync/account/douyin', _syncDouyinAccountRequest)
+        ..post('/sync/account/kuaishou', _syncKuaishouAccountRequest);
 
       server = await shelf_io.serve(
         serverRouter,
@@ -468,6 +470,35 @@ class SyncService extends GetxService {
         'status': false,
         'message': e.toString(),
       });
+    }
+  }
+
+  Future<shelf.Response> _syncKuaishouAccountRequest(
+    shelf.Request request,
+  ) async {
+    try {
+      final body = await request.readAsString();
+      final jsonBody = json.decode(body);
+      if (jsonBody is! Map) {
+        throw const FormatException("账号数据格式不是对象");
+      }
+      final cookie = jsonBody['cookie']?.toString() ?? '';
+      if (cookie.isEmpty) {
+        throw const FormatException("账号 Cookie 为空");
+      }
+      final kww = jsonBody['kww']?.toString() ?? '';
+      final expiresAtMs = (jsonBody['cookieExpiresAt'] as num?)?.toInt() ?? 0;
+      KuaishouAccountService.instance.setCookie(
+        cookie,
+        kww: kww.isEmpty ? null : kww,
+        expiresAt: expiresAtMs > 0
+            ? DateTime.fromMillisecondsSinceEpoch(expiresAtMs)
+            : null,
+      );
+      SmartDialog.showToast('已同步快手账号');
+      return toJsonResponse({'status': true, 'message': 'success'});
+    } catch (e) {
+      return toJsonResponse({'status': false, 'message': e.toString()});
     }
   }
 

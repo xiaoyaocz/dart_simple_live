@@ -13,6 +13,7 @@ import 'package:simple_live_tv_app/modules/settings/follow_update_interval_optio
 import 'package:simple_live_tv_app/services/bilibili_account_service.dart';
 import 'package:simple_live_tv_app/services/douyin_account_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
+import 'package:simple_live_tv_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_tv_app/services/mpv_options_service.dart';
 import 'package:simple_live_tv_app/services/signalr_service.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
@@ -286,7 +287,7 @@ class SettingsPage extends GetView<SettingsController> {
       padding: AppStyle.edgeInsetsA48,
       children: [
         Text(
-          "大量关注时，自动刷新会等待上一轮完成；可在关注页使用分页刷新。",
+          "关注刷新分为两种：定时刷新关注状态，以及进入关注页时立即刷新；两者可以分别开关。大量关注时，刷新会等待上一轮完成。",
           style: AppStyle.subTextStyleWhite,
         ),
         AppStyle.vGap24,
@@ -295,7 +296,7 @@ class SettingsPage extends GetView<SettingsController> {
             foucsNode: controller.autoUpdateFollowEnableFocusNode,
             autofocus:
                 controller.autoUpdateFollowEnableFocusNode.isFoucsed.value,
-            title: "自动更新关注",
+            title: "定时刷新关注状态",
             items: const {
               0: "关",
               1: "开",
@@ -368,7 +369,7 @@ class SettingsPage extends GetView<SettingsController> {
           focusNode: controller.autoUpdateFollowDurationFocusNode,
           autofocus:
               controller.autoUpdateFollowDurationFocusNode.isFoucsed.value,
-          title: "自动更新间隔",
+          title: "定时刷新间隔",
           subtitle: _formatFollowUpdateDuration(
             AppSettingsController.instance.autoUpdateFollowDuration.value,
           ),
@@ -387,7 +388,7 @@ class SettingsPage extends GetView<SettingsController> {
       return SettingsItemWidget(
         foucsNode: controller.autoUpdateFollowDurationFocusNode,
         autofocus: controller.autoUpdateFollowDurationFocusNode.isFoucsed.value,
-        title: "自动更新间隔",
+        title: "定时刷新间隔",
         items: FollowUpdateIntervalOptions.presetLabels,
         value: value,
         onChanged: (e) {
@@ -839,7 +840,23 @@ class SettingsPage extends GetView<SettingsController> {
             ),
             onTap: controller.douyinTap,
           ),
-        )
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => HighlightListTile(
+            focusNode: AppFocusNode(),
+            title: "快手账号",
+            subtitle: KuaishouAccountService.instance.hasCookie.value
+                ? "已配置 Cookie，可用于快手搜索和弹幕"
+                : "未配置 Cookie，部分搜索和弹幕可能受限",
+            leading: Image.asset(
+              "assets/images/kuaishou.png",
+              width: 64.w,
+              height: 64.w,
+            ),
+            onTap: controller.kuaishouTap,
+          ),
+        ),
       ],
     );
   }

@@ -51,6 +51,8 @@ Release 资产会在 Windows、Android 和 TV 模拟环境完成基础验证后�
 - Windows `zip`
 - Linux `zip`
 - Linux `deb`
+- Mac `dmg`
+- iOS `ipa`
 
 ## 远程同步服务
 
@@ -58,6 +60,7 @@ Release 资产会在 Windows、Android 和 TV 模拟环境完成基础验证后�
 
 - 默认服务状态页：`https://sync.furry.mo.cn/health`
 - 默认 WebSocket 地址：`wss://sync.furry.mo.cn/sync`
+  - 时神时鬼的，由于服务器老是爆炸，所以这个地址有时候不可用
 - Cloudflare 备用地址：`wss://simple-live-sync.3439394104.workers.dev/sync`
 
 普通用户不需要自己配置服务器；创建房间、扫码或输入房间号即可同步。自建服务器和 Cloudflare Worker 是两个独立后端，房间状态不共享，两台设备必须选择同一个同步服务。浏览器直接打开 `/sync` 显示 `websocket upgrade required` 是正常的，因为 `/sync` 只给 App 的 WebSocket 使用。

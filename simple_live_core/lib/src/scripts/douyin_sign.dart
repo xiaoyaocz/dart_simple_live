@@ -10649,31 +10649,55 @@ function getMSSDKSignature(msStub, userAgent) {
 
   static const String defaultUserAgent = DouyinSite.kDefaultUserAgent;
   static String getAbogusUrl(String url, String userAgent) {
+    return getAbogusUrlWithMsToken(url, userAgent);
+  }
+
+  static String getAbogusUrlWithMsToken(
+    String url,
+    String userAgent, {
+    String? msToken,
+  }) {
     JsRuntime flutterJs = JsRuntime(
       memoryLimit: 4 * 1024 * 1024,
       maxStackSize: 64 * 1024,
     );
-    final msToken = generateMsToken(107);
-    var params = ('$url&msToken=$msToken').split('?')[1];
-    var query = params.contains("?") ? params.split("?")[1] : params;
+    final uri = Uri.parse(url);
+    final queryParameters = Map<String, String>.from(uri.queryParameters);
+    final effectiveMsToken = msToken?.trim().isNotEmpty == true
+        ? msToken!.trim()
+        : generateMsToken(107);
+    queryParameters["msToken"] = effectiveMsToken;
+    queryParameters.remove("a_bogus");
+    final unsignedUrl = uri
+        .replace(queryParameters: queryParameters)
+        .toString();
+    final query = unsignedUrl.split('?').length > 1
+        ? unsignedUrl.split('?').sublist(1).join('?')
+        : '';
     var jsCode = kABogus;
     flutterJs.eval(jsCode);
     // 执行getABogus函数
     var aBogus = flutterJs.eval("getABogus('$query', '$userAgent')");
     flutterJs.dispose();
-    var newUrl =
-        '$url&msToken=${Uri.encodeComponent(msToken)}&a_bogus=${Uri.encodeComponent(aBogus)}';
+    final signedUri = Uri.parse(unsignedUrl).replace(
+      queryParameters: {...queryParameters, "a_bogus": aBogus.toString()},
+    );
+    var newUrl = signedUri.toString();
     return newUrl;
   }
 
   static String getSignature(String roomId, String uniqueId) {
+    return getSignatureForParams(getDefaultSignatureParams(roomId, uniqueId));
+  }
+
+  static String getSignatureForParams(Map<String, dynamic> params) {
     JsRuntime flutterJs = JsRuntime(
       memoryLimit: 4 * 1024 * 1024,
       maxStackSize: 128 * 1024,
     );
 
     flutterJs.eval(kWebMsSDK);
-    var msStub = getMsStub(roomId, uniqueId);
+    var msStub = getMsStubFromParams(params);
     var signature = flutterJs.eval(
       "getMSSDKSignature('$msStub','$defaultUserAgent')",
     );
@@ -10688,7 +10712,14 @@ function getMSSDKSignature(msStub, userAgent) {
   }
 
   static String getMsStub(String roomId, String uniqueId) {
-    final params = {
+    return getMsStubFromParams(getDefaultSignatureParams(roomId, uniqueId));
+  }
+
+  static Map<String, dynamic> getDefaultSignatureParams(
+    String roomId,
+    String uniqueId,
+  ) {
+    return {
       "live_id": "1",
       "aid": "6383",
       "version_code": 180800,
@@ -10703,6 +10734,9 @@ function getMSSDKSignature(msStub, userAgent) {
       "ac": "",
       "identity": "audience",
     };
+  }
+
+  static String getMsStubFromParams(Map<String, dynamic> params) {
     final sigParams = params.entries
         .map((e) => "${e.key}=${e.value}")
         .join(',');

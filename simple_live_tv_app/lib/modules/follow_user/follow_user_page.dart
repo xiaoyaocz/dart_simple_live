@@ -278,7 +278,7 @@ class _FollowUserPageState extends State<FollowUserPage> {
     final labels = <String>[
       "样式：${_displayStyleLabel(settings.followDisplayStyle.value)}",
       if (settings.followOnlyLive.value) "仅显示开播",
-      if (settings.followRefreshOnEnter.value) "进页自动刷新",
+      if (settings.followRefreshOnEnter.value) "进页刷新",
       if (FollowUserService.instance.searchKeyword.value.isNotEmpty)
         "搜索：${FollowUserService.instance.searchKeyword.value}",
     ];
@@ -411,25 +411,25 @@ class _FollowUserPageState extends State<FollowUserPage> {
             ),
             AppStyle.vGap32,
             Text(
-              "自动刷新",
+              "进入关注页时刷新",
               style: AppStyle.titleStyleWhite.copyWith(fontSize: 26.w),
             ),
             AppStyle.vGap16,
             Text(
-              "开启后，进入关注页会先显示本地列表，再异步发起一次全量刷新。关注过多时，极其容易触发抖音限制。",
+              "这是进页刷新，不是定时刷新。开启后，每次进入关注页会先显示本地列表，再异步刷新一次关注状态；关注过多时可能触发抖音限制。",
               style: AppStyle.subTextStyleWhite,
             ),
             AppStyle.vGap16,
             _buildToggleButton(
               label: AppSettingsController.instance.followRefreshOnEnter.value
-                  ? "进入关注页后自动刷新：开"
-                  : "进入关注页后自动刷新：关",
+                  ? "进入关注页时刷新：开"
+                  : "进入关注页时刷新：关",
               onTap: () async {
                 final current =
                     AppSettingsController.instance.followRefreshOnEnter.value;
                 if (!current) {
                   final confirmed = await Utils.showAlertDialog(
-                    "开启后，每次进入关注页都会先显示本地列表，再异步发起一次全量刷新。关注过多时，极其容易触发抖音限制。",
+                    "这是进页刷新，不是十分钟定时刷新。开启后，每次进入关注页都会先显示本地列表，再异步刷新一次关注状态；关注过多时可能触发抖音限制。",
                     title: "风险提示",
                     confirm: "继续开启",
                   );

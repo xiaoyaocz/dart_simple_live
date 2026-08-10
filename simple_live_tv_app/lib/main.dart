@@ -31,6 +31,7 @@ import 'package:simple_live_tv_app/services/current_room_service.dart';
 import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/douyin_account_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
+import 'package:simple_live_tv_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
 import 'package:simple_live_tv_app/services/profile_backup_service.dart';
 import 'package:simple_live_tv_app/services/sync_service.dart';
@@ -247,6 +248,7 @@ Future initServices() async {
 
   Get.put(BiliBiliAccountService());
   Get.put(DouyinAccountService());
+  Get.put(KuaishouAccountService());
   Get.put(ProfileBackupService());
 
   if (DesktopStartupArgs.isSecondaryDesktopInstance) {

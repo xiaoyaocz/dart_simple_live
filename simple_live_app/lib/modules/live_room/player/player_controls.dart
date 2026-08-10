@@ -545,8 +545,7 @@ Widget _buildFullBottomBar(
             ),
             IconButton(
               onPressed: () {
-                controller.showDanmakuState.value =
-                    !controller.showDanmakuState.value;
+                controller.setDanmakuVisible(!showDanmaku);
               },
               icon: ImageIcon(
                 AssetImage(
@@ -673,8 +672,7 @@ Widget _buildNormalBottomBar(
             ),
             IconButton(
               onPressed: () {
-                controller.showDanmakuState.value =
-                    !controller.showDanmakuState.value;
+                controller.setDanmakuVisible(!showDanmaku);
               },
               icon: ImageIcon(
                 AssetImage(

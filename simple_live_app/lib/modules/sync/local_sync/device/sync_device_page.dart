@@ -84,6 +84,16 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
                     controller.syncDouyinAccount();
                   },
                 ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Icons.account_circle_outlined),
+                  title: const Text("同步快手账号"),
+                  subtitle: const Text("给 TV 等设备同步 Cookie 和弹幕参数"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncKuaishouAccount();
+                  },
+                ),
               ],
             ),
           ),

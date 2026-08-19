@@ -83,9 +83,6 @@ dependencies:
     sdk: flutter
   sherpa_onnx: 1.13.4
 
-dependency_overrides:
-  sherpa_onnx_ios: 1.13.4
-
 dev_dependencies:
   flutter_lints: ^2.0.0
   build_runner: ^2.3.3
@@ -95,6 +92,7 @@ dev_dependencies:
     sdk: flutter
 
 dependency_overrides:
+  sherpa_onnx_ios: 1.13.4
   canvas_danmaku:
     path: ../third_party/canvas_danmaku
 

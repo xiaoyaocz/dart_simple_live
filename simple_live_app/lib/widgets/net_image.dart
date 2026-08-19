@@ -2,16 +2,30 @@ import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 
 class NetImage extends StatelessWidget {
+  static const liveCoverCacheName = 'simple_live_live_covers';
+
   final String picUrl;
   final double? width;
   final double? height;
   final BoxFit? fit;
   final double borderRadius;
+  final int? cacheWidth;
+  final int? cacheHeight;
+  final bool clearMemoryCacheWhenDispose;
+  final String? imageCacheName;
+  final Duration? cacheMaxAge;
+  final bool cache;
   const NetImage(this.picUrl,
       {this.width,
       this.height,
       this.fit = BoxFit.cover,
       this.borderRadius = 0,
+      this.cacheWidth,
+      this.cacheHeight,
+      this.clearMemoryCacheWhenDispose = false,
+      this.imageCacheName,
+      this.cacheMaxAge,
+      this.cache = true,
       Key? key})
       : super(key: key);
 
@@ -48,6 +62,12 @@ class NetImage extends StatelessWidget {
         width: width,
         shape: BoxShape.rectangle,
         borderRadius: BorderRadius.circular(borderRadius),
+        cache: cache,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
+        clearMemoryCacheWhenDispose: clearMemoryCacheWhenDispose,
+        imageCacheName: imageCacheName,
+        cacheMaxAge: cacheMaxAge,
         loadStateChanged: (e) {
           if (e.extendedImageLoadState == LoadState.loading) {
             return const Icon(

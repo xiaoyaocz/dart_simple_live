@@ -110,6 +110,7 @@ class LocalStorageService extends GetxService {
   static const String kCustomPlayerOutput = "CustomPlayerOutput";
   static const String kVideoOutputDriver = "VideoOutputDriver";
   static const String kVideoHardwareDecoder = "VideoHardwareDecoder";
+  static const String kWindowsGpuPreference = "WindowsGpuPreference";
   static const String kAudioOutputDriver = "AudioOutputDriver";
   static const String kMpvProfile = "MpvProfile";
   static const String kMpvAdvancedOptions = "MpvAdvancedOptions";

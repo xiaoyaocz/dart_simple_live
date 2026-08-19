@@ -77,8 +77,29 @@ class FollowService extends GetxService {
         loadData(updateStatus: false);
       });
     });
+    _initializeLiveNotificationBaselines();
+    if ((Platform.isAndroid || Platform.isIOS) &&
+        DBService.instance
+            .getFollowList()
+            .any((item) => item.isSpecialFollow)) {
+      // Ask while the app is available so background/queued refreshes can
+      // post a notification without waiting for the next room visit.
+      unawaited(LiveNotificationService.requestPermissionIfNeeded());
+    }
     initTimer();
     super.onInit();
+  }
+
+  void _initializeLiveNotificationBaselines() {
+    for (final item in DBService.instance.getFollowList()) {
+      if (!item.isSpecialFollow) {
+        continue;
+      }
+      _liveNotifyReadyIds.add(item.id);
+      if (item.liveStatus.value == 2) {
+        _liveNotifySentIds.add(item.id);
+      }
+    }
   }
 
   // 添加标签

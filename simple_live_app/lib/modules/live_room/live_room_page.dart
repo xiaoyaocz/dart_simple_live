@@ -189,6 +189,42 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   List<Widget> _buildDesktopOverlayButtons(BuildContext context) {
     return [
+      // Desktop uses an overlay instead of a Flutter AppBar so the player
+      // keeps its full video area. Keep the room title visible on all three
+      // desktop targets while retaining the existing edge controls.
+      Positioned(
+        top: 8,
+        left: 56,
+        right: 56,
+        child: IgnorePointer(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(110),
+                borderRadius: AppStyle.radius8,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: DefaultTextStyle(
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    child: _buildRoomTitleText(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       Obx(() {
         if (!controller.showControlsState.value) {
           return const SizedBox.shrink();

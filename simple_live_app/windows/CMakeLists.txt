@@ -90,9 +90,20 @@ endif()
 
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../build/native_assets/windows")
-install(FILES "${NATIVE_ASSETS_DIR}/dart_quickjs.dll"
-  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-  COMPONENT Runtime)
+set(DART_QUICKJS_DLL "${NATIVE_ASSETS_DIR}/dart_quickjs.dll")
+if(NOT EXISTS "${DART_QUICKJS_DLL}")
+  file(GLOB_RECURSE DART_QUICKJS_CANDIDATES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../.dart_tool/hooks_runner/shared/dart_quickjs/build/*/dart_quickjs.dll")
+  list(LENGTH DART_QUICKJS_CANDIDATES DART_QUICKJS_CANDIDATE_COUNT)
+  if(DART_QUICKJS_CANDIDATE_COUNT GREATER 0)
+    list(GET DART_QUICKJS_CANDIDATES 0 DART_QUICKJS_DLL)
+  endif()
+endif()
+if(EXISTS "${DART_QUICKJS_DLL}")
+  install(FILES "${DART_QUICKJS_DLL}"
+    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+    COMPONENT Runtime)
+endif()
 
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.

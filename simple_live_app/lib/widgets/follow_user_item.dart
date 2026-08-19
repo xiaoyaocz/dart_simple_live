@@ -571,6 +571,14 @@ class FollowUserItem extends StatelessWidget {
                     coverImage,
                     fit: BoxFit.cover,
                     borderRadius: radius,
+                    // Live covers can be large and change while the follow
+                    // list is polling. Decode them at preview size and keep
+                    // them in a bounded cache instead of the global cache.
+                    cacheWidth: 640,
+                    cacheHeight: 360,
+                    clearMemoryCacheWhenDispose: true,
+                    imageCacheName: NetImage.liveCoverCacheName,
+                    cacheMaxAge: const Duration(minutes: 10),
                   ),
           ),
       ],

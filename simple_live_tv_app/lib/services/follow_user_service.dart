@@ -47,6 +47,7 @@ class FollowUserService extends BasePageController<FollowUser> {
   DateTime? _lastEnterRefreshAt;
   bool _enterRefreshInFlight = false;
   bool _forceNextStatusRefresh = false;
+  bool _startupRefreshInFlight = false;
 
   FollowUserService() {
     pageSize = AppSettingsController.kFollowPageSizeDefault;
@@ -59,11 +60,37 @@ class FollowUserService extends BasePageController<FollowUser> {
       refreshData(forceStatus: false);
     });
 
-    if (list.isEmpty) {
-      refreshData(forceStatus: false);
+    final initialLoad =
+        list.isEmpty ? refreshData(forceStatus: false) : Future<void>.value();
+    unawaited(initialLoad.whenComplete(_refreshOnHomeStartup));
+    if (list.isNotEmpty) {
+      unawaited(_refreshOnHomeStartup());
     }
     initTimer();
     super.onInit();
+  }
+
+  /// Load local follows immediately, then perform one status refresh before
+  /// the home page is shown when periodic automatic refresh is enabled.
+  Future<void> _refreshOnHomeStartup() async {
+    if (_startupRefreshInFlight ||
+        !AppSettingsController.instance.autoUpdateFollowEnable.value) {
+      return;
+    }
+    loadLocalList();
+    if (allList.isEmpty || updating.value) {
+      return;
+    }
+    _startupRefreshInFlight = true;
+    try {
+      await _startAutomaticRefresh();
+    } finally {
+      _startupRefreshInFlight = false;
+    }
+  }
+
+  Future<void> refreshImmediatelyIfAutomaticEnabled() {
+    return _refreshOnHomeStartup();
   }
 
   void initTimer() {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -308,6 +309,12 @@ class SettingsPage extends GetView<SettingsController> {
               AppSettingsController.instance
                   .setAutoUpdateFollowEnable(e == 1 ? true : false);
               FollowUserService.instance.initTimer();
+              if (e == 1) {
+                unawaited(
+                  FollowUserService.instance
+                      .refreshImmediatelyIfAutomaticEnabled(),
+                );
+              }
             },
           ),
         ),

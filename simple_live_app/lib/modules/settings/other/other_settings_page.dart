@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -76,6 +77,31 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 ),
               ),
             ),
+            if (Platform.isWindows) ...[
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(top: 16),
+                child: Text(
+                  "图形处理器",
+                  style: Get.textTheme.titleSmall,
+                ),
+              ),
+              SettingsCard(
+                child: Obx(
+                  () => SettingsMenu<String>(
+                    title: "Windows GPU 偏好",
+                    subtitle: "选择高性能/NVIDIA 可减少游戏本误用核显；修改后必须完全重启应用",
+                    value: AppSettingsController
+                        .instance.windowsGpuPreference.value,
+                    valueMap: AppSettingsController.windowsGpuPreferenceOptions,
+                    onChanged: (value) {
+                      AppSettingsController.instance
+                          .setWindowsGpuPreference(value);
+                      SmartDialog.showToast("GPU 偏好已保存，重启应用后生效");
+                    },
+                  ),
+                ),
+              ),
+            ],
           ],
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),

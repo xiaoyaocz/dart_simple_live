@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,6 +8,8 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/danmu_shield_preset.dart';
 import 'package:simple_live_app/services/background_playback_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -327,6 +330,15 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kVideoHardwareDecoder,
       Platform.isAndroid ? "auto-safe" : "auto",
     );
+    windowsGpuPreference.value = _normalizeWindowsGpuPreference(
+      LocalStorageService.instance.getValue(
+        LocalStorageService.kWindowsGpuPreference,
+        "auto",
+      ),
+    );
+    if (Platform.isWindows) {
+      unawaited(_writeWindowsGpuPreferenceFile(windowsGpuPreference.value));
+    }
 
     autoUpdateFollowEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoUpdateFollowEnable, true);
@@ -2483,6 +2495,47 @@ class AppSettingsController extends GetxController {
     videoHardwareDecoder.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kVideoHardwareDecoder, e);
+  }
+
+  static const windowsGpuPreferenceOptions = <String, String>{
+    "auto": "自动（由系统选择）",
+    "low_power": "省电/核显",
+    "high_performance": "高性能/NVIDIA 独显",
+  };
+
+  var windowsGpuPreference = "auto".obs;
+
+  String _normalizeWindowsGpuPreference(dynamic value) {
+    final normalized = value.toString().trim().toLowerCase();
+    return windowsGpuPreferenceOptions.containsKey(normalized)
+        ? normalized
+        : "auto";
+  }
+
+  void setWindowsGpuPreference(String value) {
+    final normalized = _normalizeWindowsGpuPreference(value);
+    windowsGpuPreference.value = normalized;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kWindowsGpuPreference,
+      normalized,
+    );
+    if (Platform.isWindows) {
+      unawaited(_writeWindowsGpuPreferenceFile(normalized));
+    }
+  }
+
+  Future<void> _writeWindowsGpuPreferenceFile(String value) async {
+    try {
+      final supportDirectory = await getApplicationSupportDirectory();
+      final file = File(p.join(supportDirectory.path, "gpu_preference.txt"));
+      await file.writeAsString(
+        '$value\n',
+        encoding: utf8,
+        flush: true,
+      );
+    } catch (e, stackTrace) {
+      Log.e("保存 Windows GPU 偏好失败: $e", stackTrace);
+    }
   }
 
   var mpvProfile = "balanced".obs;

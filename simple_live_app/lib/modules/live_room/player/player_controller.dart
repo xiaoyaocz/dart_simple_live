@@ -301,7 +301,10 @@ mixin PlayerStateMixin on PlayerMixin {
   }
 
   void revealMobileLockControls() {
-    if (!lockControlsState.value || !(Platform.isAndroid || Platform.isIOS)) {
+    // The lock overlay is used by every full-screen target. On desktop the
+    // previous edge-hover-only path made the unlock button unreachable when a
+    // trackpad/mouse click was the first interaction after locking.
+    if (!lockControlsState.value) {
       return;
     }
     showLockEdgeState.value = true;
@@ -2005,6 +2008,8 @@ class PlayerController extends BaseController
   int? _streamErrorGeneration;
   Timer? _streamErrorStablePlaybackTimer;
   Timer? _surfaceHealthCheckTimer;
+  Timer? _playbackStallWatchdogTimer;
+  Timer? _playbackStallStableTimer;
   bool _surfaceRecoveryInFlight = false;
   int _surfaceRecoveryAttempts = 0;
   int? _surfaceRecoveryLoadGeneration;
@@ -2012,12 +2017,23 @@ class PlayerController extends BaseController
   int _surfaceRecoveryToken = 0;
   DateTime? _lastSurfaceRecoveryAt;
   DateTime? _surfaceRecoveryGraceUntil;
+  Duration? _stallLastPosition;
+  DateTime? _stallLastProgressAt;
+  DateTime? _lastPlaybackStallRecoveryAt;
+  int? _stallLoadGeneration;
+  String? _stallMediaUri;
+  int _playbackStallRecoveryAttempts = 0;
+  bool _playbackStallRecoveryInFlight = false;
 
   static const _stablePlaybackDuration = Duration(seconds: 30);
   static const _surfaceRecoveryCooldown = Duration(seconds: 3);
   static const _surfaceRecoveryGraceDuration = Duration(seconds: 8);
   static const _surfaceRecoveryValidationDelay = Duration(milliseconds: 600);
   static const _maxSurfaceRecoveryAttempts = 3;
+  static const _playbackStallSampleInterval = Duration(seconds: 3);
+  static const _playbackStallTimeout = Duration(seconds: 15);
+  static const _playbackBufferingStallTimeout = Duration(seconds: 30);
+  static const _playbackStallCooldown = Duration(seconds: 5);
 
   void _syncStreamErrorGeneration(int generation) {
     if (_streamErrorGeneration == generation) {
@@ -2157,6 +2173,7 @@ class PlayerController extends BaseController
 
     // Fix Issue #57: 启动Surface健康检查
     _startSurfaceHealthCheck();
+    _startPlaybackStallWatchdog();
   }
 
   void disposeStream() {
@@ -2170,6 +2187,8 @@ class PlayerController extends BaseController
     _pipSubscription?.cancel();
     _playingSubscription?.cancel();
     _surfaceHealthCheckTimer?.cancel();
+    _playbackStallWatchdogTimer?.cancel();
+    _playbackStallStableTimer?.cancel();
     _iosVideoOutputSyncTimer?.cancel();
     _iosOriginalQualityPowerSavingWorker?.dispose();
     _iosOriginalQualityPowerSavingWorker = null;
@@ -2182,6 +2201,13 @@ class PlayerController extends BaseController
     _surfaceRecoveryMediaGeneration = null;
     _lastSurfaceRecoveryAt = null;
     _surfaceRecoveryGraceUntil = null;
+    _stallLastPosition = null;
+    _stallLastProgressAt = null;
+    _lastPlaybackStallRecoveryAt = null;
+    _stallLoadGeneration = null;
+    _stallMediaUri = null;
+    _playbackStallRecoveryAttempts = 0;
+    _playbackStallRecoveryInFlight = false;
   }
 
   // Fix Issue #57: 判断是否为流错误（网络/解码错误）
@@ -2451,6 +2477,115 @@ class PlayerController extends BaseController
         }
       },
     );
+  }
+
+  /// A network outage can leave mpv in `playing == true` without emitting an
+  /// error or end event. Watch the media position and route a confirmed stall
+  /// through the existing bounded `mediaError` recovery path.
+  void _startPlaybackStallWatchdog() {
+    _playbackStallWatchdogTimer?.cancel();
+    _playbackStallWatchdogTimer = Timer.periodic(
+      _playbackStallSampleInterval,
+      (_) => _checkPlaybackStall(),
+    );
+  }
+
+  void _checkPlaybackStall() {
+    if (_playerClosing ||
+        !isPlaybackLoadGenerationCurrent(playbackLoadGeneration)) {
+      return;
+    }
+    final state = player.state;
+    if (!state.playing || state.completed) {
+      _resetPlaybackStallSample();
+      return;
+    }
+    final media = state.playlist.medias.isNotEmpty
+        ? state.playlist.medias[state.playlist.index]
+        : null;
+    final mediaUri = media?.uri.trim();
+    if (mediaUri == null || mediaUri.isEmpty) {
+      return;
+    }
+    final generation = playbackLoadGeneration;
+    if (_stallLoadGeneration != generation || _stallMediaUri != mediaUri) {
+      _stallLoadGeneration = generation;
+      _stallMediaUri = mediaUri;
+      _stallLastPosition = state.position;
+      _stallLastProgressAt = DateTime.now();
+      _playbackStallRecoveryAttempts = 0;
+      _playbackStallStableTimer?.cancel();
+      _playbackStallStableTimer = null;
+      return;
+    }
+
+    final now = DateTime.now();
+    final position = state.position;
+    if (_stallLastPosition == null || position != _stallLastPosition) {
+      _stallLastPosition = position;
+      _stallLastProgressAt = now;
+      if (_playbackStallRecoveryAttempts > 0 &&
+          _playbackStallStableTimer == null) {
+        _playbackStallStableTimer = Timer(_stablePlaybackDuration, () {
+          _playbackStallStableTimer = null;
+          if (isPlaybackLoadGenerationCurrent(generation) &&
+              player.state.playing) {
+            _playbackStallRecoveryAttempts = 0;
+          }
+        });
+      }
+      return;
+    }
+    final lastProgressAt = _stallLastProgressAt;
+    if (lastProgressAt == null ||
+        now.difference(lastProgressAt) <
+            (state.buffering
+                ? _playbackBufferingStallTimeout
+                : _playbackStallTimeout)) {
+      return;
+    }
+    if (_surfaceRecoveryGraceUntil != null &&
+        now.isBefore(_surfaceRecoveryGraceUntil!)) {
+      return;
+    }
+    if (_playbackStallRecoveryInFlight ||
+        _playbackStallRecoveryAttempts >= _maxSurfaceRecoveryAttempts ||
+        (_lastPlaybackStallRecoveryAt != null &&
+            now.difference(_lastPlaybackStallRecoveryAt!) <
+                _playbackStallCooldown)) {
+      return;
+    }
+    unawaited(_recoverPlaybackStall(generation, mediaUri));
+  }
+
+  Future<void> _recoverPlaybackStall(int generation, String mediaUri) async {
+    if (_playbackStallRecoveryInFlight ||
+        !isPlaybackLoadGenerationCurrent(generation) ||
+        _stallMediaUri != mediaUri) {
+      return;
+    }
+    _playbackStallRecoveryInFlight = true;
+    _playbackStallRecoveryAttempts += 1;
+    _lastPlaybackStallRecoveryAt = DateTime.now();
+    _stallLastProgressAt = DateTime.now();
+    Log.w(
+      "检测到直播流长时间无进度，自动刷新播放 "
+      "($_playbackStallRecoveryAttempts/$_maxSurfaceRecoveryAttempts)",
+    );
+    try {
+      // LiveRoomController overrides mediaError and refreshes the current
+      // line/URL with its existing generation and retry guards.
+      mediaError("直播流停滞，自动刷新");
+    } finally {
+      _playbackStallRecoveryInFlight = false;
+    }
+  }
+
+  void _resetPlaybackStallSample() {
+    _stallLastPosition = null;
+    _stallLastProgressAt = null;
+    _playbackStallStableTimer?.cancel();
+    _playbackStallStableTimer = null;
   }
 
   void mediaEnd() {

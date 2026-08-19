@@ -83,6 +83,8 @@ dependencies:
     sdk: flutter
   sherpa_onnx: 1.13.4
 
+dependency_overrides:
+  sherpa_onnx_ios: 1.13.4
 
 dev_dependencies:
   flutter_lints: ^2.0.0

@@ -43,6 +43,7 @@ update.md
 BUGFIX_SUMMARY.md
 issue_logs/
 .release-*.md
+WORK_COMPLETE.txt
 
 # Backups and exported snapshots
 .backup/

@@ -406,6 +406,119 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
+              "弹幕显示优化",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 小窗弹幕设置（桌面端）
+                if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) ...[
+                  Padding(
+                    padding: AppStyle.edgeInsetsA12,
+                    child: Text(
+                      "小窗弹幕",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Get.theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  Obx(
+                    () => SettingsNumber(
+                      title: "小窗字体缩放",
+                      subtitle: "相对于正常播放时的弹幕大小",
+                      value: (controller.smallWindowDanmuScale.value * 10).round(),
+                      min: 5,
+                      max: 10,
+                      step: 1,
+                      unit: "",
+                      displayValue: "${(controller.smallWindowDanmuScale.value * 10).round() / 10}x",
+                      onChanged: (v) => controller.setSmallWindowDanmuScale(v / 10),
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsNumber(
+                      title: "小窗最大行数",
+                      subtitle: "限制小窗时的弹幕行数，避免遮挡画面",
+                      value: controller.smallWindowDanmuMaxLines.value,
+                      min: 3,
+                      max: 10,
+                      step: 1,
+                      unit: "行",
+                      onChanged: controller.setSmallWindowDanmuMaxLines,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "小窗自动透明",
+                      subtitle: "小窗时自动降低弹幕透明度（70%）",
+                      value: controller.smallWindowDanmuAutoTransparent.value,
+                      onChanged: controller.setSmallWindowDanmuAutoTransparent,
+                    ),
+                  ),
+                ],
+                // PIP弹幕设置（Android）
+                if (Platform.isAndroid) ...[
+                  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) AppStyle.divider,
+                  Padding(
+                    padding: AppStyle.edgeInsetsA12,
+                    child: Text(
+                      "PIP 弹幕（画中画）",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Get.theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "PIP 显示弹幕",
+                      subtitle: "画中画模式下显示弹幕（仅滚动弹幕，限制区域）",
+                      value: controller.enablePipDanmu.value,
+                      onChanged: controller.setEnablePipDanmu,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsNumber(
+                      title: "PIP 字体缩放",
+                      subtitle: "相对于正常播放时的弹幕大小",
+                      value: (controller.pipDanmuScale.value * 20).round(),
+                      min: 10,
+                      max: 20,
+                      step: 1,
+                      unit: "",
+                      displayValue: "${(controller.pipDanmuScale.value * 20).round() / 20}x",
+                      onChanged: (v) => controller.setPipDanmuScale(v / 20),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // SuperChat 全屏滚动
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    title: "SC 全屏滚动",
+                    subtitle: "SuperChat 在全屏时作为弹幕滚动显示，格式：【头条】用户名：内容",
+                    value: controller.superChatScrollInFullscreen.value,
+                    onChanged: controller.setSuperChatScrollInFullscreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
               "清晰度",
               style: Get.textTheme.titleSmall,
             ),

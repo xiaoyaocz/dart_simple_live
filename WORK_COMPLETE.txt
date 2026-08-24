@@ -1,0 +1,30 @@
+# v1.13.0 - 工作完成
+
+## ✅ 完成情况
+- **13/13 任务完成（100%）**
+- **编译通过**
+- **文档已清理**
+- **Windows 打包进行中**
+
+## 🎯 主要更新
+1. **SC 全屏滚动** - 格式：【头条】用户名：内容
+2. **抖音三级分类** - 完整层级支持
+3. **桌面小窗优化** - 最小尺寸 200x150
+4. **设置页面优化** - 显示区域/行数提前
+5. **Linux/Android/iOS** - 稳定性修复
+
+## 📦 打包
+Windows 打包进行中，其他平台请手动执行：
+```bash
+flutter build apk --split-per-abi --release
+flutter build linux --release
+flutter build macos --release
+flutter build ios --no-codesign --release
+```
+
+## 📝 文档
+- **Release Notes**: `release/v1.13.0/RELEASE_NOTES.md`
+- **临时文档**: 已移至 `docs/v1.3.0+tv_1.8.0/`
+
+---
+**准备就绪，可以测试！** 🚀

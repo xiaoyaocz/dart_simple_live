@@ -146,6 +146,18 @@ class LocalStorageService extends GetxService {
       "LiveSubtitlePositionLocked";
   static const String kLiveSubtitleStartupGuard = "LiveSubtitleStartupGuard";
 
+  // 小窗弹幕设置
+  static const String kSmallWindowDanmuScale = "SmallWindowDanmuScale";
+  static const String kSmallWindowDanmuMaxLines = "SmallWindowDanmuMaxLines";
+  static const String kSmallWindowDanmuAutoTransparent = "SmallWindowDanmuAutoTransparent";
+
+  // PIP弹幕设置
+  static const String kEnablePipDanmu = "EnablePipDanmu";
+  static const String kPipDanmuScale = "PipDanmuScale";
+
+  // SuperChat 全屏滚动
+  static const String kSuperChatScrollInFullscreen = "SuperChatScrollInFullscreen";
+
   late Box settingsBox;
   late Box<String> shieldBox;
   late Box<String> shieldPresetBox;

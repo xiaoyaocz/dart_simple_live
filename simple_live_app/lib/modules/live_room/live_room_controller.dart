@@ -212,6 +212,7 @@ class LiveRoomController extends PlayerController
   Timer? _superChatRefreshTimer;
   Timer? _chatBottomRestoreTimer;
   Timer? _onlineRefreshTimer;
+  Timer? _memoryCleanupTimer; // 内存清理定时器
   bool _onlineRefreshInFlight = false;
   final LiveStatusRefreshPolicy _onlineStatusRefreshPolicy =
       LiveStatusRefreshPolicy();
@@ -239,6 +240,7 @@ class LiveRoomController extends PlayerController
     followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
     loadData();
     _startLiveEventFlowTimer();
+    _startMemoryCleanupTimer(); // 启动内存清理定时器
 
     scrollController.addListener(scrollListener);
 
@@ -901,6 +903,20 @@ class LiveRoomController extends PlayerController
     _superChatRefreshTimer = null;
   }
 
+  /// 启动内存清理定时器（iOS 内存优化）
+  void _startMemoryCleanupTimer() {
+    _memoryCleanupTimer?.cancel();
+    // 每分钟清理一次过期的 SuperChat
+    _memoryCleanupTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      removeSuperChats(); // 清理过期 SC
+      // 消息列表已经在添加时自动限制，这里再检查一次
+      if (messages.length > 1000) {
+        Log.d("内存清理：消息列表过大 (${messages.length})，清理到 500 条");
+        messages.removeRange(0, messages.length - 500);
+      }
+    });
+  }
+
   void _restartOnlineRefreshTimer() {
     _onlineRefreshTimer?.cancel();
     _onlineRefreshInFlight = false;
@@ -1341,6 +1357,7 @@ class LiveRoomController extends PlayerController
     _onlineRefreshTimer?.cancel();
     _onlineStatusRefreshPolicy.reset();
     _chatBottomRestoreTimer?.cancel();
+    _memoryCleanupTimer?.cancel(); // 取消内存清理定时器
     _cancelPendingDanmakuTimers();
     clearDanmakuReplayHistory();
     _liveDurationTimer?.cancel();
@@ -1415,6 +1432,11 @@ class LiveRoomController extends PlayerController
 
       messages.add(msg);
 
+      // 限制消息列表大小，防止内存溢出（特别是 iOS）
+      if (messages.length > 1000) {
+        messages.removeRange(0, 500); // 保留最近 500 条
+      }
+
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => chatScrollToBottom(),
       );
@@ -1439,6 +1461,37 @@ class LiveRoomController extends PlayerController
         return;
       }
       _appendSuperChats([superChat]);
+
+      // SC 全屏滚动显示
+      if (AppSettingsController.instance.superChatScrollInFullscreen.value &&
+          fullScreenState.value) {
+        // 格式化为：【头条】用户名：内容
+        final formattedMessage = "【头条】${superChat.userName}：${superChat.message}";
+        final scDanmakuMsg = LiveMessage(
+          type: LiveMessageType.chat,
+          userName: superChat.userName,
+          message: formattedMessage,
+          color: LiveMessageColor(255, 215, 0), // 金黄色，醒目
+        );
+
+        // 添加到消息列表（聊天区显示）
+        messages.add(scDanmakuMsg);
+
+        // 限制消息列表大小
+        if (messages.length > 1000) {
+          messages.removeRange(0, 500);
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => chatScrollToBottom(),
+        );
+
+        // 如果当前在播放且不在后台，显示为滚动弹幕
+        if (liveStatus.value && !isBackground) {
+          _scheduleOverlayDanmaku(scDanmakuMsg);
+        }
+      }
+
       return;
     }
   }
@@ -1999,6 +2052,12 @@ class LiveRoomController extends PlayerController
     } finally {
       _autoSwitchingRoom = false;
     }
+  }
+
+  @override
+  void refreshPlayback() {
+    // 手动刷新，直接触发错误恢复流程
+    mediaError("用户手动刷新");
   }
 
   /// 读取头条 / SC

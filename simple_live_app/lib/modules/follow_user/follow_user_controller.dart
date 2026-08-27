@@ -184,7 +184,6 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   // 调整标签顺序
   void updateTagOrder(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1; // 处理索引调整
     final item = userTagList.removeAt(oldIndex);
     userTagList.insert(newIndex, item);
     tagList.value = tagList.take(3).toList();

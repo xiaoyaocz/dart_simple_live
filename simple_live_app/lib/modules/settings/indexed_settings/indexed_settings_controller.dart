@@ -12,9 +12,6 @@ class IndexedSettingsController extends GetxController {
   }
 
   void updateSiteSort(int oldIndex, int newIndex) {
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
     final String item = siteSort.removeAt(oldIndex);
     siteSort.insert(newIndex, item);
     // ignore: invalid_use_of_protected_member
@@ -22,9 +19,6 @@ class IndexedSettingsController extends GetxController {
   }
 
   void updateHomeSort(int oldIndex, int newIndex) {
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
     final String item = homeSort.removeAt(oldIndex);
     homeSort.insert(newIndex, item);
     // ignore: invalid_use_of_protected_member

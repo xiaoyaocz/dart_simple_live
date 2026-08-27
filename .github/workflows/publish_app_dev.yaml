@@ -6,24 +6,30 @@ on:
     tags:
       - "dev_v*"
 
+env:
+  JAVA_VERSION: "17"
+  ANDROID_API_LEVEL: "36"
+  ANDROID_BUILD_TOOLS_VERSION: "35.0.0"
+  ANDROID_NDK_VERSION: "28.2.13676358"
+
 jobs:
   # 打包Android、iOS、Mac
   build-mac-ios-android:
-    runs-on: macos-latest
+    runs-on: macos-15-intel
 
     permissions:
       contents: write
 
     steps:
       # 签出代码
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: dev
 
       # APK签名设置
       - name: Download Android keystore
         id: android_keystore
-        uses: timheuer/base64-to-file@v1.2
+        uses: timheuer/base64-to-file@v2
         with:
           fileName: keystore.jks
           encodedString: ${{ secrets.KEYSTORE_BASE64 }}
@@ -35,18 +41,32 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
 
       # 设置JAVA环境
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: ${{ env.JAVA_VERSION }}
           cache: "gradle"
+
+      # 设置Android SDK环境
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: >-
+            platform-tools
+            platforms;android-${{ env.ANDROID_API_LEVEL }}
+            build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+            ndk;${{ env.ANDROID_NDK_VERSION }}
 
       # 设置Flutter
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          channel: stable
+          flutter-version-file: simple_live_app/.fvmrc
           cache: true
+
+      - name: Configure Android JDK
+        run: flutter config --jdk-dir "$JAVA_HOME"
 
       # 打开MAC Desktop支持
       - name: Enable Flutter Desktop
@@ -57,6 +77,11 @@ jobs:
         run: |
           cd simple_live_app
           flutter pub get
+
+      - name: Validate Android toolchain
+        run: |
+          cd simple_live_app
+          flutter analyze --suggestions
 
       # 安装appdmg npm install -g appdmg
       - name: Install appdmg
@@ -74,7 +99,7 @@ jobs:
 
       #上传Artifacts
       - name: Upload APK to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android
           path: |
@@ -100,7 +125,7 @@ jobs:
 
       # 上传IPA至Artifacts
       - name: Upload IPA to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios
           path: |
@@ -114,7 +139,7 @@ jobs:
 
       # 上传MAC至Artifacts
       - name: Upload MacOS to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mac
           path: |
@@ -125,19 +150,20 @@ jobs:
 
   # 打包Linux
   build-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       # 签出代码
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: dev
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          channel: stable
+          flutter-version-file: simple_live_app/.fvmrc
           cache: true
       # 安装依赖
       - name: Update apt-get
@@ -162,7 +188,7 @@ jobs:
           flutter_distributor package --platform linux --targets deb,zip --skip-clean
       # 上传Linux包至Artifacts
       - name: Upload Linux APP to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux
           path: |
@@ -174,19 +200,20 @@ jobs:
 
   # 打包Windows
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
     steps:
       # 签出代码
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: dev
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          channel: stable
+          flutter-version-file: simple_live_app/.fvmrc
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop
@@ -204,7 +231,7 @@ jobs:
           flutter_distributor package --platform windows --targets msix,zip --skip-clean
       # 上传Windows至Artifacts
       - name: Upload Windows APP to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows
           path: |

@@ -19,10 +19,22 @@ class AppColors {
 }
 
 class AppStyle {
+  /// 获取平台字体
+  static String? getPlatformFont() {
+    if (Platform.isWindows) {
+      return "Microsoft YaHei";
+    } else if (Platform.isAndroid) {
+      // Android 使用 Roboto 字体，支持中文显示
+      // 三星等设备可能需要明确指定
+      return "Roboto";
+    }
+    return null; // iOS 使用系统默认
+  }
+
   static ThemeData lightTheme = ThemeData(
     colorScheme: AppColors.lightColorScheme,
     useMaterial3: true,
-    fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+    fontFamily: getPlatformFont(),
     visualDensity: VisualDensity.standard,
     appBarTheme: AppBarTheme(
       //elevation: 0,
@@ -63,10 +75,10 @@ class AppStyle {
     colorScheme: AppColors.darkColorScheme,
     visualDensity: VisualDensity.standard,
     textTheme: ThemeData.dark().textTheme.apply(
-          fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+          fontFamily: getPlatformFont(),
         ),
     primaryTextTheme: ThemeData().textTheme.apply(
-          fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+          fontFamily: getPlatformFont(),
         ),
     appBarTheme: AppBarTheme(
       //elevation: 0,

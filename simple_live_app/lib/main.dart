@@ -44,6 +44,21 @@ import 'package:path/path.dart' as p;
 import 'package:dynamic_color/dynamic_color.dart';
 
 void main(List<String> args) async {
+  // 捕获 Flutter 框架错误
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    Log.e(
+      "Flutter Error: ${details.exception}",
+      details.stack ?? StackTrace.current,
+    );
+  };
+
+  // 捕获异步错误
+  PlatformDispatcher.instance.onError = (error, stack) {
+    Log.e("Async Error: $error", stack);
+    return true;
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
   DesktopStartupArgs.initialize(args);
   await migrateData();
@@ -188,7 +203,7 @@ Future initWindow() async {
   await windowManager.ensureInitialized();
   Log.i("桌面窗口初始化");
   WindowOptions windowOptions = const WindowOptions(
-    minimumSize: Size(280, 280),
+    minimumSize: Size(200, 150),  // 减小最小尺寸，允许更小的窗口
     title: "Simple Live",
   );
   await windowManager.waitUntilReadyToShow(windowOptions);

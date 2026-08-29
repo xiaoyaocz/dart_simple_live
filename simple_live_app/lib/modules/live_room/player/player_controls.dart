@@ -543,6 +543,17 @@ Widget _buildFullBottomBar(
                 color: Colors.white,
               ),
             ),
+            // 播放/暂停按钮
+            Obx(() => IconButton(
+              onPressed: controller.togglePlayPause,
+              icon: Icon(
+                controller.player.state.playing
+                    ? Icons.pause
+                    : Icons.play_arrow,
+                size: 24,
+                color: Colors.white,
+              ),
+            )),
             IconButton(
               onPressed: () {
                 controller.setDanmakuVisible(!showDanmaku);
@@ -670,6 +681,17 @@ Widget _buildNormalBottomBar(
                 color: Colors.white,
               ),
             ),
+            // 播放/暂停按钮
+            Obx(() => IconButton(
+              onPressed: controller.togglePlayPause,
+              icon: Icon(
+                controller.player.state.playing
+                    ? Icons.pause
+                    : Icons.play_arrow,
+                size: 24,
+                color: Colors.white,
+              ),
+            )),
             IconButton(
               onPressed: () {
                 controller.setDanmakuVisible(!showDanmaku);
@@ -823,6 +845,11 @@ Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
     child: Obx(
       () {
         controller.danmakuViewVersion.value;
+
+        // 检测是否为小窗模式
+        final isSmallWindow = controller.smallWindowState.value;
+        final settings = AppSettingsController.instance;
+
         return Offstage(
           offstage: !controller.showDanmakuState.value,
           child: Padding(
@@ -839,34 +866,49 @@ Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
                     ? constraints.maxHeight
                     : MediaQuery.sizeOf(context).height;
                 controller.updateDanmakuViewportHeight(viewportHeight);
-                final settings = AppSettingsController.instance;
+
+                // 小窗模式下的弹幕参数调整
+                final fontSize = isSmallWindow
+                    ? settings.danmuSize.value * settings.smallWindowDanmuScale.value
+                    : settings.danmuSize.value;
+
+                final opacity = isSmallWindow && settings.smallWindowDanmuAutoTransparent.value
+                    ? settings.danmuOpacity.value * 0.7  // 更透明
+                    : settings.danmuOpacity.value;
+
+                // 小窗模式限制行数
+                var lineCount = settings.danmuLineCount.value;
+                if (isSmallWindow && lineCount > settings.smallWindowDanmuMaxLines.value) {
+                  lineCount = settings.smallWindowDanmuMaxLines.value;
+                }
+
                 final resolvedLineCount = settings.resolveDanmuTargetLineCount(
                   viewportHeight: viewportHeight,
                   area: settings.danmuArea.value,
-                  fontSize: settings.danmuSize.value,
-                  lineCount: settings.danmuLineCount.value,
+                  fontSize: fontSize,
+                  lineCount: lineCount,
                 );
                 final hideDanmu = resolvedLineCount <= 0;
                 return DanmakuScreen(
                   key: controller.globalDanmuKey,
                   createdController: controller.initDanmakuController,
                   option: DanmakuOption(
-                    fontSize: settings.danmuSize.value,
-                    fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+                    fontSize: fontSize,
+                    fontFamily: Platform.isWindows ? "Microsoft YaHei" : (Platform.isAndroid ? "Roboto" : null),
                     area: settings.resolveDanmuEffectiveArea(
                       viewportHeight: viewportHeight,
                       area: settings.danmuArea.value,
-                      fontSize: settings.danmuSize.value,
-                      lineCount: settings.danmuLineCount.value,
+                      fontSize: fontSize,
+                      lineCount: lineCount,
                     ),
                     lineHeight: settings.resolveDanmuLineHeight(
                       viewportHeight: viewportHeight,
                       area: settings.danmuArea.value,
-                      fontSize: settings.danmuSize.value,
-                      lineCount: settings.danmuLineCount.value,
+                      fontSize: fontSize,
+                      lineCount: lineCount,
                     ),
                     duration: settings.danmuSpeed.value.toInt(),
-                    opacity: settings.danmuOpacity.value,
+                    opacity: opacity,
                     fontWeight: settings.danmuFontWeight.value,
                     hideTop: hideDanmu,
                     hideBottom: hideDanmu,

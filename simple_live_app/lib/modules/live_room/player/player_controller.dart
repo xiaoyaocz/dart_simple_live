@@ -924,6 +924,22 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     setDanmakuVisible(!showDanmakuState.value);
   }
 
+  /// 切换播放/暂停
+  Future<void> togglePlayPause() async {
+    if (player.state.playing) {
+      await player.pause();
+    } else {
+      await player.play();
+    }
+  }
+
+  /// 手动刷新播放（需要子类实现 mediaError）
+  void refreshPlayback() {
+    // 这个方法会被 LiveRoomController 覆盖
+    // 这里提供一个基础实现，尝试重新播放
+    player.play();
+  }
+
   Future<void> toggleMute() async {
     if (mutedState.value) {
       final restoreVolume =
@@ -2031,7 +2047,7 @@ class PlayerController extends BaseController
   static const _surfaceRecoveryValidationDelay = Duration(milliseconds: 600);
   static const _maxSurfaceRecoveryAttempts = 3;
   static const _playbackStallSampleInterval = Duration(seconds: 3);
-  static const _playbackStallTimeout = Duration(seconds: 15);
+  static const _playbackStallTimeout = Duration(seconds: 10);  // 从 15 秒缩短到 10 秒
   static const _playbackBufferingStallTimeout = Duration(seconds: 30);
   static const _playbackStallCooldown = Duration(seconds: 5);
 

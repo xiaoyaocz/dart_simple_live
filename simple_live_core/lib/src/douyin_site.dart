@@ -161,15 +161,10 @@ class DouyinSite implements LiveSite {
     for (var item in categoryData) {
       List<LiveSubCategory> subs = [];
       var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
+
+      // 递归处理所有子分类（支持多级嵌套）
       for (var subItem in item["sub_partition"]) {
-        var subCategory = LiveSubCategory(
-          id: '${subItem["partition"]["id_str"]},${subItem["partition"]["type"]}',
-          name: asT<String?>(subItem["partition"]["title"]) ?? "",
-          parentId: id,
-          pic:
-              _pickPartitionImageUrl(subItem["partition"]) ??
-              _pickPartitionImageUrl(item["partition"]),
-        );
+        var subCategory = _parseSubCategory(subItem, id);
         subs.add(subCategory);
       }
 
@@ -177,6 +172,7 @@ class DouyinSite implements LiveSite {
         children: subs,
         id: id,
         name: asT<String?>(item["partition"]["title"]) ?? "",
+        pic: _pickPartitionImageUrl(item["partition"]),
       );
       subs.insert(
         0,
@@ -190,6 +186,26 @@ class DouyinSite implements LiveSite {
       categories.add(category);
     }
     return categories;
+  }
+
+  /// 递归解析子分类（支持多级嵌套）
+  LiveSubCategory _parseSubCategory(dynamic item, String parentId) {
+    var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
+    List<LiveSubCategory> children = [];
+
+    // 递归处理子分类的子分类（第三级、第四级...）
+    final subPartitions = item["sub_partition"] as List? ?? [];
+    for (var subItem in subPartitions) {
+      children.add(_parseSubCategory(subItem, id));
+    }
+
+    return LiveSubCategory(
+      id: id,
+      name: asT<String?>(item["partition"]["title"]) ?? "",
+      parentId: parentId,
+      pic: _pickPartitionImageUrl(item["partition"]),
+      children: children,
+    );
   }
 
   String? _pickPartitionImageUrl(dynamic data) {

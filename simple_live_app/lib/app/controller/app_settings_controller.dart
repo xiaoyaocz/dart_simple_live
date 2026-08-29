@@ -174,6 +174,22 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kAutoPipOnExit, false);
     playershowSuperChat.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerShowSuperChat, false);
+
+    // 加载小窗弹幕设置
+    smallWindowDanmuScale.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kSmallWindowDanmuScale, 0.8);
+    smallWindowDanmuMaxLines.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kSmallWindowDanmuMaxLines, 5);
+    smallWindowDanmuAutoTransparent.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kSmallWindowDanmuAutoTransparent, true);
+
+    // 加载PIP弹幕设置
+    enablePipDanmu.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kEnablePipDanmu, false);
+    pipDanmuScale.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPipDanmuScale, 0.75);
+    superChatScrollInFullscreen.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kSuperChatScrollInFullscreen, false);
     liveEventFlowEnable.value = LocalStorageService.instance.getValue(
       LocalStorageService.kLiveEventFlowEnable,
       false,
@@ -736,7 +752,7 @@ class AppSettingsController extends GetxController {
         style: TextStyle(
           fontSize: fontSize ?? danmuSize.value,
           fontWeight: fontWeight ?? _danmuFontWeightValue,
-          fontFamily: Platform.isWindows ? "Microsoft YaHei" : null,
+          fontFamily: Platform.isWindows ? "Microsoft YaHei" : (Platform.isAndroid ? "Roboto" : null),
           foreground: Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = strokeWidth ?? danmuStrokeWidth.value
@@ -1033,6 +1049,51 @@ class AppSettingsController extends GetxController {
     playershowSuperChat.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerShowSuperChat, e);
+  }
+
+  // 小窗弹幕设置
+  var smallWindowDanmuScale = 0.8.obs;
+  void setSmallWindowDanmuScale(double e) {
+    smallWindowDanmuScale.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kSmallWindowDanmuScale, e);
+  }
+
+  var smallWindowDanmuMaxLines = 5.obs;
+  void setSmallWindowDanmuMaxLines(int e) {
+    smallWindowDanmuMaxLines.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kSmallWindowDanmuMaxLines, e);
+  }
+
+  var smallWindowDanmuAutoTransparent = true.obs;
+  void setSmallWindowDanmuAutoTransparent(bool e) {
+    smallWindowDanmuAutoTransparent.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kSmallWindowDanmuAutoTransparent, e);
+  }
+
+  // PIP弹幕设置
+  var enablePipDanmu = false.obs;
+  void setEnablePipDanmu(bool e) {
+    enablePipDanmu.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kEnablePipDanmu, e);
+  }
+
+  var pipDanmuScale = 0.75.obs;
+  void setPipDanmuScale(double e) {
+    pipDanmuScale.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPipDanmuScale, e);
+  }
+
+  // SuperChat 全屏滚动
+  var superChatScrollInFullscreen = false.obs;
+  void setSuperChatScrollInFullscreen(bool e) {
+    superChatScrollInFullscreen.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kSuperChatScrollInFullscreen, e);
   }
 
   var danmuShieldEnable = true.obs;

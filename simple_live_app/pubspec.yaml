@@ -96,6 +96,8 @@ dependency_overrides:
   sherpa_onnx_ios: 1.13.4
   canvas_danmaku:
     path: ../third_party/canvas_danmaku
+  media_kit_libs_windows_video:
+    path: ../third_party/media_kit_libs_windows_video
 
 flutter_launcher_icons:
   android: true

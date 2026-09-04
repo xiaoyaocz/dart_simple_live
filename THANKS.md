@@ -21,3 +21,5 @@ Simple Live 会继续保持开源和免费使用。感谢赞助维护、提供�
 ## 资源参考
 
 - 感谢 [EmojiAll 抖音平台表情](https://www.emojiall.com/zh-hans/platform-douyin) 提供抖音平台表情参考。
+- 抖音游戏分类素材参考 [Apple App Store](https://www.apple.com/app-store/)、[Steam Store](https://steamdb.info/)、[爱给](https://www.aigei.com/)、[FLATICON](https://www.flaticon.com/)、[iconfont](https://www.iconfont.cn/)及维护者核验的来源文件。素材相关权利归原权利人所有，仅可在本项目的非商业使用场景中使用；下游 fork 请保留代码中的来源说明和本项鸣谢，不可用于商业用途。
+

@@ -30,6 +30,7 @@ tools/
 build_android_apk.bat
 build_tv_apk.bat
 deploy_windows.bat
+third_party/mpv-dev-x86_64-20260828-git-182fa6ca49.7z
 *.log
 *.trace
 
@@ -63,3 +64,4 @@ Desktop.ini
 !THANKS.md
 !SETTINGS_GUIDE.md
 !**/README.md
+.codex/project-experience.md

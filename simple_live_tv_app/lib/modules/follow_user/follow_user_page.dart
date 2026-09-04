@@ -172,12 +172,21 @@ class _FollowUserPageState extends State<FollowUserPage> {
                   text: "显示/筛选",
                   onTap: _showDisplayDialog,
                 ),
-                const Spacer(),
+                AppStyle.hGap16,
                 HighlightButton(
                   focusNode: AppFocusNode(),
-                  iconData: Icons.sync,
-                  text: "刷新全部",
-                  onTap: FollowUserService.instance.refreshAllStatus,
+                  iconData: Icons.label_outline,
+                  text: "标签",
+                  onTap: _showTagDialog,
+                ),
+                const Spacer(),
+                Obx(
+                  () => HighlightButton(
+                    focusNode: AppFocusNode(),
+                    iconData: Icons.sync,
+                    text: FollowUserService.instance.refreshTagLabel,
+                    onTap: FollowUserService.instance.refreshAllStatus,
+                  ),
                 ),
                 AppStyle.hGap24,
                 AppStyle.hGap48,
@@ -277,6 +286,9 @@ class _FollowUserPageState extends State<FollowUserPage> {
     final settings = AppSettingsController.instance;
     final labels = <String>[
       "样式：${_displayStyleLabel(settings.followDisplayStyle.value)}",
+      if (FollowUserService.instance.selectedTagName.value !=
+          FollowUserService.allTagName)
+        "标签：${FollowUserService.instance.selectedTagName.value}",
       if (settings.followOnlyLive.value) "仅显示开播",
       if (settings.followRefreshOnEnter.value) "进页刷新",
       if (FollowUserService.instance.searchKeyword.value.isNotEmpty)
@@ -345,6 +357,43 @@ class _FollowUserPageState extends State<FollowUserPage> {
       return;
     }
     FollowUserService.instance.setSearchKeyword(result);
+  }
+
+  void _showTagDialog() {
+    Utils.showSystemRightDialog(
+      width: 760.w,
+      child: Obx(
+        () => ListView(
+          padding: AppStyle.edgeInsetsA24,
+          children: [
+            Text("关注标签", style: AppStyle.titleStyleWhite),
+            AppStyle.vGap24,
+            Wrap(
+              spacing: 16.w,
+              runSpacing: 16.w,
+              children: FollowUserService.instance.tagOptions
+                  .map(
+                    (tag) => HighlightButton(
+                      focusNode: AppFocusNode(),
+                      iconData: tag == FollowUserService.allTagName
+                          ? Icons.all_inclusive
+                          : Icons.label_outline,
+                      text: tag,
+                      selected:
+                          FollowUserService.instance.selectedTagName.value ==
+                              tag,
+                      onTap: () {
+                        FollowUserService.instance.setSelectedTagName(tag);
+                        Get.back();
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDisplayDialog() {

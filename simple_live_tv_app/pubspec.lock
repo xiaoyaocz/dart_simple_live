@@ -537,13 +537,12 @@ packages:
     source: hosted
     version: "1.0.5"
   media_kit_libs_windows_video:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: media_kit_libs_windows_video
-      sha256: dff76da2778729ab650229e6b4ec6ec111eb5151431002cbd7ea304ff1f112ab
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.0.11"
+      path: "../third_party/media_kit_libs_windows_video"
+      relative: true
+    source: path
+    version: "1.0.11+simplelive.1"
   media_kit_native_event_loop:
     dependency: transitive
     description:

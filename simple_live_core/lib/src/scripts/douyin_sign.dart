@@ -10685,9 +10685,9 @@ function getMSSDKSignature(msStub, userAgent) {
       );
       var newUrl = signedUri.toString();
       return newUrl;
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Linux 平台可能缺少 libquickjs.so，返回未签名的 URL
-      CoreLog.e("QuickJS 初始化失败，可能缺少动态库: $e");
+      CoreLog.e("QuickJS 初始化失败，可能缺少动态库: $e", stackTrace);
       final uri = Uri.parse(url);
       final queryParameters = Map<String, String>.from(uri.queryParameters);
       final effectiveMsToken = msToken?.trim().isNotEmpty == true
@@ -10695,7 +10695,9 @@ function getMSSDKSignature(msStub, userAgent) {
           : generateMsToken(107);
       queryParameters["msToken"] = effectiveMsToken;
       queryParameters.remove("a_bogus");
-      final unsignedUrl = uri.replace(queryParameters: queryParameters).toString();
+      final unsignedUrl = uri
+          .replace(queryParameters: queryParameters)
+          .toString();
       CoreLog.w("返回未签名的 URL（部分功能可能受限）");
       return unsignedUrl;
     }
@@ -10725,9 +10727,9 @@ function getMSSDKSignature(msStub, userAgent) {
       }
       flutterJs.dispose();
       return signature;
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Linux 平台可能缺少 libquickjs.so
-      CoreLog.e("QuickJS 初始化失败，无法生成签名: $e");
+      CoreLog.e("QuickJS 初始化失败，无法生成签名: $e", stackTrace);
       CoreLog.w("Linux 用户请确保已安装 libquickjs.so 动态库");
       // 返回 msStub 作为降级方案
       return getMsStubFromParams(params);

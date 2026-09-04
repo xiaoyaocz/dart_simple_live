@@ -126,13 +126,30 @@ class AppPages {
     //分类
     GetPage(
       name: RoutePath.kCategoryDetail,
-      page: () => const CategoryDetailPage(),
-      binding: BindingsBuilder.put(
-        () => CategoryDetailController(
-          site: Get.arguments[0],
-          subCategory: Get.arguments[1],
-        ),
-      ),
+      page: () {
+        final args = Get.arguments;
+        final tag = args is Map ? args["controllerTag"] as String? : null;
+        return CategoryDetailPage(tag: tag);
+      },
+      binding: BindingsBuilder(() {
+        final args = Get.arguments;
+        if (args is Map) {
+          Get.put(
+            CategoryDetailController(
+              site: args["site"],
+              subCategory: args["category"],
+            ),
+            tag: args["controllerTag"] as String?,
+          );
+          return;
+        }
+        Get.put(
+          CategoryDetailController(
+            site: args[0],
+            subCategory: args[1],
+          ),
+        );
+      }),
     ),
     // 搜索房间
     GetPage(

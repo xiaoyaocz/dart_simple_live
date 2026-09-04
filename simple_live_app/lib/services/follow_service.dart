@@ -345,7 +345,6 @@ class FollowService extends GetxService {
   Future<void> startUpdateStatus({bool force = false}) async {
     return refreshSelectedStatus(
       followList,
-      includeAllNormals: true,
       force: force,
       scope: FollowRefreshScope.all(automatic: !force),
       allowDetailRefresh: force,
@@ -555,14 +554,12 @@ class FollowService extends GetxService {
     return result;
   }
 
-  List<FollowUser> _buildRefreshTargets(
-    Iterable<FollowUser> normalTargets, {
-    bool includeAllNormals = false,
-  }) {
-    final specials = followList.where((item) => item.isSpecialFollow).toList();
-    final normals = includeAllNormals
-        ? followList.where((item) => !item.isSpecialFollow).toList()
-        : normalTargets.where((item) => !item.isSpecialFollow).toList();
+  List<FollowUser> _buildRefreshTargets(Iterable<FollowUser> normalTargets) {
+    final boundedTargets = _distinctFollowUsers(normalTargets);
+    final specials =
+        boundedTargets.where((item) => item.isSpecialFollow).toList();
+    final normals =
+        boundedTargets.where((item) => !item.isSpecialFollow).toList();
     return _distinctFollowUsers([
       ...sortFollowUsers(specials),
       ...sortFollowUsers(normals),
@@ -938,7 +935,6 @@ class FollowService extends GetxService {
 
   Future<void> refreshSelectedStatus(
     Iterable<FollowUser> normalTargets, {
-    bool includeAllNormals = false,
     bool force = true,
     FollowRefreshScope? scope,
     bool allowDetailRefresh = true,
@@ -948,10 +944,7 @@ class FollowService extends GetxService {
           automatic: !force,
         );
     final targets = resolvedScope.includeAllNormals
-        ? _buildRefreshTargets(
-            normalTargets,
-            includeAllNormals: includeAllNormals,
-          )
+        ? _buildRefreshTargets(normalTargets)
         : buildPageFrontTargets(normalTargets);
     await _refreshStatusTargets(
       targets,

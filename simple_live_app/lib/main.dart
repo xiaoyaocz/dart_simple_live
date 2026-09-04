@@ -203,7 +203,10 @@ Future initWindow() async {
   await windowManager.ensureInitialized();
   Log.i("桌面窗口初始化");
   WindowOptions windowOptions = const WindowOptions(
-    minimumSize: Size(200, 150),  // 减小最小尺寸，允许更小的窗口
+    minimumSize: Size(
+      DesktopStartupArgs.minWindowWidth,
+      DesktopStartupArgs.minWindowHeight,
+    ),
     title: "Simple Live",
   );
   await windowManager.waitUntilReadyToShow(windowOptions);
@@ -284,8 +287,12 @@ class _DesktopWindowLifecycle with WindowListener {
       if (!displayRect.contains(bounds.center)) {
         continue;
       }
-      final width = bounds.width.clamp(280.0, displayRect.width).toDouble();
-      final height = bounds.height.clamp(280.0, displayRect.height).toDouble();
+      final width = bounds.width
+          .clamp(DesktopStartupArgs.minWindowWidth, displayRect.width)
+          .toDouble();
+      final height = bounds.height
+          .clamp(DesktopStartupArgs.minWindowHeight, displayRect.height)
+          .toDouble();
 
       // Windows DWM may report edge-snapped frames a few pixels outside the
       // visible work area (commonly around -7/-8). Keep that relative overhang

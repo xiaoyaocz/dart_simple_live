@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_tv_app/routes/app_navigation.dart';
 import 'package:simple_live_tv_app/widgets/highlight_widget.dart';
 import 'package:simple_live_tv_app/widgets/net_image.dart';
@@ -121,14 +122,10 @@ class CategoryPage extends GetView<CategoryController> {
                           mainAxisSpacing: 36.w,
                           children: item.showAll.value
                               ? (item.childrenExt
-                                  .map(
-                                    (e) => buildSubCategory(e),
-                                  )
+                                  .map((e) => buildSubCategory(context, e))
                                   .toList())
                               : (item.take15
-                                  .map(
-                                    (e) => buildSubCategory(e),
-                                  )
+                                  .map((e) => buildSubCategory(context, e))
                                   .toList()
                                 ..add(buildShowMore(item))),
                         ),
@@ -144,7 +141,12 @@ class CategoryPage extends GetView<CategoryController> {
     );
   }
 
-  Widget buildSubCategory(LiveSubCategoryExt item) {
+  Widget buildSubCategory(BuildContext context, LiveSubCategoryExt item) {
+    final pic = (item.pic ?? "").trim();
+    final imageSize = 64.w;
+    final isLocalGameArtwork = DouyinGameArtwork.isLocalGameArtwork(pic);
+    final cacheWidth =
+        (imageSize * MediaQuery.of(context).devicePixelRatio).ceil();
     return HighlightWidget(
       focusNode: item.focusNode,
       onTap: () {
@@ -155,13 +157,14 @@ class CategoryPage extends GetView<CategoryController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          (item.pic != null && item.pic!.isNotEmpty)
+          pic.isNotEmpty
               ? NetImage(
-                  item.pic ?? "",
-                  width: 64.w,
-                  height: 64.w,
+                  pic,
+                  width: imageSize,
+                  height: imageSize,
                   borderRadius: 16.w,
-                  cacheWidth: 100,
+                  fit: isLocalGameArtwork ? BoxFit.contain : BoxFit.cover,
+                  cacheWidth: cacheWidth,
                 )
               : Image.asset(
                   "assets/images/${item.site.id}.png",

@@ -84,29 +84,38 @@ class CategoryListView extends StatelessWidget {
 
   Widget buildSubCategory(BuildContext context, LiveSubCategory item) {
     final pic = (item.pic ?? "").trim();
-    return ShadowCard(
-      onTap: () {
-        AppNavigator.toCategoryDetail(site: controller.site, category: item);
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          pic.isNotEmpty
-              ? NetImage(
-                  pic,
-                  width: 40,
-                  height: 40,
-                  borderRadius: 8,
-                )
-              : _buildFallbackCategoryIcon(context, item),
-          AppStyle.vGap4,
-          Text(
-            item.name,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12),
-          ),
-        ],
+    final isLocalGameArtwork = DouyinGameArtwork.isLocalGameArtwork(pic);
+    final cacheWidth = (40 * MediaQuery.of(context).devicePixelRatio).ceil();
+    return Tooltip(
+      message: item.name,
+      waitDuration: const Duration(milliseconds: 300),
+      child: ShadowCard(
+        onTap: () {
+          AppNavigator.toCategoryDetail(site: controller.site, category: item);
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            pic.isNotEmpty
+                ? NetImage(
+                    pic,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    fit: isLocalGameArtwork ? BoxFit.contain : BoxFit.cover,
+                    cacheWidth: cacheWidth,
+                  )
+                : _buildFallbackCategoryIcon(context, item),
+            AppStyle.vGap4,
+            Text(
+              item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }

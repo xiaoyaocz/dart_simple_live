@@ -47,6 +47,10 @@ endfunction()
 
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
+set(
+  SIMPLE_LIVE_LIBMPV_ARCHIVE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/mpv-dev-x86_64-20260828-git-182fa6ca49.7z"
+)
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
 # Application build; see runner/CMakeLists.txt.

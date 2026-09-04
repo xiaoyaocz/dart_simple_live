@@ -50,6 +50,9 @@ class NetImage extends StatelessWidget {
           fit: fit,
           height: height,
           width: width,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
+          filterQuality: FilterQuality.medium,
         ),
       );
     }

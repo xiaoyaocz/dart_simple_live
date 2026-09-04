@@ -63,6 +63,8 @@ dependency_overrides:
   canvas_danmaku:
     path: ../third_party/canvas_danmaku
   media_kit_libs_android_video: 1.3.7
+  media_kit_libs_windows_video:
+    path: ../third_party/media_kit_libs_windows_video
 
 dev_dependencies:
   flutter_test:
@@ -76,5 +78,6 @@ flutter:
     - assets/statement.txt
     - assets/images/
     - assets/images/douyin_emoji/
+    - assets/images/douyin_games/
     - assets/icons/
     - assets/lotties/

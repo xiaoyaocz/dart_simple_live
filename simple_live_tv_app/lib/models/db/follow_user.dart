@@ -16,6 +16,7 @@ class FollowUser {
     this.roomTitle = "",
     this.roomCover = "",
     this.previewUpdatedAt,
+    this.tag = "全部",
   });
 
   ///id=siteId_roomId
@@ -49,6 +50,9 @@ class FollowUser {
   @HiveField(9)
   DateTime? previewUpdatedAt;
 
+  @HiveField(10)
+  String tag;
+
   /// 直播状态
   /// 0=未知(加载中) 1=未开播 2=直播中
   Rx<int> liveStatus = 0.obs;
@@ -73,6 +77,9 @@ class FollowUser {
       roomCover: json["roomCover"]?.toString() ?? "",
       previewUpdatedAt:
           DateTime.tryParse(json["previewUpdatedAt"]?.toString() ?? ""),
+      tag: (json["tag"]?.toString().trim().isNotEmpty ?? false)
+          ? json["tag"].toString().trim()
+          : "全部",
     );
   }
 
@@ -87,5 +94,6 @@ class FollowUser {
         'roomTitle': roomTitle,
         'roomCover': roomCover,
         'previewUpdatedAt': previewUpdatedAt?.toIso8601String() ?? "",
+        'tag': tag,
       };
 }

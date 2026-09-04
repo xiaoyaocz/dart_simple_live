@@ -42,11 +42,13 @@ class FollowGroupOption {
 
 class FollowUserController extends BasePageController<FollowUser> {
   static const int paginationThreshold = 400;
+  static const String allTagId = "0";
   StreamSubscription<dynamic>? onUpdatedIndexedStream;
   StreamSubscription<dynamic>? onUpdatedListStream;
 
   var groupMode = FollowGroupMode.liveStatus.obs;
   var selectedGroupId = "all".obs;
+  var selectedTagId = allTagId.obs;
   var searchKeyword = "".obs;
   var multiSelectMode = false.obs;
   RxSet<String> selectedMultiRoomKeys = <String>{}.obs;
@@ -77,6 +79,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     );
     onUpdatedListStream =
         FollowService.instance.updatedListStream.listen((event) {
+      updateTagList();
       filterData();
     });
     super.onInit();
@@ -132,6 +135,9 @@ class FollowUserController extends BasePageController<FollowUser> {
         tagList.add(i);
       }
     }
+    if (!filterTagOptions.any((tag) => tag.id == selectedTagId.value)) {
+      selectedTagId.value = allTagId;
+    }
   }
 
   void filterData() {
@@ -183,8 +189,26 @@ class FollowUserController extends BasePageController<FollowUser> {
   String get currentRefreshScopeKey {
     final mode =
         groupMode.value == FollowGroupMode.platform ? "platform" : "live";
-    return "${currentDisplayPage.value}:${selectedGroupId.value}:$mode";
+    return "${currentDisplayPage.value}:${selectedTagId.value}:${selectedGroupId.value}:$mode";
   }
+
+  List<FollowUserTag> get filterTagOptions => [
+        tagList.firstWhere(
+          (tag) => tag.id == allTagId,
+          orElse: () => tagList.first,
+        ),
+        ...userTagList,
+      ];
+
+  FollowUserTag get selectedTagOption => filterTagOptions.firstWhere(
+        (tag) => tag.id == selectedTagId.value,
+        orElse: () => filterTagOptions.first,
+      );
+
+  String get selectedTagName => selectedTagOption.tag;
+
+  String get refreshTagLabel =>
+      selectedTagId.value == allTagId ? "全部" : selectedTagName;
 
   Future<void> refreshCurrentPageStatus() async {
     final pageItems =
@@ -202,11 +226,17 @@ class FollowUserController extends BasePageController<FollowUser> {
   }
 
   Future<void> refreshAllStatus() async {
+    final selectedTag = selectedTagOption;
+    final isAll = selectedTag.id == allTagId;
     await FollowService.instance.refreshSelectedStatus(
-      _buildFilteredList(),
-      includeAllNormals: true,
+      _buildSelectedTagList(),
       force: true,
-      scope: const FollowRefreshScope.all(),
+      scope: isAll
+          ? const FollowRefreshScope.all()
+          : FollowRefreshScope.tag(
+              tagId: selectedTag.id,
+              tagName: selectedTag.tag,
+            ),
     );
     filterData();
   }
@@ -281,10 +311,8 @@ class FollowUserController extends BasePageController<FollowUser> {
         FollowGroupOption(id: "not_live", title: "未开播", liveStatus: 1),
       ]);
     } else {
-      final siteIds = FollowService.instance.followList
-          .map((item) => item.siteId)
-          .toSet()
-          .toList();
+      final siteIds =
+          _buildSelectedTagList().map((item) => item.siteId).toSet().toList();
       final siteSort = Sites.supportSites.map((site) => site.id).toList();
       siteIds.sort((a, b) {
         final aIndex = siteSort.indexOf(a);
@@ -322,7 +350,7 @@ class FollowUserController extends BasePageController<FollowUser> {
         break;
       }
     }
-    final source = FollowService.instance.followList;
+    final source = _buildSelectedTagList();
     if (selected == null || selected.id == "all") {
       selectedGroupId.value = "all";
       return FollowService.instance.sortFollowUsers(
@@ -362,6 +390,30 @@ class FollowUserController extends BasePageController<FollowUser> {
       );
     }
     return FollowService.instance.sortFollowUsers(_distinctFollowUsers(items));
+  }
+
+  List<FollowUser> _buildSelectedTagList() {
+    final source = FollowService.instance.followList;
+    final selectedTag = selectedTagOption;
+    if (selectedTag.id == allTagId) {
+      return FollowService.instance.sortFollowUsers(
+        _distinctFollowUsers(source),
+      );
+    }
+    final memberIds = selectedTag.userId.toSet();
+    return FollowService.instance.sortFollowUsers(
+      _distinctFollowUsers(
+        source.where(
+          (item) => memberIds.contains(item.id) || item.tag == selectedTag.tag,
+        ),
+      ),
+    );
+  }
+
+  void setSelectedTag(FollowUserTag tag) {
+    selectedTagId.value = tag.id;
+    currentDisplayPage.value = 1;
+    filterData();
   }
 
   void setSearchKeyword(String value) {
@@ -547,6 +599,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     }
     await FollowService.instance.delFollowUserTag(tag);
     updateTagList();
+    filterData();
     Log.i('删除tag${tag.tag}');
   }
 
@@ -585,6 +638,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     }
     SmartDialog.showToast("标签名修改成功");
     updateTagList();
+    filterData();
   }
 
   // 调整标签顺序

@@ -1047,6 +1047,22 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     SmartDialog.showToast(enabled ? "已设为特别关注" : "已取消特别关注");
   }
 
+  void setCurrentFollowTag(String tagName) {
+    if (detail.value == null) return;
+    final id = "${site.id}_$roomId";
+    var follow = DBService.instance.followBox.get(id);
+    if (follow == null) {
+      followUser();
+      follow = DBService.instance.followBox.get(id);
+    }
+    if (follow == null) return;
+    follow.tag = tagName;
+    DBService.instance.addFollow(follow);
+    followed.value = true;
+    EventBus.instance.emit(Constant.kUpdateFollow, id);
+    SmartDialog.showToast("已设置标签：$tagName");
+  }
+
   void resetRoom(Site site, String roomId) async {
     if (this.site == site && this.roomId == roomId) {
       return;

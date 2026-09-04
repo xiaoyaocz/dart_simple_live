@@ -1,5 +1,5 @@
 name: simple_live_app
-version: 1.12.8+11208
+version: 1.13.0+11300
 publish_to: none
 description: "Simple Live APP"
 environment:
@@ -73,9 +73,10 @@ dependencies:
   web_socket_channel: ^3.0.1 #远程同步WebSocket
 
   # 视频播放
-  media_kit: ^1.2.2
-  media_kit_video: ^2.0.0
-  media_kit_libs_video: ^1.0.7
+  # 2.0.1 fixes Windows video texture callbacks being sent from a worker thread.
+  media_kit: 1.2.6
+  media_kit_video: 2.0.1
+  media_kit_libs_video: 1.0.7
 
   flutter:
     sdk: flutter
@@ -110,5 +111,6 @@ flutter:
     - assets/statement.txt
     - assets/images/
     - assets/images/douyin_emoji/
+    - assets/images/douyin_games/
     - assets/icons/
     - assets/lotties/

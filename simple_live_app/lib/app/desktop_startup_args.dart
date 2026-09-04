@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 
 class DesktopStartupArgs {
+  static const double minWindowWidth = 200;
+  static const double minWindowHeight = 150;
   static const secondaryInstanceArg = "--simple-live-secondary-instance";
   static const secondaryInstanceEnv = "SIMPLE_LIVE_SECONDARY_INSTANCE";
   static const openSiteArg = "--simple-live-open-site";
@@ -48,10 +50,14 @@ class DesktopStartupArgs {
     if (left == null || top == null || width == null || height == null) {
       return null;
     }
-    if (width < 280 || height < 280) {
+    if (!isValidWindowSize(width, height)) {
       return null;
     }
     return Rect.fromLTWH(left, top, width, height);
+  }
+
+  static bool isValidWindowSize(double width, double height) {
+    return width >= minWindowWidth && height >= minWindowHeight;
   }
 
   static bool get startupCollapseChat => _args.contains(collapseChatArg);

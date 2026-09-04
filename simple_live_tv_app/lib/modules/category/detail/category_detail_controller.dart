@@ -14,8 +14,10 @@ class CategoryDetailController extends BasePageController<LiveRoomItemExt> {
 
   @override
   void onInit() {
-    scrollController.addListener(scrollListener);
-    refreshData();
+    if (!subCategory.hasChildren) {
+      scrollController.addListener(scrollListener);
+      refreshData();
+    }
     super.onInit();
   }
 

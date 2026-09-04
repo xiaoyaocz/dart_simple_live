@@ -172,7 +172,12 @@ class DouyinSite implements LiveSite {
         children: subs,
         id: id,
         name: asT<String?>(item["partition"]["title"]) ?? "",
-        pic: _pickPartitionImageUrl(item["partition"]),
+        pic:
+            DouyinGameArtwork.assetUriForCategory(
+              categoryId: id,
+              categoryName: asT<String?>(item["partition"]["title"]) ?? "",
+            ) ??
+            _pickPartitionImageUrl(item["partition"]),
       );
       subs.insert(
         0,
@@ -180,7 +185,7 @@ class DouyinSite implements LiveSite {
           id: category.id,
           name: category.name,
           parentId: category.id,
-          pic: _pickPartitionImageUrl(item["partition"]),
+          pic: category.pic,
         ),
       );
       categories.add(category);
@@ -191,6 +196,7 @@ class DouyinSite implements LiveSite {
   /// 递归解析子分类（支持多级嵌套）
   LiveSubCategory _parseSubCategory(dynamic item, String parentId) {
     var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
+    final name = asT<String?>(item["partition"]["title"]) ?? "";
     List<LiveSubCategory> children = [];
 
     // 递归处理子分类的子分类（第三级、第四级...）
@@ -201,9 +207,16 @@ class DouyinSite implements LiveSite {
 
     return LiveSubCategory(
       id: id,
-      name: asT<String?>(item["partition"]["title"]) ?? "",
+      name: name,
       parentId: parentId,
-      pic: _pickPartitionImageUrl(item["partition"]),
+      // Attribution and non-commercial terms for local artwork are retained
+      // centrally in DouyinGameArtwork and THANKS.md.
+      pic:
+          DouyinGameArtwork.assetUriForCategory(
+            categoryId: id,
+            categoryName: name,
+          ) ??
+          _pickPartitionImageUrl(item["partition"]),
       children: children,
     );
   }

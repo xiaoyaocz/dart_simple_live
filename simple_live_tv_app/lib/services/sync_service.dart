@@ -298,7 +298,7 @@ class SyncService extends GetxService {
           stage: "接收标签",
           current: chunk.itemEnd,
           total: chunk.itemTotal,
-          message: "TV 端暂不使用关注标签",
+          message: "标签成员已随关注数据同步",
         ),
       );
 

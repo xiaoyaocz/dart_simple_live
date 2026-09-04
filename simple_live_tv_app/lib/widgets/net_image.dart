@@ -33,6 +33,7 @@ class NetImage extends StatelessWidget {
           height: height,
           width: width,
           cacheWidth: cacheWidth,
+          filterQuality: FilterQuality.medium,
         ),
       );
     }

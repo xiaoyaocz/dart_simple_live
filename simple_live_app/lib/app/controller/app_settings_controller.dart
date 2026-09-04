@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:simple_live_app/app/constant.dart';
+import 'package:simple_live_app/app/desktop_startup_args.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/danmu_shield_preset.dart';
@@ -752,7 +753,9 @@ class AppSettingsController extends GetxController {
         style: TextStyle(
           fontSize: fontSize ?? danmuSize.value,
           fontWeight: fontWeight ?? _danmuFontWeightValue,
-          fontFamily: Platform.isWindows ? "Microsoft YaHei" : (Platform.isAndroid ? "Roboto" : null),
+          fontFamily: Platform.isWindows
+              ? "Microsoft YaHei"
+              : (Platform.isAndroid ? "Roboto" : null),
           foreground: Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = strokeWidth ?? danmuStrokeWidth.value
@@ -2228,7 +2231,7 @@ class AppSettingsController extends GetxController {
       if (left == null || top == null || width == null || height == null) {
         return null;
       }
-      if (width < 280 || height < 280) {
+      if (!DesktopStartupArgs.isValidWindowSize(width, height)) {
         return null;
       }
       return Rect.fromLTWH(left, top, width, height);

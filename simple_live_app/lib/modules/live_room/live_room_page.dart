@@ -190,64 +190,6 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   List<Widget> _buildDesktopOverlayButtons(BuildContext context) {
     return [
-      // Desktop uses an overlay instead of a Flutter AppBar so the player
-      // keeps its full video area. Keep the room title visible on all three
-      // desktop targets while retaining the existing edge controls.
-      // 只在全屏或小窗时显示标题
-      Obx(() {
-        final shouldShowTitle = controller.fullScreenState.value ||
-                                controller.smallWindowState.value;
-        if (!shouldShowTitle) {
-          return const SizedBox.shrink();
-        }
-
-        // 使用 LayoutBuilder 获取实际播放器区域宽度
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            // 计算侧边栏宽度
-            // 全屏时没有侧边栏，非全屏时根据设置计算
-            final sidePanelWidth = controller.fullScreenState.value
-                ? 0.0
-                : _landscapeSideWidth(constraints.maxWidth);
-
-            // 标题应该从左到右减去侧边栏宽度
-            // 这样标题就只在播放器区域内居中
-            return Positioned(
-              top: 8,
-              left: 56,
-              right: sidePanelWidth + 56,  // 右边留出侧边栏宽度 + 按钮空间
-              child: IgnorePointer(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(110),
-                      borderRadius: AppStyle.radius8,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 560),
-                        child: DefaultTextStyle(
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          child: _buildRoomTitleText(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      }),
       Obx(() {
         if (!controller.showControlsState.value) {
           return const SizedBox.shrink();
@@ -405,7 +347,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   Widget _buildPipDanmuLayer() {
     return Positioned.fill(
       child: Padding(
-        padding: const EdgeInsets.all(8),  // 边距确保不触边
+        padding: const EdgeInsets.all(8), // 边距确保不触边
         child: Obx(() {
           return Offstage(
             offstage: !controller.showDanmakuState.value,
@@ -414,22 +356,25 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 final settings = AppSettingsController.instance;
 
                 // PIP 模式使用固定的小字号和限制区域
-                final fontSize = settings.danmuSize.value * settings.pipDanmuScale.value;
-                const area = 0.4;  // 限制40%区域
-                const opacity = 0.75;  // 稍微透明
+                final fontSize =
+                    settings.danmuSize.value * settings.pipDanmuScale.value;
+                const area = 0.4; // 限制40%区域
+                const opacity = 0.75; // 稍微透明
 
                 return DanmakuScreen(
                   key: controller.globalDanmuKey,
                   createdController: controller.initDanmakuController,
                   option: DanmakuOption(
                     fontSize: fontSize,
-                    fontFamily: Platform.isWindows ? "Microsoft YaHei" : (Platform.isAndroid ? "Roboto" : null),
+                    fontFamily: Platform.isWindows
+                        ? "Microsoft YaHei"
+                        : (Platform.isAndroid ? "Roboto" : null),
                     area: area,
                     lineHeight: 1.2,
                     duration: settings.danmuSpeed.value.toInt(),
                     opacity: opacity,
                     fontWeight: settings.danmuFontWeight.value,
-                    hideTop: true,      // PIP模式只显示滚动弹幕
+                    hideTop: true, // PIP模式只显示滚动弹幕
                     hideBottom: true,
                     hideScroll: false,
                     hideSpecial: true,
@@ -599,6 +544,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                             icon: const Icon(Remix.heart_line),
                             label: const Text("关注"),
                           ),
+                  ),
+                  AppStyle.hGap4,
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 14),
+                    ),
+                    onPressed: controller.showCurrentFollowTagSheet,
+                    icon: const Icon(Remix.price_tag_3_line),
+                    label: const Text("标签"),
                   ),
                   const Expanded(child: Center()),
                   TextButton.icon(
@@ -897,6 +851,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                       icon: const Icon(Remix.heart_line),
                       label: const Text("关注"),
                     ),
+            ),
+          ),
+          Expanded(
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                textStyle: const TextStyle(fontSize: 14),
+              ),
+              onPressed: controller.showCurrentFollowTagSheet,
+              icon: const Icon(Remix.price_tag_3_line),
+              label: const Text("标签"),
             ),
           ),
           Expanded(

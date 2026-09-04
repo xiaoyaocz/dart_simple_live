@@ -20,6 +20,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
+import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_status_refresh_policy.dart';
@@ -223,7 +224,7 @@ class LiveRoomController extends PlayerController
   void onInit() {
     CurrentRoomService.instance.setRoom(site, roomId);
     WidgetsBinding.instance.addObserver(this);
-    if (Platform.isWindows) {
+    if (_usesDesktopWindowManager) {
       windowManager.addListener(this);
     }
     if (initialDesktopSidePanelCollapsed ||
@@ -1334,13 +1335,17 @@ class LiveRoomController extends PlayerController
     forceChatScrollToBottom(delay: const Duration(milliseconds: 120));
   }
 
+  bool get _usesDesktopWindowManager {
+    return Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  }
+
   @override
   void onClose() async {
     _roomDisposed = true;
     clearTransientPlayerOverlays();
     _loadGeneration += 1;
     WidgetsBinding.instance.removeObserver(this);
-    if (Platform.isWindows) {
+    if (_usesDesktopWindowManager) {
       windowManager.removeListener(this);
     }
     unawaited(cancelAutoPipOnLeave());
@@ -1466,7 +1471,8 @@ class LiveRoomController extends PlayerController
       if (AppSettingsController.instance.superChatScrollInFullscreen.value &&
           fullScreenState.value) {
         // 格式化为：【头条】用户名：内容
-        final formattedMessage = "【头条】${superChat.userName}：${superChat.message}";
+        final formattedMessage =
+            "【头条】${superChat.userName}：${superChat.message}";
         final scDanmakuMsg = LiveMessage(
           type: LiveMessageType.chat,
           userName: superChat.userName,
@@ -2137,6 +2143,59 @@ class LiveRoomController extends PlayerController
     );
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
+  }
+
+  /// 在直播间给当前主播设置关注标签。
+  Future<void> showCurrentFollowTagSheet() async {
+    if (detail.value == null) {
+      return;
+    }
+    final id = "${site.id}_$roomId";
+    if (!DBService.instance.getFollowExist(id)) {
+      followUser();
+    }
+    final item = DBService.instance.followBox.get(id);
+    if (item == null) {
+      return;
+    }
+    if (FollowService.instance.followTagList.isEmpty) {
+      FollowService.instance.getAllTagList();
+    }
+    final tags = [
+      FollowUserTag(id: "__all__", tag: "全部", userId: []),
+      ...FollowService.instance.followTagList,
+    ];
+    final selected = tags.firstWhere(
+      (tag) => tag.tag == item.tag,
+      orElse: () => tags.first,
+    );
+    Utils.showOptionDialog<FollowUserTag>(
+      tags,
+      selected,
+      title: "设置标签",
+      titleBuilder: (tag) => Text(tag.tag),
+    ).then((target) {
+      if (target == null) return;
+      final current = DBService.instance.followBox.get(id);
+      if (current == null) return;
+      final oldTag = FollowService.instance.followTagList.firstWhere(
+        (tag) => tag.tag == current.tag,
+        orElse: () => FollowUserTag(id: "__all__", tag: "全部", userId: []),
+      );
+      oldTag.userId.remove(id);
+      if (target.tag != "全部") {
+        target.userId.addIf(!target.userId.contains(id), id);
+      }
+      current.tag = target.tag;
+      DBService.instance.addFollow(current);
+      if (oldTag.id != "__all__") {
+        FollowService.instance.updateFollowUserTag(oldTag);
+      }
+      if (target.id != "__all__") {
+        FollowService.instance.updateFollowUserTag(target);
+      }
+      EventBus.instance.emit(Constant.kUpdateFollow, id);
+    });
   }
 
   /// 取消关注当前主播
@@ -3374,6 +3433,20 @@ ${errorStackTrace ?? ""}''');
         previousPosition: positionBeforeWindowBlur,
       ),
     );
+  }
+
+  @override
+  void onWindowEnterFullScreen() {
+    if (_usesDesktopWindowManager && !smallWindowState.value) {
+      fullScreenState.value = true;
+    }
+  }
+
+  @override
+  void onWindowLeaveFullScreen() {
+    if (_usesDesktopWindowManager && !smallWindowState.value) {
+      fullScreenState.value = false;
+    }
   }
 
   // 启动并更新开播时长计时器

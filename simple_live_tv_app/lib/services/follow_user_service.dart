@@ -18,6 +18,7 @@ import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
 
 class FollowUserService extends BasePageController<FollowUser> {
+  static const String allTagName = "全部";
   static const Duration updateStatusCooldown = Duration(seconds: 10);
   static const Duration refreshProgressCompletionHold = Duration(seconds: 2);
   static const int paginationThreshold = 400;
@@ -33,6 +34,7 @@ class FollowUserService extends BasePageController<FollowUser> {
   RxList<FollowUser> livingList = RxList<FollowUser>();
   final Set<String> _previewRefreshingKeys = <String>{};
   var searchKeyword = "".obs;
+  var selectedTagName = allTagName.obs;
   var currentDisplayPage = 1.obs;
   var totalDisplayPages = 1.obs;
   var paginationEnabled = false.obs;
@@ -117,7 +119,7 @@ class FollowUserService extends BasePageController<FollowUser> {
 
   Future<void> _startAutomaticRefresh() async {
     loadLocalList();
-    final targets = _buildRefreshTargets(allList, includeAllNormals: true);
+    final targets = _buildRefreshTargets(allList);
     if (targets.isEmpty) {
       return;
     }
@@ -134,6 +136,7 @@ class FollowUserService extends BasePageController<FollowUser> {
       _sortFollowUsers(
           _distinctFollowUsers(DBService.instance.getFollowList())),
     );
+    _validateSelectedTag();
     updateLivingList();
     sortList();
     if (allList.isEmpty) {
@@ -156,7 +159,7 @@ class FollowUserService extends BasePageController<FollowUser> {
       _lastEnterRefreshAt = now;
       _enterRefreshInFlight = true;
       final refreshFuture = startUpdateStatus(
-        _buildRefreshTargets(allList, includeAllNormals: true),
+        _buildRefreshTargets(allList),
         force: false,
         scope: const FollowRefreshScope.all(automatic: true),
       );
@@ -272,7 +275,22 @@ class FollowUserService extends BasePageController<FollowUser> {
 
   List<FollowUser> get currentPageTargets => list.toList();
 
-  String get currentRefreshScopeKey => "page:${currentDisplayPage.value}";
+  String get currentRefreshScopeKey =>
+      "page:${selectedTagName.value}:${currentDisplayPage.value}";
+
+  List<String> get tagOptions {
+    final tags = allList
+        .map((item) => item.tag.trim())
+        .where((tag) => tag.isNotEmpty && tag != allTagName)
+        .toSet()
+        .toList()
+      ..sort();
+    return [allTagName, ...tags];
+  }
+
+  String get refreshTagLabel => selectedTagName.value == allTagName
+      ? "刷新全部"
+      : "刷新 ${selectedTagName.value}";
 
   Future<void> refreshCurrentPageStatus() async {
     await startUpdateStatus(
@@ -283,15 +301,21 @@ class FollowUserService extends BasePageController<FollowUser> {
   }
 
   Future<void> refreshAllStatus() async {
+    final tagName = selectedTagName.value;
     await startUpdateStatus(
-      _buildRefreshTargets(allList, includeAllNormals: true),
+      _buildRefreshTargets(_buildSelectedTagList()),
       force: true,
-      scope: const FollowRefreshScope.all(),
+      scope: tagName == allTagName
+          ? const FollowRefreshScope.all()
+          : FollowRefreshScope.tag(
+              tagId: tagName,
+              tagName: tagName,
+            ),
     );
   }
 
   List<FollowUser> _buildDisplaySource() {
-    Iterable<FollowUser> items = allList;
+    Iterable<FollowUser> items = _buildSelectedTagList();
     if (AppSettingsController.instance.followOnlyLive.value) {
       items = items.where((item) => item.liveStatus.value == 2);
     }
@@ -302,6 +326,30 @@ class FollowUserService extends BasePageController<FollowUser> {
       );
     }
     return _sortFollowUsers(items);
+  }
+
+  List<FollowUser> _buildSelectedTagList() {
+    final tagName = selectedTagName.value;
+    if (tagName == allTagName) {
+      return _sortFollowUsers(_distinctFollowUsers(allList));
+    }
+    return _sortFollowUsers(
+      _distinctFollowUsers(
+        allList.where((item) => item.tag.trim() == tagName),
+      ),
+    );
+  }
+
+  void setSelectedTagName(String tagName) {
+    selectedTagName.value = tagOptions.contains(tagName) ? tagName : allTagName;
+    currentDisplayPage.value = 1;
+    sortList();
+  }
+
+  void _validateSelectedTag() {
+    if (!tagOptions.contains(selectedTagName.value)) {
+      selectedTagName.value = allTagName;
+    }
   }
 
   void setSearchKeyword(String value) {
@@ -339,14 +387,12 @@ class FollowUserService extends BasePageController<FollowUser> {
     sortList();
   }
 
-  List<FollowUser> _buildRefreshTargets(
-    Iterable<FollowUser> normalTargets, {
-    bool includeAllNormals = false,
-  }) {
-    final specials = allList.where((item) => item.isSpecialFollow).toList();
-    final normals = includeAllNormals
-        ? allList.where((item) => !item.isSpecialFollow).toList()
-        : normalTargets.where((item) => !item.isSpecialFollow).toList();
+  List<FollowUser> _buildRefreshTargets(Iterable<FollowUser> normalTargets) {
+    final boundedTargets = _distinctFollowUsers(normalTargets);
+    final specials =
+        boundedTargets.where((item) => item.isSpecialFollow).toList();
+    final normals =
+        boundedTargets.where((item) => !item.isSpecialFollow).toList();
     return _distinctFollowUsers([
       ..._sortFollowUsers(specials),
       ..._sortFollowUsers(normals),

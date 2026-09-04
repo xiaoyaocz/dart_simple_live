@@ -36,4 +36,17 @@ class FollowRefreshScope {
          stage: "正在刷新关注状态",
          backgroundStage: "当前页已完成，后台补充特别关注",
        );
+
+  FollowRefreshScope.tag({
+    required String tagId,
+    required String tagName,
+    bool automatic = false,
+  }) : this(
+         scopeKey: "tag:$tagId",
+         includeAllNormals: true,
+         automatic: automatic,
+         allowBackgroundSpecials: false,
+         stage: "正在刷新标签「$tagName」",
+         backgroundStage: "",
+       );
 }

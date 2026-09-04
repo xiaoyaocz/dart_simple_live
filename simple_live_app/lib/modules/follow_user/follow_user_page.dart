@@ -72,7 +72,10 @@ class FollowUserPage extends GetView<FollowUserController> {
                     icon: const Icon(Icons.refresh),
                   ),
                   IconButton(
-                    tooltip: "刷新全部",
+                    tooltip: controller.selectedTagId.value ==
+                            FollowUserController.allTagId
+                        ? "刷新全部关注"
+                        : "刷新标签：${controller.selectedTagName}",
                     onPressed: controller.refreshAllStatus,
                     icon: const Icon(Icons.sync),
                   ),
@@ -195,9 +198,11 @@ class FollowUserPage extends GetView<FollowUserController> {
                   ),
                 )
               : IconButton(
-                  onPressed: () {
-                    controller.refreshData();
-                  },
+                  tooltip: controller.selectedTagId.value ==
+                          FollowUserController.allTagId
+                      ? "刷新全部关注"
+                      : "刷新标签：${controller.selectedTagName}",
+                  onPressed: controller.refreshAllStatus,
                   icon: const Icon(Icons.refresh),
                 ),
         ),
@@ -213,7 +218,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                   child: Padding(
                     padding: AppStyle.edgeInsetsH8.copyWith(top: 8),
                     child: Text(
-                      "当前页刷新只处理当前结果；刷新全部会按当前筛选结果执行完整刷新，并在手动时补齐封面与标题。",
+                      "当前页刷新只处理当前显示结果；刷新“${controller.refreshTagLabel}”会忽略搜索、平台和开播状态，只刷新该标签内的关注。",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -224,6 +229,31 @@ class FollowUserPage extends GetView<FollowUserController> {
               ),
               Obx(
                 () => _buildActiveFilterBar(context),
+              ),
+              Padding(
+                padding: AppStyle.edgeInsetsH8.copyWith(top: 4),
+                child: Text(
+                  "标签",
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              Padding(
+                padding: AppStyle.edgeInsetsA8.copyWith(top: 4),
+                child: Obx(
+                  () => SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Wrap(
+                      spacing: 12,
+                      children: controller.filterTagOptions.map((tag) {
+                        return FilterButton(
+                          text: tag.tag,
+                          selected: controller.selectedTagId.value == tag.id,
+                          onTap: () => controller.setSelectedTag(tag),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
               ),
               Padding(
                 padding: AppStyle.edgeInsetsH8,
@@ -380,7 +410,7 @@ class FollowUserPage extends GetView<FollowUserController> {
         detailsExtent: FollowUserItem.previewDetailsExtent,
       );
       final cardExtent =
-          showLiveCover ? grid.mainAxisExtent : (mobile ? 178.0 : 190.0);
+          showLiveCover ? grid.mainAxisExtent : (mobile ? 210.0 : 222.0);
       return _FollowLayoutSpec(
         itemStyle: FollowUserItemStyle.card,
         crossAxisCount: grid.crossAxisCount,
@@ -403,6 +433,15 @@ class FollowUserPage extends GetView<FollowUserController> {
   Widget _buildActiveFilterBar(BuildContext context) {
     final settings = AppSettingsController.instance;
     final chips = <Widget>[];
+    if (controller.selectedTagId.value != FollowUserController.allTagId) {
+      chips.add(
+        InputChip(
+          label: Text("标签：${controller.selectedTagName}"),
+          onDeleted: () =>
+              controller.setSelectedTag(controller.filterTagOptions.first),
+        ),
+      );
+    }
     if (controller.searchKeyword.value.isNotEmpty) {
       chips.add(
         InputChip(
@@ -616,7 +655,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                 TextButton.icon(
                   onPressed: controller.refreshAllStatus,
                   icon: const Icon(Icons.sync),
-                  label: const Text("全部"),
+                  label: Text(controller.refreshTagLabel),
                 ),
               ],
             ),

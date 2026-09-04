@@ -78,13 +78,7 @@ class AppLiveCategory extends LiveCategory {
     required super.children,
     required this.site,
   }) : childrenExt = children
-            .map((e) => LiveSubCategoryExt(
-                  id: e.id,
-                  name: e.name,
-                  parentId: e.parentId,
-                  pic: e.pic,
-                  site: site,
-                ))
+            .map((e) => LiveSubCategoryExt.fromLiveSubCategory(e, site))
             .toList() {
     showAll.value = children.length < 19;
   }
@@ -105,13 +99,38 @@ class AppLiveCategory extends LiveCategory {
 
 class LiveSubCategoryExt extends LiveSubCategory {
   LiveSubCategoryExt({
-    required super.id,
-    required super.name,
-    required super.parentId,
+    required String id,
+    required String name,
+    required String parentId,
     required this.site,
-    super.pic,
-  });
+    String? pic,
+    List<LiveSubCategoryExt> children = const [],
+  })  : childrenExt = children,
+        super(
+          id: id,
+          name: name,
+          parentId: parentId,
+          pic: pic,
+          children: children,
+        );
+
+  factory LiveSubCategoryExt.fromLiveSubCategory(
+    LiveSubCategory item,
+    Site site,
+  ) {
+    return LiveSubCategoryExt(
+      id: item.id,
+      name: item.name,
+      parentId: item.parentId,
+      pic: item.pic,
+      site: site,
+      children: item.children
+          .map((child) => LiveSubCategoryExt.fromLiveSubCategory(child, site))
+          .toList(),
+    );
+  }
 
   final Site site;
+  final List<LiveSubCategoryExt> childrenExt;
   AppFocusNode focusNode = AppFocusNode();
 }

@@ -489,6 +489,9 @@ class SettingsPage extends GetView<SettingsController> {
               56.0: "56",
               64.0: "64",
               72.0: "72",
+              96.0: "96",
+              120.0: "120",
+              144.0: "144",
             },
             value: AppSettingsController.instance.danmuSize.value,
             onChanged: (e) {
@@ -510,6 +513,8 @@ class SettingsPage extends GetView<SettingsController> {
               8.0: "快",
               6.0: "较快",
               4.0: "很快",
+              2.0: "极速",
+              1.0: "最快",
             },
             value: AppSettingsController.instance.danmuSpeed.value,
             onChanged: (e) {

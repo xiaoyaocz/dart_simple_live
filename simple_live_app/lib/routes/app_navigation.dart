@@ -22,6 +22,12 @@ typedef RoomSelectionCallback = void Function(Site site, String roomId);
 /// * 如不需要参数，可以使用Get.toNamed
 class AppNavigator {
   static final Map<String, DateTime> _lastLiveRoomOpenAt = {};
+  static int _categoryDetailRouteId = 0;
+
+  static String _nextCategoryDetailTag() {
+    _categoryDetailRouteId += 1;
+    return "category-detail-$_categoryDetailRouteId";
+  }
 
   /// 跳转至观看记录
   static Future<dynamic> toHistory({
@@ -46,9 +52,11 @@ class AppNavigator {
       String? excludedRoomId}) {
     Get.toNamed(
       RoutePath.kCategoryDetail,
+      preventDuplicates: false,
       arguments: {
         "site": site,
         "category": category,
+        "controllerTag": _nextCategoryDetailTag(),
         if (onRoomSelected != null) "onRoomSelected": onRoomSelected,
         if (excludedRoomId != null) "excludedRoomId": excludedRoomId,
       },

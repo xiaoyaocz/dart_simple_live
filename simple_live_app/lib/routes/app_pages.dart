@@ -107,20 +107,30 @@ class AppPages {
     //分类详情
     GetPage(
       name: RoutePath.kCategoryDetail,
-      page: () => const CategoryDetailPage(),
-      binding: BindingsBuilder.put(() {
+      page: () {
+        final args = Get.arguments;
+        final tag = args is Map ? args["controllerTag"] as String? : null;
+        return CategoryDetailPage(tag: tag);
+      },
+      binding: BindingsBuilder(() {
         final args = Get.arguments;
         if (args is Map<String, dynamic>) {
-          return CategoryDetailController(
+          Get.put(
+            CategoryDetailController(
             site: args["site"],
             subCategory: args["category"],
             onRoomSelected: args["onRoomSelected"] as RoomSelectionCallback?,
             excludedRoomId: args["excludedRoomId"] as String?,
+            ),
+            tag: args["controllerTag"] as String?,
           );
+          return;
         }
-        return CategoryDetailController(
-          site: args[0],
-          subCategory: args[1],
+        Get.put(
+          CategoryDetailController(
+            site: args[0],
+            subCategory: args[1],
+          ),
         );
       }),
     ),

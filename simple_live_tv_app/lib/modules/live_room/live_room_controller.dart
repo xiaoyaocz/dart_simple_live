@@ -854,6 +854,17 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
     await initializePlayer();
+    // 桌面平台：停止旧流并等待资源释放，避免视频纹理渲染冲突（Issue #115 相关）
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      if (player.state.playing || player.state.playlist.medias.isNotEmpty) {
+        try {
+          await player.stop();
+          await Future.delayed(const Duration(milliseconds: 120));
+        } catch (e, stackTrace) {
+          Log.e("停止旧播放失败: $e", stackTrace);
+        }
+      }
+    }
     player.open(
       Media(
         playUrls[currentLineIndex],

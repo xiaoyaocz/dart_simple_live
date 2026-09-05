@@ -1,0 +1,118 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 作者的话
+
+        提交 Issue 或 Discussion 前，请保持礼貌、尊重和友善。作者不是任何人的专属开发人员，也只是一个平时有很多事情要忙的学生。清楚描述问题、耐心沟通，以及一句简单的“感谢开发和维护”并不难，也会让开源协作更舒服。
+
+  - type: checkboxes
+    id: author-note
+    attributes:
+      label: 作者的话
+      description: 请确认你理解并愿意保持礼貌、尊重和友善
+      options:
+        - label: 我知道了，会保持礼貌、尊重和友善，理解作者不是我的专属开发人员，也感谢作者开发和维护项目
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        适合放这里的内容：
+        - 安装问答
+        - 版本选择
+        - 配置疑问
+        - 不确定是不是 `BUG` 的问题
+
+        如果已经确认是稳定可复现的程序错误，请改发 `BUG Issue`。
+
+  - type: dropdown
+    id: question-kind
+    attributes:
+      label: 问题类型
+      options:
+        - 下载哪个包
+        - 安装失败
+        - 运行异常但未确认是否为 BUG
+        - 配置 / 使用问题
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release-type
+    attributes:
+      label: 下载来源
+      options:
+        - GitHub Releases
+        - GitHub Actions
+        - 群文件 / 网盘
+        - 他人转发
+        - 本地自行构建
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: release-tag
+    attributes:
+      label: Release 名称 / 构建标识
+      description: 请写完整版本
+      placeholder: ex. v1.12.0 / tv_v1.7.0 / Actions run #123
+    validations:
+      required: true
+
+  - type: input
+    id: package-file
+    attributes:
+      label: 文件完整名称
+      description: 如果已经下载，请写具体文件名；如果还没下载，可写“未下载”
+      placeholder: ex. SimpleLive-TV-armeabi-v7a-release.apk
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package-abi
+    attributes:
+      label: 文件架构 / 变体
+      options:
+        - arm64-v8a
+        - armeabi-v7a
+        - x86_64
+        - universal / 未区分
+        - Windows zip
+        - Linux zip
+        - Linux deb
+        - 未确定
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台
+      options:
+        - Android
+        - Android TV
+        - Windows
+        - Linux
+        - macOS
+        - iOS
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 设备信息
+      placeholder: ex. NVIDIA SHIELD Android TV / 小米电视 / Windows 11 PC
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题内容
+      description: 请把你的问题描述完整
+    validations:
+      required: true

@@ -45,7 +45,12 @@ class HomeController extends GetxController
   }
 
   void toSearch() {
-    Get.toNamed(RoutePath.kSearch);
+    Get.toNamed(
+      RoutePath.kSearch,
+      arguments: {
+        "siteId": Sites.supportSites[tabController.index].id,
+      },
+    );
   }
 
   @override

@@ -19,6 +19,9 @@ class PageGridView extends StatelessWidget {
   final double crossAxisSpacing, mainAxisSpacing;
   final int crossAxisCount;
   final bool showPCRefreshButton;
+  final double? childAspectRatio;
+  final double? mainAxisExtent;
+  final bool useFixedGrid;
   const PageGridView({
     required this.itemBuilder,
     required this.pageController,
@@ -29,6 +32,9 @@ class PageGridView extends StatelessWidget {
     this.crossAxisSpacing = 0.0,
     this.mainAxisSpacing = 0.0,
     this.showPCRefreshButton = true,
+    this.childAspectRatio,
+    this.mainAxisExtent,
+    this.useFixedGrid = false,
     required this.crossAxisCount,
     Key? key,
   }) : super(key: key);
@@ -50,14 +56,29 @@ class PageGridView extends StatelessWidget {
             firstRefresh: firstRefresh,
             onLoad: pageController.loadData,
             onRefresh: pageController.refreshData,
-            child: MasonryGridView.count(
-              padding: padding,
-              itemCount: pageController.list.length,
-              itemBuilder: itemBuilder,
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: crossAxisSpacing,
-              mainAxisSpacing: mainAxisSpacing,
-            ),
+            child: useFixedGrid
+                ? GridView.builder(
+                    padding: padding,
+                    controller: pageController.scrollController,
+                    primary: false,
+                    itemCount: pageController.list.length,
+                    itemBuilder: itemBuilder,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: crossAxisSpacing,
+                      mainAxisSpacing: mainAxisSpacing,
+                      childAspectRatio: childAspectRatio ?? 3.4,
+                      mainAxisExtent: mainAxisExtent,
+                    ),
+                  )
+                : MasonryGridView.count(
+                    padding: padding,
+                    itemCount: pageController.list.length,
+                    itemBuilder: itemBuilder,
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: crossAxisSpacing,
+                    mainAxisSpacing: mainAxisSpacing,
+                  ),
           ),
           Positioned(
             bottom: 0,

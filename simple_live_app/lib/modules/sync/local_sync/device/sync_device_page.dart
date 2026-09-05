@@ -30,6 +30,16 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
             child: Column(
               children: [
                 ListTile(
+                  leading: const Icon(Remix.file_transfer_line),
+                  title: const Text("同步完整配置包"),
+                  subtitle: const Text("设置、关注、历史和屏蔽数据一起同步"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncProfile();
+                  },
+                ),
+                AppStyle.divider,
+                ListTile(
                   leading: const Icon(Remix.heart_line),
                   title: const Text("同步关注列表"),
                   trailing: const Icon(Icons.chevron_right),
@@ -62,6 +72,26 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     controller.syncBiliAccount();
+                  },
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Icons.music_note),
+                  title: const Text("同步抖音账号"),
+                  subtitle: const Text("给 TV 等设备同步网页登录 Cookie"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncDouyinAccount();
+                  },
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Icons.account_circle_outlined),
+                  title: const Text("同步快手账号"),
+                  subtitle: const Text("给 TV 等设备同步 Cookie 和弹幕参数"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncKuaishouAccount();
                   },
                 ),
               ],

@@ -15,7 +15,7 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
         title: const Text("外观设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.pagePadding(),
         children: [
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 0),

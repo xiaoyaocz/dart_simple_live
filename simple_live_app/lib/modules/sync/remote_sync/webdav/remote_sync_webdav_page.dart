@@ -131,6 +131,16 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
             ),
           ),
           AppStyle.divider,
+          Obx(
+            () => CheckboxListTile(
+              secondary: const Icon(Icons.account_circle_outlined),
+              title: const Text("同步抖音账号"),
+              value: controller.isSyncDouyinAccount.value,
+              controlAffinity: ListTileControlAffinity.trailing,
+              onChanged: (value) => controller.changeIsSyncDouyinAccount(),
+            ),
+          ),
+          AppStyle.divider,
         ],
       ),
     );

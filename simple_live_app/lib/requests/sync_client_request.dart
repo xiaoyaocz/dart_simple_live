@@ -14,6 +14,7 @@ class SyncClientRequest {
     SyncClinet client,
     dynamic body, {
     bool overlay = false,
+    Map<String, String> extraQueryParameters = const {},
   }) async {
     var url = "http://${client.address}:${client.port}/sync/follow";
     var data = await HttpClient.instance.postJson(
@@ -21,6 +22,7 @@ class SyncClientRequest {
       data: body,
       queryParameters: {
         'overlay': overlay ? '1' : '0',
+        ...extraQueryParameters,
       },
     );
 
@@ -32,16 +34,18 @@ class SyncClientRequest {
   }
 
   Future<bool> syncTag(
-      SyncClinet client,
-      dynamic body, {
-        bool overlay = false,
-      }) async {
+    SyncClinet client,
+    dynamic body, {
+    bool overlay = false,
+    Map<String, String> extraQueryParameters = const {},
+  }) async {
     var url = "http://${client.address}:${client.port}/sync/tag";
     var data = await HttpClient.instance.postJson(
       url,
       data: body,
       queryParameters: {
         'overlay': overlay ? '1' : '0',
+        ...extraQueryParameters,
       },
     );
 
@@ -56,6 +60,7 @@ class SyncClientRequest {
     SyncClinet client,
     dynamic body, {
     bool overlay = false,
+    Map<String, String> extraQueryParameters = const {},
   }) async {
     var url = "http://${client.address}:${client.port}/sync/history";
     var data = await HttpClient.instance.postJson(
@@ -63,6 +68,7 @@ class SyncClientRequest {
       data: body,
       queryParameters: {
         'overlay': overlay ? '1' : '0',
+        ...extraQueryParameters,
       },
     );
 
@@ -77,8 +83,31 @@ class SyncClientRequest {
     SyncClinet client,
     dynamic body, {
     bool overlay = false,
+    Map<String, String> extraQueryParameters = const {},
   }) async {
     var url = "http://${client.address}:${client.port}/sync/blocked_word";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: body,
+      queryParameters: {
+        'overlay': overlay ? '1' : '0',
+        ...extraQueryParameters,
+      },
+    );
+
+    if (data["status"]) {
+      return true;
+    } else {
+      throw data["message"];
+    }
+  }
+
+  Future<bool> syncProfile(
+    SyncClinet client,
+    dynamic body, {
+    bool overlay = false,
+  }) async {
+    var url = "http://${client.address}:${client.port}/sync/profile";
     var data = await HttpClient.instance.postJson(
       url,
       data: body,
@@ -100,6 +129,45 @@ class SyncClientRequest {
       url,
       data: {
         "cookie": cookie,
+      },
+    );
+
+    if (data["status"]) {
+      return true;
+    } else {
+      throw data["message"];
+    }
+  }
+
+  Future<bool> syncDouyinAccount(SyncClinet client, String cookie) async {
+    var url = "http://${client.address}:${client.port}/sync/account/douyin";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: {
+        "cookie": cookie,
+      },
+    );
+
+    if (data["status"]) {
+      return true;
+    } else {
+      throw data["message"];
+    }
+  }
+
+  Future<bool> syncKuaishouAccount(
+    SyncClinet client,
+    String cookie,
+    String kww,
+    int cookieExpiresAt,
+  ) async {
+    var url = "http://${client.address}:${client.port}/sync/account/kuaishou";
+    var data = await HttpClient.instance.postJson(
+      url,
+      data: {
+        "cookie": cookie,
+        "kww": kww,
+        "cookieExpiresAt": cookieExpiresAt,
       },
     );
 

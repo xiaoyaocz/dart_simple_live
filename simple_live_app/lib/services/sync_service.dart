@@ -6,15 +6,15 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:simple_live_app/app/constant.dart';
-import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
-import 'package:simple_live_app/models/db/follow_user.dart';
-import 'package:simple_live_app/models/db/follow_user_tag.dart';
-import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
-import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/services/bulk_data_import_service.dart';
+import 'package:simple_live_app/services/douyin_account_service.dart';
+import 'package:simple_live_app/services/profile_backup_service.dart';
+import 'package:simple_live_app/widgets/sync_progress_dialog.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:udp/udp.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -34,6 +34,8 @@ class SyncService extends GetxService {
   var ipAddress = "".obs;
   var httpRunning = false.obs;
   var httpErrorMsg = "".obs;
+  var udpRunning = false.obs;
+  var udpErrorMsg = "".obs;
 
   var deviceId = "";
 
@@ -48,8 +50,23 @@ class SyncService extends GetxService {
 
   /// 监听其他端UDP广播的回复
   void listenUDP() async {
-    udp = await UDP.bind(Endpoint.any(port: const Port(udpPort)));
-    udp!.asStream().listen(listenUdp);
+    try {
+      udp = await UDP.bind(Endpoint.any(port: const Port(udpPort)));
+      udpRunning.value = true;
+      udpErrorMsg.value = "";
+      udp!.asStream().listen(
+        listenUdp,
+        onError: (Object e, StackTrace stackTrace) {
+          udpRunning.value = false;
+          udpErrorMsg.value = _formatPortError(e, udpPort, "UDP发现服务");
+          Log.e("UDP discovery stream failed: $e", stackTrace);
+        },
+      );
+    } catch (e) {
+      udpRunning.value = false;
+      udpErrorMsg.value = _formatPortError(e, udpPort, "UDP发现服务");
+      Log.e("UDP discovery bind failed: $e", StackTrace.current);
+    }
   }
 
   void listenUdp(Datagram? datagram) {
@@ -91,6 +108,10 @@ class SyncService extends GetxService {
 
   /// 发送UDP广播至其他端
   void sendHello() async {
+    if (udp == null || !udpRunning.value) {
+      Log.w("Skip UDP hello broadcast: ${udpErrorMsg.value}");
+      return;
+    }
     await udp!.send(
       json.encode({
         "id": deviceId,
@@ -105,6 +126,10 @@ class SyncService extends GetxService {
 
   /// UDP广播自身信息
   void sendInfo() async {
+    if (udp == null || !udpRunning.value) {
+      Log.w("Skip UDP info broadcast: ${udpErrorMsg.value}");
+      return;
+    }
     //var ip = await getLocalIP();
 
     var name = await getDeviceName();
@@ -196,27 +221,50 @@ class SyncService extends GetxService {
       serverRouter.post('/sync/tag', _syncFollowUserTagRequest);
       serverRouter.post('/sync/history', _syncHistoryReuqest);
       serverRouter.post('/sync/blocked_word', _syncBlockedWordReuqest);
+      serverRouter.post('/sync/profile', _syncProfileReuqest);
       serverRouter.post('/sync/account/bilibili', _syncBiliAccountReuqest);
+      serverRouter.post('/sync/account/douyin', _syncDouyinAccountReuqest);
 
-      var server = await shelf_io.serve(
+      server = await shelf_io.serve(
         serverRouter,
         InternetAddress.anyIPv4,
         httpPort,
       );
 
       // Enable content compression
-      server.autoCompress = true;
+      server!.autoCompress = true;
 
       httpRunning.value = true;
 
       var ip = await getLocalIP();
       ipAddress.value = ip;
 
-      Log.d('Serving at http://$ip:${server.port}');
+      Log.d('Serving at http://$ip:${server!.port}');
     } catch (e) {
-      httpErrorMsg.value = e.toString();
-      Log.logPrint(e);
+      httpRunning.value = false;
+      httpErrorMsg.value = _formatPortError(e, httpPort, "HTTP同步服务");
+      Log.e("HTTP sync server bind failed: $e", StackTrace.current);
     }
+  }
+
+  String get lanErrorMsg {
+    final messages = <String>[
+      if (httpErrorMsg.value.trim().isNotEmpty) httpErrorMsg.value,
+      if (udpErrorMsg.value.trim().isNotEmpty) udpErrorMsg.value,
+    ];
+    return messages.join("；");
+  }
+
+  String _formatPortError(Object error, int port, String serviceName) {
+    final text = error.toString();
+    final lower = text.toLowerCase();
+    if (text.contains("10048") ||
+        lower.contains("address already in use") ||
+        lower.contains("failed to create server socket") ||
+        lower.contains("only one usage of each socket address")) {
+      return "$port 端口已被占用，请关闭其他 Simple Live / TV-Windows 窗口后重试";
+    }
+    return "$serviceName启动失败：$text";
   }
 
   /// 测试服务能否正常访问
@@ -225,7 +273,10 @@ class SyncService extends GetxService {
       'status': true,
       'message': 'http server is running...',
       "version":
-          'SimpeLive ${Platform.operatingSystem} v${Utils.packageInfo.version}',
+          'Simple Live ${Platform.operatingSystem} v${Utils.packageInfo.version}',
+      "app": "Simple Live",
+      "type": Platform.operatingSystem,
+      "platform": Platform.operatingSystem,
     });
   }
 
@@ -247,25 +298,38 @@ class SyncService extends GetxService {
     try {
       var overlay =
           int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      final chunk = _readSyncChunk(request);
 
       var body = await request.readAsString();
-      Log.d('_syncFollowUserReuqest: $body');
+      SyncProgressDialog.show(_stageProgress("接收关注", chunk));
+      final stopwatch = Stopwatch()..start();
       var jsonBody = json.decode(body);
-      if (overlay == 1) {
-        await DBService.instance.followBox.clear();
+      if (jsonBody is! List) {
+        throw const FormatException("关注列表格式不是数组");
       }
-      for (var item in jsonBody) {
-        var user = FollowUser.fromJson(item);
-        await DBService.instance.followBox.put(user.id, user);
-      }
+      final result = await BulkDataImportService.importFollowUsers(
+        jsonBody,
+        overwrite: overlay == 1,
+        onProgress: _wrapChunkProgress(chunk),
+      );
+      stopwatch.stop();
+      Log.i(
+        "本地同步关注完成：${result.logSummary} bytes=${body.length} elapsed=${stopwatch.elapsedMilliseconds}ms",
+      );
 
-      SmartDialog.showToast('已同步关注用户列表');
-      EventBus.instance.emit(Constant.kUpdateFollow, 0);
+      if (chunk.isLastChunk) {
+        SmartDialog.showToast(
+          '已同步关注用户列表（${chunk.itemTotal > 0 ? chunk.itemTotal : result.imported} 条）',
+        );
+        EventBus.instance.emit(Constant.kUpdateFollow, 0);
+        SyncProgressDialog.dismiss();
+      }
       return toJsonResponse({
         'status': true,
         'message': 'success',
       });
     } catch (e) {
+      SyncProgressDialog.dismiss();
       return toJsonResponse({
         'status': false,
         'message': e.toString(),
@@ -274,29 +338,43 @@ class SyncService extends GetxService {
   }
 
   /// 同步标签列表
-  Future<shelf.Response> _syncFollowUserTagRequest(shelf.Request request) async {
+  Future<shelf.Response> _syncFollowUserTagRequest(
+      shelf.Request request) async {
     try {
       var overlay =
-      int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      final chunk = _readSyncChunk(request);
 
       var body = await request.readAsString();
-      Log.d('_syncFollowUserTagRequest: $body');
+      SyncProgressDialog.show(_stageProgress("接收标签", chunk));
+      final stopwatch = Stopwatch()..start();
       var jsonBody = json.decode(body);
-      if (overlay == 1) {
-        await DBService.instance.tagBox.clear();
+      if (jsonBody is! List) {
+        throw const FormatException("标签列表格式不是数组");
       }
-      for (var item in jsonBody) {
-        var tag = FollowUserTag.fromJson(item);
-        await DBService.instance.tagBox.put(tag.id, tag);
-      }
+      final result = await BulkDataImportService.importFollowTags(
+        jsonBody,
+        overwrite: overlay == 1,
+        onProgress: _wrapChunkProgress(chunk),
+      );
+      stopwatch.stop();
+      Log.i(
+        "本地同步标签完成：${result.logSummary} bytes=${body.length} elapsed=${stopwatch.elapsedMilliseconds}ms",
+      );
 
-      SmartDialog.showToast('已同步标签列表');
-      EventBus.instance.emit(Constant.kUpdateFollow, 0);
+      if (chunk.isLastChunk) {
+        SmartDialog.showToast(
+          '已同步标签列表（${chunk.itemTotal > 0 ? chunk.itemTotal : result.imported} 条）',
+        );
+        EventBus.instance.emit(Constant.kUpdateFollow, 0);
+        SyncProgressDialog.dismiss();
+      }
       return toJsonResponse({
         'status': true,
         'message': 'success',
       });
     } catch (e) {
+      SyncProgressDialog.dismiss();
       return toJsonResponse({
         'status': false,
         'message': e.toString(),
@@ -309,31 +387,37 @@ class SyncService extends GetxService {
     try {
       var overlay =
           int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      final chunk = _readSyncChunk(request);
       var body = await request.readAsString();
-      Log.d('_syncFollowUserReuqest: $body');
+      SyncProgressDialog.show(_stageProgress("接收历史", chunk));
+      final stopwatch = Stopwatch()..start();
       var jsonBody = json.decode(body);
-      if (overlay == 1) {
-        await DBService.instance.historyBox.clear();
+      if (jsonBody is! List) {
+        throw const FormatException("历史记录格式不是数组");
       }
-      for (var item in jsonBody) {
-        var history = History.fromJson(item);
-        if (DBService.instance.historyBox.containsKey(history.id)) {
-          var old = DBService.instance.historyBox.get(history.id);
-          //如果本地的更新时间比较新，就不更新
-          if (old!.updateTime.isAfter(history.updateTime)) {
-            continue;
-          }
-        }
-        await DBService.instance.addOrUpdateHistory(history);
-      }
+      final result = await BulkDataImportService.importHistories(
+        jsonBody,
+        overwrite: overlay == 1,
+        onProgress: _wrapChunkProgress(chunk),
+      );
+      stopwatch.stop();
+      Log.i(
+        "本地同步历史完成：${result.logSummary} bytes=${body.length} elapsed=${stopwatch.elapsedMilliseconds}ms",
+      );
 
-      SmartDialog.showToast('已同步观看记录');
-      EventBus.instance.emit(Constant.kUpdateHistory, 0);
+      if (chunk.isLastChunk) {
+        SmartDialog.showToast(
+          '已同步观看记录（${chunk.itemTotal > 0 ? chunk.itemTotal : result.imported} 条）',
+        );
+        EventBus.instance.emit(Constant.kUpdateHistory, 0);
+        SyncProgressDialog.dismiss();
+      }
       return toJsonResponse({
         'status': true,
         'message': 'success',
       });
     } catch (e) {
+      SyncProgressDialog.dismiss();
       return toJsonResponse({
         'status': false,
         'message': e.toString(),
@@ -346,16 +430,126 @@ class SyncService extends GetxService {
     try {
       var overlay =
           int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      final chunk = _readSyncChunk(request);
       var body = await request.readAsString();
-      Log.d('_syncBlockedWordReuqest: $body');
+      SyncProgressDialog.show(_stageProgress("接收屏蔽词", chunk));
+      final stopwatch = Stopwatch()..start();
       var jsonBody = json.decode(body);
-      if (overlay == 1) {
-        AppSettingsController.instance.clearShieldList();
+      if (jsonBody is! List) {
+        throw const FormatException("屏蔽词格式不是数组");
       }
-      for (var keyword in jsonBody) {
-        AppSettingsController.instance.addShieldList(keyword.trim());
+      final result = await BulkDataImportService.importShieldValues(
+        jsonBody,
+        overwrite: overlay == 1,
+        onProgress: _wrapChunkProgress(chunk),
+      );
+      stopwatch.stop();
+      Log.i(
+        "本地同步屏蔽词完成：${result.logSummary} bytes=${body.length} elapsed=${stopwatch.elapsedMilliseconds}ms",
+      );
+      if (chunk.isLastChunk) {
+        SmartDialog.showToast(
+          '已同步弹幕屏蔽词（${chunk.itemTotal > 0 ? chunk.itemTotal : result.imported} 条）',
+        );
+        SyncProgressDialog.dismiss();
       }
-      SmartDialog.showToast('已同步弹幕屏蔽词');
+      return toJsonResponse({
+        'status': true,
+        'message': 'success',
+      });
+    } catch (e) {
+      SyncProgressDialog.dismiss();
+      return toJsonResponse({
+        'status': false,
+        'message': e.toString(),
+      });
+    }
+  }
+
+  Future<shelf.Response> _syncProfileReuqest(shelf.Request request) async {
+    try {
+      final overlay =
+          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      final body = await request.readAsString();
+      SyncProgressDialog.show(const SyncProgress(stage: "接收配置包"));
+      final summary = await ProfileBackupService.instance.importProfileJson(
+        body,
+        overwrite: overlay == 1,
+        onProgress: SyncProgressDialog.update,
+      );
+      SmartDialog.showToast('已同步配置包');
+      SyncProgressDialog.dismiss();
+      return toJsonResponse({
+        'status': true,
+        'message': summary.message,
+      });
+    } catch (e) {
+      SyncProgressDialog.dismiss();
+      return toJsonResponse({
+        'status': false,
+        'message': e.toString(),
+      });
+    }
+  }
+
+  _SyncChunk _readSyncChunk(shelf.Request request) {
+    final params = request.requestedUri.queryParameters;
+    return _SyncChunk(
+      chunkIndex: int.tryParse(params["chunkIndex"] ?? "") ?? 1,
+      chunkTotal: int.tryParse(params["chunkTotal"] ?? "") ?? 1,
+      itemStart: int.tryParse(params["itemStart"] ?? "") ?? 0,
+      itemEnd: int.tryParse(params["itemEnd"] ?? "") ?? 0,
+      itemTotal: int.tryParse(params["itemTotal"] ?? "") ?? 0,
+    );
+  }
+
+  SyncProgress _stageProgress(String stage, _SyncChunk chunk) {
+    final total = chunk.itemTotal > 0 ? chunk.itemTotal : chunk.chunkTotal;
+    final current = chunk.itemTotal > 0 ? chunk.itemEnd : chunk.chunkIndex;
+    return SyncProgress(
+      stage: stage,
+      current: current,
+      total: total,
+      message: chunk.chunkTotal > 1
+          ? "接收第 ${chunk.chunkIndex}/${chunk.chunkTotal} 段"
+          : stage,
+    );
+  }
+
+  SyncProgressCallback _wrapChunkProgress(_SyncChunk chunk) {
+    return (progress) {
+      if (chunk.itemTotal <= 0) {
+        SyncProgressDialog.update(progress);
+        return;
+      }
+      final current = (chunk.itemStart + progress.current)
+          .clamp(0, chunk.itemTotal)
+          .toInt();
+      SyncProgressDialog.update(SyncProgress(
+        stage: progress.stage,
+        current: current,
+        total: chunk.itemTotal,
+        message: "${progress.stage} $current/${chunk.itemTotal}",
+      ));
+    };
+  }
+
+  /// 同步哔哩哔哩账号
+  Future<shelf.Response> _syncBiliAccountReuqest(shelf.Request request) async {
+    try {
+      var body = await request.readAsString();
+      Log.d('_syncBiliAccountReuqest: $body');
+      var jsonBody = json.decode(body);
+      if (jsonBody is! Map) {
+        throw const FormatException("账号数据格式不是对象");
+      }
+      var cookie = jsonBody['cookie']?.toString() ?? "";
+      if (cookie.isEmpty) {
+        throw const FormatException("账号 Cookie 为空");
+      }
+      BiliBiliAccountService.instance.setCookie(cookie);
+      BiliBiliAccountService.instance.loadUserInfo();
+      SmartDialog.showToast('已同步哔哩哔哩账号');
       return toJsonResponse({
         'status': true,
         'message': 'success',
@@ -368,16 +562,22 @@ class SyncService extends GetxService {
     }
   }
 
-  /// 同步哔哩哔哩账号
-  Future<shelf.Response> _syncBiliAccountReuqest(shelf.Request request) async {
+  /// 同步抖音账号
+  Future<shelf.Response> _syncDouyinAccountReuqest(
+      shelf.Request request) async {
     try {
       var body = await request.readAsString();
-      Log.d('_syncBiliAccountReuqest: $body');
+      Log.d('_syncDouyinAccountReuqest');
       var jsonBody = json.decode(body);
-      var cookie = jsonBody['cookie'];
-      BiliBiliAccountService.instance.setCookie(cookie);
-      BiliBiliAccountService.instance.loadUserInfo();
-      SmartDialog.showToast('已同步哔哩哔哩账号');
+      if (jsonBody is! Map) {
+        throw const FormatException("账号数据格式不是对象");
+      }
+      var cookie = jsonBody['cookie']?.toString() ?? "";
+      if (cookie.isEmpty) {
+        throw const FormatException("账号 Cookie 为空");
+      }
+      DouyinAccountService.instance.setCookie(cookie);
+      SmartDialog.showToast('已同步抖音账号');
       return toJsonResponse({
         'status': true,
         'message': 'success',
@@ -404,9 +604,29 @@ class SyncService extends GetxService {
   void onClose() {
     Log.d('SyncService close');
     udp?.close();
+    udpRunning.value = false;
     server?.close(force: true);
+    httpRunning.value = false;
     super.onClose();
   }
+}
+
+class _SyncChunk {
+  final int chunkIndex;
+  final int chunkTotal;
+  final int itemStart;
+  final int itemEnd;
+  final int itemTotal;
+
+  const _SyncChunk({
+    required this.chunkIndex,
+    required this.chunkTotal,
+    required this.itemStart,
+    required this.itemEnd,
+    required this.itemTotal,
+  });
+
+  bool get isLastChunk => chunkIndex >= chunkTotal;
 }
 
 class SyncClinet {

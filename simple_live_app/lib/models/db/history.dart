@@ -32,14 +32,22 @@ class History {
   @HiveField(5)
   DateTime updateTime;
 
-  factory History.fromJson(Map<String, dynamic> json) => History(
-        id: json["id"],
-        roomId: json["roomId"],
-        siteId: json["siteId"],
-        userName: json["userName"],
-        face: json["face"],
-        updateTime: DateTime.parse(json["updateTime"]),
-      );
+  factory History.fromJson(Map<String, dynamic> json) {
+    final roomId = json["roomId"]?.toString().trim() ?? "";
+    final siteId = json["siteId"]?.toString().trim() ?? "";
+    final id = (json["id"]?.toString().trim().isNotEmpty ?? false)
+        ? json["id"].toString().trim()
+        : "${siteId}_$roomId";
+    return History(
+      id: id,
+      roomId: roomId,
+      siteId: siteId,
+      userName: json["userName"]?.toString() ?? "",
+      face: json["face"]?.toString() ?? "",
+      updateTime: DateTime.tryParse(json["updateTime"]?.toString() ?? "") ??
+          DateTime.now(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,

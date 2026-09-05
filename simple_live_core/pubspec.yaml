@@ -20,6 +20,8 @@ dependencies:
   dart_quickjs:
     git:
       url: https://github.com/xiaoyaocz/dart_quickjs
+  cookie_jar: ^4.0.8
+  dio_cookie_manager: ^3.3.0
 
 dev_dependencies: 
   lints: ^2.0.0

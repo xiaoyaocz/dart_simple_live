@@ -7,8 +7,14 @@ import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class ParseController extends GetxController {
+  ParseController({Dio? redirectClient})
+      : _redirectClient = redirectClient ?? Dio();
+
+  static const int _maxRedirects = 5;
+  final Dio _redirectClient;
   final TextEditingController roomJumpToController = TextEditingController();
   final TextEditingController getUrlController = TextEditingController();
 
@@ -21,7 +27,7 @@ class ParseController extends GetxController {
     FocusManager.instance.primaryFocus?.unfocus();
 
     var parseResult = await parse(e);
-    if (parseResult.isEmpty && parseResult.first == "") {
+    if (parseResult.isEmpty || parseResult.first.toString().isEmpty) {
       SmartDialog.showToast("无法解析此链接");
       return;
     }
@@ -39,7 +45,7 @@ class ParseController extends GetxController {
       return;
     }
     var parseResult = await parse(e);
-    if (parseResult.isEmpty && parseResult.first == "") {
+    if (parseResult.isEmpty || parseResult.first.toString().isEmpty) {
       SmartDialog.showToast("无法解析此链接");
       return;
     }
@@ -108,6 +114,10 @@ class ParseController extends GetxController {
 
   Future<List> parse(String url) async {
     var id = "";
+    final extractedUrl = extractHttpUrl(url);
+    if (extractedUrl.isNotEmpty) {
+      url = extractedUrl;
+    }
     if (url.contains("bilibili.com")) {
       var regExp = RegExp(r"bilibili\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
@@ -125,7 +135,7 @@ class ParseController extends GetxController {
     if (url.contains("douyu.com")) {
       var regExp = RegExp(r"douyu\.com/([\d|\w]+)");
       // 适配 topic_url
-      if(url.contains("topic")){
+      if (url.contains("topic")) {
         regExp = RegExp(r"[?&]rid=([\d]+)");
       }
       id = regExp.firstMatch(url)?.group(1) ?? "";
@@ -150,34 +160,134 @@ class ParseController extends GetxController {
       return [id, Sites.allSites[Constant.kDouyin]!];
     }
     if (url.contains("v.douyin.com")) {
-      var regExp = RegExp(r"http.?://v.douyin.com/[\d\w]+/");
+      var regExp = RegExp(
+        r"https?://v\.douyin\.com/[\w-]+/?",
+        caseSensitive: false,
+      );
       var u = regExp.firstMatch(url)?.group(0) ?? "";
       var location = await getLocation(u);
       return await parse(location);
+    }
+    final kuaishouRoomId = await resolveKuaishouRoomId(url);
+    if (kuaishouRoomId.isNotEmpty) {
+      return [kuaishouRoomId, Sites.allSites[Constant.kKuaishou]!];
     }
 
     return [];
   }
 
-  Future<String> getLocation(String url) async {
+  /// Resolves only known Kuaishou live-room links without account cookies.
+  Future<String> resolveKuaishouRoomId(String value) async {
+    final initial = KuaishouLiveLink.parseHttpUrl(value);
+    if (initial == null) {
+      return "";
+    }
+
+    final directRoomId = KuaishouLiveLink.roomIdFromUri(initial);
+    if (directRoomId != null) {
+      return directRoomId;
+    }
+    if (!KuaishouLiveLink.isShortLink(initial)) {
+      return "";
+    }
+
+    var current = initial;
+    final visited = <String>{};
     try {
-      if (url.isEmpty) return "";
-      await Dio().get(
-        url,
-        options: Options(
-          followRedirects: false,
-        ),
-      );
-    } on DioException catch (e) {
-      if (e.response!.statusCode == 302) {
-        var redirectUrl = e.response!.headers.value("Location");
-        if (redirectUrl != null) {
-          return redirectUrl;
+      for (var redirectCount = 0;
+          redirectCount < _maxRedirects;
+          redirectCount++) {
+        if (!visited.add(current.toString())) {
+          return "";
         }
+        final response = await _redirectClient.getUri<dynamic>(
+          current,
+          options: Options(
+            followRedirects: false,
+            validateStatus: (status) =>
+                status != null && status >= 200 && status < 400,
+            headers: const <String, dynamic>{},
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 8),
+            sendTimeout: const Duration(seconds: 8),
+          ),
+        );
+        final statusCode = response.statusCode ?? 0;
+        if (statusCode < 300 || statusCode >= 400) {
+          return "";
+        }
+        final location = response.headers.value("location");
+        if (location == null || location.trim().isEmpty) {
+          return "";
+        }
+
+        final next = current.resolve(location.trim());
+        if (!KuaishouLiveLink.isTrustedRedirectTarget(next)) {
+          return "";
+        }
+        final roomId = KuaishouLiveLink.roomIdFromUri(next);
+        if (roomId != null) {
+          return roomId;
+        }
+        current = next;
       }
     } catch (e) {
       Log.logPrint(e);
     }
     return "";
+  }
+
+  Future<String> getLocation(String url) async {
+    final parsed = Uri.tryParse(url);
+    if (parsed == null || !parsed.hasScheme) {
+      return "";
+    }
+    var current = parsed;
+    try {
+      for (var redirectCount = 0;
+          redirectCount < _maxRedirects;
+          redirectCount++) {
+        final response = await _redirectClient.getUri<dynamic>(
+          current,
+          options: Options(
+            followRedirects: false,
+            validateStatus: (status) =>
+                status != null && status >= 200 && status < 400,
+            // Short-link resolution must remain independent from login state.
+            headers: const <String, dynamic>{},
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 8),
+            sendTimeout: const Duration(seconds: 8),
+          ),
+        );
+        final statusCode = response.statusCode ?? 0;
+        if (statusCode < 300 || statusCode >= 400) {
+          return current.toString();
+        }
+        final location = response.headers.value("location");
+        if (location == null || location.trim().isEmpty) {
+          return "";
+        }
+        current = current.resolve(location.trim());
+      }
+    } catch (e) {
+      Log.logPrint(e);
+    }
+    return "";
+  }
+
+  static String extractHttpUrl(String text) {
+    return RegExp(
+          r"https?://[^\s<>\u3000，。！？、；：]+",
+          caseSensitive: false,
+        )
+            .firstMatch(text)
+            ?.group(0)
+            ?.replaceFirst(
+              RegExp(r"[，。！？、；：,.;:!?]+$"),
+              "",
+            )
+            .replaceFirst(RegExp(r'''[)\]}>'"）】》”’]+$'''), "") ??
+        "";
   }
 }

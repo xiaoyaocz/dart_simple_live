@@ -1,5 +1,67 @@
+# Editor and IDE settings
 simple_live_app/.vscode/settings.json
 simple_live_tv_app/.vscode/settings.json
+.idea/
+.fleet/
 
-# macOS Spotlight Search index file
+# Local workspace metadata
+.codex/
+.agents/
+.uploads/
+.vscode/
+
+# Build, dependency, and release artifacts
+release/
+models/
+docs/
+issue_logs/
+experience/
+graphify-out/
+**/android/app/build/
+**/android/.kotlin/
+tools/
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/pubspec.lock
+
+# Local scripts and tool caches
+build_android_apk.bat
+build_tv_apk.bat
+deploy_windows.bat
+third_party/mpv-dev-x86_64-20260828-git-182fa6ca49.7z
+*.log
+*.trace
+
+# Local notes, issue triage, and temporary workspace files
+fix-guide.md
+tmp_*.png
+tmp_*.xml
+images/todo/
+todo.md
+update.md
+BUGFIX_SUMMARY.md
+issue_logs/
+.release-*.md
+WORK_COMPLETE.txt
+
+# Backups and exported snapshots
+.backup/
+*.bak
+*.backup
+*.orig
+*.rej
+
+# Operating-system metadata
 *.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Markdown docs kept in the repository
+*.md
+!README.md
+!THANKS.md
+!SETTINGS_GUIDE.md
+!**/README.md
+.codex/project-experience.md

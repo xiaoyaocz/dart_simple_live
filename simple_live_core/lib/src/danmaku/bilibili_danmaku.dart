@@ -56,14 +56,15 @@ class BiliBiliDanmaku implements LiveDanmaku {
   @override
   Future start(dynamic args) async {
     danmakuArgs = args as BiliBiliDanmakuArgs;
+    if (danmakuArgs.token.isEmpty) {
+      CoreLog.w("B站弹幕信息缺失，跳过弹幕连接：roomId=${danmakuArgs.roomId}");
+      onClose?.call("弹幕信息缺失，已跳过弹幕连接");
+      return;
+    }
     webScoketUtils = WebScoketUtils(
       url: "wss://${args.serverHost}/sub",
       heartBeatTime: heartbeatTime,
-      headers: args.cookie.isEmpty
-          ? null
-          : {
-              "cookie": args.cookie,
-            },
+      headers: args.cookie.isEmpty ? null : {"cookie": args.cookie},
       onMessage: (e) {
         decodeMessage(e);
       },
@@ -102,10 +103,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
 
   @override
   void heartbeat() {
-    webScoketUtils?.sendMessage(encodeData(
-      "",
-      2,
-    ));
+    webScoketUtils?.sendMessage(encodeData("", 2));
   }
 
   @override
@@ -172,10 +170,12 @@ class BiliBiliDanmaku implements LiveDanmaku {
 
         var text = utf8.decode(body, allowMalformed: true);
 
-        var group =
-            text.split(RegExp(r"[\x00-\x1f]+", unicode: true, multiLine: true));
-        for (var item
-            in group.where((x) => x.length > 2 && x.startsWith('{'))) {
+        var group = text.split(
+          RegExp(r"[\x00-\x1f]+", unicode: true, multiLine: true),
+        );
+        for (var item in group.where(
+          (x) => x.length > 2 && x.startsWith('{'),
+        )) {
           parseMessage(item);
         }
       }
@@ -194,13 +194,22 @@ class BiliBiliDanmaku implements LiveDanmaku {
           var color = asT<int?>(obj["info"][0][3]) ?? 0;
           if (obj["info"][2] != null && obj["info"][2].length != 0) {
             var username = obj["info"][2][1].toString();
+            final spans = _extractSpans(obj["info"], message);
+            final imageUrls = spans
+                .where((span) => span.isImage)
+                .map((span) => span.imageUrl!.trim())
+                .toSet()
+                .toList();
+            final textMessage = _buildTextMessage(message, spans);
             var liveMsg = LiveMessage(
               type: LiveMessageType.chat,
               userName: username,
-              message: message,
+              message: textMessage,
               color: color == 0
                   ? LiveMessageColor.white
                   : LiveMessageColor.numberToColor(color),
+              imageUrls: imageUrls.isEmpty ? null : imageUrls,
+              spans: spans.isEmpty ? null : spans,
             );
             onMessage?.call(liveMsg);
           }
@@ -210,8 +219,8 @@ class BiliBiliDanmaku implements LiveDanmaku {
           return;
         }
         LiveSuperChatMessage sc = LiveSuperChatMessage(
-          backgroundBottomColor:
-              obj["data"]["background_bottom_color"].toString(),
+          backgroundBottomColor: obj["data"]["background_bottom_color"]
+              .toString(),
           backgroundColor: obj["data"]["background_color"].toString(),
           endTime: DateTime.fromMillisecondsSinceEpoch(
             obj["data"]["end_time"] * 1000,
@@ -238,9 +247,117 @@ class BiliBiliDanmaku implements LiveDanmaku {
     }
   }
 
+  List<LiveMessageSpan> _extractSpans(dynamic info, String message) {
+    final emojiMap = _extractEmojiMap(info, message);
+    if (emojiMap.isEmpty) {
+      return const [];
+    }
+    final spans = <LiveMessageSpan>[];
+    final keys = emojiMap.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    var index = 0;
+    while (index < message.length) {
+      String? matchedKey;
+      for (final key in keys) {
+        if (key.isEmpty) {
+          continue;
+        }
+        if (message.startsWith(key, index)) {
+          matchedKey = key;
+          break;
+        }
+      }
+      if (matchedKey == null) {
+        final nextIndex = _nextEmojiIndex(message, keys, index + 1);
+        spans.add(LiveMessageSpan.text(message.substring(index, nextIndex)));
+        index = nextIndex;
+        continue;
+      }
+      final imageUrl = emojiMap[matchedKey]?.trim() ?? "";
+      if (imageUrl.isNotEmpty) {
+        spans.add(LiveMessageSpan.image(imageUrl));
+      }
+      index += matchedKey.length;
+    }
+    return spans;
+  }
+
+  int _nextEmojiIndex(String message, List<String> keys, int start) {
+    var next = message.length;
+    for (final key in keys) {
+      if (key.isEmpty) {
+        continue;
+      }
+      final index = message.indexOf(key, start);
+      if (index >= 0 && index < next) {
+        next = index;
+      }
+    }
+    return next;
+  }
+
+  String _buildTextMessage(String original, List<LiveMessageSpan> spans) {
+    return original;
+  }
+
+  Map<String, String> _extractEmojiMap(dynamic info, String message) {
+    final emojiMap = <String, String>{};
+
+    void addEmoji(String key, dynamic url) {
+      final emojiKey = key.trim();
+      final value = url?.toString().trim() ?? "";
+      if (emojiKey.isEmpty || value.isEmpty) {
+        return;
+      }
+      emojiMap[emojiKey] = value;
+    }
+
+    try {
+      if (info is List &&
+          info.length > 13 &&
+          info[0] is List &&
+          info[0].length > 13 &&
+          info[0][13] is Map) {
+        final key = message.trim();
+        if (key.startsWith("[") && key.endsWith("]")) {
+          addEmoji(key, info[0][13]["url"]);
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (info is List &&
+          info.isNotEmpty &&
+          info[0] is List &&
+          info[0].length > 15 &&
+          info[0][15] is Map) {
+        final extra = info[0][15]["extra"];
+        if (extra is String && extra.isNotEmpty) {
+          final extraObj = json.decode(extra);
+          final emots = extraObj["emots"];
+          if (emots is Map) {
+            for (final entry in emots.entries) {
+              final key = entry.key.toString();
+              if (key.isNotEmpty && !message.contains(key)) {
+                continue;
+              }
+              final emot = entry.value;
+              if (emot is Map) {
+                addEmoji(key, emot["url"]);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return emojiMap;
+  }
+
   int readInt(List<int> buffer, int start, int len) {
-    var bytes =
-        Uint8List.fromList(buffer.getRange(start, start + len).toList());
+    var bytes = Uint8List.fromList(
+      buffer.getRange(start, start + len).toList(),
+    );
     var byteBuffer = bytes.buffer;
     var data = ByteData.view(byteBuffer);
     var result = 0;

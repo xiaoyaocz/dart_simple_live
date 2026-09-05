@@ -12,6 +12,12 @@ class RoutePath {
   /// 直播间
   static const kLiveRoomDetail = "/room/detail";
 
+  /// 多开同屏
+  static const kMultiRoom = "/room/multi";
+
+  /// 多开设置
+  static const kSettingsMultiRoom = "/settings/multi_room";
+
   /// 弹幕设置
   static const kSettingsDanmu = "/settings/danmu";
 
@@ -27,9 +33,6 @@ class RoutePath {
   /// 其他设置
   static const kSettingsOther = "/settings/other";
 
-  /// 赞助
-  static const kSponsor = "/sponsor";
-
   /// 历史记录
   static const kHistory = "/user/history";
 
@@ -41,6 +44,9 @@ class RoutePath {
 
   /// 主页设置
   static const kSettingsIndexed = "/settings/indexed";
+
+  /// 播放页设置
+  static const kSettingsPlaybackPage = "/settings/playback_page";
 
   /// 外观设置
   static const kAppstyleSetting = "/settings/appstyle";
@@ -57,11 +63,20 @@ class RoutePath {
   /// BiliBili 二维码登录
   static const kBiliBiliQRLogin = "/settings/account/bilibili/qr_login";
 
+  /// 抖音 Web登录
+  static const kDouyinWebLogin = "/settings/account/douyin/web_login";
+
+  /// 快手 Web登录
+  static const kKuaishouWebLogin = "/settings/account/kuaishou/web_login";
+
   /// 数据同步
   static const kLocalSync = "/local_sync";
 
   /// 数据同步
   static const kSync = "/sync";
+
+  /// 配置包导入导出
+  static const kProfileBackup = "/sync/profile_backup";
 
   /// 扫描
   static const kSyncScan = "/sync/scan";

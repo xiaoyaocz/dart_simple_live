@@ -25,6 +25,9 @@ import 'package:simple_live_tv_app/modules/settings/settings_controller.dart';
 import 'package:simple_live_tv_app/modules/settings/settings_page.dart';
 import 'package:simple_live_tv_app/modules/sync/sync_controller.dart';
 import 'package:simple_live_tv_app/modules/sync/sync_page.dart';
+import 'package:simple_live_tv_app/modules/sync/webdav/webdav_config_page.dart';
+import 'package:simple_live_tv_app/modules/sync/webdav/webdav_controller.dart';
+import 'package:simple_live_tv_app/modules/sync/webdav/webdav_page.dart';
 
 import 'route_path.dart';
 
@@ -50,6 +53,17 @@ class AppPages {
       bindings: [
         BindingsBuilder.put(() => SyncController()),
       ],
+    ),
+    GetPage(
+      name: RoutePath.kWebDAV,
+      page: () => const WebDavPage(),
+      bindings: [
+        BindingsBuilder.put(() => WebDavController()),
+      ],
+    ),
+    GetPage(
+      name: RoutePath.kWebDAVConfig,
+      page: () => const WebDavConfigPage(),
     ),
 
     // 关注
@@ -112,13 +126,30 @@ class AppPages {
     //分类
     GetPage(
       name: RoutePath.kCategoryDetail,
-      page: () => const CategoryDetailPage(),
-      binding: BindingsBuilder.put(
-        () => CategoryDetailController(
-          site: Get.arguments[0],
-          subCategory: Get.arguments[1],
-        ),
-      ),
+      page: () {
+        final args = Get.arguments;
+        final tag = args is Map ? args["controllerTag"] as String? : null;
+        return CategoryDetailPage(tag: tag);
+      },
+      binding: BindingsBuilder(() {
+        final args = Get.arguments;
+        if (args is Map) {
+          Get.put(
+            CategoryDetailController(
+              site: args["site"],
+              subCategory: args["category"],
+            ),
+            tag: args["controllerTag"] as String?,
+          );
+          return;
+        }
+        Get.put(
+          CategoryDetailController(
+            site: args[0],
+            subCategory: args[1],
+          ),
+        );
+      }),
     ),
     // 搜索房间
     GetPage(

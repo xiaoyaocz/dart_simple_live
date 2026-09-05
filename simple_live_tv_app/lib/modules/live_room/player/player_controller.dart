@@ -10,6 +10,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_tv_app/app/log.dart';
+import 'package:simple_live_tv_app/services/mpv_options_service.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 mixin PlayerMixin {
@@ -26,30 +28,15 @@ mixin PlayerMixin {
     ),
   );
 
-  /// 初始化播放器并设置 ao 参数
-  Future<void> initializePlayer() async {
-    var pp = player.platform as NativePlayer;
-
-    // media_kit 仓库更新导致的问题，临时解决办法
-    if (Platform.isAndroid) {
-      await pp.setProperty('force-seekable', 'yes');
-    }
-  }
-
   /// 视频控制器
   late final videoController = VideoController(
     player,
-    configuration: AppSettingsController.instance.playerCompatMode.value
-        ? const VideoControllerConfiguration(
-            vo: 'mediacodec_embed',
-            hwdec: 'mediacodec',
-          )
-        : VideoControllerConfiguration(
-            enableHardwareAcceleration:
-                AppSettingsController.instance.hardwareDecode.value,
-            androidAttachSurfaceAfterVideoParameters: false,
-          ),
+    configuration: MpvOptionsService.videoControllerConfiguration(),
   );
+
+  Future<void> initializePlayer() async {
+    await MpvOptionsService.applyToPlayer(player);
+  }
 }
 mixin PlayerStateMixin on PlayerMixin {
   /// 是否显示弹幕
@@ -235,13 +222,21 @@ class PlayerController extends BaseController
   StreamSubscription? _widthSubscription;
   StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
+  DateTime? _lastAudioDiagnosticTime;
 
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
-      Log.d("播放器错误：$event");
-      if (event.contains('no sound.')) {
+      if (PlayerErrorClassifier.isRecoverableAudioDiagnostic(event)) {
+        final now = DateTime.now();
+        if (_lastAudioDiagnosticTime == null ||
+            now.difference(_lastAudioDiagnosticTime!) >=
+                const Duration(seconds: 15)) {
+          _lastAudioDiagnosticTime = now;
+          Log.d("播放器音频诊断（已忽略）：$event");
+        }
         return;
       }
+      Log.d("播放器错误：$event");
       //SmartDialog.showToast(event);
       mediaError(event);
     });

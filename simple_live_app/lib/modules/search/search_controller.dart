@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/search/search_list_controller.dart';
 
@@ -14,8 +15,14 @@ class AppSearchController extends GetxController
   var searchMode = 0.obs;
 
   AppSearchController() {
-    tabController =
-        TabController(length: Sites.supportSites.length, vsync: this);
+    final initialIndex = _resolveInitialIndex();
+    index = initialIndex;
+    tabController = TabController(
+      length: Sites.supportSites.length,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
+    AppSettingsController.instance.setLastSearchSiteId(Sites.supportSites[index].id);
     tabController.animation?.addListener(() {
       var currentIndex = (tabController.animation?.value ?? 0).round();
       if (index == currentIndex) {
@@ -23,6 +30,7 @@ class AppSearchController extends GetxController
       }
 
       index = currentIndex;
+      AppSettingsController.instance.setLastSearchSiteId(Sites.supportSites[index].id);
       // if (Sites.supportSites[index].id == Constant.kDouyin) {
       //   return;
       // }
@@ -41,6 +49,20 @@ class AppSearchController extends GetxController
   StreamSubscription<dynamic>? streamSubscription;
 
   TextEditingController searchController = TextEditingController();
+
+  int _resolveInitialIndex() {
+    String? siteId;
+    final args = Get.arguments;
+    if (args is Map) {
+      siteId = args["siteId"]?.toString();
+    } else if (args is String) {
+      siteId = args;
+    }
+    siteId ??= AppSettingsController.instance.lastSearchSiteId.value;
+    final resolvedIndex =
+        Sites.supportSites.indexWhere((site) => site.id == siteId);
+    return resolvedIndex < 0 ? 0 : resolvedIndex;
+  }
 
   @override
   void onInit() {

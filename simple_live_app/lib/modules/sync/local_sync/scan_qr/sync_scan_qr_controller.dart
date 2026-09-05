@@ -8,6 +8,7 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/services/signalr_service.dart';
 
 class SyncScanQRControlelr extends BaseController {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
@@ -33,9 +34,12 @@ class SyncScanQRControlelr extends BaseController {
         return;
       }
 
-      // 如果是5位字符串，为房间号
-      if (code.length == 5) {
-        Get.offAndToNamed(RoutePath.kRemoteSyncRoom, arguments: code);
+      // 如果是远程同步房间号
+      if (code.trim().length == SignalRService.kRoomIdLength) {
+        Get.offAndToNamed(
+          RoutePath.kRemoteSyncRoom,
+          arguments: code.trim().toUpperCase(),
+        );
         return;
       } else {
         var addressList = code.split(";");

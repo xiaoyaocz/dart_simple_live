@@ -1,10 +1,33 @@
 name: BUG报告
 title: "[BUG] 请填写简短易读的标题"
 description: "使用过程中遇到了BUG"
-assignees: xiaoyaocz
 labels:
   - "bug"
 body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 作者的话
+
+        提交 Issue 或 Discussion 前，请保持礼貌、尊重和友善。作者不是任何人的专属开发人员，也只是一个平时有很多事情要忙的学生。清楚描述问题、耐心沟通，以及一句简单的“感谢开发和维护”并不难，也会让开源协作更舒服。
+
+  - type: checkboxes
+    id: author-note
+    attributes:
+      label: 作者的话
+      description: 请确认你理解并愿意保持礼貌、尊重和友善
+      options:
+        - label: 我知道了，会保持礼貌、尊重和友善，理解作者不是我的专属开发人员，也感谢作者开发和维护项目
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        请只提交一个明确的 `BUG`。
+        如果你想提功能建议、体验优化、平台适配、文案/UI 调整，或者分享使用妙招、配置经验、一般性提问，请改用 `Discussions`。
+
+        `Issue` 只处理已经存在、可复现的程序错误。非 `BUG` 需求必须先发到 `Discussions` 公开讨论；其他用户需要给主楼点 Upvote/👍 表示支持，评论只用于补充理由。只有获得足够支持的需求，才会被考虑排期或上线。请不要把个人想法直接当成作者必须实现的任务。
+
   - type: checkboxes
     id: terms
     attributes:
@@ -45,7 +68,7 @@ body:
     id: logs
     attributes:
       label: 日志
-      description: 请上传日志文件
+      description: 请上传日志文件；没有日志的 BUG Issue 默认不会查看或处理。如果无法获取日志，请加群反馈 BUG 问题
       placeholder: |
         可以在[其他设置]-[开启日志记录]后获取日志文件
  
@@ -53,22 +76,42 @@ body:
     id: version
     attributes:
       label: 版本号
-      description: 请填写你使用的APP版本号
-      placeholder: ex. 1.0.1
+      description: 请填写你使用的APP版本号，最好能直接给出release的链接
+      placeholder: ex. 1.0.1 tv_1.7.0
     validations:
       required: true
- 
+
   - type: dropdown
-    id: release-type
+    id: package-abi
     validations:
       required: true
     attributes:
-      label: 使用版本
-      description: 使用的是什么版本，从哪里下载的
+      label: 安装包架构 / 变体
+      description: 如果不确定，请看文件名里的 arm64-v8a / armeabi-v7a / x86_64 / windows / linux 等字样
       options:
-        - 正式版(Releases)
-        - 开发版(Actions)
-      default: 0
+        - Android 注意Android apk ≠ TV apk
+        - arm64-v8a
+        - armeabi-v7a
+        - x86_64
+        - universal / 未区分
+        - Windows zip
+        - Linux zip
+        - Linux deb
+        - TV
+        - 其他，请在备注里补充
+
+  - type: textarea
+    id: install-source-detail
+    attributes:
+      label: 下载来源与安装方式
+      description: 请写清是从 Releases、Actions、群文件、网盘还是他人转发处下载，以及你是如何安装的
+      placeholder: |
+        ex.
+        - 来源：GitHub Releases 的 tv_v1.7.0
+        - 文件：SimpleLive-TV-arm64-v8a-release.apk
+        - 安装方式：adb install -r / 文件管理器本地安装
+    validations:
+      required: true
 
   - type: dropdown
     id: platform
@@ -90,19 +133,26 @@ body:
     id: os-version
     attributes:
       label: 操作系统信息
-      description: 请填写你的操作系统信息版本
+      description: 请填写你的操作系统信息版本，如不确定可不填
       placeholder: ex. Windows 10 21H1 / MIUI 15 Android 12
     validations:
-      required: true
+      required: false
 
   - type: input
     id: device
     attributes:
       label: 设备信息
-      description: 请填写你的设备信息
+      description: 请填写你的设备信息，如不确定可不填
       placeholder: ex. PC / iPhone 12 Pro Max
     validations:
-      required: true
+      required: false
+
+  - type: input
+    id: live-platform
+    attributes:
+      label: 直播平台 / 房间信息
+      description: 如果问题与某个直播平台或具体直播间有关，请尽量写清楚
+      placeholder: ex. B站 / 抖音 / 虎牙 / 具体房间链接
 
   - type: textarea
     id: remark

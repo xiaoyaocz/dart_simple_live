@@ -38,3 +38,24 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+set(NATIVE_ASSETS_DIR "${CMAKE_SOURCE_DIR}/../build/native_assets/windows")
+set(DART_QUICKJS_DLL "${NATIVE_ASSETS_DIR}/dart_quickjs.dll")
+if(NOT EXISTS "${DART_QUICKJS_DLL}")
+  file(GLOB_RECURSE DART_QUICKJS_CANDIDATES
+    "${CMAKE_SOURCE_DIR}/../.dart_tool/hooks_runner/shared/dart_quickjs/build/*/dart_quickjs.dll")
+  list(LENGTH DART_QUICKJS_CANDIDATES DART_QUICKJS_CANDIDATE_COUNT)
+  if(DART_QUICKJS_CANDIDATE_COUNT GREATER 0)
+    list(GET DART_QUICKJS_CANDIDATES 0 DART_QUICKJS_DLL)
+  endif()
+endif()
+if(EXISTS "${DART_QUICKJS_DLL}")
+  add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${DART_QUICKJS_DLL}"
+      "$<TARGET_FILE_DIR:${BINARY_NAME}>/dart_quickjs.dll"
+    COMMENT "Copy required dart_quickjs native asset"
+    VERBATIM)
+else()
+  message(WARNING "dart_quickjs.dll was not found during CMake configure")
+endif()

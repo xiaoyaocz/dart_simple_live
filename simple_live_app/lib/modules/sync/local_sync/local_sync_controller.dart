@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/requests/sync_client_request.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
@@ -36,29 +37,35 @@ class LocalSyncController extends BaseController {
   SyncClientRequest request = SyncClientRequest();
 
   void connect() async {
-    var address = addressController.text;
-    if (address.isEmpty) {
+    final parsed = parseAddress(addressController.text);
+    if (parsed == null) {
       SmartDialog.showToast("请输入地址");
       return;
-    }
-    if (address.startsWith('http')) {
-      var uri = Uri.tryParse(address);
-      if (uri != null) {
-        address = uri.host;
-      }
-    } else if (address.contains(':')) {
-      var parts = address.split(":");
-      address = parts.first;
     }
 
     var client = SyncClinet(
       id: 'manual',
-      address: address,
-      port: SyncService.httpPort,
+      address: parsed.$1,
+      port: parsed.$2,
       name: "手动输入",
       type: Platform.operatingSystem,
     );
     connectClient(client);
+  }
+
+  (String, int)? parseAddress(String rawAddress) {
+    var address = rawAddress.trim();
+    if (address.isEmpty) {
+      return null;
+    }
+    if (!address.startsWith("http://") && !address.startsWith("https://")) {
+      address = "http://$address";
+    }
+    final uri = Uri.tryParse(address);
+    if (uri == null || uri.host.isEmpty) {
+      return null;
+    }
+    return (uri.host, uri.hasPort ? uri.port : SyncService.httpPort);
   }
 
   void connectClient(SyncClinet client) async {
@@ -67,7 +74,16 @@ class LocalSyncController extends BaseController {
       var info = await request.getClientInfo(client);
       AppNavigator.toSyncDevice(client, info);
     } catch (e) {
-      SmartDialog.showToast("连接失败:$e");
+      Log.e("局域网同步连接失败：$e", StackTrace.current);
+      SmartDialog.dismiss();
+      await Utils.showMessageDialog(
+        "局域网同步只支持两台设备在同一 Wi-Fi/局域网内互相访问。"
+        "如果两台设备不在同一局域网，需要先配置 VPN、端口转发或内网穿透；"
+        "否则请改用远程房间同步或 WebDAV。\n\n"
+        "错误详情：${exceptionToString(e)}",
+        title: "连接失败",
+        selectable: true,
+      );
     } finally {
       SmartDialog.dismiss();
     }
@@ -109,18 +125,25 @@ class LocalSyncController extends BaseController {
   }
 
   void showInfo() {
+    final addresses = SyncService.instance.ipAddress.value
+        .split(";")
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .map((e) => "$e:${SyncService.httpPort}")
+        .join(";");
     Utils.showBottomSheet(
       title: "本机信息",
       child: Column(
         children: [
           Visibility(
-            visible: SyncService.instance.httpRunning.value,
+            visible:
+                SyncService.instance.httpRunning.value && addresses.isNotEmpty,
             child: GestureDetector(
               onTap: () {
                 Get.back();
               },
               child: QrImageView(
-                data: SyncService.instance.ipAddress.value,
+                data: addresses,
                 version: QrVersions.auto,
                 backgroundColor: Colors.white,
                 padding: AppStyle.edgeInsetsA12,
@@ -132,20 +155,33 @@ class LocalSyncController extends BaseController {
           Visibility(
             visible: SyncService.instance.httpRunning.value,
             child: Text(
-              '服务已启动：${SyncService.instance.ipAddress.value.split(';').map((e) => '$e:${SyncService.httpPort}').join('；')}',
+              addresses.isEmpty
+                  ? '服务已启动，但未获取到局域网 IP，请确认已连接同一局域网'
+                  : '服务已启动：${addresses.replaceAll(";", "；")}',
               textAlign: TextAlign.center,
             ),
           ),
           Visibility(
             visible: !SyncService.instance.httpRunning.value,
             child: Text(
-              'HTTP服务未启动：${SyncService.instance.httpErrorMsg}，请尝试重启应用',
+              SyncService.instance.lanErrorMsg.isEmpty
+                  ? 'HTTP服务未启动，请尝试重启应用'
+                  : SyncService.instance.lanErrorMsg,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Visibility(
+            visible: SyncService.instance.httpRunning.value &&
+                SyncService.instance.udpErrorMsg.value.isNotEmpty,
+            child: Text(
+              SyncService.instance.udpErrorMsg.value,
               textAlign: TextAlign.center,
             ),
           ),
           AppStyle.vGap12,
           Visibility(
-            visible: SyncService.instance.httpRunning.value,
+            visible:
+                SyncService.instance.httpRunning.value && addresses.isNotEmpty,
             child: const Text(
               "请使用其他Simple Live客户端扫描上方二维码\n建立连接后可选择需要同步的数据",
               textAlign: TextAlign.center,

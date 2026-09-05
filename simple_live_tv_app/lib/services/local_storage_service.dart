@@ -17,6 +17,9 @@ class LocalStorageService extends GetxService {
   /// 首页排序
   static const String kHomeSort = "HomeSort";
 
+  /// 多开布局间距
+  static const String kMultiRoomGap = "MultiRoomGap";
+
   /// 显示模式
   /// * [0] 跟随系统
   /// * [1] 浅色模式
@@ -59,6 +62,26 @@ class LocalStorageService extends GetxService {
   /// 弹幕开启
   static const String kDanmuEnable = "DanmuEnable";
 
+  /// 显示弹幕表情
+  static const String kDanmuRenderEmoji = "DanmuRenderEmoji";
+
+  /// 重点动态
+  static const String kLiveEventFlowEnable = "LiveEventFlowEnable";
+  static const String kLiveEventFlowLimit = "LiveEventFlowLimit";
+  static const String kLiveEventFlowOverlayEnable =
+      "LiveEventFlowOverlayEnable";
+  static const String kLiveEventFlowWindowSeconds =
+      "LiveEventFlowWindowSeconds";
+  static const String kLiveEventFlowDisplaySeconds =
+      "LiveEventFlowDisplaySeconds";
+  static const String kLiveEventFlowMinCount = "LiveEventFlowMinCount";
+
+  /// 重复弹幕过滤
+  static const String kDanmuDedupeEnable = "DanmuDedupeEnable";
+  static const String kDanmuDedupeMode = "DanmuDedupeMode";
+  static const String kDanmuDedupeWindow = "DanmuDedupeWindow";
+  static const String kDanmuDedupeStep = "DanmuDedupeStep";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 
@@ -95,6 +118,13 @@ class LocalStorageService extends GetxService {
 
   /// 播放器缓冲区大小
   static const String kPlayerBufferSize = "PlayerBufferSize";
+  static const String kPlayerForceHttps = "PlayerForceHttps";
+  static const String kAutoSwitchNextOnLiveEnd = "AutoSwitchNextOnLiveEnd";
+  static const String kAutoSwitchNextOnPlaybackFailure =
+      "AutoSwitchNextOnPlaybackFailure";
+  static const String kPlayerVolume = "PlayerVolume";
+  static const String kLogEnable = "LogEnable";
+  static const String kMpvProfile = "MpvProfile";
 
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
@@ -104,6 +134,14 @@ class LocalStorageService extends GetxService {
 
   /// 哔哩哔哩cookie
   static const String kBilibiliCookie = "BilibiliCookie";
+
+  /// 抖音cookie
+  static const String kDouyinCookie = "DouyinCookie";
+
+  /// 快手 Cookie 与弹幕签名参数
+  static const String kKuaishouCookie = "KuaishouCookie";
+  static const String kKuaishouKww = "KuaishouKww";
+  static const String kKuaishouCookieExpiresAt = "KuaishouCookieExpiresAt";
 
   ///主题色
   static const String kStyleColor = "kStyleColor";
@@ -122,6 +160,25 @@ class LocalStorageService extends GetxService {
 
   /// 开启多线程更新关注
   static const String kUpdateFollowThreadCount = "UpdateFollowThreadCount";
+  static const String kFollowPageSize = "FollowPageSize";
+  static const String kFollowDisplayStyle = "FollowDisplayStyle";
+  static const String kFollowOnlyLive = "FollowOnlyLive";
+  static const String kFollowRefreshOnEnter = "FollowRefreshOnEnter";
+  static const String kFollowShowLiveCover = "FollowShowLiveCover";
+  static const String kFollowRefreshTaskState = "FollowRefreshTaskState";
+  static const String kFollowRefreshTaskTargets = "FollowRefreshTaskTargets";
+
+  /// 远程同步服务地址
+  static const String kSyncServerUrl = "SyncServerUrl";
+
+  /// 远程同步代理地址
+  static const String kSyncProxyUrl = "SyncProxyUrl";
+
+  static const String kWebDAVUri = "WebDAVUri";
+  static const String kWebDAVUser = "WebDAVUser";
+  static const String kWebDAVPassword = "kWebDAVPassword";
+  static const String kWebDAVLastUploadTime = "kWebDAVLastUploadTime";
+  static const String kWebDAVLastRecoverTime = "kWebDAVLastRecoverTime";
 
   late Box settingsBox;
   late Box<String> shieldBox;
@@ -138,7 +195,7 @@ class LocalStorageService extends GetxService {
   T getValue<T>(dynamic key, T defaultValue) {
     try {
       var value = settingsBox.get(key, defaultValue: defaultValue) as T;
-      Log.d("Get LocalStorage：$key\r\n$value");
+      Log.d("Get LocalStorage：$key");
       return value;
     } catch (e) {
       Log.logPrint(e);
@@ -147,7 +204,7 @@ class LocalStorageService extends GetxService {
   }
 
   Future setValue<T>(dynamic key, T value) async {
-    Log.d("Set LocalStorage：$key\r\n$value");
+    Log.d("Set LocalStorage：$key");
     return await settingsBox.put(key, value);
   }
 

@@ -5,7 +5,9 @@ import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/platform_utils.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/signalr_service.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -69,7 +71,7 @@ class MinePage extends StatelessWidget {
                     color: Colors.grey,
                   ),
                   onTap: () {
-                    Get.toNamed(RoutePath.kHistory);
+                    AppNavigator.toHistory();
                   },
                 ),
               ],
@@ -153,6 +155,17 @@ class MinePage extends StatelessWidget {
                   },
                 ),
                 ListTile(
+                  leading: const Icon(Icons.tune),
+                  title: const Text("播放页设置"),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                  ),
+                  onTap: () {
+                    Get.toNamed(RoutePath.kSettingsPlaybackPage);
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Remix.play_circle_line),
                   title: const Text("直播设置"),
                   trailing: const Icon(
@@ -163,6 +176,18 @@ class MinePage extends StatelessWidget {
                     Get.toNamed(RoutePath.kSettingsPlay);
                   },
                 ),
+                if (PlatformUtils.supportsInlineMultiRoom)
+                  ListTile(
+                    leading: const Icon(Remix.layout_grid_line),
+                    title: const Text("多开设置"),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey,
+                    ),
+                    onTap: () {
+                      Get.toNamed(RoutePath.kSettingsMultiRoom);
+                    },
+                  ),
                 ListTile(
                   leading: const Icon(Remix.text),
                   title: const Text("弹幕设置"),
@@ -251,7 +276,7 @@ class MinePage extends StatelessWidget {
                   ),
                   onTap: () {
                     launchUrlString(
-                      "https://github.com/xiaoyaocz/dart_simple_live",
+                      "https://github.com/June6699/dart_simple_live",
                       mode: LaunchMode.externalApplication,
                     );
                   },

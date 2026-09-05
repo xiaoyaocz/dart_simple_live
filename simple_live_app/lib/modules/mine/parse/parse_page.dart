@@ -14,7 +14,7 @@ class ParsePage extends GetView<ParseController> {
         title: const Text("链接解析"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.pagePadding(),
         children: [
           buildCard(
             context: context,
@@ -30,7 +30,7 @@ class ParsePage extends GetView<ParseController> {
                   textInputAction: TextInputAction.go,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
+                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播/快手直播的链接",
                     contentPadding: AppStyle.edgeInsetsA12,
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
@@ -69,7 +69,7 @@ class ParsePage extends GetView<ParseController> {
                   textInputAction: TextInputAction.go,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播的链接",
+                    hintText: "输入或粘贴哔哩哔哩直播/虎牙直播/斗鱼直播/抖音直播/快手直播的链接",
                     contentPadding: AppStyle.edgeInsetsA12,
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
@@ -108,6 +108,10 @@ https://www.douyu.com/topic/xxx?rid=xxx
 https://v.douyin.com/xxxxx
 https://live.douyin.com/xxxxx
 https://webcast.amemv.com/webcast/reflow/xxxxx
+快手直播：
+https://live.kuaishou.com/u/xxxxx
+https://v.kuaishou.com/xxxxx
+https://live.m.chenzhongtech.com/fw/live/xxxxx
 ''', style: TextStyle(color: Colors.grey)),
           ),
         ],

@@ -26,6 +26,12 @@ class DBService extends GetxService {
     await followBox.put(follow.id, follow);
   }
 
+  Future addFollows(Iterable<FollowUser> follows) async {
+    await followBox.putAll({
+      for (final follow in follows) follow.id: follow,
+    });
+  }
+
   Future deleteFollow(String id) async {
     await followBox.delete(id);
   }

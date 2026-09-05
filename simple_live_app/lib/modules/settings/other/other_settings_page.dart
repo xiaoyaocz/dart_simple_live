@@ -1,12 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/settings/other/other_settings_controller.dart';
+import 'package:simple_live_app/services/mpv_options_service.dart';
+import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_menu.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
@@ -22,7 +25,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
         title: const Text("其他设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.pagePadding(),
         children: [
           SettingsCard(
             child: Padding(
@@ -32,14 +35,14 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                   Expanded(
                     child: TextButton.icon(
                       onPressed: controller.exportConfig,
-                      label: const Text("导出配置"),
+                      label: const Text("导出配置包"),
                       icon: const Icon(Remix.export_line),
                     ),
                   ),
                   Expanded(
                     child: TextButton.icon(
                       onPressed: controller.importConfig,
-                      label: const Text("导入配置"),
+                      label: const Text("导入配置包"),
                       icon: const Icon(Remix.import_line),
                     ),
                   ),
@@ -54,6 +57,52 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
               ),
             ),
           ),
+          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "桌面窗口",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+            SettingsCard(
+              child: Obx(
+                () => SettingsSwitch(
+                  value: AppSettingsController
+                      .instance.rememberWindowPlacement.value,
+                  title: "记住窗口大小和位置",
+                  subtitle: "开启后恢复上次普通窗口位置和最大化状态",
+                  onChanged:
+                      AppSettingsController.instance.setRememberWindowPlacement,
+                ),
+              ),
+            ),
+            if (Platform.isWindows) ...[
+              Padding(
+                padding: AppStyle.edgeInsetsA12.copyWith(top: 16),
+                child: Text(
+                  "图形处理器",
+                  style: Get.textTheme.titleSmall,
+                ),
+              ),
+              SettingsCard(
+                child: Obx(
+                  () => SettingsMenu<String>(
+                    title: "Windows GPU 偏好",
+                    subtitle: "选择高性能/NVIDIA 可减少游戏本误用核显；修改后必须完全重启应用",
+                    value: AppSettingsController
+                        .instance.windowsGpuPreference.value,
+                    valueMap: AppSettingsController.windowsGpuPreferenceOptions,
+                    onChanged: (value) {
+                      AppSettingsController.instance
+                          .setWindowsGpuPreference(value);
+                      SmartDialog.showToast("GPU 偏好已保存，重启应用后生效");
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ],
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
@@ -92,6 +141,20 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
             child: Column(
               children: [
                 Obx(
+                  () => SettingsMenu(
+                    title: Platform.isIOS ? "mpv 性能档位（桌面端）" : "mpv 性能档位",
+                    subtitle: Platform.isIOS
+                        ? "iOS 仅使用其中的自动硬解设置，不影响画质与功耗"
+                        : "流畅适合核显/低功耗，均衡为默认，画质适合高性能显卡",
+                    value: AppSettingsController.instance.mpvProfile.value,
+                    valueMap: MpvOptionsService.profileLabels,
+                    onChanged: (e) {
+                      AppSettingsController.instance.setMpvProfile(e);
+                    },
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
                   () => SettingsSwitch(
                     value:
                         AppSettingsController.instance.customPlayerOutput.value,
@@ -99,6 +162,30 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                     onChanged: (e) {
                       AppSettingsController.instance.setCustomPlayerOutput(e);
                     },
+                  ),
+                ),
+                AppStyle.divider,
+                GetBuilder<OtherSettingsController>(
+                  builder: (controller) => SettingsAction(
+                    title: "高级 mpv options",
+                    subtitle: "每行一个 key=value，覆盖内置档位和可视化设置",
+                    value: AppSettingsController
+                            .instance.mpvAdvancedOptions.value.isEmpty
+                        ? "未设置"
+                        : "已设置",
+                    onTap: controller.editMpvAdvancedOptions,
+                  ),
+                ),
+                AppStyle.divider,
+                GetBuilder<OtherSettingsController>(
+                  builder: (controller) => SettingsAction(
+                    title: "导入 mpv.conf",
+                    subtitle: "导入后复制到应用私有目录，覆盖同名 mpv option",
+                    value: AppSettingsController
+                            .instance.importedMpvConfPath.value.isEmpty
+                        ? "未导入"
+                        : "已导入",
+                    onTap: controller.importMpvConf,
                   ),
                 ),
                 AppStyle.divider,

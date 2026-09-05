@@ -1,0 +1,86 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 功能建议 / 体验优化 / 平台适配
+
+        这里用于提交 `Enhance`、新功能、体验优化、平台适配、文案/UI 调整等非 `BUG` 需求。
+
+        请注意：
+        - 非 `BUG` 需求不要发到 `Issues`，否则可能会被直接关闭。
+        - 需求必须通过 `Discussions` 公开讨论。其他用户请给主楼点 Upvote/👍 表示支持，评论只用于补充理由。
+        - 只有获得足够支持的需求，才会被考虑排期或上线。
+        - 请先搜索已有 Discussion。已有相同需求时，请给已有帖子的主楼点 Upvote/👍 并补充说明，不要重复开帖。
+        - 提需求不是派单。请说明真实使用场景、受影响人群和你愿意如何协助验证。
+
+  - type: checkboxes
+    id: voting-rule
+    attributes:
+      label: 投票规则
+      description: 请确认你理解非 BUG 需求的处理方式
+      options:
+        - label: 我知道非 BUG 需求必须在 Discussions 公开讨论，其他用户需要给主楼点 Upvote/👍 才算明确支持
+          required: true
+        - label: 我知道评论只用于补充理由、场景和证据，不能靠反复评论或催促要求上线
+          required: true
+        - label: 我已经搜索过现有 Discussions，没有找到相同或高度相似的需求
+          required: true
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: 建议类型
+      description: 请选择更接近你这次反馈的类型
+      options:
+        - 体验优化
+        - 新增功能
+        - 平台适配
+        - 文案 / 图标 / UI 调整
+        - 发布 / 构建 / 文档
+        - 其他
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: platform
+    attributes:
+      label: 平台
+      description: 这个建议主要针对什么平台
+      options:
+        - label: Android
+        - label: Android TV
+        - label: iOS
+        - label: macOS
+        - label: Windows
+        - label: Linux
+        - label: 全平台 / 不限平台
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的问题或不便
+      description: 请说明现在哪里不方便、影响了什么使用场景
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望的解决方式
+      description: 请描述理想效果，而不是只写“加一个某某功能”
+    validations:
+      required: true
+
+  - type: textarea
+    id: value
+    attributes:
+      label: 这个建议能帮助谁
+      description: 请说明受影响用户、使用频率、是否有替代方案，以及为什么值得优先处理
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 参考信息
+      description: 可以附加截图、视频、链接、竞品做法、相关 Discussion 或 Issue

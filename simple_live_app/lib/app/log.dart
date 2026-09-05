@@ -15,9 +15,14 @@ class Log {
     logFileWriter = LogFileWriter();
   }
 
-  static void disposeWriter() {
-    logFileWriter?.close();
+  static Future<void> disposeWriter() async {
+    final writer = logFileWriter;
     logFileWriter = null;
+    await writer?.close();
+  }
+
+  static Future<void> flushWriter() async {
+    await logFileWriter?.flush();
   }
 
   static void writeLog(content, [Level level = Level.info]) {
@@ -126,8 +131,18 @@ class LogFileWriter {
     fileWriter?.write("\r\n");
   }
 
+  Future<void> flush() async {
+    await fileWriter?.flush();
+  }
+
   Future close() async {
-    await fileWriter?.close();
+    final writer = fileWriter;
+    fileWriter = null;
+    if (writer == null) {
+      return;
+    }
+    await writer.flush();
+    await writer.close();
   }
 
   void writeSystemInfo() async {

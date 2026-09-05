@@ -57,6 +57,7 @@ class BaseController extends GetxController {
 }
 
 class BasePageController<T> extends BaseController {
+  static const Duration refreshCooldown = Duration(seconds: 2);
   final ScrollController scrollController = ScrollController();
   final EasyRefreshController easyRefreshController = EasyRefreshController();
   int currentPage = 1;
@@ -65,8 +66,31 @@ class BasePageController<T> extends BaseController {
   int pageSize = 24;
   var canLoadMore = false.obs;
   var list = <T>[].obs;
+  DateTime? _lastRefreshAt;
+
+  bool get isRefreshCoolingDown {
+    final lastRefreshAt = _lastRefreshAt;
+    return lastRefreshAt != null &&
+        DateTime.now().difference(lastRefreshAt) < refreshCooldown;
+  }
+
+  void showRefreshCooldownToast() {
+    SmartDialog.showToast("刷新太频繁，请稍后再试");
+  }
+
+  bool tryBeginRefresh({bool showToast = true}) {
+    if (isRefreshCoolingDown) {
+      if (showToast) {
+        showRefreshCooldownToast();
+      }
+      return false;
+    }
+    _lastRefreshAt = DateTime.now();
+    return true;
+  }
 
   Future refreshData() async {
+    if (!tryBeginRefresh()) return;
     currentPage = 1;
     list.value = [];
     await loadData();
@@ -75,27 +99,28 @@ class BasePageController<T> extends BaseController {
   Future loadData() async {
     try {
       if (loadding.value) return;
+      final requestedPage = currentPage;
       loadding.value = true;
       pageError.value = false;
       pageEmpty.value = false;
       notLogin.value = false;
       pageLoadding.value = currentPage == 1;
 
-      var result = await getData(currentPage, pageSize);
+      var result = await getData(requestedPage, pageSize);
       //是否可以加载更多
       if (result.isNotEmpty) {
-        currentPage++;
+        currentPage = requestedPage + 1;
         canLoadMore.value = true;
         pageEmpty.value = false;
       } else {
         canLoadMore.value = false;
-        if (currentPage == 1) {
+        if (requestedPage == 1) {
           pageEmpty.value = true;
         }
       }
       // 赋值数据
-      if (currentPage == 1) {
-        list.value = result;
+      if (requestedPage == 1) {
+        list.assignAll(result);
       } else {
         list.addAll(result);
       }

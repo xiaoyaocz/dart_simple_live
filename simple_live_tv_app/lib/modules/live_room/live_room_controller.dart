@@ -76,6 +76,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   /// 是否处于后台
   var isBackground = false;
 
+  /// 用户主动暂停（暂停/继续功能状态）
+  final RxBool userPaused = false.obs;
+
+  /// 播放停滞看门狗
+  Timer? _playbackWatchdog;
+  Duration? _lastWatchdogPosition;
+  int _stallSampleCount = 0;
+
   /// 自动退出倒计时，单位秒
   var countdown = 60.obs;
 
@@ -276,6 +284,54 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     _clearDanmuDedupeState();
 
     loadData();
+  }
+
+  /// 暂停/继续（遥控器媒体键触发）：继续时刷新直播流回到最新画面
+  Future<void> togglePlayPause() async {
+    if (userPaused.value) {
+      userPaused.value = false;
+      await player.play();
+      SmartDialog.showToast("继续播放");
+      setPlayer(refreshUrls: true);
+    } else {
+      userPaused.value = true;
+      await player.pause();
+      SmartDialog.showToast("已暂停");
+    }
+  }
+
+  /// 停滞看门狗：播放中连续 3 次采样（每 5 秒）位置不变时自动刷新
+  void _startPlaybackWatchdog() {
+    _playbackWatchdog?.cancel();
+    _lastWatchdogPosition = null;
+    _stallSampleCount = 0;
+    _playbackWatchdog = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (isBackground || !liveStatus.value || userPaused.value) {
+        _lastWatchdogPosition = null;
+        _stallSampleCount = 0;
+        return;
+      }
+      if (!player.state.playing || player.state.buffering) {
+        // 缓冲中不算停滞，等待起播
+        _lastWatchdogPosition = null;
+        _stallSampleCount = 0;
+        return;
+      }
+      final position = player.state.position;
+      if (_lastWatchdogPosition != null && position == _lastWatchdogPosition) {
+        _stallSampleCount += 1;
+        if (_stallSampleCount >= 3) {
+          _stallSampleCount = 0;
+          _lastWatchdogPosition = null;
+          Log.w("检测到播放停滞，自动刷新播放");
+          setPlayer(refreshUrls: true);
+          return;
+        }
+      } else {
+        _stallSampleCount = 0;
+      }
+      _lastWatchdogPosition = position;
+    });
   }
 
   Future<void> syncDesktopFullscreenState() async {
@@ -845,6 +901,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void setPlayer({bool refreshUrls = false}) async {
+    // 切换清晰度/线路意味着回到正常播放，清除暂停状态
+    userPaused.value = false;
     if (refreshUrls) {
       var reloaded = await _reloadPlayUrls(silent: true);
       if (!reloaded) {
@@ -874,6 +932,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     await player.setVolume(muted.value ? 0 : 100);
 
     Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");
+    _startPlaybackWatchdog();
   }
 
   bool get _shouldRefreshUrlsOnPlaybackRetry =>
@@ -1175,6 +1234,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     autoExitTimer?.cancel();
     _autoExitSession.stop();
     _clockTimer?.cancel();
+    _playbackWatchdog?.cancel();
     doubleClickTimer?.cancel();
     liveDanmaku.stop();
     _liveEventFlowTimer?.cancel();

@@ -2066,6 +2066,18 @@ class LiveRoomController extends PlayerController
     mediaError("用户手动刷新");
   }
 
+  /// 暂停/继续：暂停冻结画面；继续时刷新直播流回到最新画面
+  Future<void> togglePlayPauseWithRefresh() async {
+    if (player.state.playing) {
+      await player.pause();
+      return;
+    }
+    await player.play();
+    // 手动动作，重置自动重试计数，避免连续暂停/继续误触线路切换
+    mediaErrorRetryCount = 0;
+    refreshPlayback();
+  }
+
   /// 读取头条 / SC
   void getSuperChatMessage({bool silent = false}) async {
     if (detail.value == null) {

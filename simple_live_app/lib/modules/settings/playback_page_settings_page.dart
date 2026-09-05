@@ -191,6 +191,18 @@ class PlaybackPageSettingsPage extends GetView<IndexedSettingsController> {
                           .instance.setLiveRoomShortcutVolumeDown,
                     ),
                   ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsMenu<int>(
+                      title: "暂停/继续",
+                      subtitle: "继续播放时刷新直播流，仅在直播间且输入框未聚焦时生效",
+                      value: AppSettingsController
+                          .instance.liveRoomShortcutPlayPause.value,
+                      valueMap: AppSettingsController.liveRoomShortcutOptions,
+                      onChanged: AppSettingsController
+                          .instance.setLiveRoomShortcutPlayPause,
+                    ),
+                  ),
                 ],
               ),
             ),

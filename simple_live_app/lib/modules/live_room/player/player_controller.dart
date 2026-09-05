@@ -180,6 +180,9 @@ mixin PlayerStateMixin on PlayerMixin {
   RxBool mutedState = false.obs;
   double _volumeBeforeMute = 100.0;
 
+  /// 是否正在播放（由 player.stream.playing 同步，供 UI 响应式使用）
+  RxBool playingState = true.obs;
+
   void onPlayerWindowModeExited() {}
 
   /// 是否显示控制器
@@ -888,10 +891,14 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       return;
     }
 
-    fullScreenState.value = false;
-    smallWindowState.value = false;
-    await windowManager.setAlwaysOnTop(false);
-    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    try {
+      fullScreenState.value = false;
+      smallWindowState.value = false;
+      await windowManager.setAlwaysOnTop(false);
+    } finally {
+      // 无论中途是否异常，都必须恢复标题栏，否则窗口顶部条会丢失
+      await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    }
     if (_lastWindowPosition != null) {
       await windowManager.setPosition(_lastWindowPosition!);
     }
@@ -2121,6 +2128,7 @@ class PlayerController extends BaseController
     });
 
     _playingSubscription = player.stream.playing.listen((event) {
+      playingState.value = event;
       final generation = playbackLoadGeneration;
       _syncStreamErrorGeneration(generation);
       if (event) {

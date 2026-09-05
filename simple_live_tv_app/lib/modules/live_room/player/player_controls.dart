@@ -190,6 +190,14 @@ Widget buildControls(VideoState videoState, LiveRoomController controller) {
                     Text("下一频道", style: AppStyle.textStyleWhite),
                     AppStyle.hGap32,
                     Icon(
+                      Icons.play_circle_fill,
+                      color: Colors.white,
+                      size: 40.w,
+                    ),
+                    AppStyle.hGap16,
+                    Text("暂停/继续", style: AppStyle.textStyleWhite),
+                    AppStyle.hGap32,
+                    Icon(
                       Icons.arrow_circle_left_outlined,
                       color: Colors.white,
                       size: 40.w,

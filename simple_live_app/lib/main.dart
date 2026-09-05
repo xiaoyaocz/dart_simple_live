@@ -782,6 +782,9 @@ class MyApp extends StatelessWidget {
       if (shortcut == LogicalKeyboardKey.arrowDown.keyId) {
         return physicalKey == PhysicalKeyboardKey.arrowDown;
       }
+      if (shortcut == LogicalKeyboardKey.space.keyId) {
+        return physicalKey == PhysicalKeyboardKey.space;
+      }
       return false;
     }
 
@@ -809,6 +812,10 @@ class MyApp extends StatelessWidget {
     }
     if (matches(settings.liveRoomShortcutRefresh.value)) {
       liveRoomController.refreshRoom();
+      return;
+    }
+    if (matches(settings.liveRoomShortcutPlayPause.value)) {
+      unawaited(liveRoomController.togglePlayPauseWithRefresh());
       return;
     }
     if (matches(settings.liveRoomShortcutToggleChat.value) &&
@@ -883,6 +890,8 @@ class MyApp extends StatelessWidget {
           return shortcut == LogicalKeyboardKey.arrowUp.keyId;
         case "arrowDown":
           return shortcut == LogicalKeyboardKey.arrowDown.keyId;
+        case "keySpace":
+          return shortcut == LogicalKeyboardKey.space.keyId;
         default:
           return false;
       }
@@ -910,6 +919,10 @@ class MyApp extends StatelessWidget {
     }
     if (matchesDesktopShortcut(settings.liveRoomShortcutRefresh.value)) {
       liveRoomController.refreshRoom();
+      return;
+    }
+    if (matchesDesktopShortcut(settings.liveRoomShortcutPlayPause.value)) {
+      unawaited(liveRoomController.togglePlayPauseWithRefresh());
       return;
     }
     if (matchesDesktopShortcut(settings.liveRoomShortcutToggleChat.value)) {

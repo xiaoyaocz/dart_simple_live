@@ -5,6 +5,7 @@
 #include <utility>
 
 #include <flutter/standard_method_codec.h>
+#include <imm.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -19,6 +20,12 @@ bool FlutterWindow::OnCreate() {
   }
 
   RECT frame = GetClientArea();
+
+  // Capture the stock window style once while the caption is guaranteed to be
+  // present. Fullscreen and small-window modes mutate the style afterwards;
+  // restoring from this baseline keeps the title bar from being lost.
+  windowed_style_ = GetWindowLongPtr(GetHandle(), GWL_STYLE);
+  windowed_ex_style_ = GetWindowLongPtr(GetHandle(), GWL_EXSTYLE);
 
   // The size here must match the window dimensions to avoid unnecessary surface
   // creation / destruction in the startup path.
@@ -48,6 +55,9 @@ bool FlutterWindow::OnCreate() {
               if (const auto* value =
                       std::get_if<bool>(&enabled->second)) {
                 shortcut_capture_enabled_ = *value;
+                // While shortcuts are captured the window hosts no editable
+                // text, so detach the IME to keep it from swallowing keys.
+                SetImeEnabled(*value);
               }
             }
           }
@@ -98,9 +108,15 @@ void FlutterWindow::ConfigureWindowChromeChannel() {
 void FlutterWindow::ApplyFullscreenChrome() {
   HWND hwnd = GetHandle();
   if (!hwnd) return;
+  // Only refresh the saved baseline from a captioned (normal windowed) state;
+  // saving while the caption is hidden (small-window mode) would make every
+  // later restore drop the title bar.
   if (!fullscreen_chrome_applied_) {
-    windowed_style_ = GetWindowLongPtr(hwnd, GWL_STYLE);
-    windowed_ex_style_ = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+    const auto current_style = GetWindowLongPtr(hwnd, GWL_STYLE);
+    if (current_style & WS_CAPTION) {
+      windowed_style_ = current_style;
+      windowed_ex_style_ = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+    }
   }
   const auto style = windowed_style_ &
       ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
@@ -124,7 +140,27 @@ void FlutterWindow::RestoreWindowChrome() {
   fullscreen_chrome_applied_ = false;
 }
 
+void FlutterWindow::SetImeEnabled(bool enabled) {
+  HWND hwnd = GetHandle();
+  if (!hwnd) return;
+  if (enabled && ime_disabled_) {
+    ImmAssociateContext(hwnd, default_imc_);
+    default_imc_ = nullptr;
+    ime_disabled_ = false;
+  } else if (!enabled && !ime_disabled_) {
+    default_imc_ = ImmAssociateContext(hwnd, nullptr);
+    ime_disabled_ = true;
+  }
+}
+
 void FlutterWindow::OnDestroy() {
+  if (ime_disabled_) {
+    if (HWND hwnd = GetHandle()) {
+      ImmAssociateContext(hwnd, default_imc_);
+    }
+    default_imc_ = nullptr;
+    ime_disabled_ = false;
+  }
   shortcut_channel_.reset();
   window_chrome_channel_.reset();
   if (flutter_controller_) {
@@ -208,6 +244,8 @@ std::string FlutterWindow::ShortcutKeyForWindowsKey(WPARAM wparam,
       return "arrowUp";
     case 0x50:
       return "arrowDown";
+    case 0x39:
+      return "keySpace";
     default:
       break;
   }
@@ -235,6 +273,8 @@ std::string FlutterWindow::ShortcutKeyForWindowsKey(WPARAM wparam,
       return "keyB";
     case 'N':
       return "keyN";
+    case VK_SPACE:
+      return "keySpace";
     case VK_UP:
       return "arrowUp";
     case VK_DOWN:

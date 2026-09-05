@@ -50,6 +50,23 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       requestExitPlayer();
       return;
     }
+    // 遥控器媒体键：播放/暂停
+    if (key.logicalKey == LogicalKeyboardKey.mediaPlayPause) {
+      controller.togglePlayPause();
+      return;
+    }
+    if (key.logicalKey == LogicalKeyboardKey.mediaPlay) {
+      if (controller.userPaused.value) {
+        controller.togglePlayPause();
+      }
+      return;
+    }
+    if (key.logicalKey == LogicalKeyboardKey.mediaPause) {
+      if (!controller.userPaused.value) {
+        controller.togglePlayPause();
+      }
+      return;
+    }
     // 点击OK、Enter、Select键时显示/隐藏控制器
     if (key.logicalKey == LogicalKeyboardKey.select ||
         key.logicalKey == LogicalKeyboardKey.enter ||
@@ -153,6 +170,38 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           },
           aspectRatio: aspectRatio,
           fit: boxFit,
+        ),
+        // 暂停状态提示
+        Obx(
+          () => Visibility(
+            visible: controller.userPaused.value &&
+                !controller.pageLoadding.value &&
+                controller.playbackLoadError.value.isEmpty,
+            child: Center(
+              child: Container(
+                padding: AppStyle.edgeInsetsA24,
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.pause_circle_outline,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                    AppStyle.vGap12,
+                    Text(
+                      "已暂停 · 按播放键继续",
+                      style: AppStyle.textStyleWhite,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
         Obx(
           () => Visibility(

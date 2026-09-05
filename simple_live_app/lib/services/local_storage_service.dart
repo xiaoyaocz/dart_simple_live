@@ -23,6 +23,8 @@ class LocalStorageService extends GetxService {
   static const String kLiveRoomShortcutVolumeUp = "LiveRoomShortcutVolumeUp";
   static const String kLiveRoomShortcutVolumeDown =
       "LiveRoomShortcutVolumeDown";
+  static const String kLiveRoomShortcutPlayPause =
+      "LiveRoomShortcutPlayPause";
   static const String kLastSearchSiteId = "LastSearchSiteId";
   static const String kFollowGroupMode = "FollowGroupMode";
   static const String kFollowSelectedGroupId = "FollowSelectedGroupId";

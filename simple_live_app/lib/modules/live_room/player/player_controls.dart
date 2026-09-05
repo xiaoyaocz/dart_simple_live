@@ -543,6 +543,17 @@ Widget _buildFullBottomBar(
                 color: Colors.white,
               ),
             ),
+            Obx(
+              () => IconButton(
+                onPressed: controller.togglePlayPauseWithRefresh,
+                icon: Icon(
+                  controller.playingState.value
+                      ? Icons.pause
+                      : Icons.play_arrow,
+                  color: Colors.white,
+                ),
+              ),
+            ),
             IconButton(
               onPressed: () {
                 controller.setDanmakuVisible(!showDanmaku);
@@ -618,6 +629,15 @@ Widget _buildFullBottomBar(
                 style: const TextStyle(color: Colors.white, fontSize: 15),
               ),
             ),
+            if (!Platform.isAndroid && !Platform.isIOS)
+              IconButton(
+                onPressed: controller.enterSmallWindow,
+                icon: const Icon(
+                  Icons.picture_in_picture,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
             IconButton(
               onPressed: () {
                 if (controller.smallWindowState.value) {
@@ -668,6 +688,17 @@ Widget _buildNormalBottomBar(
               icon: const Icon(
                 Remix.refresh_line,
                 color: Colors.white,
+              ),
+            ),
+            Obx(
+              () => IconButton(
+                onPressed: controller.togglePlayPauseWithRefresh,
+                icon: Icon(
+                  controller.playingState.value
+                      ? Icons.pause
+                      : Icons.play_arrow,
+                  color: Colors.white,
+                ),
               ),
             ),
             IconButton(

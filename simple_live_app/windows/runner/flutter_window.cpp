@@ -57,7 +57,7 @@ bool FlutterWindow::OnCreate() {
                 shortcut_capture_enabled_ = *value;
                 // While shortcuts are captured the window hosts no editable
                 // text, so detach the IME to keep it from swallowing keys.
-                SetImeEnabled(*value);
+                SetImeForShortcutCapture(*value);
               }
             }
           }
@@ -140,16 +140,19 @@ void FlutterWindow::RestoreWindowChrome() {
   fullscreen_chrome_applied_ = false;
 }
 
-void FlutterWindow::SetImeEnabled(bool enabled) {
+void FlutterWindow::SetImeForShortcutCapture(bool captureEnabled) {
+  // captureEnabled=true means desktop shortcuts are being captured for a
+  // window without editable text: detach the IME so it cannot swallow keys.
+  // Otherwise restore the default IME context for normal text input.
   HWND hwnd = GetHandle();
   if (!hwnd) return;
-  if (enabled && ime_disabled_) {
+  if (captureEnabled && !ime_disabled_) {
+    default_imc_ = ImmAssociateContext(hwnd, nullptr);
+    ime_disabled_ = true;
+  } else if (!captureEnabled && ime_disabled_) {
     ImmAssociateContext(hwnd, default_imc_);
     default_imc_ = nullptr;
     ime_disabled_ = false;
-  } else if (!enabled && !ime_disabled_) {
-    default_imc_ = ImmAssociateContext(hwnd, nullptr);
-    ime_disabled_ = true;
   }
 }
 

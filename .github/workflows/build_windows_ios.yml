@@ -1,0 +1,88 @@
+name: Build Windows & iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.x"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: |
+          flutter config --enable-macos-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Build iOS
+        run: |
+          cd simple_live_app
+          flutter build ios --release --no-codesign
+
+      - name: Create Unsigned IPA
+        run: |
+          cd simple_live_app
+          mkdir -p build/ios/iphoneos/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          cd build/ios/iphoneos
+          zip -qry ios_no_sign.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: simple_live_app/build/ios/iphoneos/ios_no_sign.ipa
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.x"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Restore Packages
+        shell: bash
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install flutter_distributor
+        shell: bash
+        run: dart pub global activate flutter_distributor
+
+      - name: Build Windows
+        shell: bash
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform windows --targets zip --skip-clean
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: simple_live_app/build/dist/*/*.zip

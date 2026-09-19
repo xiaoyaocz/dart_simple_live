@@ -36,16 +36,70 @@ import 'package:window_manager/window_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:dynamic_color/dynamic_color.dart';
 
+// ignore: unused_element
+RandomAccessFile? _instanceLockFile;
+
+Future<String?> getSafeHiveDirectory() async {
+  if (Platform.isAndroid || Platform.isIOS) {
+    return null;
+  }
+  var baseDir = await getApplicationSupportDirectory();
+  // 检查并寻找可用的实例目录，避免多开时 Hive 文件锁冲突导致闪退
+  for (int i = 0; i < 30; i++) {
+    var candidateDir = i == 0
+        ? baseDir
+        : Directory(p.join(baseDir.path, "instances", "inst_$i"));
+    if (!await candidateDir.exists()) {
+      await candidateDir.create(recursive: true);
+    }
+    var lockFilePath = p.join(candidateDir.path, ".instance.lock");
+    try {
+      var lockFile = File(lockFilePath);
+      var raf = await lockFile.open(mode: FileMode.write);
+      await raf.lock(FileLock.exclusive);
+      // 保持 raf 打开不关闭，直到进程退出，作为当前进程独占锁标记
+      _instanceLockFile = raf;
+
+      // 如果是非主实例且是新目录，拷贝主目录的基础配置和关注列表
+      if (i > 0) {
+        await _copyInitialConfigIfEmpty(baseDir, candidateDir);
+      }
+      return candidateDir.path;
+    } catch (_) {
+      // 当前目录已被其他运行中的实例独占，尝试下一个实例编号
+      continue;
+    }
+  }
+  return baseDir.path;
+}
+
+Future<void> _copyInitialConfigIfEmpty(
+    Directory baseDir, Directory targetDir) async {
+  try {
+    var filesToCopy = [
+      "followuser.hive",
+      "followusertag.hive",
+      "localstorage.hive"
+    ];
+    for (var fileName in filesToCopy) {
+      var src = File(p.join(baseDir.path, fileName));
+      var dst = File(p.join(targetDir.path, fileName));
+      if (await src.exists() && !await dst.exists()) {
+        await src.copy(dst.path);
+      }
+    }
+  } catch (e) {
+    Log.logPrint("Copy initial config error: $e");
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await migrateData();
   await initWindow();
   MediaKit.ensureInitialized();
-  await Hive.initFlutter(
-    (!Platform.isAndroid && !Platform.isIOS)
-        ? (await getApplicationSupportDirectory()).path
-        : null,
-  );
+  var hivePath = await getSafeHiveDirectory();
+  await Hive.initFlutter(hivePath);
   //初始化服务
   await initServices();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

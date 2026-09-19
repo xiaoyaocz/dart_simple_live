@@ -78,6 +78,45 @@ Widget buildFullControls(
           ),
         ),
         Positioned.fill(
+          child: Obx(
+            () => Visibility(
+              visible: controller.onlyAudioMode.value ||
+                  controller.suspendedByWindow.value,
+              child: Container(
+                color: const Color(0xFF141414),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Remix.headphone_line,
+                          size: 56, color: Colors.white70),
+                      const SizedBox(height: 14),
+                      Text(
+                        controller.onlyAudioMode.value
+                            ? "已开启纯音频省电模式 (GPU 占用 0%)"
+                            : "窗口已最小化 (后台挂起画面省电中)",
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 16),
+                      ),
+                      const SizedBox(height: 14),
+                      if (controller.onlyAudioMode.value)
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white24,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => controller.toggleOnlyAudioMode(),
+                          icon: const Icon(Icons.videocam_outlined, size: 18),
+                          label: const Text("恢复画面显示"),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
           child: GestureDetector(
             onTap: controller.onTap,
             onDoubleTapDown: controller.onDoubleTap,
@@ -311,6 +350,37 @@ Widget buildFullControls(
                       ),
                     ),
                   ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    onPressed: () {
+                      controller.toggleOnlyAudioMode();
+                    },
+                    icon: Obx(
+                      () => Icon(
+                        controller.onlyAudioMode.value
+                            ? Remix.headphone_fill
+                            : Remix.headphone_line,
+                        size: 18,
+                        color: controller.onlyAudioMode.value
+                            ? Colors.greenAccent
+                            : Colors.white,
+                      ),
+                    ),
+                    label: Obx(
+                      () => Text(
+                        controller.onlyAudioMode.value ? "纯音频(开)" : "听声音",
+                        style: TextStyle(
+                          color: controller.onlyAudioMode.value
+                              ? Colors.greenAccent
+                              : Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                   TextButton(
                     onPressed: () {
                       showQualitesInfo(controller);
@@ -464,6 +534,45 @@ Widget buildControls(
         ),
       ),
       Positioned.fill(
+        child: Obx(
+          () => Visibility(
+            visible: controller.onlyAudioMode.value ||
+                controller.suspendedByWindow.value,
+            child: Container(
+              color: const Color(0xFF141414),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Remix.headphone_line,
+                        size: 52, color: Colors.white70),
+                    const SizedBox(height: 12),
+                    Text(
+                      controller.onlyAudioMode.value
+                          ? "已开启纯音频省电模式 (GPU 占用 0%)"
+                          : "窗口已最小化 (后台挂起画面省电中)",
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 15),
+                    ),
+                    const SizedBox(height: 14),
+                    if (controller.onlyAudioMode.value)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white24,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => controller.toggleOnlyAudioMode(),
+                        icon: const Icon(Icons.videocam_outlined, size: 18),
+                        label: const Text("恢复画面显示"),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      Positioned.fill(
         child: GestureDetector(
           onTap: controller.onTap,
           onDoubleTapDown: controller.onDoubleTap,
@@ -566,6 +675,37 @@ Widget buildControls(
                       Icons.volume_down,
                       size: 24,
                       color: Colors.white,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: () {
+                    controller.toggleOnlyAudioMode();
+                  },
+                  icon: Obx(
+                    () => Icon(
+                      controller.onlyAudioMode.value
+                          ? Remix.headphone_fill
+                          : Remix.headphone_line,
+                      size: 18,
+                      color: controller.onlyAudioMode.value
+                          ? Colors.greenAccent
+                          : Colors.white,
+                    ),
+                  ),
+                  label: Obx(
+                    () => Text(
+                      controller.onlyAudioMode.value ? "纯音频(开)" : "听声音",
+                      style: TextStyle(
+                        color: controller.onlyAudioMode.value
+                            ? Colors.greenAccent
+                            : Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

@@ -76,6 +76,12 @@ mixin PlayerMixin {
 }
 
 mixin PlayerStateMixin on PlayerMixin {
+  /// 是否开启纯音频模式（只听声音，彻底关掉视频硬解与渲染）
+  RxBool onlyAudioMode = false.obs;
+
+  /// 是否由于窗口最小化/后台而挂起视频画面
+  RxBool suspendedByWindow = false.obs;
+
   ///音量控制条计时器
   Timer? hidevolumeTimer;
 
@@ -658,14 +664,55 @@ class PlayerController extends BaseController
         PlayerStateMixin,
         PlayerDanmakuMixin,
         PlayerSystemMixin,
-        PlayerGestureControlMixin {
+        PlayerGestureControlMixin,
+        WindowListener {
   @override
   void onInit() {
     initSystem();
     initStream();
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      windowManager.addListener(this);
+    }
     //设置音量
     player.setVolume(AppSettingsController.instance.playerVolume.value);
     super.onInit();
+  }
+
+  @override
+  void onWindowMinimize() async {
+    Log.d("Window minimized, suspending video rendering for power saving (GPU 0%)");
+    suspendedByWindow.value = true;
+    await updateVideoRenderingState();
+  }
+
+  @override
+  void onWindowRestore() async {
+    Log.d("Window restored, resuming video rendering");
+    suspendedByWindow.value = false;
+    await updateVideoRenderingState();
+  }
+
+  Future<void> toggleOnlyAudioMode() async {
+    onlyAudioMode.value = !onlyAudioMode.value;
+    SmartDialog.showToast(onlyAudioMode.value ? "已开启纯音频省电模式 (GPU 0%)" : "已恢复画面显示");
+    await updateVideoRenderingState();
+  }
+
+  Future<void> updateVideoRenderingState() async {
+    bool disableVideo = onlyAudioMode.value || suspendedByWindow.value;
+    try {
+      if (disableVideo) {
+        await player.setVideoTrack(VideoTrack.no());
+        danmakuController?.pause();
+      } else {
+        await player.setVideoTrack(VideoTrack.auto());
+        if (showDanmakuState.value) {
+          danmakuController?.resume();
+        }
+      }
+    } catch (e, stackTrace) {
+      Log.e("updateVideoRenderingState error: $e", stackTrace);
+    }
   }
 
   StreamSubscription<String>? _errorSubscription;
@@ -691,6 +738,9 @@ class PlayerController extends BaseController
       if (event) {
         WakelockPlus.enable();
         Log.d("Playing");
+        if (onlyAudioMode.value || suspendedByWindow.value) {
+          updateVideoRenderingState();
+        }
       }
     });
 
@@ -836,6 +886,9 @@ class PlayerController extends BaseController
   @override
   void onClose() async {
     Log.w("播放器关闭");
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      windowManager.removeListener(this);
+    }
     if (smallWindowState.value) {
       exitSmallWindow();
     }

@@ -1,0 +1,97 @@
+name: Build dart_simple_live Latest
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # ✅ 支持手动点击运行
+
+jobs:
+  build-android:
+    name: Build Android & TV APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest source
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.0'
+          channel: stable
+          cache: true
+
+      - name: Flutter info
+        run: flutter --version
+
+      # 国内pub镜像加速
+      - name: Set pub mirror
+        run: |
+          export PUB_HOSTED_URL=https://pub.flutter-io.cn
+          export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+
+      # 手机APP simple_live_app
+      - name: Build simple_live_app APK
+        working-directory: ./simple_live_app
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload Phone APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple_live_app-phone-apk
+          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
+
+      # TV APP simple_live_tv_app
+      - name: Build simple_live_tv_app APK
+        working-directory: ./simple_live_tv_app
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload TV APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple_live_app-tv-apk
+          path: simple_live_tv_app/build/app/outputs/flutter-apk/app-release.apk
+
+  build-windows:
+    name: Build Windows Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout latest source
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.0'
+          channel: stable
+          cache: true
+
+      - name: Flutter info
+        run: flutter --version
+
+      - name: Set pub mirror（Windows环境）
+        run: |
+          $env:PUB_HOSTED_URL="https://pub.flutter-io.cn"
+          $env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
+
+      - name: Build Windows
+        working-directory: ./simple_live_app
+        run: |
+          flutter pub get
+          flutter build windows --release
+
+      - name: Upload Windows Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple_live_app-windows
+          path: simple_live_app/build/windows/x64/release/

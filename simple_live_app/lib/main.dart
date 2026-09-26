@@ -12,6 +12,7 @@ import 'package:logger/logger.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:simple_live_app/app/app_skin.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
@@ -173,25 +174,35 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isDynamicColor = AppSettingsController.instance.isDynamic.value;
     Color styleColor = Color(AppSettingsController.instance.styleColor.value);
+    AppSkin skin = AppSkins.byId(AppSettingsController.instance.skinId.value);
     return DynamicColorBuilder(
         builder: ((ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-      ColorScheme? lightColorScheme;
-      ColorScheme? darkColorScheme;
+      ThemeData lightTheme;
+      ThemeData darkTheme;
       if (lightDynamic != null && darkDynamic != null && isDynamicColor) {
-        lightColorScheme = lightDynamic;
-        darkColorScheme = darkDynamic;
-      } else {
-        lightColorScheme = ColorScheme.fromSeed(
-          seedColor: styleColor,
-          brightness: Brightness.light,
+        lightTheme = AppStyle.lightTheme.copyWith(colorScheme: lightDynamic);
+        darkTheme = AppStyle.darkTheme.copyWith(colorScheme: darkDynamic);
+      } else if (AppSettingsController.instance.skinId.value == "custom") {
+        lightTheme = AppStyle.lightTheme.copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: styleColor,
+            brightness: Brightness.light,
+          ),
         );
-        darkColorScheme = ColorScheme.fromSeed(
-            seedColor: styleColor, brightness: Brightness.dark);
+        darkTheme = AppStyle.darkTheme.copyWith(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: styleColor,
+            brightness: Brightness.dark,
+          ),
+        );
+      } else {
+        lightTheme = skin.buildTheme(Brightness.light, AppStyle.lightTheme);
+        darkTheme = skin.buildTheme(Brightness.dark, AppStyle.darkTheme);
       }
       return GetMaterialApp(
         title: "Simple Live",
-        theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
-        darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
+        theme: lightTheme,
+        darkTheme: darkTheme,
         themeMode:
             ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
         initialRoute: RoutePath.kIndex,
@@ -237,6 +248,13 @@ class MyApp extends StatelessWidget {
               data: fixedMediaQueryData,
               child: Stack(
               children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: skin.gradient(Theme.of(context).brightness),
+                    ),
+                  ),
+                ),
                 //侧键返回
                 RawGestureDetector(
                   excludeFromSemantics: true,

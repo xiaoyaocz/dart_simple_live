@@ -22,6 +22,18 @@ class DouyinSite implements LiveSite {
 
   static const String kDefaultReferer = "https://live.douyin.com";
 
+  /// 抖音一级分类 -> B 站一级分类（用于图标兜底）。
+  static const Map<String, String> kDouyinTopAlias = {
+    "聊天": "聊天室",
+    "音乐": "电台",
+    "游戏": "网游",
+    "二次元": "虚拟主播",
+    "舞蹈": "娱乐",
+    "文化": "知识",
+    "生活": "生活",
+    "运动": "赛事",
+  };
+
   static const String kDefaultAuthority = "live.douyin.com";
 
   /// 默认 Cookie - 只需要 ttwid 字段即可获取所有画质（包括蓝光）
@@ -31,6 +43,9 @@ class DouyinSite implements LiveSite {
 
   /// 用户设置的 cookie
   String cookie = "";
+
+  /// B 站直播分类图标缓存（名称 -> 图标 URL），用于给抖音分类配图标。
+  Map<String, String>? _biliIconCache;
 
   void _logDebug(String msg) {
     // 同时使用 print 和 CoreLog 确保日志输出
@@ -73,51 +88,148 @@ class DouyinSite implements LiveSite {
       header: await getRequestHeaders(),
     );
 
-    var renderData =
-        RegExp(
-          r'\{\\"pathname\\":\\"\/\\",\\"categoryData.*?\]\\n',
-        ).firstMatch(result)?.group(0) ??
-        "";
-    var renderDataJson = json.decode(
-      renderData
-          .trim()
-          .replaceAll('\\"', '"')
-          .replaceAll(r"\\", r"\")
-          .replaceAll(']\\n', ""),
-    );
-
-    for (var item in renderDataJson["categoryData"]) {
-      List<LiveSubCategory> subs = [];
-      var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
-      for (var subItem in item["sub_partition"]) {
-        var subCategory = LiveSubCategory(
-          id: '${subItem["partition"]["id_str"]},${subItem["partition"]["type"]}',
-          name: asT<String?>(subItem["partition"]["title"]) ?? "",
-          parentId: id,
-          pic: "",
-        );
-        subs.add(subCategory);
-      }
-
-      var category = LiveCategory(
-        children: subs,
-        id: id,
-        name: asT<String?>(item["partition"]["title"]) ?? "",
-      );
-      subs.insert(
-        0,
-        LiveSubCategory(
-          id: category.id,
-          name: category.name,
-          parentId: category.id,
-          pic: "",
-        ),
-      );
-      categories.add(category);
+    // 修复：抖音首页把分类数据放在一段 JS 字符串里，原正则在字段变化时容易截断。
+    // 这里用括号配对的方式截取完整的 categoryData 数组后再解析。
+    var marker = r'\"categoryData\":[';
+    var start = result.indexOf(marker);
+    if (start < 0) {
+      throw const FormatException("douyin categoryData not found");
     }
-    return categories;
+    var arrayStart = result.indexOf('[', start);
+    var depth = 0;
+    var end = -1;
+    var inString = false;
+    for (var i = arrayStart; i < result.length; i++) {
+      if (result[i] == '\\' && i + 1 < result.length && result[i + 1] == '"') {
+        i++;
+        inString = !inString;
+        continue;
+      }
+      if (inString) {
+        continue;
+      }
+      if (result[i] == '[') {
+        depth++;
+      } else if (result[i] == ']') {
+        depth--;
+        if (depth == 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end < 0) {
+      throw const FormatException("douyin categoryData array not closed");
+    }
+    var categoryJson = result.substring(arrayStart, end + 1);
+    categoryJson = categoryJson
+        .replaceAll(r'\"', '"')
+        .replaceAll(r'\/', '/');
+    var renderDataJson = json.decode(categoryJson);
+    var iconMap = await _getBilibiliIconMap();
+    for (var item in renderDataJson) {
+      var id = '${item["partition"]["id_str"]},${item["partition"]["type"]}';
+      var name = asT<String?>(item["partition"]["title"]) ?? "";
+      List<LiveSubCategory> subs = [];
+      var seen = <String>{};
+      // 抖音分类最多三级：分区 -> 子分区 -> 具体游戏。
+      // 这里把具体游戏铺平为二级子分类，和其他平台保持一致。
+      for (var subItem in item["sub_partition"]) {
+        for (var leafItem in subItem["sub_partition"]) {
+          var leaf = leafItem["partition"];
+          var leafName = asT<String?>(leaf["title"]) ?? "";
+          var leafId = '${leaf["id_str"]},${leaf["type"]}';
+          if (!seen.add(leafId)) {
+            continue;
+          }
+          subs.add(
+            LiveSubCategory(
+              id: leafId,
+              name: leafName,
+              parentId: id,
+              pic: _iconForName(leafName, iconMap, fallback: iconMap["网游"] ?? ""),
+            ),
+          );
+        }
+      }
+      // 没有子分类的分区（聊天/音乐等）补一个“全部”入口。
+      if (subs.isEmpty) {
+        subs.add(LiveSubCategory(id: id, name: name, parentId: id, pic: _iconForName(name, iconMap, fallback: iconMap[kDouyinTopAlias[name] ?? ""] ?? "")));
+      }
+      categories.add(LiveCategory(children: subs, id: id, name: name));
+    }    return categories;
   }
 
+  Future<Map<String, String>> _getBilibiliIconMap() async {
+    if (_biliIconCache != null) {
+      return _biliIconCache!;
+    }
+    var map = <String, String>{};
+    try {
+      var result = await HttpClient.instance.getJson(
+        "https://api.live.bilibili.com/room/v1/Area/getList",
+        queryParameters: {"need_entrance": 1, "parent_id": 0},
+        header: {
+          "User-Agent": kDefaultUserAgent,
+          "Referer": "https://live.bilibili.com",
+        },
+      );
+      for (var top in result["data"]) {
+        for (var sub in top["list"]) {
+          var name = asT<String?>(sub["name"]) ?? "";
+          var pic = asT<String?>(sub["pic"]) ?? "";
+          if (pic.isNotEmpty) {
+            pic = "$pic@100w.png";
+          }
+          if (name.isNotEmpty && pic.isNotEmpty) {
+            map.putIfAbsent(name, () => pic);
+          }
+        }
+        var topName = asT<String?>(top["name"]) ?? "";
+        var allPic = "";
+        for (var sub in top["list"]) {
+          var n = asT<String?>(sub["name"]) ?? "";
+          if (n.startsWith("全部")) {
+            allPic = asT<String?>(sub["pic"]) ?? "";
+            if (allPic.isNotEmpty) allPic = "$allPic@100w.png";
+            break;
+          }
+        }
+        if (topName.isNotEmpty && allPic.isNotEmpty) {
+          map.putIfAbsent(topName, () => allPic);
+        }
+      }
+    } catch (e) {
+      CoreLog.error(e);
+    }
+    _biliIconCache = map;
+    return map;
+  }
+
+  String _iconForName(String name, Map<String, String> iconMap, {String fallback = ""}) {
+    if (name.isEmpty || iconMap.isEmpty) {
+      return "";
+    }
+    var exact = iconMap[name];
+    if (exact != null && exact.isNotEmpty) {
+      return exact;
+    }
+    var best = "";
+    var bestLen = 0;
+    for (var entry in iconMap.entries) {
+      var key = entry.key;
+      if (key.isEmpty) {
+        continue;
+      }
+      if (name.contains(key) || key.contains(name)) {
+        if (key.length > bestLen) {
+          bestLen = key.length;
+          best = entry.value;
+        }
+      }
+    }
+    return best.isNotEmpty ? best : fallback;
+  }
   @override
   Future<LiveCategoryResult> getCategoryRooms(
     LiveSubCategory category, {
@@ -204,7 +316,7 @@ class DouyinSite implements LiveSite {
         "browser_online": "true",
         "count": '15',
         "offset": ((page - 1) * 15).toString(),
-        "partition": '720',
+        "partition": '0',
         "partition_type": '1',
         "req_from": '2',
       },
@@ -682,7 +794,6 @@ class DouyinSite implements LiveSite {
         "webid": "7382872326016435738",
       },
     );
-    //var requlestUrl = await getAbogusUrl(uri.toString());
     var requlestUrl = uri.toString();
     var headResp = await HttpClient.instance.head(
       'https://live.douyin.com',
@@ -698,6 +809,8 @@ class DouyinSite implements LiveSite {
         dyCookie += "$cookie;";
       }
     });
+    // 搜索接口现在必须登录，优先使用用户设置的登录 Cookie。
+    var searchCookie = cookie.isNotEmpty ? cookie : dyCookie;
 
     var result = await HttpClient.instance.getJson(
       requlestUrl,
@@ -706,7 +819,7 @@ class DouyinSite implements LiveSite {
         "Authority": 'www.douyin.com',
         'accept': 'application/json, text/plain, */*',
         'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'cookie': dyCookie,
+        'cookie': searchCookie,
         'priority': 'u=1, i',
         'referer':
             'https://www.douyin.com/search/${Uri.encodeComponent(keyword)}?type=live',
@@ -720,24 +833,73 @@ class DouyinSite implements LiveSite {
         'user-agent': kDefaultUserAgent,
       },
     );
-    if (result == "" || result == 'blocked') {
-      throw Exception("抖音直播搜索被限制，请稍后再试");
-    }
     var items = <LiveRoomItem>[];
-    for (var item in result["data"] ?? []) {
-      var itemData = json.decode(item["lives"]["rawdata"].toString());
-      var roomItem = LiveRoomItem(
-        roomId: itemData["owner"]["web_rid"].toString(),
-        title: itemData["title"].toString(),
-        cover: itemData["cover"]["url_list"][0].toString(),
-        userName: itemData["owner"]["nickname"].toString(),
-        online: int.tryParse(itemData["stats"]["total_user"].toString()) ?? 0,
-      );
-      items.add(roomItem);
+    if (result != "" && result != 'blocked') {
+      for (var item in result["data"] ?? []) {
+        var itemData = json.decode(item["lives"]["rawdata"].toString());
+        var roomItem = LiveRoomItem(
+          roomId: itemData["owner"]["web_rid"].toString(),
+          title: itemData["title"].toString(),
+          cover: itemData["cover"]["url_list"][0].toString(),
+          userName: itemData["owner"]["nickname"].toString(),
+          online: int.tryParse(itemData["stats"]["total_user"].toString()) ?? 0,
+        );
+        items.add(roomItem);
+      }
     }
-    return LiveSearchRoomResult(hasMore: items.length >= 10, items: items);
+    var hasMore = false;
+    if (items.isEmpty) {
+      // 未登录时直播搜索会被拦截，按“分类名”回退到分区直播列表。
+      items = await _searchByCategory(keyword);
+    } else {
+      hasMore = items.length >= 10;
+    }
+    return LiveSearchRoomResult(hasMore: hasMore, items: items);
   }
 
+  /// 按分类名匹配并返回该分区的直播列表（用于未登录时的搜索回退）。
+  Future<List<LiveRoomItem>> _searchByCategory(String keyword) async {
+    try {
+      var categories = await getCategores();
+      var kw = keyword.trim();
+      if (kw.isEmpty) {
+        return [];
+      }
+      LiveSubCategory? target;
+      for (var c in categories) {
+        for (var s in c.children) {
+          if (s.name == kw) {
+            target = s;
+            break;
+          }
+        }
+        if (target != null) {
+          break;
+        }
+      }
+      if (target == null) {
+        for (var c in categories) {
+          for (var s in c.children) {
+            if (s.name.contains(kw) || kw.contains(s.name)) {
+              target = s;
+              break;
+            }
+          }
+          if (target != null) {
+            break;
+          }
+        }
+      }
+      if (target == null) {
+        return [];
+      }
+      var result = await getCategoryRooms(target, page: 1);
+      return result.items;
+    } catch (e) {
+      CoreLog.error(e);
+      return [];
+    }
+  }
   @override
   Future<LiveSearchAnchorResult> searchAnchors(
     String keyword, {

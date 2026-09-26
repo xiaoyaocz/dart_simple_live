@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/app_skin.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
@@ -67,7 +68,99 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
           Padding(
             padding: AppStyle.edgeInsetsA12,
             child: Text(
-              "主题颜色",
+              "换肤",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Padding(
+              padding: AppStyle.edgeInsetsA12,
+              child: Obx(
+                () => Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: AppSkins.all.map((skin) {
+                    final selected = controller.skinId.value == skin.id;
+                    return GestureDetector(
+                      onTap: () {
+                        controller.setSkinId(skin.id);
+                        controller.setStyleColor(skin.seed);
+                        Get.forceAppUpdate();
+                      },
+                      child: Container(
+                        width: 112,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          borderRadius: AppStyle.radius12,
+                          border: Border.all(
+                            color: selected
+                                ? skin.preview
+                                : Colors.grey.withAlpha(40),
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 40,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: AppStyle.radius8,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(skin.seed),
+                                    Color(skin.secondary ?? skin.seed),
+                                    Color(skin.tertiary ?? skin.seed),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            AppStyle.vGap4,
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    skin.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (selected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    size: 16,
+                                    color: skin.preview,
+                                  ),
+                              ],
+                            ),
+                            Text(
+                              skin.description,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+          AppStyle.vGap12,
+          Padding(
+            padding: AppStyle.edgeInsetsA12,
+            child: Text(
+              "自定义颜色",
               style: Get.textTheme.titleSmall,
             ),
           ),
@@ -104,6 +197,7 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
                             .map(
                               (e) => GestureDetector(
                                 onTap: () {
+                                  controller.setSkinId("custom");
                                   controller.setStyleColor(e.toARGB32());
                                   Get.forceAppUpdate();
                                 },

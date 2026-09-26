@@ -122,6 +122,8 @@ class LocalStorageService extends GetxService {
 
   ///主题色
   static const String kStyleColor = "kStyleColor";
+  /// 皮肤ID
+  static const String kSkinId = "SkinId";
 
   ///动态取色
   static const String kIsDynamic = "kIsDynamic";

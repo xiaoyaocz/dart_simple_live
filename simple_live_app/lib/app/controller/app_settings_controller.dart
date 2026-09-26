@@ -100,6 +100,8 @@ class AppSettingsController extends GetxController {
 
     styleColor.value = LocalStorageService.instance
         .getValue(LocalStorageService.kStyleColor, 0xff3498db);
+    skinId.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kSkinId, "classic");
 
     isDynamic.value = LocalStorageService.instance
         .getValue(LocalStorageService.kIsDynamic, false);
@@ -441,6 +443,12 @@ class AppSettingsController extends GetxController {
   void setStyleColor(int e) {
     styleColor.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kStyleColor, e);
+  }
+
+  var skinId = "classic".obs;
+  void setSkinId(String e) {
+    skinId.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kSkinId, e);
   }
 
   var isDynamic = false.obs;

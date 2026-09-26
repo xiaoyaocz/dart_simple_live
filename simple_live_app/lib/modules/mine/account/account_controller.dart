@@ -81,10 +81,10 @@ class AccountController extends GetxController {
 
   void douyinTap() async {
     if (DouyinAccountService.instance.hasCookie.value) {
-      var result = await Utils.showAlertDialog("确定要清除自定义 ttwid 吗？", title: "清除配置");
+      var result = await Utils.showAlertDialog("确定要清除自定义 Cookie 吗？", title: "清除配置");
       if (result) {
         DouyinAccountService.instance.clearCookie();
-        SmartDialog.showToast("已清除自定义 ttwid，将使用默认 ttwid");
+        SmartDialog.showToast("已清除 Cookie，将使用默认 ttwid");
       }
     } else {
       doDouyinCookieConfig();
@@ -102,22 +102,22 @@ class AccountController extends GetxController {
 
     Get.dialog(
       AlertDialog(
-        title: const Text("配置抖音 ttwid"),
+        title: const Text("配置抖音 Cookie"),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                "默认已内置有效的 ttwid，可观看所有画质（包括蓝光）。\n如有需要可自定义配置。",
+                "粘贴完整 Cookie 可解锁搜索主播、关注列表等登录功能。\n留空则使用默认 ttwid（仅能看直播）。",
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                maxLines: 3,
+                maxLines: 6,
                 decoration: const InputDecoration(
-                  hintText: "请粘贴 ttwid 值（留空则使用默认值）",
+                  hintText: "请粘贴完整 Cookie（留空则使用默认值）",
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -125,11 +125,7 @@ class AccountController extends GetxController {
               TextButton.icon(
                 onPressed: () {
                   // 提取 ttwid 的值部分（去掉 "ttwid=" 前缀）
-                  var defaultValue = DouyinSite.kDefaultCookie;
-                  if (defaultValue.startsWith('ttwid=')) {
-                    defaultValue = defaultValue.substring(6); // 去掉 "ttwid="
-                  }
-                  controller.text = defaultValue;
+                  controller.text = DouyinSite.kDefaultCookie;
                 },
                 icon: const Icon(Icons.restore),
                 label: const Text("恢复默认 ttwid"),
@@ -148,15 +144,10 @@ class AccountController extends GetxController {
               Get.back();
               if (input.isEmpty) {
                 DouyinAccountService.instance.clearCookie();
-                SmartDialog.showToast("已清除自定义 Cookie，将使用默认 ttwid");
+                SmartDialog.showToast("已清除 Cookie，将使用默认 ttwid");
               } else {
-                // 如果用户只输入了 ttwid 值，自动添加 "ttwid=" 前缀
-                var cookie = input;
-                if (!input.startsWith('ttwid=')) {
-                  cookie = 'ttwid=$input';
-                }
-                DouyinAccountService.instance.setCookie(cookie);
-                SmartDialog.showToast("ttwid 已保存");
+                DouyinAccountService.instance.setCookie(input);
+                SmartDialog.showToast("Cookie 已保存");
               }
             },
             child: const Text("确定"),

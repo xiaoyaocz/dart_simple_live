@@ -9,6 +9,7 @@ import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/shadow_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:remixicon/remixicon.dart';
 import 'package:sticky_headers/sticky_headers.dart';
 
 class CategoryListView extends StatelessWidget {
@@ -78,6 +79,20 @@ class CategoryListView extends StatelessWidget {
     );
   }
 
+  IconData _categoryIcon(LiveSubCategory item) {
+    final name = item.name;
+    if (item.id.endsWith(',4')) {
+      if (name.contains('聊天')) return Remix.chat_1_line;
+      if (name.contains('音乐')) return Remix.music_2_line;
+      if (name.contains('游戏')) return Remix.gamepad_line;
+      if (name.contains('二次元')) return Remix.movie_2_line;
+      if (name.contains('舞蹈')) return Remix.rhythm_line;
+      if (name.contains('文化')) return Remix.book_2_line;
+      if (name.contains('生活')) return Remix.home_4_line;
+      if (name.contains('运动')) return Remix.basketball_line;
+    }
+    return Remix.gamepad_line;
+  }
   Widget buildSubCategory(LiveSubCategory item) {
     return ShadowCard(
       onTap: () {
@@ -86,12 +101,19 @@ class CategoryListView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          NetImage(
-            item.pic ?? "",
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-          ),
+          if ((item.pic ?? "").isEmpty)
+            Icon(
+              _categoryIcon(item),
+              size: 40,
+              color: Colors.blueGrey,
+            )
+          else
+            NetImage(
+              item.pic ?? "",
+              width: 40,
+              height: 40,
+              borderRadius: 8,
+            ),
           AppStyle.vGap4,
           Text(
             item.name,

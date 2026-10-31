@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -75,8 +77,19 @@ class _AppTextFieldState extends State<AppTextField> {
     _fieldNode.requestFocus();
     // 部分 TV 系统对聚焦自带的 show 不响应；在按键上下文内再显式唤起兜底
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_fieldNode.hasFocus) {
-        SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+      if (!_fieldNode.hasFocus) {
+        return;
+      }
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+      // 真机（S905X4 等 TV ROM）可能把上面的请求整条取消，原生层再兜底：
+      // 窗口 STATE_ALWAYS_VISIBLE + showSoftInput，仍未弹出则强制唤起
+      if (Platform.isAndroid) {
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (_fieldNode.hasFocus) {
+            const MethodChannel("simple_live_tv/ime")
+                .invokeMethod<void>("showKeyboard");
+          }
+        });
       }
     });
   }

@@ -219,6 +219,20 @@ class SettingsPage extends GetView<SettingsController> {
         Obx(
           () => SettingsItemWidget(
             foucsNode: AppFocusNode(),
+            title: "音量增强",
+            items: const {0: "关", 1: "开"},
+            value: AppSettingsController.instance.volumeBoostEnable.value
+                ? 1
+                : 0,
+            onChanged: (e) {
+              AppSettingsController.instance.setVolumeBoostEnable(e == 1);
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: AppFocusNode(),
             title: "关播后自动换下一个直播间",
             items: const {0: "关", 1: "开"},
             value: AppSettingsController.instance.autoSwitchNextOnLiveEnd.value

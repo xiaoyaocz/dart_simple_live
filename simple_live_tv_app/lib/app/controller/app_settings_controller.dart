@@ -172,6 +172,10 @@ class AppSettingsController extends GetxController {
                 100.0)
             .clamp(0.0, 300.0)
             .toDouble();
+    volumeBoostEnable.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVolumeBoostEnable,
+      false,
+    );
 
     playerAutoPause.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerAutoPause, false);
@@ -582,6 +586,21 @@ class AppSettingsController extends GetxController {
       playerVolume.value,
     );
   }
+
+  /// 音量增强开关：开启后音量上限扩展至 300%，>100 为播放器软件增益（讨论 #161）。
+  var volumeBoostEnable = false.obs;
+  void setVolumeBoostEnable(bool e) {
+    volumeBoostEnable.value = e;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kVolumeBoostEnable,
+      e,
+    );
+  }
+
+  /// 当前生效音量：按"音量增强"开关钳制（关 = 上限 100）。
+  double get effectivePlayerVolume => volumeBoostEnable.value
+      ? playerVolume.value.clamp(0.0, 300.0).toDouble()
+      : playerVolume.value.clamp(0.0, 100.0).toDouble();
 
   var playerBufferSize = 32.obs;
   void setPlayerBufferSize(int e) {

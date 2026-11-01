@@ -138,6 +138,7 @@ class LocalStorageService extends GetxService {
   static const String kAutoSwitchListMode = "AutoSwitchListMode";
   static const String kAutoSwitchListItems = "AutoSwitchListItems";
   static const String kPlayerVolume = "PlayerVolume";
+  static const String kVolumeBoostEnable = "VolumeBoostEnable";
   static const String kLogEnable = "LogEnable";
   static const String kMpvProfile = "MpvProfile";
 

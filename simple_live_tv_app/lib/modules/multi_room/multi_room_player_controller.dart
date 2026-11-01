@@ -404,7 +404,7 @@ class MultiRoomPlayerController extends GetxController {
       return;
     }
     await player.setVolume(
-      isMuted ? 0 : AppSettingsController.instance.playerVolume.value,
+      isMuted ? 0 : AppSettingsController.instance.effectivePlayerVolume,
     );
     if (!_isLoadCurrent(generation)) {
       return;
@@ -555,7 +555,7 @@ class MultiRoomPlayerController extends GetxController {
   Future<void> toggleMute() async {
     muted.value = !muted.value;
     await player.setVolume(
-      muted.value ? 0 : AppSettingsController.instance.playerVolume.value,
+      muted.value ? 0 : AppSettingsController.instance.effectivePlayerVolume,
     );
   }
 

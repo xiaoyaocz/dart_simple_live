@@ -529,7 +529,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   Future<void> toggleMute() async {
     muted.value = !muted.value;
     await player.setVolume(
-      muted.value ? 0 : AppSettingsController.instance.playerVolume.value,
+      muted.value ? 0 : AppSettingsController.instance.effectivePlayerVolume,
     );
     SmartDialog.showToast(muted.value ? "已静音" : "已恢复声音");
   }
@@ -541,9 +541,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   /// 调节播放器音量（0-300，>100 为软件增益档），并弹出 OSD。
   Future<void> adjustVolume(double delta) async {
+    final limit = AppSettingsController.instance.volumeBoostEnable.value
+        ? PlayerVolumePolicy.maxVolume
+        : PlayerVolumePolicy.baseVolume;
     final target =
         (AppSettingsController.instance.playerVolume.value + delta)
-            .clamp(0.0, PlayerVolumePolicy.maxVolume)
+            .clamp(0.0, limit)
             .toDouble();
     AppSettingsController.instance.setPlayerVolume(target);
     if (target > 0 && muted.value) {
@@ -556,6 +559,23 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     _hideVolumeOSDTimer = Timer(const Duration(seconds: 2), () {
       showVolumeOSDState.value = false;
     });
+  }
+
+  /// 切换"音量增强"开关；关闭时若正在增益档则立即降回生效音量。
+  Future<void> setVolumeBoostEnabled(bool enable) async {
+    AppSettingsController.instance.setVolumeBoostEnable(enable);
+    if (!enable && !muted.value) {
+      await player.setVolume(
+        AppSettingsController.instance.effectivePlayerVolume,
+      );
+      volumeOSDValue.value =
+          AppSettingsController.instance.effectivePlayerVolume;
+      showVolumeOSDState.value = true;
+      _hideVolumeOSDTimer?.cancel();
+      _hideVolumeOSDTimer = Timer(const Duration(seconds: 2), () {
+        showVolumeOSDState.value = false;
+      });
+    }
   }
 
   bool handleDesktopShortcut(
@@ -1214,7 +1234,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return true;
     }
     await player.setVolume(
-      muted.value ? 0 : AppSettingsController.instance.playerVolume.value,
+      muted.value ? 0 : AppSettingsController.instance.effectivePlayerVolume,
     );
 
     Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");

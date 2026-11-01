@@ -534,6 +534,7 @@ void showPlayerSettings(LiveRoomController controller) {
   var scaleFoucsNode = AppFocusNode();
   var clockFoucsNode = AppFocusNode();
   var volumeFoucsNode = AppFocusNode();
+  var volumeBoostFoucsNode = AppFocusNode();
   var danmakuFoucsNode = AppFocusNode();
   var danmakuSizeFoucsNode = AppFocusNode();
   var danmakuSpeedFoucsNode = AppFocusNode();
@@ -725,16 +726,21 @@ void showPlayerSettings(LiveRoomController controller) {
               AppStyle.vGap24,
               Obx(
                 () {
-                  // 0-300 步长 10；value 取整到 key 对齐，避免遥控器
-                  // ±5 调出的中间值让左右切换时 indexOf 找不到
+                  // 步长 10，范围随"音量增强"开关：关 = 0-100，开 = 0-300；
+                  // value 取整到 key 对齐，避免遥控器 ±5 调出的中间值
+                  // 让左右切换时 indexOf 找不到
+                  final boost =
+                      AppSettingsController.instance.volumeBoostEnable.value;
+                  final maxVolume = boost ? 300 : 100;
                   final current =
                       AppSettingsController.instance.playerVolume.value;
-                  final snapped = (current / 10).round() * 10;
+                  final snapped =
+                      ((current / 10).round() * 10).clamp(0, maxVolume);
                   return SettingsItemWidget(
                     foucsNode: volumeFoucsNode,
                     title: "音量",
                     items: {
-                      for (var v = 0; v <= 300; v += 10)
+                      for (var v = 0; v <= maxVolume; v += 10)
                         v: v > 100 ? "$v%（增强）" : "$v%",
                     },
                     value: snapped,
@@ -743,6 +749,21 @@ void showPlayerSettings(LiveRoomController controller) {
                     },
                   );
                 },
+              ),
+              AppStyle.vGap24,
+              Obx(
+                () => SettingsItemWidget(
+                  foucsNode: volumeBoostFoucsNode,
+                  title: "音量增强",
+                  items: const {0: "关", 1: "开"},
+                  value:
+                      AppSettingsController.instance.volumeBoostEnable.value
+                          ? 1
+                          : 0,
+                  onChanged: (e) {
+                    controller.setVolumeBoostEnabled(e == 1);
+                  },
+                ),
               ),
               Divider(color: Colors.grey.withAlpha(50), height: 36.w),
               Padding(

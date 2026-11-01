@@ -593,27 +593,26 @@ Widget _buildFullBottomBar(
               ),
             ),
             const Expanded(child: SizedBox()),
-            if (!Platform.isAndroid && !Platform.isIOS)
-              IconButton(
-                key: volumeButtonKey,
-                onPressed: () {
-                  final context = volumeButtonKey.currentContext;
-                  if (context == null) {
-                    return;
-                  }
-                  controller.showVolumeSlider(
-                    context,
-                    keepAlive: true,
-                  );
-                },
-                icon: Icon(
-                  controller.mutedState.value
-                      ? Icons.volume_off
-                      : Icons.volume_down,
-                  size: 24,
-                  color: Colors.white,
-                ),
+            IconButton(
+              key: volumeButtonKey,
+              onPressed: () {
+                final context = volumeButtonKey.currentContext;
+                if (context == null) {
+                  return;
+                }
+                controller.showVolumeSlider(
+                  context,
+                  keepAlive: true,
+                );
+              },
+              icon: Icon(
+                controller.mutedState.value
+                    ? Icons.volume_off
+                    : Icons.volume_down,
+                size: 24,
+                color: Colors.white,
               ),
+            ),
             IconButton(
               onPressed: controller.toggleMute,
               icon: Icon(
@@ -799,27 +798,26 @@ Widget _buildNormalBottomBar(
               ),
             ),
             const Expanded(child: SizedBox()),
-            if (!Platform.isAndroid && !Platform.isIOS)
-              IconButton(
-                key: volumeButtonKey,
-                onPressed: () {
-                  final context = volumeButtonKey.currentContext;
-                  if (context == null) {
-                    return;
-                  }
-                  controller.showVolumeSlider(
-                    context,
-                    keepAlive: true,
-                  );
-                },
-                icon: Icon(
-                  controller.mutedState.value
-                      ? Icons.volume_off
-                      : Icons.volume_down,
-                  size: 24,
-                  color: Colors.white,
-                ),
+            IconButton(
+              key: volumeButtonKey,
+              onPressed: () {
+                final context = volumeButtonKey.currentContext;
+                if (context == null) {
+                  return;
+                }
+                controller.showVolumeSlider(
+                  context,
+                  keepAlive: true,
+                );
+              },
+              icon: Icon(
+                controller.mutedState.value
+                    ? Icons.volume_off
+                    : Icons.volume_down,
+                size: 24,
+                color: Colors.white,
               ),
+            ),
             IconButton(
               onPressed: controller.toggleMute,
               icon: Icon(

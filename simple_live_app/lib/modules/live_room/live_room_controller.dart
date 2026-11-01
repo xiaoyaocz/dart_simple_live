@@ -2930,18 +2930,69 @@ class LiveRoomController extends PlayerController
               borderRadius: AppStyle.radius12,
               color: Theme.of(context).cardColor,
             ),
-            padding: AppStyle.edgeInsetsA4,
+            padding: AppStyle.edgeInsetsA8,
             child: Obx(
               () => SizedBox(
-                width: 200,
-                child: Slider(
-                  min: 0,
-                  max: 100,
-                  value: AppSettingsController.instance.playerVolume.value,
-                  onChangeStart: (_) => _cancelVolumeSliderDismiss(),
-                  onChanged: (newValue) {
-                    setSessionPlayerVolume(newValue, persist: true);
-                  },
+                width: 244,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Slider(
+                      min: 0,
+                      max: PlayerVolumePolicy.maxVolume,
+                      value: effectiveVolume.value,
+                      onChangeStart: (_) => _cancelVolumeSliderDismiss(),
+                      onChanged: (newValue) {
+                        setSessionPlayerVolume(newValue, persist: true);
+                      },
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        for (final preset in const [0, 50, 100, 200, 300])
+                          InkWell(
+                            onTap: () {
+                              _cancelVolumeSliderDismiss();
+                              setSessionPlayerVolume(
+                                preset.toDouble(),
+                                persist: true,
+                              );
+                            },
+                            borderRadius: AppStyle.radius12,
+                            child: Padding(
+                              padding: AppStyle.edgeInsetsA4,
+                              child: Text(
+                                "$preset",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      effectiveVolume.value.round() == preset
+                                      ? Theme.of(context).primaryColor
+                                      : Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.color,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (PlayerVolumePolicy.isBoostVolume(effectiveVolume.value))
+                      Padding(
+                        padding: AppStyle.edgeInsetsA4,
+                        child: Text(
+                          "增益 ×${(effectiveVolume.value / 100).toStringAsFixed(1)}，软件增益，音源响度大时可能破音",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.color,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

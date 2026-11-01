@@ -182,6 +182,7 @@ class MultiRoomPlayerController extends GetxController {
         mobile: Platform.isAndroid || Platform.isIOS,
         muted: muted.value,
         persisted: AppSettingsController.instance.playerVolume.value,
+        boostEnabled: AppSettingsController.instance.volumeBoostEnable.value,
       ),
     );
     if (!_isLoadCurrent(generation)) {
@@ -201,6 +202,7 @@ class MultiRoomPlayerController extends GetxController {
         mobile: Platform.isAndroid || Platform.isIOS,
         muted: muted.value,
         persisted: AppSettingsController.instance.playerVolume.value,
+        boostEnabled: AppSettingsController.instance.volumeBoostEnable.value,
       ),
     );
   }

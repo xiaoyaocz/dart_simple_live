@@ -281,6 +281,10 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kPlayerVolume,
       100.0,
     );
+    volumeBoostEnable.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVolumeBoostEnable,
+      false,
+    );
     playerGestureControlEnable.value = LocalStorageService.instance.getValue(
       LocalStorageService.kPlayerGestureControlEnable,
       true,
@@ -2407,6 +2411,16 @@ class AppSettingsController extends GetxController {
     playerVolume.value = value;
     LocalStorageService.instance.setValue(
       LocalStorageService.kPlayerVolume,
+      value,
+    );
+  }
+
+  /// 音量增强开关：开启后音量上限扩展至 300%，>100 为播放器软件增益（讨论 #161）。
+  Rx<bool> volumeBoostEnable = false.obs;
+  void setVolumeBoostEnable(bool value) {
+    volumeBoostEnable.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kVolumeBoostEnable,
       value,
     );
   }

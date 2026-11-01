@@ -278,6 +278,29 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ],
             ),
           ),
+          // 音量增强
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "音量",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    title: "音量增强（0-300%）",
+                    subtitle:
+                        "开启后音量上限扩展至 300%，超过 100% 为播放器软件增益，部分直播间音量偏小时有用；音源响度大时可能破音",
+                    value: controller.volumeBoostEnable.value,
+                    onChanged: controller.setVolumeBoostEnable,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(

@@ -226,6 +226,12 @@ mixin PlayerStateMixin on PlayerMixin {
   /// >100 增益段（mpv 软件增益），是手势/滑条/快捷键共用的唯一真源。
   final RxDouble effectiveVolume = 100.0.obs;
 
+  /// 当前会话的音量上限，随"音量增强"开关变化：开 = 300，关 = 100。
+  double get _sessionVolumeLimit =>
+      AppSettingsController.instance.volumeBoostEnable.value
+          ? PlayerVolumePolicy.maxVolume
+          : PlayerVolumePolicy.baseVolume;
+
   /// 移动端系统音量镜像（0.0-1.0）：由 volume_controller 事件流同步，
   /// 覆盖硬件音量键等应用外的音量变化。
   double _systemVolumeMirror = 1.0;
@@ -1051,14 +1057,14 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (mutedState.value) {
       final restoreVolume = _volumeBeforeMute <= 0
           ? 100.0
-          : _volumeBeforeMute.clamp(0.0, PlayerVolumePolicy.maxVolume);
+          : _volumeBeforeMute.clamp(0.0, _sessionVolumeLimit);
       await setSessionPlayerVolume(restoreVolume);
       return;
     }
     _volumeBeforeMute = effectiveVolume.value > 0
         ? effectiveVolume.value
         : AppSettingsController.instance.playerVolume.value
-              .clamp(0.0, PlayerVolumePolicy.maxVolume);
+              .clamp(0.0, _sessionVolumeLimit);
     mutedState.value = true;
     await player.setVolume(0);
   }
@@ -1070,7 +1076,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     bool persist = false,
   }) async {
     final requestedValue =
-        volume.clamp(0.0, PlayerVolumePolicy.maxVolume).toDouble();
+        volume.clamp(0.0, _sessionVolumeLimit).toDouble();
     if (Platform.isAndroid || Platform.isIOS) {
       await _setMobileSessionVolume(requestedValue);
     } else {
@@ -1120,10 +1126,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       return;
     }
     final current = player.state.volume
-        .clamp(0.0, PlayerVolumePolicy.maxVolume)
+        .clamp(0.0, _sessionVolumeLimit)
         .toDouble();
     final target = (current + delta)
-        .clamp(0.0, PlayerVolumePolicy.maxVolume)
+        .clamp(0.0, _sessionVolumeLimit)
         .toDouble();
     await setSessionPlayerVolume(target, persist: true);
     showGestureTipText(target > PlayerVolumePolicy.baseVolume
@@ -1885,8 +1891,8 @@ mixin PlayerGestureControlMixin
     } else {
       value = ((dy - verStartPosition) / _verticalDragExtent);
       seek = value.abs() + _currentVolume;
-      if (seek > PlayerVolumePolicy.maxVolume / 100) {
-        seek = PlayerVolumePolicy.maxVolume / 100;
+      if (seek > _sessionVolumeLimit / 100) {
+        seek = _sessionVolumeLimit / 100;
       }
     }
     int volume = _convertVolume((seek * 100).round());
@@ -2581,6 +2587,7 @@ class PlayerController extends BaseController
       mobile: Platform.isAndroid || Platform.isIOS,
       muted: mutedState.value,
       persisted: AppSettingsController.instance.playerVolume.value,
+      boostEnabled: AppSettingsController.instance.volumeBoostEnable.value,
     );
   }
 

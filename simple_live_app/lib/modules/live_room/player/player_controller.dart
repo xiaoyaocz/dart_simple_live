@@ -1657,11 +1657,25 @@ mixin PlayerGestureControlMixin
 
   DelayedThrottle? throttle;
 
-  @override
-  void cancelVerticalDrag() {
-    _verticalDragGeneration += 1;
+  /// 冲刷上一把手势尚未落地的最终音量。
+  /// 节流器在忙碌期只保留最后一次调用，并会在 cancel 时丢弃它：
+  /// 快速滑动在收尾调用触发前结束（或被下一把手势打断）时，若直接
+  /// cancel 会丢失全部调整（OSD 已显示目标值但实际未生效）。
+  /// 因此在拖动结束/取消/新一轮开始前，把最终值立即落地。
+  void _flushPendingVolume() {
+    final pendingVolume = lastVolume;
+    lastVolume = -1;
     throttle?.cancel();
     throttle = null;
+    if (pendingVolume >= 0) {
+      unawaited(_realSetVolume(pendingVolume));
+    }
+  }
+
+  @override
+  void cancelVerticalDrag() {
+    _flushPendingVolume();
+    _verticalDragGeneration += 1;
     verticalDragging = false;
     leftVerticalDrag = false;
     _useLocalDragPosition = false;
@@ -1735,24 +1749,24 @@ mixin PlayerGestureControlMixin
                 .clamp(0.0, 100.0) /
             100;
       }
-    } else if (Platform.isAndroid || Platform.isIOS) {
-      try {
-        initialVolume = await VolumeController.instance.getVolume();
-      } catch (e, stackTrace) {
-        volumeReadSucceeded = false;
-        Log.e("读取系统音量失败: $e", stackTrace);
-      }
     }
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isWindows ||
-        Platform.isLinux) {
-      try {
-        initialBrightness = await ScreenBrightness.instance.application;
-      } catch (e, stackTrace) {
-        Log.e("读取应用亮度失败: $e", stackTrace);
-      }
+    // 系统音量与应用亮度并行读取，缩短拖动开始前的准备窗口：
+    // 该窗口内的拖动更新会被丢弃，快速甩动会因此整把失效。
+    final volumeRead =
+        Platform.isAndroid || Platform.isIOS ? _readSystemVolume() : null;
+    final brightnessRead =
+        Platform.isAndroid ||
+            Platform.isIOS ||
+            Platform.isMacOS ||
+            Platform.isWindows ||
+            Platform.isLinux
+        ? _readApplicationBrightness(initialBrightness)
+        : null;
+    if (volumeRead != null) {
+      (initialVolume, volumeReadSucceeded) = await volumeRead;
+    }
+    if (brightnessRead != null) {
+      initialBrightness = await brightnessRead;
     }
     if (dragGeneration != _verticalDragGeneration || !verticalDragging) {
       return;
@@ -1766,6 +1780,26 @@ mixin PlayerGestureControlMixin
     _currentVolume = initialVolume ?? _currentVolume;
     _currentBrightness = initialBrightness;
     _verticalDragReady = true;
+  }
+
+  /// 读取系统音量；失败时返回 (null, false)，右侧手势按原逻辑终止。
+  Future<(double?, bool)> _readSystemVolume() async {
+    try {
+      return (await VolumeController.instance.getVolume(), true);
+    } catch (e, stackTrace) {
+      Log.e("读取系统音量失败: $e", stackTrace);
+      return (null, false);
+    }
+  }
+
+  /// 读取应用亮度；失败时保持传入的兜底值。
+  Future<double> _readApplicationBrightness(double fallback) async {
+    try {
+      return await ScreenBrightness.instance.application;
+    } catch (e, stackTrace) {
+      Log.e("读取应用亮度失败: $e", stackTrace);
+      return fallback;
+    }
   }
 
   /// 竖向手势更新

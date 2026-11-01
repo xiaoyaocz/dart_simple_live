@@ -1583,6 +1583,7 @@ class LiveRoomController extends PlayerController
   void onClose() async {
     _roomDisposed = true;
     clearTransientPlayerOverlays();
+    disposeSystemVolumeListener();
     _loadGeneration += 1;
     _cancelListenExitTimer();
     listenMode.value = false;

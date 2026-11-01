@@ -222,6 +222,19 @@ mixin PlayerStateMixin on PlayerMixin {
   RxBool mutedState = false.obs;
   double _volumeBeforeMute = 100.0;
 
+  /// 有效音量（0-300）：≤100 基础段（移动端=系统音量，桌面=播放器音量），
+  /// >100 增益段（mpv 软件增益），是手势/滑条/快捷键共用的唯一真源。
+  final RxDouble effectiveVolume = 100.0.obs;
+
+  /// 移动端系统音量镜像（0.0-1.0）：由 volume_controller 事件流同步，
+  /// 覆盖硬件音量键等应用外的音量变化。
+  double _systemVolumeMirror = 1.0;
+  StreamSubscription<double>? _volumeEventSubscription;
+
+  /// 是否正在进行竖向手势（音量/亮度），声明在基座 mixin 供系统音量
+  /// 监听回调整齐手势期间的同步。
+  bool verticalDragging = false;
+
   /// 是否正在播放（由 player.stream.playing 同步，供 UI 响应式使用）
   RxBool playingState = true.obs;
 
@@ -629,6 +642,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
     if (Platform.isAndroid || Platform.isIOS) {
       VolumeController.instance.showSystemUI = false;
+      // 监听系统音量变化（含硬件音量键），作为基础段（≤100）的音量来源。
+      _volumeEventSubscription = VolumeController.instance
+          .addListener(_onSystemVolumeChanged);
     }
 
     // 屏幕常亮
@@ -641,6 +657,26 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (AppSettingsController.instance.autoFullScreen.value) {
       await enterFullScreen();
     }
+  }
+
+  /// 系统音量变化（含硬件音量键）：更新镜像；基础段（≤100）的有效音量
+  /// 跟随系统音量，增益段保持档位不被覆盖。
+  void _onSystemVolumeChanged(double volume) {
+    _systemVolumeMirror = volume.clamp(0.0, 1.0);
+    if (verticalDragging) {
+      return;
+    }
+    final mirrored = _systemVolumeMirror * 100;
+    if (effectiveVolume.value <= PlayerVolumePolicy.baseVolume &&
+        (effectiveVolume.value - mirrored).abs() > 0.5) {
+      effectiveVolume.value = mirrored;
+    }
+  }
+
+  /// 取消系统音量监听（移动端），随播放器关闭释放。
+  void disposeSystemVolumeListener() {
+    _volumeEventSubscription?.cancel();
+    _volumeEventSubscription = null;
   }
 
   /// 释放一些系统状态
@@ -1013,35 +1049,69 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   Future<void> toggleMute() async {
     if (mutedState.value) {
-      final restoreVolume =
-          _volumeBeforeMute <= 0 ? 100.0 : _volumeBeforeMute.clamp(0.0, 100.0);
+      final restoreVolume = _volumeBeforeMute <= 0
+          ? 100.0
+          : _volumeBeforeMute.clamp(0.0, PlayerVolumePolicy.maxVolume);
       await setSessionPlayerVolume(restoreVolume);
       return;
     }
-    _volumeBeforeMute = player.state.volume <= 0
-        ? AppSettingsController.instance.playerVolume.value
-        : player.state.volume;
+    _volumeBeforeMute = effectiveVolume.value > 0
+        ? effectiveVolume.value
+        : AppSettingsController.instance.playerVolume.value
+              .clamp(0.0, PlayerVolumePolicy.maxVolume);
     mutedState.value = true;
     await player.setVolume(0);
   }
 
+  /// 会话内音量设置的唯一入口：手势、滑条弹窗、快捷键都走这里，
+  /// ≤100 基础段与 >100 增益段的路由由各端实现决定，互相不会冲突。
   Future<void> setSessionPlayerVolume(
     double volume, {
     bool persist = false,
   }) async {
-    final requestedValue = volume.clamp(0.0, 100.0).toDouble();
-    final mobile = Platform.isAndroid || Platform.isIOS;
-    final value = requestedValue <= 0 ? 0.0 : (mobile ? 100.0 : requestedValue);
+    final requestedValue =
+        volume.clamp(0.0, PlayerVolumePolicy.maxVolume).toDouble();
+    if (Platform.isAndroid || Platform.isIOS) {
+      await _setMobileSessionVolume(requestedValue);
+    } else {
+      await _setDesktopSessionVolume(requestedValue);
+    }
+    if (persist) {
+      AppSettingsController.instance.setPlayerVolume(requestedValue);
+    }
+  }
+
+  Future<void> _setDesktopSessionVolume(double value) async {
     if (value <= 0) {
       mutedState.value = true;
+      effectiveVolume.value = 0;
       await player.setVolume(0);
-    } else {
+      return;
+    }
+    mutedState.value = false;
+    _volumeBeforeMute = value;
+    effectiveVolume.value = value;
+    await player.setVolume(value);
+  }
+
+  Future<void> _setMobileSessionVolume(double value) async {
+    if (value > PlayerVolumePolicy.baseVolume) {
+      // 增益段：只调播放器软件增益，系统音量保持不变。
       mutedState.value = false;
       _volumeBeforeMute = value;
+      effectiveVolume.value = value;
       await player.setVolume(value);
+      return;
     }
-    if (persist && !mobile) {
-      AppSettingsController.instance.setPlayerVolume(requestedValue);
+    // 基础段：系统音量负责实际输出，播放器保持满格（0 = 静音）。
+    mutedState.value = value <= 0;
+    _volumeBeforeMute = value;
+    effectiveVolume.value = value;
+    await player.setVolume(value <= 0 ? 0 : PlayerVolumePolicy.baseVolume);
+    try {
+      await VolumeController.instance.setVolume(value / 100);
+    } catch (e, stackTrace) {
+      Log.e("设置系统音量失败: $e", stackTrace);
     }
   }
 
@@ -1049,10 +1119,16 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (delta == 0 || Platform.isAndroid || Platform.isIOS) {
       return;
     }
-    final current = player.state.volume.clamp(0.0, 100.0).toDouble();
-    final target = (current + delta).clamp(0.0, 100.0).toDouble();
+    final current = player.state.volume
+        .clamp(0.0, PlayerVolumePolicy.maxVolume)
+        .toDouble();
+    final target = (current + delta)
+        .clamp(0.0, PlayerVolumePolicy.maxVolume)
+        .toDouble();
     await setSessionPlayerVolume(target, persist: true);
-    showGestureTipText("音量 ${target.round()}%");
+    showGestureTipText(target > PlayerVolumePolicy.baseVolume
+        ? "音量 ${target.round()}%（增强）"
+        : "音量 ${target.round()}%");
   }
 
   bool _shouldUseAndroidPhoneOrientationPolicy() {
@@ -1645,8 +1721,8 @@ mixin PlayerGestureControlMixin
     }
   }
 
-  bool verticalDragging = false;
   bool leftVerticalDrag = false;
+  /// 音量手势基准（0-3，对应有效音量 0-300%）。
   var _currentVolume = 0.0;
   var _currentBrightness = 1.0;
   var verStartPosition = 0.0;
@@ -1735,71 +1811,34 @@ mixin PlayerGestureControlMixin
     lastVolume = -1;
 
     verticalDragging = true;
-    _verticalDragReady = false;
     final dragGeneration = ++_verticalDragGeneration;
-    double? initialVolume;
+    if (leftVerticalDrag) {
+      // 左侧（亮度）仍需等待异步读取后才能就绪。
+      _verticalDragReady = false;
+    } else {
+      // 右侧（音量）：基准直接取有效音量（0-300，含增益档）。
+      // 系统音量变化已由 volume_controller 监听保持同步，无需等待
+      // 异步读取即可就绪，避免快速滑动在准备窗口内被整把丢弃。
+      _currentVolume = effectiveVolume.value / 100;
+      _verticalDragReady = true;
+    }
     var initialBrightness = 1.0;
-    var volumeReadSucceeded = true;
-    if (Platform.isWindows || Platform.isLinux) {
-      final currentPlayerVolume = player.state.volume;
-      if (currentPlayerVolume > 0) {
-        initialVolume = currentPlayerVolume.clamp(0.0, 100.0) / 100;
-      } else {
-        initialVolume = AppSettingsController.instance.playerVolume.value
-                .clamp(0.0, 100.0) /
-            100;
+    if (Platform.isAndroid ||
+        Platform.isIOS ||
+        Platform.isMacOS ||
+        Platform.isWindows ||
+        Platform.isLinux) {
+      try {
+        initialBrightness = await ScreenBrightness.instance.application;
+      } catch (e, stackTrace) {
+        Log.e("读取应用亮度失败: $e", stackTrace);
       }
-    }
-    // 系统音量与应用亮度并行读取，缩短拖动开始前的准备窗口：
-    // 该窗口内的拖动更新会被丢弃，快速甩动会因此整把失效。
-    final volumeRead =
-        Platform.isAndroid || Platform.isIOS ? _readSystemVolume() : null;
-    final brightnessRead =
-        Platform.isAndroid ||
-            Platform.isIOS ||
-            Platform.isMacOS ||
-            Platform.isWindows ||
-            Platform.isLinux
-        ? _readApplicationBrightness(initialBrightness)
-        : null;
-    if (volumeRead != null) {
-      (initialVolume, volumeReadSucceeded) = await volumeRead;
-    }
-    if (brightnessRead != null) {
-      initialBrightness = await brightnessRead;
     }
     if (dragGeneration != _verticalDragGeneration || !verticalDragging) {
       return;
     }
-    if (!leftVerticalDrag && !volumeReadSucceeded) {
-      // Do not calculate a new value from the previous gesture when the
-      // system-volume read failed; the next gesture can retry the read.
-      verticalDragging = false;
-      return;
-    }
-    _currentVolume = initialVolume ?? _currentVolume;
     _currentBrightness = initialBrightness;
     _verticalDragReady = true;
-  }
-
-  /// 读取系统音量；失败时返回 (null, false)，右侧手势按原逻辑终止。
-  Future<(double?, bool)> _readSystemVolume() async {
-    try {
-      return (await VolumeController.instance.getVolume(), true);
-    } catch (e, stackTrace) {
-      Log.e("读取系统音量失败: $e", stackTrace);
-      return (null, false);
-    }
-  }
-
-  /// 读取应用亮度；失败时保持传入的兜底值。
-  Future<double> _readApplicationBrightness(double fallback) async {
-    try {
-      return await ScreenBrightness.instance.application;
-    } catch (e, stackTrace) {
-      Log.e("读取应用亮度失败: $e", stackTrace);
-      return fallback;
-    }
   }
 
   /// 竖向手势更新
@@ -1846,8 +1885,8 @@ mixin PlayerGestureControlMixin
     } else {
       value = ((dy - verStartPosition) / _verticalDragExtent);
       seek = value.abs() + _currentVolume;
-      if (seek > 1) {
-        seek = 1;
+      if (seek > PlayerVolumePolicy.maxVolume / 100) {
+        seek = PlayerVolumePolicy.maxVolume / 100;
       }
     }
     int volume = _convertVolume((seek * 100).round());
@@ -1856,23 +1895,23 @@ mixin PlayerGestureControlMixin
     }
     lastVolume = volume;
     // update UI outside throttle to make it more fluent
-    showGestureTipText("音量 $volume%");
+    showGestureTipText(volume > PlayerVolumePolicy.baseVolume
+        ? "音量 $volume%（增强）"
+        : "音量 $volume%");
     throttle?.invoke(() async => await _realSetVolume(volume));
   }
 
-  // 0 to 100, 5 step each
+  // 0 to 300, 5 step each
   int _convertVolume(int volume) {
     return (volume / 5).round() * 5;
   }
 
   Future<void> _realSetVolume(int volume) async {
     Log.logPrint(volume);
-    if (Platform.isWindows || Platform.isLinux) {
-      await setSessionPlayerVolume(volume.toDouble(), persist: true);
-      return;
-    }
-    // 手势只调系统音量，播放器内部音量由独立设置控制。
-    await VolumeController.instance.setVolume(volume / 100);
+    // 手势与滑条/快捷键统一走 setSessionPlayerVolume：
+    // ≤100 段调系统音量（移动端）或播放器音量（桌面），
+    // >100 段统一为播放器软件增益，各控件之间不会互相冲突。
+    await setSessionPlayerVolume(volume.toDouble(), persist: true);
   }
 
   void setGestureBrightness(double dy) {
@@ -2034,7 +2073,9 @@ class PlayerController extends BaseController
     unawaited(initSystem());
     initStream();
     //设置音量
-    player.setVolume(_resolvedPlayerVolume());
+    final resolvedVolume = _resolvedPlayerVolume();
+    effectiveVolume.value = resolvedVolume;
+    player.setVolume(resolvedVolume);
     super.onInit();
   }
 
@@ -2547,7 +2588,13 @@ class PlayerController extends BaseController
     if (_playerClosing) {
       return;
     }
-    await player.setVolume(_resolvedPlayerVolume());
+    final resolvedVolume = _resolvedPlayerVolume();
+    final mobile = Platform.isAndroid || Platform.isIOS;
+    // 桌面端与移动端增益段同步有效音量；移动端基础段保持系统音量语义不动。
+    if (!mobile || resolvedVolume > PlayerVolumePolicy.baseVolume) {
+      effectiveVolume.value = resolvedVolume;
+    }
+    await player.setVolume(resolvedVolume);
   }
 
   // Fix Issue #57 & #97: 处理异常的视频尺寸（Surface失效）。
@@ -2959,7 +3006,12 @@ class PlayerController extends BaseController
           await player.pause();
           break;
         case 'can_duck':
-          await player.setVolume(30);
+          // 按当前播放器音量等比压低（含增益档），gain 分支再恢复。
+          await player.setVolume(
+            (player.state.volume * 0.3)
+                .clamp(0.0, PlayerVolumePolicy.maxVolume)
+                .toDouble(),
+          );
           break;
       }
     }

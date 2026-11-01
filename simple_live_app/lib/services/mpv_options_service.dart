@@ -141,6 +141,13 @@ class MpvOptionsService {
     'demuxer-max-back-bytes': '8MiB',
   };
 
+  /// 音频默认参数：扩大 mpv softvol 范围以支持 >100% 的音量增益档
+  /// （media_kit 的 setVolume 直透 mpv volume 属性，上限由 volume-max 决定）。
+  /// 用户在高级参数/mpv.conf 中设置的同名参数会覆盖该默认值。
+  static const Map<String, String> audioDefaultOptions = {
+    'volume-max': '300',
+  };
+
   static Future<void> applyToPlayer(Player player) async {
     if (player.platform is! NativePlayer) {
       return;
@@ -150,6 +157,7 @@ class MpvOptionsService {
     // MixWithOthers，与 AppDelegate 的 .playback 类别保持一致。
     if (Platform.isIOS) {
       final iosOptions = <String, String>{
+        ...audioDefaultOptions,
         ...networkDefaultOptions,
         'audio-exclusive': 'yes',
       };
@@ -162,7 +170,8 @@ class MpvOptionsService {
       }
       return;
     }
-    final options = Map<String, String>.from(networkDefaultOptions)
+    final options = Map<String, String>.from(audioDefaultOptions)
+      ..addAll(networkDefaultOptions)
       ..addAll(effectiveOptions())
       ..remove("vo")
       ..remove("hwdec");

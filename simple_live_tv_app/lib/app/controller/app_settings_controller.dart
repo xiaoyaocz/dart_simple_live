@@ -164,6 +164,14 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kPlayerCompatMode, false);
     mpvProfile.value = LocalStorageService.instance
         .getValue(LocalStorageService.kMpvProfile, "balanced");
+    playerVolume.value =
+        (LocalStorageService.instance.getValue(
+                  LocalStorageService.kPlayerVolume,
+                  100.0,
+                ) as num? ??
+                100.0)
+            .clamp(0.0, 300.0)
+            .toDouble();
 
     playerAutoPause.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerAutoPause, false);
@@ -563,6 +571,16 @@ class AppSettingsController extends GetxController {
   void setMpvProfile(String e) {
     mpvProfile.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kMpvProfile, e);
+  }
+
+  /// 播放器音量（0-300）：>100 为 mpv 软件增益档（讨论 #161）。
+  var playerVolume = 100.0.obs;
+  void setPlayerVolume(double e) {
+    playerVolume.value = e.clamp(0.0, 300.0).toDouble();
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kPlayerVolume,
+      playerVolume.value,
+    );
   }
 
   var playerBufferSize = 32.obs;

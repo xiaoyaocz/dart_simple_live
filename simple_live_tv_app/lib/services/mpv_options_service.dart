@@ -78,11 +78,18 @@ class MpvOptionsService {
     );
   }
 
+  /// 音频默认参数：扩大 mpv softvol 范围以支持 >100% 的音量增益档
+  /// （media_kit 的 setVolume 直透 mpv volume 属性，上限由 volume-max 决定）。
+  static const Map<String, String> audioDefaultOptions = {
+    'volume-max': '300',
+  };
+
   static Future<void> applyToPlayer(Player player) async {
     if (player.platform is! NativePlayer) {
       return;
     }
-    final options = Map<String, String>.from(effectiveOptions())
+    final options = Map<String, String>.from(audioDefaultOptions)
+      ..addAll(effectiveOptions())
       ..remove("vo")
       ..remove("hwdec");
     for (final entry in options.entries) {

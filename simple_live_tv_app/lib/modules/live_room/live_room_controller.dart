@@ -528,8 +528,34 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   Future<void> toggleMute() async {
     muted.value = !muted.value;
-    await player.setVolume(muted.value ? 0 : 100);
+    await player.setVolume(
+      muted.value ? 0 : AppSettingsController.instance.playerVolume.value,
+    );
     SmartDialog.showToast(muted.value ? "已静音" : "已恢复声音");
+  }
+
+  /// 音量 OSD 状态：遥控器调节音量时短暂显示（讨论 #161）
+  RxBool showVolumeOSDState = false.obs;
+  RxDouble volumeOSDValue = 100.0.obs;
+  Timer? _hideVolumeOSDTimer;
+
+  /// 调节播放器音量（0-300，>100 为软件增益档），并弹出 OSD。
+  Future<void> adjustVolume(double delta) async {
+    final target =
+        (AppSettingsController.instance.playerVolume.value + delta)
+            .clamp(0.0, PlayerVolumePolicy.maxVolume)
+            .toDouble();
+    AppSettingsController.instance.setPlayerVolume(target);
+    if (target > 0 && muted.value) {
+      muted.value = false;
+    }
+    await player.setVolume(target);
+    volumeOSDValue.value = target;
+    showVolumeOSDState.value = true;
+    _hideVolumeOSDTimer?.cancel();
+    _hideVolumeOSDTimer = Timer(const Duration(seconds: 2), () {
+      showVolumeOSDState.value = false;
+    });
   }
 
   bool handleDesktopShortcut(
@@ -1187,7 +1213,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (generation != _playerGeneration) {
       return true;
     }
-    await player.setVolume(muted.value ? 0 : 100);
+    await player.setVolume(
+      muted.value ? 0 : AppSettingsController.instance.playerVolume.value,
+    );
 
     Log.d("播放链接\r\n：${playUrls[currentLineIndex]}");
     _startPlaybackWatchdog();
@@ -1821,6 +1849,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     _liveEventFlowTimer?.cancel();
     clearLiveEventFlow();
     _cancelDanmakuFlushTimer();
+    _hideVolumeOSDTimer?.cancel();
 
     danmakuController = null;
     super.onClose();

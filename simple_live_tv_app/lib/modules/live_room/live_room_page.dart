@@ -67,6 +67,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       }
       return;
     }
+    // 遥控器音量键：调节播放器音量 0-300（部分电视盒子会在系统层拦截
+    // 该键，此时可用设置面板中的"音量"项调节）
+    if (key.logicalKey == LogicalKeyboardKey.audioVolumeUp) {
+      controller.adjustVolume(5);
+      return;
+    }
+    if (key.logicalKey == LogicalKeyboardKey.audioVolumeDown) {
+      controller.adjustVolume(-5);
+      return;
+    }
     // 点击OK、Enter、Select键：按"OK键行为"设置触发暂停/继续或显示/隐藏控制栏
     if (key.logicalKey == LogicalKeyboardKey.select ||
         key.logicalKey == LogicalKeyboardKey.enter ||

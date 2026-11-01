@@ -14,6 +14,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
+import 'package:simple_live_app/widgets/corner_clock.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
@@ -59,6 +60,9 @@ Widget buildFullControls(
       children: [
         const SizedBox.expand(),
         buildDanmuView(videoState, controller),
+        CornerClock(
+          safeArea: padding,
+        ),
         _buildPlayerSuperChatOverlay(controller),
         _buildBufferingIndicator(videoState),
         _buildGestureLayer(

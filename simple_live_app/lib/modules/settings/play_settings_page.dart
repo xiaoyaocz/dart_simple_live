@@ -391,6 +391,42 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ],
             ),
           ),
+          // 全屏四角时钟
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+            child: Text(
+              "四角时钟",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                Obx(
+                  () => SettingsSwitch(
+                    title: "全屏四角时钟",
+                    subtitle: "在全屏直播画面角落常驻显示当前时间，不随控制栏隐藏",
+                    value: controller.playerClockEnable.value,
+                    onChanged: controller.setPlayerClockEnable,
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsMenu<int>(
+                    title: "时钟位置",
+                    value: controller.playerClockPosition.value,
+                    valueMap: const {
+                      0: "左上角",
+                      1: "右上角",
+                      2: "左下角",
+                      3: "右下角",
+                    },
+                    onChanged: controller.setPlayerClockPosition,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(

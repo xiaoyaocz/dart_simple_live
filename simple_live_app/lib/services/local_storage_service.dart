@@ -171,6 +171,10 @@ class LocalStorageService extends GetxService {
   // SuperChat 全屏滚动
   static const String kSuperChatScrollInFullscreen = "SuperChatScrollInFullscreen";
 
+  // 全屏四角时钟
+  static const String kPlayerClockEnable = "PlayerClockEnable";
+  static const String kPlayerClockPosition = "PlayerClockPosition";
+
   late Box settingsBox;
   late Box<String> shieldBox;
   late Box<String> shieldPresetBox;

@@ -171,6 +171,15 @@ class AppSettingsController extends GetxController {
     okKeyAction.value = LocalStorageService.instance
         .getValue(LocalStorageService.kOkKeyAction, kOkKeyActionShowControls);
 
+    playerClockEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerClockEnable, false);
+    playerClockPosition.value = _normalizePlayerClockPosition(
+      LocalStorageService.instance.getValue(
+        LocalStorageService.kPlayerClockPosition,
+        kPlayerClockPositionTopRight,
+      ),
+    );
+
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
     autoSwitchNextOnLiveEnd.value = LocalStorageService.instance.getValue(
@@ -581,6 +590,36 @@ class AppSettingsController extends GetxController {
   }
 
   bool get okKeyTriggersPlayPause => okKeyAction.value == kOkKeyActionPlayPause;
+
+  /// 全屏四角时钟：0=左上 1=右上（默认） 2=左下 3=右下
+  static const int kPlayerClockPositionTopLeft = 0;
+  static const int kPlayerClockPositionTopRight = 1;
+  static const int kPlayerClockPositionBottomLeft = 2;
+  static const int kPlayerClockPositionBottomRight = 3;
+
+  var playerClockEnable = false.obs;
+  void setPlayerClockEnable(bool e) {
+    playerClockEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerClockEnable, e);
+  }
+
+  var playerClockPosition = kPlayerClockPositionTopRight.obs;
+  void setPlayerClockPosition(int e) {
+    playerClockPosition.value = _normalizePlayerClockPosition(e);
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerClockPosition, e);
+  }
+
+  static int _normalizePlayerClockPosition(int e) {
+    const valid = [
+      kPlayerClockPositionTopLeft,
+      kPlayerClockPositionTopRight,
+      kPlayerClockPositionBottomLeft,
+      kPlayerClockPositionBottomRight,
+    ];
+    return valid.contains(e) ? e : kPlayerClockPositionTopRight;
+  }
 
   var autoFullScreen = false.obs;
   void setAutoFullScreen(bool e) {

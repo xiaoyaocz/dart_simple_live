@@ -23,12 +23,64 @@ Widget playerControls(VideoState videoState, LiveRoomController controller) {
   return buildControls(videoState, controller);
 }
 
+/// 全屏四角时钟：常驻显示当前时间，不随控制栏显隐消失（讨论 #160）
+Widget _buildCornerClock(LiveRoomController controller) {
+  final settings = AppSettingsController.instance;
+  return Obx(
+    () {
+      if (!settings.playerClockEnable.value) {
+        return const SizedBox.shrink();
+      }
+      Alignment alignment;
+      switch (settings.playerClockPosition.value) {
+        case AppSettingsController.kPlayerClockPositionTopLeft:
+          alignment = Alignment.topLeft;
+          break;
+        case AppSettingsController.kPlayerClockPositionBottomLeft:
+          alignment = Alignment.bottomLeft;
+          break;
+        case AppSettingsController.kPlayerClockPositionBottomRight:
+          alignment = Alignment.bottomRight;
+          break;
+        default:
+          alignment = Alignment.topRight;
+      }
+      // 复用 LiveRoomController 已有的每秒 datetime 定时器
+      return IgnorePointer(
+        child: Align(
+          alignment: alignment,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 32.w,
+              right: 32.w,
+              top: 24.w,
+              bottom: 24.w,
+            ),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.w),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8.w),
+              ),
+              child: Text(
+                controller.datetime.value,
+                style: AppStyle.titleStyleWhite,
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 Widget buildControls(VideoState videoState, LiveRoomController controller) {
   return Stack(
     children: [
       Container(),
       buildDanmuView(videoState, controller),
       _buildLiveEventFlowOverlay(controller),
+      _buildCornerClock(controller),
       // 点击播放器打开设置
       Positioned.fill(
         child: GestureDetector(onTap: () => showPlayerSettings(controller)),
@@ -110,10 +162,19 @@ Widget buildControls(VideoState videoState, LiveRoomController controller) {
                   ),
                 ),
                 Obx(
-                  () => Text(
-                    controller.datetime.value,
-                    style: AppStyle.titleStyleWhite,
-                  ),
+                  () {
+                    final settings = AppSettingsController.instance;
+                    // 四角时钟已开启且位于右上角时，顶栏不再重复显示时间
+                    if (settings.playerClockEnable.value &&
+                        settings.playerClockPosition.value ==
+                            AppSettingsController.kPlayerClockPositionTopRight) {
+                      return const SizedBox.shrink();
+                    }
+                    return Text(
+                      controller.datetime.value,
+                      style: AppStyle.titleStyleWhite,
+                    );
+                  },
                 ),
               ],
             ),
@@ -415,6 +476,7 @@ void showPlayerSettings(LiveRoomController controller) {
   var qualityFoucsNode = AppFocusNode();
   var lineFoucsNode = AppFocusNode();
   var scaleFoucsNode = AppFocusNode();
+  var clockFoucsNode = AppFocusNode();
   var danmakuFoucsNode = AppFocusNode();
   var danmakuSizeFoucsNode = AppFocusNode();
   var danmakuSpeedFoucsNode = AppFocusNode();
@@ -586,6 +648,20 @@ void showPlayerSettings(LiveRoomController controller) {
                   onChanged: (e) {
                     AppSettingsController.instance.setScaleMode(e);
                     controller.updateScaleMode();
+                  },
+                ),
+              ),
+              AppStyle.vGap24,
+              Obx(
+                () => SettingsItemWidget(
+                  foucsNode: clockFoucsNode,
+                  title: "四角时钟",
+                  items: const {0: "关", 1: "开"},
+                  value: AppSettingsController.instance.playerClockEnable.value
+                      ? 1
+                      : 0,
+                  onChanged: (e) {
+                    AppSettingsController.instance.setPlayerClockEnable(e == 1);
                   },
                 ),
               ),

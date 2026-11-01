@@ -300,6 +300,37 @@ class SettingsPage extends GetView<SettingsController> {
         AppStyle.vGap24,
         Obx(
           () => SettingsItemWidget(
+            foucsNode: AppFocusNode(),
+            title: "全屏四角时钟",
+            items: const {0: "关", 1: "开"},
+            value: AppSettingsController.instance.playerClockEnable.value
+                ? 1
+                : 0,
+            onChanged: (e) {
+              AppSettingsController.instance.setPlayerClockEnable(e == 1);
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
+            foucsNode: AppFocusNode(),
+            title: "四角时钟位置",
+            items: const {
+              AppSettingsController.kPlayerClockPositionTopLeft: "左上角",
+              AppSettingsController.kPlayerClockPositionTopRight: "右上角",
+              AppSettingsController.kPlayerClockPositionBottomLeft: "左下角",
+              AppSettingsController.kPlayerClockPositionBottomRight: "右下角",
+            },
+            value: AppSettingsController.instance.playerClockPosition.value,
+            onChanged: (e) {
+              AppSettingsController.instance.setPlayerClockPosition(e);
+            },
+          ),
+        ),
+        AppStyle.vGap24,
+        Obx(
+          () => SettingsItemWidget(
             foucsNode: controller.scaleFoucsNode,
             autofocus: controller.scaleFoucsNode.isFoucsed.value,
             title: "画面比例",

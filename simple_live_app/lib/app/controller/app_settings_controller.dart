@@ -204,6 +204,14 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kPipDanmuScale, 0.75);
     superChatScrollInFullscreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kSuperChatScrollInFullscreen, false);
+    playerClockEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPlayerClockEnable, false);
+    playerClockPosition.value = _normalizePlayerClockPosition(
+      LocalStorageService.instance.getValue(
+        LocalStorageService.kPlayerClockPosition,
+        1,
+      ),
+    );
     liveEventFlowEnable.value = LocalStorageService.instance.getValue(
       LocalStorageService.kLiveEventFlowEnable,
       false,
@@ -1205,6 +1213,36 @@ class AppSettingsController extends GetxController {
     superChatScrollInFullscreen.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kSuperChatScrollInFullscreen, e);
+  }
+
+  // 全屏四角时钟：0左上 1右上 2左下 3右下
+  static const int kPlayerClockPositionTopLeft = 0;
+  static const int kPlayerClockPositionTopRight = 1;
+  static const int kPlayerClockPositionBottomLeft = 2;
+  static const int kPlayerClockPositionBottomRight = 3;
+
+  var playerClockEnable = false.obs;
+  void setPlayerClockEnable(bool e) {
+    playerClockEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerClockEnable, e);
+  }
+
+  var playerClockPosition = kPlayerClockPositionTopRight.obs;
+  void setPlayerClockPosition(int e) {
+    playerClockPosition.value = _normalizePlayerClockPosition(e);
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPlayerClockPosition, e);
+  }
+
+  static int _normalizePlayerClockPosition(int e) {
+    const valid = [
+      kPlayerClockPositionTopLeft,
+      kPlayerClockPositionTopRight,
+      kPlayerClockPositionBottomLeft,
+      kPlayerClockPositionBottomRight,
+    ];
+    return valid.contains(e) ? e : kPlayerClockPositionTopRight;
   }
 
   var danmuShieldEnable = true.obs;

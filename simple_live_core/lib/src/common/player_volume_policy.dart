@@ -15,15 +15,18 @@ class PlayerVolumePolicy {
   ///
   /// 移动端 ≤100 段由系统音量控制实际输出，播放器内部保持满格；
   /// >100 的增益档由播放器自身应用（mpv 软件增益）。
+  /// [boostEnabled] 为 false 时上限回到 [baseVolume]（音量增强开关关闭）。
   static double internalVolume({
     required bool mobile,
     required bool muted,
     required double persisted,
+    bool boostEnabled = true,
   }) {
     if (muted) {
       return 0;
     }
-    final value = persisted.clamp(0.0, maxVolume).toDouble();
+    final limit = boostEnabled ? maxVolume : baseVolume;
+    final value = persisted.clamp(0.0, limit).toDouble();
     if (mobile) {
       return value > baseVolume ? value : baseVolume;
     }

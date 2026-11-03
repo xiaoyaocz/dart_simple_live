@@ -940,6 +940,35 @@ class DouyinSite implements LiveSite {
     return state;
   }
 
+  /// 登录墙兜底：仅凭 sec_user_id 通过移动端 reflow 接口匿名获取当前直播间。
+  /// 用于 web 端返回 enter_mode=1（无 room、要求扫码登录）的房间。
+  /// 该接口无需 Cookie 与 a_bogus 签名（参考 bililive-tools DouYinRecorder 的 mobile 接口）。
+  Future<Map> _getRoomDataByMobileReflow(String secUserId) async {
+    final stopwatch = Stopwatch()..start();
+    final result = await HttpClient.instance.getJson(
+      'https://webcast.amemv.com/webcast/room/reflow/info/',
+      queryParameters: {
+        "app_id": "1128",
+        "live_id": "1",
+        "verifyFp": "",
+        "room_id": "2",
+        "type_id": "0",
+        "sec_user_id": secUserId,
+      },
+      header: _newRequestHeaders(
+        authority: "webcast.amemv.com",
+        referer: "https://webcast.amemv.com/",
+      ),
+    );
+
+    final room = result?["data"]?["room"];
+    if (room is! Map || room.isEmpty) {
+      throw CoreError("抖音移动端房间数据为空，可能主播未开播或被风控限制");
+    }
+    _logElapsed("_getRoomDataByMobileReflow($secUserId)", stopwatch);
+    return room;
+  }
+
   /// 通过webRid获取直播间Web信息
   /// - [webRid] 直播间RID
   Future<Map> _getRoomDataByApi(String webRid) async {
@@ -961,6 +990,14 @@ class DouyinSite implements LiveSite {
     }
     final rooms = data["data"];
     if (rooms is! List || rooms.isEmpty) {
+      // 登录墙（enter_mode=1）：web 端匿名不下发房间，凭 user.sec_uid 走移动端 reflow 补全
+      final secUserId = data["user"]?["sec_uid"]?.toString() ?? "";
+      if (data["enter_mode"] == 1 && secUserId.isNotEmpty) {
+        _logDebug("enter 接口命中登录墙，移动端 reflow 补全房间：$webRid");
+        data["data"] = [await _getRoomDataByMobileReflow(secUserId)];
+        _logElapsed("_getRoomDataByApi($webRid) reflow", stopwatch);
+        return data;
+      }
       throw CoreError("抖音直播间数据为空，可能是房间不存在、未开播或被风控限制");
     }
 

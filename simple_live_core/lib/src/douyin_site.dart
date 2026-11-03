@@ -733,10 +733,17 @@ class DouyinSite implements LiveSite {
     }
     
     var room = roomInfo["room"];
-    if (room == null) {
-      throw CoreError("抖音直播间数据异常：room 为空，可能该用户 '$webRid' 不存在或从未开播");
+    // 登录墙（enter_mode=1）时 web 端不下发 room，只给主播信息与二维码，
+    // 此时凭 anchor.sec_uid 走移动端 reflow 匿名获取真实房间与流地址。
+    if (room is! Map || room.isEmpty) {
+      final secUserId = roomInfo["anchor"]?["sec_uid"]?.toString() ?? "";
+      if (secUserId.isEmpty) {
+        throw CoreError("抖音直播间数据异常：room 为空且无法获取主播标识，可能该用户 '$webRid' 不存在或从未开播");
+      }
+      _logDebug("web 端命中登录墙(enter_mode=1)，改用移动端 reflow：$webRid");
+      room = await _getRoomDataByMobileReflow(secUserId);
     }
-    
+
     var roomId = room["id_str"]?.toString();
     if (roomId == null || roomId.isEmpty) {
       throw CoreError("抖音直播间数据异常：无法获取房间ID");

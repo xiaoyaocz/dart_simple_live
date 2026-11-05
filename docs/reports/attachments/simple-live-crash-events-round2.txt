@@ -1,0 +1,175 @@
+===== 2026-11-05 19:06:13 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x13D8
+Faulting application start time: 0x1DD6D15925C7B22
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 82c2c9ed-affc-455f-a84b-c51a5a5c53bd
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 19:01:20 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x2D70
+Faulting application start time: 0x1DD6D14C570A9BA
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: ae4ac1f6-f832-448a-9949-8f029cc73027
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 18:59:14 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: dcomp.dll, version: 10.0.26100.8972, time stamp: 0xccb007dd
+Exception code: 0xe0464645
+Fault offset: 0x000000000007fed4
+Faulting process id: 0x3F60
+Faulting application start time: 0x1DD6D118DA7A8D2
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\WINDOWS\SYSTEM32\dcomp.dll
+Report Id: 69722bd1-b3b9-4d9f-a792-43c3cf60fb07
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 18:33:27 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000005
+Fault offset: 0x00000000002c4527
+Faulting process id: 0x3EA0
+Faulting application start time: 0x1DD6D109B60F173
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 68acf3d6-254e-4eac-bb49-f35875b019c4
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 18:23:18 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: dcomp.dll, version: 10.0.26100.8972, time stamp: 0xccb007dd
+Exception code: 0xe0464645
+Fault offset: 0x000000000007fed4
+Faulting process id: 0x5F9C
+Faulting application start time: 0x1DD6D0DFAD86246
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\WINDOWS\SYSTEM32\dcomp.dll
+Report Id: 4806c72e-aa1f-4265-b3d5-aadeffdb3f69
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 18:18:33 [Microsoft-Windows-RestartManager] id=10010
+Application 'C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe' (pid 24476) cannot be restarted - Application SID does not match Conductor SID..
+
+===== 2026-11-05 18:18:28 [Microsoft-Windows-RestartManager] id=10010
+Application 'C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe' (pid 24476) cannot be restarted - Application SID does not match Conductor SID..
+
+===== 2026-11-05 18:02:56 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000005
+Fault offset: 0x00000000002c4527
+Faulting process id: 0x53D8
+Faulting application start time: 0x1DD6D0C66AED051
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 751991ca-8464-47a5-b8b8-d2cd68b1d921
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:58:11 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x59A8
+Faulting application start time: 0x1DD6D0C0F69419A
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 9e1f72b9-ad54-4039-a0ff-3b022cd7d63e
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:57:17 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x54F0
+Faulting application start time: 0x1DD6D0BF4E5EF9F
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 244f7dee-664b-4143-9000-ffb3c2180606
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:56:29 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x49B0
+Faulting application start time: 0x1DD6D0A5B18D5E6
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 5fcc72bb-38ef-4739-bbc7-1396d066830e
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:45:03 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x5744
+Faulting application start time: 0x1DD6D0A4503A983
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 4a88020f-6176-4f1b-b709-5895f87b7a25
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:39:18 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000409
+Fault offset: 0x0000000000fb44e9
+Faulting process id: 0x2914
+Faulting application start time: 0x1DD6D0980265682
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: afec36a2-eb77-4949-8852-4ddce567b15f
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:31:28 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000005
+Fault offset: 0x00000000002c4527
+Faulting process id: 0x51D4
+Faulting application start time: 0x1DD6D07B19CE2BF
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 5489a876-4478-43c9-9c2e-8f065351884c
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+
+===== 2026-11-05 17:19:12 [Application Error] id=1000
+Faulting application name: simple_live_app.exe, version: 1.11.7.11107, time stamp: 0x6a903371
+Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852865
+Exception code: 0xc0000005
+Fault offset: 0x00000000002c4527
+Faulting process id: 0x5AD4
+Faulting application start time: 0x1DD6D065D24C5E6
+Faulting application path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\simple_live_app.exe
+Faulting module path: C:\Program Files\WindowsApps\com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144\flutter_windows.dll
+Report Id: 7cf664ba-1116-4ea2-a8d3-7b6296483438
+Faulting package full name: com.xycz.simplelive_1.11.7.0_x64__fxkeb4dgdm144
+Faulting package-relative application ID: simpleliveapp
+

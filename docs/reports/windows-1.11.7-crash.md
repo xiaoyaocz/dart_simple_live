@@ -95,3 +95,33 @@ Faulting module name: flutter_windows.dll, version: 0.0.0.0, time stamp: 0x6a852
 Exception code: 0xc0000005
 Fault offset: 0x00000000002c4527
 ```
+
+## 补充：2026-11-05 第二轮实测（重启 + 新驱动后）
+
+### 1. 配置与结果对照
+
+| 配置 | 4K 切换结果 | 崩溃签名 |
+|---|---|---|
+| 旧驱动 32.0.15.9649 + 165Hz + 硬件解码关 | 崩溃 | `dcomp.dll` `0xE0464645` offset `0x7fed4` |
+| 新驱动 32.0.16.2101 + 165Hz + 硬件解码开 | 先卡约 90 秒，随后闪退 | `flutter_windows.dll` `0xC0000409` offset `0xfb44e9` |
+| 新驱动 + 强制 NVIDIA GPU（`UserGpuPreferences`） | 同上 | `flutter_windows.dll` `0xC0000409` offset `0xfb44e9` |
+| 新驱动 + 刷新率 60Hz | 同上 | `flutter_windows.dll` `0xC0000409` offset `0xfb44e9` |
+
+结论：三种互不相同的环境配置（GPU 选择 / 刷新率 / 驱动版本）得到完全相同的 fail-fast 偏移，说明 4K 切换是确定性代码路径缺陷，不是显卡驱动或合成层可调项。
+
+### 2. 返回闪退复核（新驱动后）
+
+- 7 次「播放 6 秒 → 返回」：第 4 次崩溃，`flutter_windows.dll` `0xC0000005` offset `0x2c4527`，与更新驱动前完全一致 → 与驱动无关。
+- 对照：720p ↔ 1080p 切换 6 次全部正常；2.5 秒内快速返回 5/5 正常（视频纹理尚未激活）。
+
+### 3. 4K 冻结阶段的进程状态
+
+- 冻结期间进程 `Responding=True`、CPU 约单核 11%、无 TDR、无 AppHang 记录 → 卡在渲染/上屏，随后由引擎 fail-fast 终止；
+- 先切 2K 再切 4K 与直接切 4K 结果相同，均触发 `0xfb44e9`。
+
+### 4. 建议排查点（补充）
+
+- `VideoController` 生命周期：切清晰度时 `player.open()` 会以新的 4K 尺寸重建纹理，若旧 `Texture` 未释放或尺寸未更新，可能触发引擎侧断言；
+- `onClose()` 中 `await player.dispose()` 与路由 pop 的时序：建议先销毁视频纹理/控制器，再延迟一帧释放 `Player`。
+
+附：本轮事件日志见 `docs/reports/attachments/simple-live-crash-events-round2.txt`。

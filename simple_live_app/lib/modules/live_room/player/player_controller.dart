@@ -1700,7 +1700,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   Future<void> _setIosPipHwdec(String value) async {
     final nativePlayer = player.platform as NativePlayer;
+    final before = await nativePlayer.getProperty("hwdec");
     await nativePlayer.setProperty("hwdec", value);
+    final after = await nativePlayer.getProperty("hwdec");
+    Log.i("iOS 小窗 hwdec 切换：$before -> $value（生效 $after）");
   }
 
   void _ensureIosPipEventListener() {

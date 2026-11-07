@@ -28,10 +28,19 @@ public class MediaKitVideoPlugin: NSObject, FlutterPlugin {
       utils: utils
     )
     registrar.addMethodCallDelegate(instance, channel: channel)
+
+    #if os(iOS)
+      if #available(iOS 15.0, *) {
+        _ = MediaKitPictureInPicturePlugin(
+          registrar: registrar,
+          outputManager: instance.videoOutputManager
+        )
+      }
+    #endif
   }
 
   private let channel: FlutterMethodChannel
-  private let videoOutputManager: VideoOutputManager
+  let videoOutputManager: VideoOutputManager
   private let utils: UtilsProtocol?
 
   init(
@@ -57,6 +66,8 @@ public class MediaKitVideoPlugin: NSObject, FlutterPlugin {
       handleSetSizeMethodCall(call.arguments, result)
     case "VideoOutputManager.Dispose":
       handleDisposeMethodCall(call.arguments, result)
+    case "VideoOutputManager.SetHardwareAcceleration":
+      handleSetHardwareAccelerationMethodCall(call.arguments, result)
     case "Utils.EnterNativeFullscreen":
       handleEnterNativeFullscreenMethodCall(call.arguments, result)
     case "Utils.ExitNativeFullscreen":
@@ -127,7 +138,7 @@ public class MediaKitVideoPlugin: NSObject, FlutterPlugin {
 
   private func handleDisposeMethodCall(
     _ arguments: Any?,
-    _ result: FlutterResult
+    _ result: @escaping FlutterResult
   ) {
     let args = arguments as? [String: Any]
     let handleStr = args?["handle"] as! String
@@ -137,6 +148,27 @@ public class MediaKitVideoPlugin: NSObject, FlutterPlugin {
 
     videoOutputManager.destroy(
       handle: handle!
+    )
+
+    result(nil)
+  }
+
+  /// 切换指定视频输出的硬件/软件渲染。iOS 画中画会话期间切换到软渲染，
+  /// 保证退后台（失去 GPU 访问权）后仍能持续出帧。
+  private func handleSetHardwareAccelerationMethodCall(
+    _ arguments: Any?,
+    _ result: @escaping FlutterResult
+  ) {
+    let args = arguments as? [String: Any]
+    let handleStr = args?["handle"] as! String
+    let handle: Int64? = Int64(handleStr)
+    let enabled = args?["enabled"] as? Bool ?? true
+
+    assert(handle != nil, "handle must be an Int64")
+
+    videoOutputManager.setHardwareAcceleration(
+      handle: handle!,
+      enabled: enabled
     )
 
     result(nil)

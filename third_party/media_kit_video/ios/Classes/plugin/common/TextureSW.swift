@@ -15,6 +15,8 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
     skipCheckArgs: true
   )
 
+  public var onFrameRendered: ((CVPixelBuffer) -> Void)?
+
   init(
     handle: OpaquePointer,
     updateCallback: @escaping UpdateCallback
@@ -142,5 +144,7 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
     mpv_render_context_render(renderContext, &params)
 
     textureContexts.pushAsReady(textureContext!)
+
+    onFrameRendered?(textureContext!.pixelBuffer)
   }
 }

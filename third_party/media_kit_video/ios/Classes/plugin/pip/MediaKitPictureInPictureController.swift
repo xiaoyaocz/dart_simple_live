@@ -225,6 +225,12 @@
             "MediaKitPiP: enqueued %d frames",
             self.enqueuedFrameCount
           )
+          // 桥接进 Dart 日志（app 日志导出不含 NSLog），便于真机定位
+          self.eventCallback([
+            "event": "stats",
+            "enqueued": self.enqueuedFrameCount,
+            "dropped": self.droppedByBackpressureCount,
+          ])
         }
       }
     }

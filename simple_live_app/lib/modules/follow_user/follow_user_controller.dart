@@ -498,7 +498,9 @@ class FollowUserController extends BasePageController<FollowUser> {
       updateTag(tag);
     }
     await DBService.instance.followBox.delete(item.id);
-    refreshData();
+    // #163 取消关注后仅本地移除，不再触发全量开播状态刷新，避免频繁请求触发风控
+    await refreshData(forceStatus: false);
+    FollowService.instance.filterData();
   }
 
   void updateItem(FollowUser item) {

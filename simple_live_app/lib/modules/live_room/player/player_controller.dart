@@ -1661,6 +1661,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   bool _iosPipActive = false;
   bool _iosPipOriginalHardwareDecode = true;
   String _iosPipOriginalHwdec = "auto-safe";
+  Media? _iosPipMedia;
 
   Future<void> _enableIOSPip() async {
     if (!await IosPictureInPicture.isSupported()) {
@@ -1675,9 +1676,17 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       SmartDialog.showToast("进入小窗失败");
       return;
     }
+    final media = player.state.playlist.medias.isNotEmpty
+        ? player.state.playlist.medias.first
+        : null;
+    if (media == null) {
+      SmartDialog.showToast("进入小窗失败");
+      return;
+    }
     _iosPipActive = true;
+    _iosPipMedia = media;
     _ensureIosPipEventListener();
-    Log.i("iOS 小窗启动：handle=$handle");
+    Log.i("iOS 小窗启动：handle=$handle media=${media.uri}");
     final nativePlayer = player.platform as NativePlayer;
     try {
       _iosPipOriginalHwdec =
@@ -1687,19 +1696,26 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
     _iosPipOriginalHardwareDecode =
         AppSettingsController.instance.hardwareDecode.value;
+    // 播放中运行时交换渲染上下文会销毁 vo_libmpv，视频链掉线
+    //（mpv 日志 Video: no video，音频正常画面黑），且与解码器重配置
+    // 存在竞态（显式重载视频轨也无法稳定重建）。改为确定性路径：
+    // 停播 → 无播放状态下完成解码/渲染切换 → 重开同一路流，
+    // 视频链在全新上下文上自然建立。
+    try {
+      await player.stop();
+      await _setIosPipHwdec("no");
+    } catch (e) {
+      Log.w("iOS 小窗切换软解码失败: $e");
+    }
     await IosPictureInPicture.setHardwareAcceleration(
       handle: handle,
       enabled: false,
     );
     try {
-      await _setIosPipHwdec("no");
+      await player.open(media);
     } catch (e) {
-      Log.w("iOS 小窗切换软解码失败: $e");
+      Log.w("iOS 小窗重开播放失败: $e");
     }
-    // 渲染上下文重建会销毁 vo_libmpv，mpv 直接放弃视频轨
-    //（日志表现为 "Video: no video"，音频正常但永久黑屏）；
-    // 显式重载视频轨强制视频链在新渲染上下文上重建
-    await _reloadIosPipVideoTrack();
     final started = await IosPictureInPicture.start(
       handle: handle,
       startImmediately: true,
@@ -1707,19 +1723,6 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (!started) {
       await _teardownIosPip();
       SmartDialog.showToast("进入小窗失败");
-    }
-  }
-
-  /// 强制 mpv 重建视频链（vid 卸载后重选，触发 reinit_video_chain，
-  /// 挂到当前渲染上下文上）
-  Future<void> _reloadIosPipVideoTrack() async {
-    final nativePlayer = player.platform as NativePlayer;
-    try {
-      await nativePlayer.setProperty("vid", "no");
-      await nativePlayer.setProperty("vid", "auto");
-      Log.i("iOS 小窗视频轨已重载");
-    } catch (e) {
-      Log.w("iOS 小窗重载视频轨失败: $e");
     }
   }
 
@@ -1780,10 +1783,18 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     _iosPipTearingDown = true;
     try {
       await IosPictureInPicture.stop();
-      // 按进入小窗前的原始配置还原解码/渲染，正常播放不受会话影响；
-      // 原生侧对"已是目标状态"的切换为空操作，重复调用安全
+      // 按进入小窗前的原始配置还原解码/渲染（停播状态下交换，
+      // 同进入时）；正常播放不受会话影响，原生侧对"已是目标状态"
+      // 的切换为空操作
       final restoreHardware = _iosPipOriginalHardwareDecode;
       final handle = await player.handle;
+      final media = _iosPipMedia;
+      _iosPipMedia = null;
+      try {
+        await player.stop();
+      } catch (e) {
+        Log.d("iOS 小窗停止播放失败: $e");
+      }
       if (handle != 0) {
         await IosPictureInPicture.setHardwareAcceleration(
           handle: handle,
@@ -1795,12 +1806,14 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       } catch (e) {
         Log.w("iOS 小窗恢复解码配置失败: $e");
       }
-      // 渲染上下文重建后同样需要重载视频轨（同进入时）
-      await _reloadIosPipVideoTrack();
-      _restorePipExitedState();
-      if (pauseOnClosed) {
-        await player.pause();
+      if (media != null) {
+        try {
+          await player.open(media, play: !pauseOnClosed);
+        } catch (e) {
+          Log.w("iOS 小窗恢复播放失败: $e");
+        }
       }
+      _restorePipExitedState();
     } catch (e) {
       Log.d("iOS 小窗退出清理失败: $e");
     } finally {

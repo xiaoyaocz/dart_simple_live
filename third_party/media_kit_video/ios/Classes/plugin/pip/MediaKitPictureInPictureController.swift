@@ -31,6 +31,8 @@
     private var startAttempts: Int = 0
     private var didRestoreInterface: Bool = false
     private var didReturnToApp: Bool = false
+    private var enqueuedFrameCount: Int = 0
+    private var droppedByBackpressureCount: Int = 0
 
     init(
       hostView: UIView,
@@ -86,6 +88,12 @@
       autoEnter: Bool,
       startImmediately: Bool
     ) -> Bool {
+      NSLog(
+        "MediaKitPiP: start handle=%lld autoEnter=%d startImmediately=%d",
+        handle,
+        autoEnter ? 1 : 0,
+        startImmediately ? 1 : 0
+      )
       self.handle = handle
 
       let contentSource = AVPictureInPictureController.ContentSource(
@@ -154,16 +162,35 @@
       let retained = pixelBuffer
       enqueueQueue.async { [weak self] in
         guard let self = self else { return }
-        guard self.displayLayer.isReadyForMoreMediaData else { return }
-        guard let sample = self.makeSampleBuffer(from: retained) else { return }
+        guard self.displayLayer.isReadyForMoreMediaData else {
+          self.droppedByBackpressureCount += 1
+          if self.droppedByBackpressureCount % 120 == 1 {
+            NSLog(
+              "MediaKitPiP: frame dropped by backpressure (total=%d)",
+              self.droppedByBackpressureCount
+            )
+          }
+          return
+        }
+        guard let sample = self.makeSampleBuffer(from: retained) else {
+          NSLog("MediaKitPiP: makeSampleBuffer failed")
+          return
+        }
         self.displayLayer.enqueue(sample)
+        self.enqueuedFrameCount += 1
         if !self.firstFrameEnqueued {
           self.firstFrameEnqueued = true
+          NSLog("MediaKitPiP: first frame enqueued")
           if self.startRequested {
             DispatchQueue.main.async { [weak self] in
               self?.attemptStart()
             }
           }
+        } else if self.enqueuedFrameCount % 120 == 0 {
+          NSLog(
+            "MediaKitPiP: enqueued %d frames",
+            self.enqueuedFrameCount
+          )
         }
       }
     }

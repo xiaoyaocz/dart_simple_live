@@ -1660,6 +1660,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   bool _iosPipTearingDown = false;
   bool _iosPipActive = false;
   bool _iosPipOriginalHardwareDecode = true;
+  String _iosPipOriginalHwdec = "auto-safe";
 
   Future<void> _enableIOSPip() async {
     if (!await IosPictureInPicture.isSupported()) {
@@ -1677,6 +1678,13 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     _iosPipActive = true;
     _ensureIosPipEventListener();
     Log.i("iOS 小窗启动：handle=$handle");
+    final nativePlayer = player.platform as NativePlayer;
+    try {
+      _iosPipOriginalHwdec =
+          (await nativePlayer.getProperty("hwdec")).toString();
+    } catch (e) {
+      Log.w("iOS 小窗读取原始 hwdec 失败: $e");
+    }
     _iosPipOriginalHardwareDecode =
         AppSettingsController.instance.hardwareDecode.value;
     await IosPictureInPicture.setHardwareAcceleration(
@@ -1688,6 +1696,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     } catch (e) {
       Log.w("iOS 小窗切换软解码失败: $e");
     }
+    // 渲染上下文重建会销毁 vo_libmpv，mpv 直接放弃视频轨
+    //（日志表现为 "Video: no video"，音频正常但永久黑屏）；
+    // 显式重载视频轨强制视频链在新渲染上下文上重建
+    await _reloadIosPipVideoTrack();
     final started = await IosPictureInPicture.start(
       handle: handle,
       startImmediately: true,
@@ -1695,6 +1707,19 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (!started) {
       await _teardownIosPip();
       SmartDialog.showToast("进入小窗失败");
+    }
+  }
+
+  /// 强制 mpv 重建视频链（vid 卸载后重选，触发 reinit_video_chain，
+  /// 挂到当前渲染上下文上）
+  Future<void> _reloadIosPipVideoTrack() async {
+    final nativePlayer = player.platform as NativePlayer;
+    try {
+      await nativePlayer.setProperty("vid", "no");
+      await nativePlayer.setProperty("vid", "auto");
+      Log.i("iOS 小窗视频轨已重载");
+    } catch (e) {
+      Log.w("iOS 小窗重载视频轨失败: $e");
     }
   }
 
@@ -1766,10 +1791,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         );
       }
       try {
-        await _setIosPipHwdec(restoreHardware ? "auto" : "no");
+        await _setIosPipHwdec(_iosPipOriginalHwdec);
       } catch (e) {
         Log.w("iOS 小窗恢复解码配置失败: $e");
       }
+      // 渲染上下文重建后同样需要重载视频轨（同进入时）
+      await _reloadIosPipVideoTrack();
       _restorePipExitedState();
       if (pauseOnClosed) {
         await player.pause();

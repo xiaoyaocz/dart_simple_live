@@ -2,7 +2,8 @@ import Foundation
 
 /// mpv 渲染上下文 update callback 的宿主协议
 protocol MPVUpdateCallbackTarget: NSObjectProtocol, AnyObject {
-  func updateCallback()
+  /// 转发到纹理自身的 updateCallback 闭包属性（私有，经此内部方法中转）
+  func mpvUpdateCallbackFire()
 }
 
 /// mpv 渲染上下文的 update callback 以裸指针回调宿主纹理。
@@ -14,6 +15,6 @@ final class MPVUpdateCallbackProxy: NSObject {
   weak var target: MPVUpdateCallbackTarget?
 
   func fire() {
-    target?.updateCallback()
+    target?.mpvUpdateCallbackFire()
   }
 }

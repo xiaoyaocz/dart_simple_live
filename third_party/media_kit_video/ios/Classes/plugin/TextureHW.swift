@@ -53,6 +53,10 @@ public class TextureHW: NSObject, FlutterTexture, ResizableTextureProtocol, MPVU
     return Unmanaged.passRetained(textureContext!.pixelBuffer)
   }
 
+  func mpvUpdateCallbackFire() {
+    updateCallback()
+  }
+
   private func initMPV() {
     EAGLContext.setCurrent(context)
     defer {

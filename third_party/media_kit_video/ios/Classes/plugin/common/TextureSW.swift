@@ -47,6 +47,10 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol, MPVU
     return Unmanaged.passRetained(textureContext!.pixelBuffer)
   }
 
+  func mpvUpdateCallbackFire() {
+    updateCallback()
+  }
+
   private func initMPV() {
     let api = UnsafeMutableRawPointer(
       mutating: (MPV_RENDER_API_TYPE_SW as NSString).utf8String

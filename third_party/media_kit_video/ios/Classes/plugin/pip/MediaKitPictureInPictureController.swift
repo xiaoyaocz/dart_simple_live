@@ -169,13 +169,14 @@
       }
       pipController = nil
       // 先在入队串行队列上断流，确保所有在途入队完成后（不再有新引用）
-      // 再 flush，杜绝小窗图层残留渲染池缓冲
+      // 再 flush；CALayer 状态操作必须在主线程
       enqueueQueue.async { [weak self] in
         guard let self = self else { return }
         self.isStopped = true
-        self.displayLayer.flushAndRemoveImage()
         DispatchQueue.main.async { [weak self] in
-          self?.displayLayer.removeFromSuperlayer()
+          guard let self = self else { return }
+          self.displayLayer.flushAndRemoveImage()
+          self.displayLayer.removeFromSuperlayer()
         }
       }
     }

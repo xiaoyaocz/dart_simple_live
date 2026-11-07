@@ -1,7 +1,7 @@
 import Flutter
 import OpenGLES
 
-public class TextureHW: NSObject, FlutterTexture, ResizableTextureProtocol {
+public class TextureHW: NSObject, FlutterTexture, ResizableTextureProtocol, MPVUpdateCallbackTarget {
   public typealias UpdateCallback = () -> Void
 
   private let handle: OpaquePointer

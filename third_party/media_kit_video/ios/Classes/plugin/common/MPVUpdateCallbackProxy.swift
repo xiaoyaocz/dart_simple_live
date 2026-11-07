@@ -1,7 +1,7 @@
 import Foundation
 
 /// mpv 渲染上下文 update callback 的宿主协议
-protocol MPVUpdateCallbackTarget: NSObjectProtocol {
+protocol MPVUpdateCallbackTarget: NSObjectProtocol, AnyObject {
   func updateCallback()
 }
 

@@ -4,7 +4,7 @@
   import FlutterMacOS
 #endif
 
-public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
+public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol, MPVUpdateCallbackTarget {
   public typealias UpdateCallback = () -> Void
 
   private let handle: OpaquePointer

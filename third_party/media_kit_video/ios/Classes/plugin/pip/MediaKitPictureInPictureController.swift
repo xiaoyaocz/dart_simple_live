@@ -112,6 +112,18 @@
       self.startRequested = startImmediately
       self.firstFrameEnqueued = false
       self.startAttempts = 0
+      if startImmediately {
+        // 无帧看门狗：软路径建立失败等场景下帧永远不会到来，
+        // 5 秒内没有首帧则上报 failed，让 Dart 侧还原配置并提示
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+          guard let self = self,
+            !self.firstFrameEnqueued,
+            self.pipController != nil
+          else { return }
+          NSLog("MediaKitPiP: no frames within 5s, report failed")
+          self.eventCallback(["event": "failed", "reason": "no_frames"])
+        }
+      }
       return true
     }
 

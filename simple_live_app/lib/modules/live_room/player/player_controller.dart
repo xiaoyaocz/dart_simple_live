@@ -693,6 +693,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     _androidLandscapePendingAfterExternalWindow = false;
     _androidExternalWindowExitGeneration += 1;
     _pipSubscription?.cancel();
+    if (Platform.isIOS) {
+      // 房间关闭时若画中画仍在进行，立即拆除并恢复硬渲染
+      await _teardownIosPip();
+      _iosPipEventSubscription?.cancel();
+      _iosPipEventSubscription = null;
+    }
     if (Platform.isAndroid && _androidWindowChannelActive) {
       final token = _androidWindowHandlerToken;
       _androidWindowChannelActive = false;
@@ -1618,6 +1624,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 
   Future enablePIP() async {
+    if (Platform.isIOS) {
+      await _enableIOSPip();
+      return;
+    }
     if (!Platform.isAndroid) {
       SmartDialog.showToast("当前平台暂不支持小窗播放");
       return;
@@ -1636,6 +1646,107 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     );
     if (status != PiPStatus.enabled) {
       SmartDialog.showToast("进入小窗失败");
+    }
+  }
+
+  // ===== iOS 画中画（AVSampleBufferDisplayLayer 路线，iOS 15+） =====
+  // 帧源由 vendored media_kit_video 提供：每帧 CVPixelBuffer 零拷贝送入
+  // 系统小窗。会话期间切到纯软渲染（mpv zimg），规避退后台后失去 GPU
+  // 访问权导致 GL 停帧的问题（上游 PR #206 当年的死因）。
+  StreamSubscription<dynamic>? _iosPipEventSubscription;
+  int? _iosPipHandle;
+  bool _iosPipTearingDown = false;
+
+  Future<void> _enableIOSPip() async {
+    if (!await IosPictureInPicture.isSupported()) {
+      SmartDialog.showToast("设备不支持小窗播放");
+      return;
+    }
+    final handle = await player.handle;
+    if (handle == 0) {
+      SmartDialog.showToast("进入小窗失败");
+      return;
+    }
+    _iosPipHandle = handle;
+    _ensureIosPipEventListener();
+    await IosPictureInPicture.setHardwareAcceleration(
+      handle: handle,
+      enabled: false,
+    );
+    final started = await IosPictureInPicture.start(
+      handle: handle,
+      startImmediately: true,
+    );
+    if (!started) {
+      await _teardownIosPip();
+      SmartDialog.showToast("进入小窗失败");
+    }
+  }
+
+  void _ensureIosPipEventListener() {
+    _iosPipEventSubscription ??= IosPictureInPicture.events.listen(
+      _onIosPipEvent,
+      onError: (e) {
+        Log.d("iOS 小窗事件异常: $e");
+      },
+    );
+  }
+
+  void _onIosPipEvent(dynamic event) {
+    if (event is! Map) {
+      return;
+    }
+    final type = event['event']?.toString();
+    switch (type) {
+      case 'didStart':
+        _applyPipEnteredState();
+        break;
+      case 'restore':
+      case 'didStop':
+        // 用户点击小窗恢复按钮或返回 App：继续播放，只做状态恢复
+        unawaited(_teardownIosPip());
+        break;
+      case 'closed':
+        // 用户在小窗点关闭：结束观看，暂停播放
+        unawaited(_teardownIosPip(pauseOnClosed: true));
+        break;
+      case 'failed':
+        Log.w("iOS 小窗启动失败: ${event['reason']}");
+        unawaited(_teardownIosPip());
+        SmartDialog.showToast("进入小窗失败");
+        break;
+      case 'setPlaying':
+        final playing = event['playing'] == true;
+        unawaited(playing ? player.play() : player.pause());
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _teardownIosPip({bool pauseOnClosed = false}) async {
+    if (_iosPipTearingDown) {
+      return;
+    }
+    _iosPipTearingDown = true;
+    try {
+      await IosPictureInPicture.stop();
+      final handle = _iosPipHandle;
+      if (handle != null) {
+        await IosPictureInPicture.setHardwareAcceleration(
+          handle: handle,
+          enabled: true,
+        );
+      }
+      _iosPipHandle = null;
+      _restorePipExitedState();
+      if (pauseOnClosed) {
+        await player.pause();
+      }
+    } catch (e) {
+      Log.d("iOS 小窗退出清理失败: $e");
+    } finally {
+      _iosPipTearingDown = false;
     }
   }
 }

@@ -1651,10 +1651,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   // ===== iOS 画中画（AVSampleBufferDisplayLayer 路线，iOS 15+） =====
   // 帧源由 vendored media_kit_video 提供：每帧 CVPixelBuffer 零拷贝送入
-  // 系统小窗。会话期间切到纯软渲染（mpv zimg），规避退后台后失去 GPU
-  // 访问权导致 GL 停帧的问题（上游 PR #206 当年的死因）。
+  // 系统小窗。帧源保持硬件渲染路径：真机上 mpv 软渲染器（zimg）无法映射
+  // VideoToolbox 硬解帧（模拟器无硬解故正常），切换软渲染会导致画面全黑。
   StreamSubscription<dynamic>? _iosPipEventSubscription;
-  int? _iosPipHandle;
   bool _iosPipTearingDown = false;
 
   Future<void> _enableIOSPip() async {
@@ -1667,12 +1666,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       SmartDialog.showToast("进入小窗失败");
       return;
     }
-    _iosPipHandle = handle;
     _ensureIosPipEventListener();
-    await IosPictureInPicture.setHardwareAcceleration(
-      handle: handle,
-      enabled: false,
-    );
+    Log.i("iOS 小窗启动：handle=$handle");
     final started = await IosPictureInPicture.start(
       handle: handle,
       startImmediately: true,
@@ -1697,6 +1692,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       return;
     }
     final type = event['event']?.toString();
+    Log.i("iOS 小窗事件：$event");
     switch (type) {
       case 'didStart':
         _applyPipEnteredState();
@@ -1731,14 +1727,6 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     _iosPipTearingDown = true;
     try {
       await IosPictureInPicture.stop();
-      final handle = _iosPipHandle;
-      if (handle != null) {
-        await IosPictureInPicture.setHardwareAcceleration(
-          handle: handle,
-          enabled: true,
-        );
-      }
-      _iosPipHandle = null;
       _restorePipExitedState();
       if (pauseOnClosed) {
         await player.pause();

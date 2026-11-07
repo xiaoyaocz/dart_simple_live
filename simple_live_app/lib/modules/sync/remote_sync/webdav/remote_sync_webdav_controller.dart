@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart';
@@ -26,6 +27,37 @@ import 'package:simple_live_core/simple_live_core.dart';
 Archive _decodeWebDavBackupArchive(List<int> data) {
   final zipDecoder = ZipDecoder();
   return zipDecoder.decodeBytes(data);
+}
+
+/// 提取 WebDAV 请求失败的关键诊断信息：请求方法、URL、状态码与服务器响应体。
+/// 服务器返回 5xx 时响应体往往带有具体原因（如 Alist 的 {"message":"failed get..."}）。
+Future<String> _davErrorDetail(Object e) async {
+  if (e is! DioException) {
+    return "";
+  }
+  final resp = e.response;
+  if (resp == null) {
+    return "";
+  }
+  final requestOptions = resp.requestOptions;
+  var body = "";
+  try {
+    final data = resp.data;
+    if (data is ResponseBody) {
+      body = await data.stream.cast<List<int>>().transform(utf8.decoder).join();
+    } else if (data is String) {
+      body = data;
+    } else if (data != null) {
+      body = data.toString();
+    }
+  } catch (_) {}
+  body = body.trim();
+  if (body.length > 300) {
+    body = body.substring(0, 300);
+  }
+  final method = requestOptions.method;
+  final url = requestOptions.uri.toString();
+  return "[$method $url] HTTP ${resp.statusCode}${body.isEmpty ? "" : "：$body"}";
 }
 
 class RemoteSyncWebDAVController extends BaseController {
@@ -165,8 +197,9 @@ class RemoteSyncWebDAVController extends BaseController {
         SmartDialog.showToast("上传失败");
       }
     } catch (e) {
-      Log.e("WebDAV 上传失败：$e", StackTrace.current);
-      SmartDialog.showToast("上传失败：${exceptionToString(e)}");
+      final detail = await _davErrorDetail(e);
+      Log.e("WebDAV 上传失败：$e $detail", StackTrace.current);
+      SmartDialog.showToast("上传失败：${exceptionToString(e)} $detail");
     } finally {
       SyncProgressDialog.dismiss();
     }
@@ -312,8 +345,9 @@ class RemoteSyncWebDAVController extends BaseController {
           LocalStorageService.kWebDAVLastRecoverTime,
           recoverTime.millisecondsSinceEpoch);
     } catch (e) {
-      Log.e("WebDAV 恢复失败：$e", StackTrace.current);
-      SmartDialog.showToast("恢复失败：${exceptionToString(e)}");
+      final detail = await _davErrorDetail(e);
+      Log.e("WebDAV 恢复失败：$e $detail", StackTrace.current);
+      SmartDialog.showToast("恢复失败：${exceptionToString(e)} $detail");
     } finally {
       SyncProgressDialog.dismiss();
       try {

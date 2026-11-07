@@ -33,6 +33,8 @@
     private var didReturnToApp: Bool = false
     private var enqueuedFrameCount: Int = 0
     private var droppedByBackpressureCount: Int = 0
+    /// 仅在 enqueueQueue 上访问：置位后丢弃所有后续入队
+    private var isStopped = false
 
     init(
       hostView: UIView,
@@ -166,14 +168,22 @@
         self.handle = nil
       }
       pipController = nil
-      displayLayer.flushAndRemoveImage()
-      displayLayer.removeFromSuperlayer()
+      // 先在入队串行队列上断流，确保所有在途入队完成后（不再有新引用）
+      // 再 flush，杜绝小窗图层残留渲染池缓冲
+      enqueueQueue.async { [weak self] in
+        guard let self = self else { return }
+        self.isStopped = true
+        self.displayLayer.flushAndRemoveImage()
+        DispatchQueue.main.async { [weak self] in
+          self?.displayLayer.removeFromSuperlayer()
+        }
+      }
     }
 
     private func enqueue(pixelBuffer: CVPixelBuffer) {
       let retained = pixelBuffer
       enqueueQueue.async { [weak self] in
-        guard let self = self else { return }
+        guard let self = self, !self.isStopped else { return }
         guard self.displayLayer.isReadyForMoreMediaData else {
           self.droppedByBackpressureCount += 1
           if self.droppedByBackpressureCount % 120 == 1 {
@@ -184,7 +194,18 @@
           }
           return
         }
-        guard let sample = self.makeSampleBuffer(from: retained) else {
+        // 关键：拷贝到私有缓冲再入队。渲染池只有 3 块缓冲轮转复用，
+        // 若直接引用池内缓冲，退出小窗后图层残留的引用会与 GL 渲染
+        // 争抢同一块内存，App 内画面表现为卡在某处反复抽动
+        guard let privateBuffer = Self.copyPixelBuffer(retained) else {
+          NSLog("MediaKitPiP: copyPixelBuffer failed, fallback to shared")
+          guard let sample = self.makeSampleBuffer(from: retained) else {
+            return
+          }
+          self.displayLayer.enqueue(sample)
+          return
+        }
+        guard let sample = self.makeSampleBuffer(from: privateBuffer) else {
           NSLog("MediaKitPiP: makeSampleBuffer failed")
           return
         }
@@ -205,6 +226,49 @@
           )
         }
       }
+    }
+
+    /// 把渲染缓冲拷贝到一块私有 CVPixelBuffer（与源同尺寸同像素格式）
+    private static func copyPixelBuffer(_ src: CVPixelBuffer) -> CVPixelBuffer? {
+      let width = CVPixelBufferGetWidth(src)
+      let height = CVPixelBufferGetHeight(src)
+      let format = CVPixelBufferGetPixelFormatType(src)
+      var dst: CVPixelBuffer?
+      let attrs = [kCVPixelBufferMetalCompatibilityKey: true] as CFDictionary
+      guard
+        CVPixelBufferCreate(
+          kCFAllocatorDefault, width, height, format, attrs, &dst
+        ) == kCVReturnSuccess,
+        let out = dst
+      else { return nil }
+
+      CVPixelBufferLockBaseAddress(src, .readOnly)
+      CVPixelBufferLockBaseAddress(out, [])
+      defer {
+        CVPixelBufferUnlockBaseAddress(src, .readOnly)
+        CVPixelBufferUnlockBaseAddress(out, [])
+      }
+
+      guard let srcBase = CVPixelBufferGetBaseAddress(src),
+        let dstBase = CVPixelBufferGetBaseAddress(out)
+      else { return nil }
+
+      let srcStride = CVPixelBufferGetBytesPerRow(src)
+      let dstStride = CVPixelBufferGetBytesPerRow(out)
+      if srcStride == dstStride {
+        memcpy(dstBase, srcBase, srcStride * height)
+      } else {
+        // 行跨度不一致（对齐差异）时逐行拷贝
+        let rowBytes = min(srcStride, dstStride)
+        for row in 0..<height {
+          memcpy(
+            dstBase.advanced(by: row * dstStride),
+            srcBase.advanced(by: row * srcStride),
+            rowBytes
+          )
+        }
+      }
+      return out
     }
 
     private func makeSampleBuffer(from pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {

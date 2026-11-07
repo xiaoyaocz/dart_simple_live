@@ -1651,14 +1651,22 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   // ===== iOS 画中画（AVSampleBufferDisplayLayer 路线，iOS 15+） =====
   // 帧源由 vendored media_kit_video 提供：每帧 CVPixelBuffer 零拷贝送入
-  // 系统小窗。帧源保持硬件渲染路径：真机上 mpv 软渲染器（zimg）无法映射
-  // VideoToolbox 硬解帧（模拟器无硬解故正常），切换软渲染会导致画面全黑。
+  // 系统小窗。小窗会话期间整体切换到纯 CPU 路径（软渲染 + 软解码）：
+  // 退后台后 iOS 收回 GPU 访问权导致 GL 停帧，而 mpv 软渲染器又无法
+  // 映射 VideoToolbox 硬解帧（真机全黑根因），因此两者必须同时切换。
+  // 所有切换严格限定在会话内，退出时按用户原始配置还原，正常播放
+  // 路径不受任何影响。
   StreamSubscription<dynamic>? _iosPipEventSubscription;
   bool _iosPipTearingDown = false;
+  bool _iosPipActive = false;
+  bool _iosPipOriginalHardwareDecode = true;
 
   Future<void> _enableIOSPip() async {
     if (!await IosPictureInPicture.isSupported()) {
       SmartDialog.showToast("设备不支持小窗播放");
+      return;
+    }
+    if (_iosPipActive) {
       return;
     }
     final handle = await player.handle;
@@ -1666,8 +1674,20 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       SmartDialog.showToast("进入小窗失败");
       return;
     }
+    _iosPipActive = true;
     _ensureIosPipEventListener();
     Log.i("iOS 小窗启动：handle=$handle");
+    _iosPipOriginalHardwareDecode =
+        AppSettingsController.instance.hardwareDecode.value;
+    await IosPictureInPicture.setHardwareAcceleration(
+      handle: handle,
+      enabled: false,
+    );
+    try {
+      await _setIosPipHwdec("no");
+    } catch (e) {
+      Log.w("iOS 小窗切换软解码失败: $e");
+    }
     final started = await IosPictureInPicture.start(
       handle: handle,
       startImmediately: true,
@@ -1676,6 +1696,11 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
       await _teardownIosPip();
       SmartDialog.showToast("进入小窗失败");
     }
+  }
+
+  Future<void> _setIosPipHwdec(String value) async {
+    final nativePlayer = player.platform as NativePlayer;
+    await nativePlayer.setProperty("hwdec", value);
   }
 
   void _ensureIosPipEventListener() {
@@ -1721,12 +1746,27 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 
   Future<void> _teardownIosPip({bool pauseOnClosed = false}) async {
-    if (_iosPipTearingDown) {
+    if (_iosPipTearingDown || !_iosPipActive) {
       return;
     }
     _iosPipTearingDown = true;
     try {
       await IosPictureInPicture.stop();
+      // 按进入小窗前的原始配置还原解码/渲染，正常播放不受会话影响；
+      // 原生侧对"已是目标状态"的切换为空操作，重复调用安全
+      final restoreHardware = _iosPipOriginalHardwareDecode;
+      final handle = await player.handle;
+      if (handle != 0) {
+        await IosPictureInPicture.setHardwareAcceleration(
+          handle: handle,
+          enabled: restoreHardware,
+        );
+      }
+      try {
+        await _setIosPipHwdec(restoreHardware ? "auto" : "no");
+      } catch (e) {
+        Log.w("iOS 小窗恢复解码配置失败: $e");
+      }
       _restorePipExitedState();
       if (pauseOnClosed) {
         await player.pause();
@@ -1734,6 +1774,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     } catch (e) {
       Log.d("iOS 小窗退出清理失败: $e");
     } finally {
+      _iosPipActive = false;
       _iosPipTearingDown = false;
     }
   }

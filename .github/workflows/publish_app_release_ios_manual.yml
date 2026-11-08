@@ -79,25 +79,21 @@ jobs:
         shell: bash
         run: |
           cd simple_live_app
-          base=$(grep -E '^version:' pubspec.yaml | head -1 | sed 's/^version:[[:space:]]*//')
           suffix="${{ inputs.version_suffix }}"
-          if [ -n "$suffix" ]; then
-            echo "name=${base}${suffix}" >> "$GITHUB_OUTPUT"
-            echo "use_custom=true" >> "$GITHUB_OUTPUT"
-            echo "App version: ${base}${suffix}"
-          else
-            echo "use_custom=false" >> "$GITHUB_OUTPUT"
-            echo "App version: ${base} (no suffix)"
-          fi
+          # 后缀注入 Dart 常量（lib/app/build_tag.dart），日志导出的
+          # App Version 直接携带。不使用 --build-name：Xcode 会清洗
+          # 版本串中的 + 和 -，导致后缀变形（实测 1.13.3+11303-S1 变成
+          # 1.13.3113031+11303）。
+          cat > lib/app/build_tag.dart <<EOF
+          /// CI 构建时注入的测试包标识（如 "-S1"、"-R1"），本地构建为空字符串。
+          const String kBuildTag = "$suffix";
+          EOF
+          echo "App build tag: $suffix"
 
       - name: Build iOS
         run: |
           cd simple_live_app
-          ARGS=""
-          if [ "${{ steps.build_name.outputs.use_custom }}" = "true" ]; then
-            ARGS="--build-name=${{ steps.build_name.outputs.name }}"
-          fi
-          flutter build ios --release --no-codesign $ARGS
+          flutter build ios --release --no-codesign
 
       - name: Create unsigned IPA
         run: |

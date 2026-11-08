@@ -17,6 +17,11 @@
     private let outputManager: VideoOutputManager
     // 用 AnyObject 装箱持有 iOS 15+ 类型，避免在更低部署目标下的类型可用性问题
     private var controllerBox: AnyObject?
+    /// 已停止、等待延迟释放的控制器。iOS 26/27 的 AVKit 在
+    /// stopPictureInPicture 之后仍会异步访问 sample buffer 图层的内部
+    /// 对象（社区报告的系统级缺陷），立即释放控制器会命中该窗口；
+    /// 退役控制器保留 3 秒再释放。
+    private var retiredControllers: [MediaKitPictureInPictureController] = []
     private var eventSink: FlutterEventSink?
     private var audioSessionConfigured: Bool = false
 
@@ -74,6 +79,7 @@
           let controller = controllerBox as? MediaKitPictureInPictureController
         {
           controller.stop()
+          retire(controller)
         }
         controllerBox = nil
         result(nil)
@@ -92,6 +98,15 @@
         result(nil)
       default:
         result(FlutterMethodNotImplemented)
+      }
+    }
+
+    /// 停止并延迟释放控制器，避开 AVKit 内部异步访问的释放窗口
+    private func retire(_ controller: MediaKitPictureInPictureController) {
+      retiredControllers.append(controller)
+      DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+        guard let self = self else { return }
+        self.retiredControllers.removeAll { /usr/bin/bash === controller }
       }
     }
 
@@ -130,7 +145,10 @@
 
       configureAudioSessionIfNeeded()
 
-      (controllerBox as? MediaKitPictureInPictureController)?.stop()
+      if let old = controllerBox as? MediaKitPictureInPictureController {
+        old.stop()
+        retire(old)
+      }
       let pipController = MediaKitPictureInPictureController(
         hostView: hostView,
         outputManager: outputManager

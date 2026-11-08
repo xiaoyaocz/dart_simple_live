@@ -21,7 +21,7 @@
     /// stopPictureInPicture 之后仍会异步访问 sample buffer 图层的内部
     /// 对象（社区报告的系统级缺陷），立即释放控制器会命中该窗口；
     /// 退役控制器保留 3 秒再释放。
-    private var retiredControllers: [MediaKitPictureInPictureController] = []
+    private var retiredControllers: [AnyObject] = []
     private var eventSink: FlutterEventSink?
     private var audioSessionConfigured: Bool = false
 
@@ -102,7 +102,8 @@
     }
 
     /// 停止并延迟释放控制器，避开 AVKit 内部异步访问的释放窗口
-    private func retire(_ controller: MediaKitPictureInPictureController) {
+    private func retire(_ controller: AnyObject) {
+      guard #available(iOS 15.0, *) else { return }
       retiredControllers.append(controller)
       DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
         guard let self = self else { return }

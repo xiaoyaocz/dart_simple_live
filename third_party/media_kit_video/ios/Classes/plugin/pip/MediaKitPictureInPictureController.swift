@@ -168,15 +168,15 @@
         self.handle = nil
       }
       pipController = nil
-      // 先在入队串行队列上断流，确保所有在途入队完成后（不再有新引用）
-      // 再 flush；CALayer 状态操作必须在主线程
+      // 断流与 flush 必须在同一队列上串行：flush 与 enqueue 竞争是
+      // 文档化的崩溃条件。AVSampleBufferDisplayLayer 的媒体 API
+      // （enqueue/flush）自身线程安全，主线程约束只涉及几何属性
       enqueueQueue.async { [weak self] in
         guard let self = self else { return }
         self.isStopped = true
+        self.displayLayer.flushAndRemoveImage()
         DispatchQueue.main.async { [weak self] in
-          guard let self = self else { return }
-          self.displayLayer.flushAndRemoveImage()
-          self.displayLayer.removeFromSuperlayer()
+          self?.displayLayer.removeFromSuperlayer()
         }
       }
     }
@@ -185,6 +185,13 @@
       let retained = pixelBuffer
       enqueueQueue.async { [weak self] in
         guard let self = self, !self.isStopped else { return }
+        // 后台/前台切换后图层解码器可能失效，需先 flush 才能继续
+        // enqueue（Apple: requiresFlushToResumeDecoding）
+        if self.displayLayer.status == .failed
+          || self.displayLayer.requiresFlushToResumeDecoding {
+          NSLog("MediaKitPiP: layer decoder invalid, flush before enqueue")
+          self.displayLayer.flush()
+        }
         guard self.displayLayer.isReadyForMoreMediaData else {
           self.droppedByBackpressureCount += 1
           if self.droppedByBackpressureCount % 120 == 1 {

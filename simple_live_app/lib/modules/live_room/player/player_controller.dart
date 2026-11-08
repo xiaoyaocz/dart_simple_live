@@ -1724,6 +1724,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         Log.w("iOS 小窗重开播放失败: $e");
       }
     } else {
+      _iosPipPipelineSwitched = false;
       Log.i("iOS 小窗启动（即显省电）：handle=$handle");
     }
     final started = await IosPictureInPicture.start(
@@ -1823,6 +1824,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
             Log.w("iOS 小窗恢复播放失败: $e");
           }
         }
+        _iosPipPipelineSwitched = false;
       }
       _restorePipExitedState();
     } catch (e) {

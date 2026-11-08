@@ -135,7 +135,11 @@
         hostView: hostView,
         outputManager: outputManager
       ) { [weak self] event in
-        self?.eventSink?(event)
+        // FlutterEventSink 必须在主线程调用：stats 事件从入队串行队列
+        // 发出，其余事件虽已在主线程，统一再派发一次保证线程正确
+        DispatchQueue.main.async {
+          self?.eventSink?(event)
+        }
       }
       self.controllerBox = pipController
 

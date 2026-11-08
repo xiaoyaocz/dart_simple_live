@@ -17,10 +17,11 @@
     private let outputManager: VideoOutputManager
     // 用 AnyObject 装箱持有 iOS 15+ 类型，避免在更低部署目标下的类型可用性问题
     private var controllerBox: AnyObject?
-    /// 已停止、等待延迟释放的控制器。iOS 26/27 的 AVKit 在
-    /// stopPictureInPicture 之后仍会异步访问 sample buffer 图层的内部
-    /// 对象（社区报告的系统级缺陷），立即释放控制器会命中该窗口；
-    /// 退役控制器保留 3 秒再释放。
+    /// 已停止、永不释放的控制器。iOS 26/27 的 AVKit 对已停止的
+    /// sample buffer 图层持有长生命周期内部引用，任何时机的 deinit
+    /// 都会命中释放窗口（实测延迟 3 秒释放仅把崩溃推后 3 秒）。
+    /// 引用随插件生命周期统一回收，每个小窗会话累积一个已 flush 的
+    /// 空图层，内存代价极小。
     private var retiredControllers: [AnyObject] = []
     private var eventSink: FlutterEventSink?
     private var audioSessionConfigured: Bool = false
@@ -101,14 +102,14 @@
       }
     }
 
-    /// 停止并延迟释放控制器，避开 AVKit 内部异步访问的释放窗口
+    /// 停止并永久保留控制器引用（不再释放）。
+    /// 实测：延迟 3 秒释放只是把崩溃推后了同样时长——iOS 26/27 的 AVKit
+    /// 对已停止的 sample buffer 图层持有长生命周期的内部引用，图层 deinit
+    /// 无论何时发生都会命中释放窗口。每个小窗会话仅累积一个已 flush 的
+    /// 空图层（内存代价极小），引用随插件生命周期统一回收。
     private func retire(_ controller: AnyObject) {
       guard #available(iOS 15.0, *) else { return }
       retiredControllers.append(controller)
-      DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-        guard let self = self else { return }
-        self.retiredControllers.removeAll { $0 === controller }
-      }
     }
 
     private func handleStart(_ arguments: Any?, result: @escaping FlutterResult) {

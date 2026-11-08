@@ -20,6 +20,10 @@ on:
         description: "6.1 quota strategy: use GitHub Actions only for macOS/iOS; build Android/Windows/Linux/TV locally"
         required: false
         default: "iOS only"
+      version_suffix:
+        description: "App version suffix for test identification, e.g. -hwA1; empty keeps pubspec version"
+        required: false
+        default: ""
 
 jobs:
   build-ios:
@@ -70,10 +74,30 @@ jobs:
           echo "ref_name=$ref_name" >> "$GITHUB_OUTPUT"
           echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve build name
+        id: build_name
+        shell: bash
+        run: |
+          cd simple_live_app
+          base=$(grep -E '^version:' pubspec.yaml | head -1 | sed 's/^version:[[:space:]]*//')
+          suffix="${{ inputs.version_suffix }}"
+          if [ -n "$suffix" ]; then
+            echo "name=${base}${suffix}" >> "$GITHUB_OUTPUT"
+            echo "use_custom=true" >> "$GITHUB_OUTPUT"
+            echo "App version: ${base}${suffix}"
+          else
+            echo "use_custom=false" >> "$GITHUB_OUTPUT"
+            echo "App version: ${base} (no suffix)"
+          fi
+
       - name: Build iOS
         run: |
           cd simple_live_app
-          flutter build ios --release --no-codesign
+          ARGS=""
+          if [ "${{ steps.build_name.outputs.use_custom }}" = "true" ]; then
+            ARGS="--build-name=${{ steps.build_name.outputs.name }}"
+          fi
+          flutter build ios --release --no-codesign $ARGS
 
       - name: Create unsigned IPA
         run: |

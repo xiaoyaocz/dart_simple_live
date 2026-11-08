@@ -31,6 +31,10 @@
     private var startAttempts: Int = 0
     private var didRestoreInterface: Bool = false
     private var didReturnToApp: Bool = false
+    /// PiP 停止流程进行中（willStop → didStop 之间）。此期间跳过
+    /// didBecomeActive 的自动停止，避免与系统已启动的停止流程叠加，
+    /// 造成状态机卡死（PiP 窗口残留，App 与小窗双放）
+    private var isStopInProgress: Bool = false
     private var enqueuedFrameCount: Int = 0
     private var droppedByBackpressureCount: Int = 0
     /// 仅在 enqueueQueue 上访问：置位后丢弃所有后续入队
@@ -70,7 +74,8 @@
     /// 标记 didReturnToApp，让 Dart 侧把这次结束与"用户点关闭"区分开。
     @objc private func appDidBecomeActive() {
       guard let controller = pipController,
-        controller.isPictureInPictureActive
+        controller.isPictureInPictureActive,
+        !isStopInProgress
       else { return }
       didReturnToApp = true
       DispatchQueue.main.async {
@@ -348,6 +353,7 @@
       _ controller: AVPictureInPictureController
     ) {
       didRestoreInterface = false
+      isStopInProgress = true
       eventCallback(["event": "willStop"])
     }
 
@@ -361,6 +367,7 @@
       }
       didRestoreInterface = false
       didReturnToApp = false
+      isStopInProgress = false
     }
 
     func pictureInPictureController(
@@ -370,7 +377,19 @@
     ) {
       didRestoreInterface = true
       eventCallback(["event": "restore"])
-      completionHandler(true)
+      // completionHandler 必须异步调用：同步调用会让 AVKit 的停止
+      // 状态机卡在 willStop 与 didStop 之间（实测 PiP 窗口残留、
+      // App 与小窗双放持续）。同时兜底校验，若 1.5 秒后小窗仍存活
+      // 则再次请求停止。
+      DispatchQueue.main.async { completionHandler(true) }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+        guard let self = self,
+          let controller = self.pipController,
+          controller.isPictureInPictureActive
+        else { return }
+        NSLog("MediaKitPiP: PiP still active after restore, retry stop")
+        controller.stopPictureInPicture()
+      }
     }
   }
 

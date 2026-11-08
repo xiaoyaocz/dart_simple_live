@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'build_tag.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class Log {
@@ -156,7 +157,7 @@ class LogFileWriter {
     write("Version: ${Platform.operatingSystemVersion}");
     write("Local: ${Platform.localeName}");
     write(
-        "App Version: ${Utils.packageInfo.version}+${Utils.packageInfo.buildNumber}");
+        "App Version: ${Utils.packageInfo.version}+${Utils.packageInfo.buildNumber}$kBuildTag");
     if (Platform.isAndroid) {
       write((await deviceInfo.androidInfo).data.toString());
     } else if (Platform.isIOS) {

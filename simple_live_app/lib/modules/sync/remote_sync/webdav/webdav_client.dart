@@ -17,10 +17,13 @@ class DAVClient {
       user: webDAVUser,
       password: webDAVPassword,
     );
+    // 仅设置必要头。GET 请求不能携带 Content-Type：
+    // Alist 等网关代理到 OSS 签名直链时会把该头透传，
+    // 与直链签名不一致导致 SignatureDoesNotMatch（HTTP 403→500）。
+    // PROPFIND 所需的 XML Content-Type 由 webdav_client 内部自行设置。
     client.setHeaders(
       {
         'accept-charset': 'utf-8',
-        'Content-Type': 'text/xml',
       },
     );
     client.setConnectTimeout(15000);

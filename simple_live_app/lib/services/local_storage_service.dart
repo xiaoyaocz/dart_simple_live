@@ -169,6 +169,9 @@ class LocalStorageService extends GetxService {
   static const String kEnablePipDanmu = "EnablePipDanmu";
   static const String kPipDanmuScale = "PipDanmuScale";
 
+  // iOS 小窗（画中画）
+  static const String kPipKeepBackgroundVideo = "PipKeepBackgroundVideo";
+
   // SuperChat 全屏滚动
   static const String kSuperChatScrollInFullscreen = "SuperChatScrollInFullscreen";
 

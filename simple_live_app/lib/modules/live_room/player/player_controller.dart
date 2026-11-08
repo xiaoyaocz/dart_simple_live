@@ -693,6 +693,12 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     _androidLandscapePendingAfterExternalWindow = false;
     _androidExternalWindowExitGeneration += 1;
     _pipSubscription?.cancel();
+    if (Platform.isIOS) {
+      // 房间关闭时若画中画仍在进行，立即拆除并恢复硬渲染
+      await _teardownIosPip();
+      _iosPipEventSubscription?.cancel();
+      _iosPipEventSubscription = null;
+    }
     if (Platform.isAndroid && _androidWindowChannelActive) {
       final token = _androidWindowHandlerToken;
       _androidWindowChannelActive = false;
@@ -1618,6 +1624,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   }
 
   Future enablePIP() async {
+    if (Platform.isIOS) {
+      await _enableIOSPip();
+      return;
+    }
     if (!Platform.isAndroid) {
       SmartDialog.showToast("当前平台暂不支持小窗播放");
       return;
@@ -1636,6 +1646,190 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     );
     if (status != PiPStatus.enabled) {
       SmartDialog.showToast("进入小窗失败");
+    }
+  }
+
+  // ===== iOS 画中画（AVSampleBufferDisplayLayer 路线，iOS 15+） =====
+  // 帧源由 vendored media_kit_video 提供：每帧 CVPixelBuffer 零拷贝送入
+  // 系统小窗。小窗会话期间整体切换到纯 CPU 路径（软渲染 + 软解码）：
+  // 退后台后 iOS 收回 GPU 访问权导致 GL 停帧，而 mpv 软渲染器又无法
+  // 映射 VideoToolbox 硬解帧（真机全黑根因），因此两者必须同时切换。
+  // 所有切换严格限定在会话内，退出时按用户原始配置还原，正常播放
+  // 路径不受任何影响。
+  StreamSubscription<dynamic>? _iosPipEventSubscription;
+  bool _iosPipTearingDown = false;
+  bool _iosPipActive = false;
+  bool _iosPipOriginalHardwareDecode = true;
+  String _iosPipOriginalHwdec = "auto-safe";
+  Media? _iosPipMedia;
+  /// 本会话是否执行了停播重建（后台保持画面开关开启时）；
+  /// 退出时按标记决定是否还原解码/渲染配置
+  bool _iosPipPipelineSwitched = false;
+
+  Future<void> _enableIOSPip() async {
+    if (!await IosPictureInPicture.isSupported()) {
+      SmartDialog.showToast("设备不支持小窗播放");
+      return;
+    }
+    if (_iosPipActive) {
+      return;
+    }
+    final handle = await player.handle;
+    if (handle == 0) {
+      SmartDialog.showToast("进入小窗失败");
+      return;
+    }
+    final media = player.state.playlist.medias.isNotEmpty
+        ? player.state.playlist.medias.first
+        : null;
+    if (media == null) {
+      SmartDialog.showToast("进入小窗失败");
+      return;
+    }
+    _iosPipActive = true;
+    _ensureIosPipEventListener();
+    final nativePlayer = player.platform as NativePlayer;
+    // 后台保持画面（默认开）：停播重建管线到软解码+软渲染，
+    // 纯 CPU 路径不依赖 GPU 访问权，退后台可持续出帧；关闭后走
+    // 即显省电路线（秒开，后台画面冻结、音频正常）。
+    // 播放中运行时交换渲染上下文会销毁 vo_libmpv 导致视频链掉线
+    //（mpv 日志 Video: no video），因此重建必须在停播状态下进行。
+    final keepBackground =
+        AppSettingsController.instance.pipKeepBackgroundVideo.value;
+    if (keepBackground) {
+      _iosPipMedia = media;
+      _iosPipPipelineSwitched = true;
+      Log.i("iOS 小窗启动（后台保持画面）：handle=$handle media=${media.uri}");
+      try {
+        _iosPipOriginalHwdec =
+            (await nativePlayer.getProperty("hwdec")).toString();
+      } catch (e) {
+        Log.w("iOS 小窗读取原始 hwdec 失败: $e");
+      }
+      _iosPipOriginalHardwareDecode =
+          AppSettingsController.instance.hardwareDecode.value;
+      try {
+        await player.stop();
+        await _setIosPipHwdec("no");
+      } catch (e) {
+        Log.w("iOS 小窗切换软解码失败: $e");
+      }
+      await IosPictureInPicture.setHardwareAcceleration(
+        handle: handle,
+        enabled: false,
+      );
+      try {
+        await player.open(media);
+      } catch (e) {
+        Log.w("iOS 小窗重开播放失败: $e");
+      }
+    } else {
+      Log.i("iOS 小窗启动（即显省电）：handle=$handle");
+    }
+    final started = await IosPictureInPicture.start(
+      handle: handle,
+      startImmediately: true,
+    );
+    if (!started) {
+      await _teardownIosPip();
+      SmartDialog.showToast("进入小窗失败");
+    }
+  }
+
+  Future<void> _setIosPipHwdec(String value) async {
+    final nativePlayer = player.platform as NativePlayer;
+    final before = await nativePlayer.getProperty("hwdec");
+    await nativePlayer.setProperty("hwdec", value);
+    final after = await nativePlayer.getProperty("hwdec");
+    Log.i("iOS 小窗 hwdec 切换：$before -> $value（生效 $after）");
+  }
+
+  void _ensureIosPipEventListener() {
+    _iosPipEventSubscription ??= IosPictureInPicture.events.listen(
+      _onIosPipEvent,
+      onError: (e) {
+        Log.d("iOS 小窗事件异常: $e");
+      },
+    );
+  }
+
+  void _onIosPipEvent(dynamic event) {
+    if (event is! Map) {
+      return;
+    }
+    final type = event['event']?.toString();
+    Log.i("iOS 小窗事件：$event");
+    switch (type) {
+      case 'didStart':
+        _applyPipEnteredState();
+        break;
+      case 'restore':
+      case 'didStop':
+        // 用户点击小窗恢复按钮或返回 App：继续播放，只做状态恢复
+        unawaited(_teardownIosPip());
+        break;
+      case 'closed':
+        // 用户在小窗点关闭：结束观看，暂停播放
+        unawaited(_teardownIosPip(pauseOnClosed: true));
+        break;
+      case 'failed':
+        Log.w("iOS 小窗启动失败: ${event['reason']}");
+        unawaited(_teardownIosPip());
+        SmartDialog.showToast("进入小窗失败");
+        break;
+      case 'setPlaying':
+        final playing = event['playing'] == true;
+        unawaited(playing ? player.play() : player.pause());
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _teardownIosPip({bool pauseOnClosed = false}) async {
+    if (_iosPipTearingDown || !_iosPipActive) {
+      return;
+    }
+    _iosPipTearingDown = true;
+    try {
+      await IosPictureInPicture.stop();
+      // 仅停播重建会话需要还原解码/渲染（停播状态下交换，同进入时）；
+      // 正常播放不受会话影响，原生侧对"已是目标状态"的切换为空操作
+      if (_iosPipPipelineSwitched) {
+        final restoreHardware = _iosPipOriginalHardwareDecode;
+        final handle = await player.handle;
+        final media = _iosPipMedia;
+        _iosPipMedia = null;
+        try {
+          await player.stop();
+        } catch (e) {
+          Log.d("iOS 小窗停止播放失败: $e");
+        }
+        if (handle != 0) {
+          await IosPictureInPicture.setHardwareAcceleration(
+            handle: handle,
+            enabled: restoreHardware,
+          );
+        }
+        try {
+          await _setIosPipHwdec(_iosPipOriginalHwdec);
+        } catch (e) {
+          Log.w("iOS 小窗恢复解码配置失败: $e");
+        }
+        if (media != null) {
+          try {
+            await player.open(media, play: !pauseOnClosed);
+          } catch (e) {
+            Log.w("iOS 小窗恢复播放失败: $e");
+          }
+        }
+      }
+      _restorePipExitedState();
+    } catch (e) {
+      Log.d("iOS 小窗退出清理失败: $e");
+    } finally {
+      _iosPipActive = false;
+      _iosPipTearingDown = false;
     }
   }
 }

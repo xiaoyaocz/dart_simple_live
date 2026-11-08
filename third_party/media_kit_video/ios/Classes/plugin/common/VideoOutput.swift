@@ -25,7 +25,7 @@ public class VideoOutput: NSObject {
   }()
 
   private let handle: OpaquePointer
-  private let enableHardwareAcceleration: Bool
+  private var enableHardwareAcceleration: Bool
   private let registry: FlutterTextureRegistry
   private let textureUpdateCallback: TextureUpdateCallback
   private let worker: Worker = .init()
@@ -70,6 +70,43 @@ public class VideoOutput: NSObject {
     worker.enqueue {
       self.width = width
       self.height = height
+    }
+  }
+
+  /// 注册每帧回调（iOS 画中画帧源）。回调在 worker 线程触发，
+  /// 携带的 CVPixelBuffer 与纹理渲染共享同一缓冲，零拷贝。
+  public func setOnFrameRendered(_ callback: ((CVPixelBuffer) -> Void)?) {
+    worker.enqueue {
+      self.texture?.onFrameRendered = callback
+    }
+  }
+
+  /// 切换硬件/软件渲染。iOS 画中画会话期间必须使用纯软件渲染：
+  /// 退后台后进程失去 GPU 访问权，GL 路径（TextureHW/TextureSW-GL 均依赖
+  /// mpv GL 渲染上下文）会停帧；TextureSW 走 mpv 的 zimg 软件渲染器，不受影响。
+  ///
+  /// mpv 实例同一时刻只允许存在一个渲染上下文：先同步注销旧纹理并释放
+  /// （deinit 内 mpv_render_context_free），再创建新纹理，全部串行在
+  /// 同一 worker 上，避免释放/创建竞态。
+  public func setHardwareAcceleration(_ enabled: Bool) {
+    worker.enqueue {
+      guard !self.disposed, self.enableHardwareAcceleration != enabled else {
+        return
+      }
+      self.enableHardwareAcceleration = enabled
+      let registry_ = self.registry
+      let oldTextureId = self.textureId
+      if oldTextureId >= 0 {
+        self.textureId = -1
+        DispatchQueue.main.sync {
+          registry_.unregisterTexture(oldTextureId)
+        }
+      }
+      // 释放旧纹理：deinit 同步执行 mpv_render_context_free
+      self.texture = nil
+      // 尺寸复位，新纹理在新 textureId 上重新走 resize 流程
+      self.currentSize = CGSize.zero
+      self._init()
     }
   }
 

@@ -43,6 +43,20 @@ public class VideoOutputManager: NSObject {
     )
   }
 
+  public func setOnFrameRendered(
+    handle: Int64,
+    _ callback: ((CVPixelBuffer) -> Void)?
+  ) {
+    videoOutputs[handle]?.setOnFrameRendered(callback)
+  }
+
+  public func setHardwareAcceleration(
+    handle: Int64,
+    enabled: Bool
+  ) {
+    videoOutputs[handle]?.setHardwareAcceleration(enabled)
+  }
+
   public func destroy(
     handle: Int64
   ) {

@@ -1622,7 +1622,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               },
             ),
             Visibility(
-              visible: Platform.isAndroid,
+              visible: Platform.isAndroid || Platform.isIOS,
               child: ListTile(
                 leading: const Icon(Icons.picture_in_picture),
                 title: const Text("小窗播放"),

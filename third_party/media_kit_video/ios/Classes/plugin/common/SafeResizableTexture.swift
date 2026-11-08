@@ -33,6 +33,19 @@ public class SafeResizableTexture:
     return child.copyPixelBuffer()
   }
 
+  public var onFrameRendered: ((CVPixelBuffer) -> Void)? {
+    get {
+      lock.lock()
+      defer { lock.unlock() }
+      return child.onFrameRendered
+    }
+    set {
+      lock.lock()
+      defer { lock.unlock() }
+      child.onFrameRendered = newValue
+    }
+  }
+
   private func locked<T>(do block: () -> T) -> T {
     lock.lock()
     defer {

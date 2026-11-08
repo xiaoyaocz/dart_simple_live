@@ -396,6 +396,29 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     ),
                   ),
                 ],
+                // iOS 小窗（画中画）
+                if (Platform.isIOS) ...[
+                  AppStyle.divider,
+                  Padding(
+                    padding: AppStyle.edgeInsetsA12,
+                    child: Text(
+                      "iOS 小窗（画中画）",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Get.theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "后台保持画面",
+                      subtitle:
+                          "切后台后小窗持续显示直播画面（软解码渲染，略增耗电）；关闭后进小窗更快更省电，后台画面停住、声音正常",
+                      value: controller.pipKeepBackgroundVideo.value,
+                      onChanged: controller.setPipKeepBackgroundVideo,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

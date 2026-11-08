@@ -4,16 +4,20 @@
   import FlutterMacOS
 #endif
 
-public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
+public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol, MPVUpdateCallbackTarget {
   public typealias UpdateCallback = () -> Void
 
   private let handle: OpaquePointer
   private let updateCallback: UpdateCallback
+  private let updateProxy = MPVUpdateCallbackProxy()
+  private var updateProxyRef: Unmanaged<MPVUpdateCallbackProxy>?
   private var renderContext: OpaquePointer?
   private var textureContexts = SwappableObjectManager<TextureSWContext>(
     objects: [],
     skipCheckArgs: true
   )
+
+  public var onFrameRendered: ((CVPixelBuffer) -> Void)?
 
   init(
     handle: OpaquePointer,
@@ -43,6 +47,10 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
     return Unmanaged.passRetained(textureContext!.pixelBuffer)
   }
 
+  func mpvUpdateCallbackFire() {
+    updateCallback()
+  }
+
   private func initMPV() {
     let api = UnsafeMutableRawPointer(
       mutating: (MPV_RENDER_API_TYPE_SW as NSString).utf8String
@@ -56,21 +64,33 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
       mpv_render_context_create(&renderContext, handle, &params)
     )
 
+    updateProxy.target = self
+    let proxyRef = Unmanaged.passRetained(updateProxy)
+    updateProxyRef = proxyRef
     mpv_render_context_set_update_callback(
       renderContext,
       { (ctx) in
-        let that = unsafeBitCast(ctx, to: TextureSW.self)
+        guard let ctx = ctx else { return }
+        let proxy = Unmanaged<MPVUpdateCallbackProxy>
+          .fromOpaque(ctx)
+          .takeUnretainedValue()
         DispatchQueue.main.async {
-          that.updateCallback()
+          proxy.fire()
         }
       },
-      UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+      UnsafeMutableRawPointer(proxyRef.toOpaque())
     )
   }
 
   private func disposeMPV() {
     mpv_render_context_set_update_callback(renderContext, nil, nil)
     mpv_render_context_free(renderContext)
+    // 释放 mpv 持有的代理引用：free 返回后不会再有回调派发，
+    // 主队列上已派发的块对 proxy 是强引用，此时释放安全
+    if let proxyRef = updateProxyRef {
+      DispatchQueue.main.async { proxyRef.release() }
+      updateProxyRef = nil
+    }
   }
 
   public func resize(_ size: CGSize) {
@@ -142,5 +162,7 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
     mpv_render_context_render(renderContext, &params)
 
     textureContexts.pushAsReady(textureContext!)
+
+    onFrameRendered?(textureContext!.pixelBuffer)
   }
 }

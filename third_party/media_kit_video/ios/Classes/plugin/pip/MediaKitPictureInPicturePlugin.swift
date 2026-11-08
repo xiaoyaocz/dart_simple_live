@@ -106,7 +106,7 @@
       retiredControllers.append(controller)
       DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
         guard let self = self else { return }
-        self.retiredControllers.removeAll { /usr/bin/bash === controller }
+        self.retiredControllers.removeAll { $0 === controller }
       }
     }
 

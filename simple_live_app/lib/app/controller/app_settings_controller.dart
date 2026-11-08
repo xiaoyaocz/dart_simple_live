@@ -202,6 +202,9 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kEnablePipDanmu, false);
     pipDanmuScale.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPipDanmuScale, 0.75);
+    // iOS 小窗（画中画）：后台保持画面
+    pipKeepBackgroundVideo.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kPipKeepBackgroundVideo, true);
     superChatScrollInFullscreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kSuperChatScrollInFullscreen, false);
     playerClockEnable.value = LocalStorageService.instance
@@ -1202,6 +1205,15 @@ class AppSettingsController extends GetxController {
     enablePipDanmu.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kEnablePipDanmu, e);
+  }
+
+  // iOS 小窗（画中画）：后台保持画面（默认开，重连管线保证后台持续
+  // 出帧；关闭为即显省电路线，秒开但后台画面冻结、音频正常）
+  var pipKeepBackgroundVideo = true.obs;
+  void setPipKeepBackgroundVideo(bool e) {
+    pipKeepBackgroundVideo.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kPipKeepBackgroundVideo, e);
   }
 
   var pipDanmuScale = 0.75.obs;

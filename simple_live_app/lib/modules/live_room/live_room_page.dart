@@ -22,6 +22,7 @@ import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/player_view_gate.dart';
+import 'package:simple_live_app/widgets/scrollable_sheet_body.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_menu.dart';
@@ -1650,153 +1651,156 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       ),
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => Utils.bottomSheetSafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.refresh),
-              title: const Text("刷新"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                controller.refreshRoom();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.play_circle_outline),
-              title: const Text("切换清晰度"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.showQualitySheet();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.switch_video_outlined),
-              title: const Text("切换线路"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.showPlayUrlsSheet();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.aspect_ratio_outlined),
-              title: const Text("画面尺寸"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.showPlayerSettingsSheet();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text("截图"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                controller.saveScreenshot();
-              },
-            ),
-            Visibility(
-              visible: Platform.isAndroid || Platform.isIOS,
-              child: ListTile(
-                leading: const Icon(Icons.picture_in_picture),
-                title: const Text("小窗播放"),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Get.back();
-                  controller.enablePIP();
-                },
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.headphones_outlined),
-              title: const Text("听直播"),
-              subtitle: const Text("只听声音，支持息屏后台播放"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.openListenMode();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.timer_outlined),
-              title: const Text("定时关闭"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.showAutoExitSheet();
-              },
-            ),
-            if (LiveSubtitleService.instance.uiEnabled)
+      builder: (context) => ScrollableSheetBody(
+        showScrollbar: _isDesktop,
+        child: Utils.bottomSheetSafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.subtitles_outlined),
-                title: const Text("实时字幕"),
+                leading: const Icon(Icons.refresh),
+                title: const Text("刷新"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  controller.refreshRoom();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.play_circle_outline),
+                title: const Text("切换清晰度"),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Get.back();
-                  showSubtitleSettingsSheet();
+                  controller.showQualitySheet();
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.history_outlined),
-              title: const Text("观看历史"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.openHistoryPage();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.interests_outlined),
-              title: const Text("同类推荐"),
-              subtitle: Text(controller.currentRecommendationSubtitle),
-              trailing: const Icon(Icons.chevron_right),
-              enabled: controller.hasCategoryRecommendation,
-              onTap: !controller.hasCategoryRecommendation
-                  ? null
-                  : () {
-                      Get.back();
-                      controller.openCategoryRecommendation();
-                    },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_sharp),
-              title: const Text("分享直播间"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.share();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: const Text("复制链接"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.copyUrl();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.open_in_new),
-              title: const Text("APP中打开"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.openNaviteAPP();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline_rounded),
-              title: const Text("播放信息"),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Get.back();
-                controller.showDebugInfo();
-              },
-            ),
-          ],
+              ListTile(
+                leading: const Icon(Icons.switch_video_outlined),
+                title: const Text("切换线路"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.showPlayUrlsSheet();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.aspect_ratio_outlined),
+                title: const Text("画面尺寸"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.showPlayerSettingsSheet();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text("截图"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  controller.saveScreenshot();
+                },
+              ),
+              Visibility(
+                visible: Platform.isAndroid || Platform.isIOS,
+                child: ListTile(
+                  leading: const Icon(Icons.picture_in_picture),
+                  title: const Text("小窗播放"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Get.back();
+                    controller.enablePIP();
+                  },
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.headphones_outlined),
+                title: const Text("听直播"),
+                subtitle: const Text("只听声音，支持息屏后台播放"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.openListenMode();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer_outlined),
+                title: const Text("定时关闭"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.showAutoExitSheet();
+                },
+              ),
+              if (LiveSubtitleService.instance.uiEnabled)
+                ListTile(
+                  leading: const Icon(Icons.subtitles_outlined),
+                  title: const Text("实时字幕"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Get.back();
+                    showSubtitleSettingsSheet();
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.history_outlined),
+                title: const Text("观看历史"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.openHistoryPage();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.interests_outlined),
+                title: const Text("同类推荐"),
+                subtitle: Text(controller.currentRecommendationSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                enabled: controller.hasCategoryRecommendation,
+                onTap: !controller.hasCategoryRecommendation
+                    ? null
+                    : () {
+                        Get.back();
+                        controller.openCategoryRecommendation();
+                      },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_sharp),
+                title: const Text("分享直播间"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.share();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy),
+                title: const Text("复制链接"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.copyUrl();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_in_new),
+                title: const Text("APP中打开"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.openNaviteAPP();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.info_outline_rounded),
+                title: const Text("播放信息"),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.showDebugInfo();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

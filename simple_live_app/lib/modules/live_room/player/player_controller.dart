@@ -164,6 +164,7 @@ const int _kDanmakuReplayLimit = 300;
 
 mixin PlayerMixin {
   bool _playerInitialized = false;
+  Future<void>? _playerInitializationFuture;
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
@@ -178,11 +179,24 @@ mixin PlayerMixin {
   );
 
   /// 初始化播放器并设置静态 mpv 参数。
-  Future<void> initializePlayer() async {
+  Future<void> initializePlayer() {
+    final active = _playerInitializationFuture;
+    if (active != null) return active;
+    final initialization = _initializePlayer();
+    _playerInitializationFuture = initialization;
+    initialization.then((_) {}, onError: (Object error, StackTrace stackTrace) {
+      if (identical(_playerInitializationFuture, initialization)) {
+        _playerInitializationFuture = null;
+        _playerInitialized = false;
+      }
+    });
+    return initialization;
+  }
+
+  Future<void> _initializePlayer() async {
     if (_playerInitialized) {
       return;
     }
-    _playerInitialized = true;
     await MpvOptionsService.applyToPlayer(player);
     final nativePlayer = player.platform as NativePlayer;
     // 设置音频输出驱动
@@ -198,6 +212,7 @@ mixin PlayerMixin {
     if (Platform.isAndroid) {
       await nativePlayer.setProperty('force-seekable', 'yes');
     }
+    _playerInitialized = true;
   }
 
   /// 视频控制器

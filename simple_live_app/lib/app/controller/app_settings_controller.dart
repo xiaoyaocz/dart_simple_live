@@ -127,6 +127,8 @@ class AppSettingsController extends GetxController {
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
+    videoRenderingAcceleration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kVideoRenderingAcceleration, true);
     mobileTopExtraInset.value = _normalizeMobileExtraInset(
       LocalStorageService.instance
           .getValue<dynamic>(LocalStorageService.kMobileTopExtraInset, 0),
@@ -667,6 +669,13 @@ class AppSettingsController extends GetxController {
     hardwareDecode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kHardwareDecode, e);
+  }
+
+  var videoRenderingAcceleration = true.obs;
+  void setVideoRenderingAcceleration(bool value) {
+    videoRenderingAcceleration.value = value;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoRenderingAcceleration, value);
   }
 
   // 屏幕安全区补偿仅保存在本机，单位为逻辑像素。

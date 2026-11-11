@@ -60,6 +60,8 @@ class LocalStorageService extends GetxService {
   static const String kDanmuFontWeight = "DanmuFontWeight";
   static const String kContributionRankEnable = "ContributionRankEnable";
   static const String kHardwareDecode = "HardwareDecode";
+  static const String kVideoRenderingAcceleration =
+      "VideoRenderingAcceleration";
   static const String kMobileTopExtraInset = "MobileTopExtraInset";
   static const String kMobileBottomExtraInset = "MobileBottomExtraInset";
   static const String kIosOriginalQualityPowerSaving =

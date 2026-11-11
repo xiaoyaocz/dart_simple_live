@@ -24,6 +24,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/services/background_playback_service.dart';
 import 'package:simple_live_app/services/ios_video_output_size.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
+import 'package:simple_live_app/services/player_resource_lifecycle.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
@@ -32,6 +33,8 @@ const _windowsChromeChannel = MethodChannel('simple_live/windows_chrome');
 const _androidWindowChannel = MethodChannel('simple_live/app_window');
 const liveRoomVolumeSliderDialogTag = 'live_room_volume_slider';
 int _androidWindowHandlerGeneration = 0;
+int _nextPlayerInstanceId = 0;
+int _livePlayerInstances = 0;
 
 /// Android OEMs do not use one consistent windowing mode for their system
 /// floating windows: some report freeform, while others only report
@@ -165,18 +168,30 @@ const int _kDanmakuReplayLimit = 300;
 mixin PlayerMixin {
   bool _playerInitialized = false;
   Future<void>? _playerInitializationFuture;
+  final int playerInstanceId = ++_nextPlayerInstanceId;
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
   /// 播放器实例
-  late final player = Player(
-    configuration: PlayerConfiguration(
-      title: "Simple Live Player",
-      logLevel: AppSettingsController.instance.logEnable.value
-          ? MPVLogLevel.info
-          : MPVLogLevel.error,
-    ),
-  );
+  Player? _createdPlayer;
+  Player get player => _createdPlayer ??= _createPlayer();
+  bool get hasCreatedPlayer => _createdPlayer != null;
+
+  Player _createPlayer() {
+    final stopwatch = Stopwatch()..start();
+    final result = Player(
+      configuration: PlayerConfiguration(
+        title: "Simple Live Player",
+        logLevel: AppSettingsController.instance.logEnable.value
+            ? MPVLogLevel.info
+            : MPVLogLevel.error,
+      ),
+    );
+    _livePlayerInstances += 1;
+    Log.i('播放器实例创建：id=$playerInstanceId logicalInstances=$_livePlayerInstances '
+        '${stopwatch.elapsedMilliseconds}ms');
+    return result;
+  }
 
   /// 初始化播放器并设置静态 mpv 参数。
   Future<void> initializePlayer() {
@@ -664,8 +679,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (Platform.isAndroid || Platform.isIOS) {
       VolumeController.instance.showSystemUI = false;
       // 监听系统音量变化（含硬件音量键），作为基础段（≤100）的音量来源。
-      _volumeEventSubscription = VolumeController.instance
-          .addListener(_onSystemVolumeChanged);
+      _volumeEventSubscription =
+          VolumeController.instance.addListener(_onSystemVolumeChanged);
     }
 
     // 屏幕常亮
@@ -1085,7 +1100,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     _volumeBeforeMute = effectiveVolume.value > 0
         ? effectiveVolume.value
         : AppSettingsController.instance.playerVolume.value
-              .clamp(0.0, _sessionVolumeLimit);
+            .clamp(0.0, _sessionVolumeLimit);
     mutedState.value = true;
     await player.setVolume(0);
   }
@@ -1096,8 +1111,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     double volume, {
     bool persist = false,
   }) async {
-    final requestedValue =
-        volume.clamp(0.0, _sessionVolumeLimit).toDouble();
+    final requestedValue = volume.clamp(0.0, _sessionVolumeLimit).toDouble();
     if (Platform.isAndroid || Platform.isIOS) {
       await _setMobileSessionVolume(requestedValue);
     } else {
@@ -1146,12 +1160,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (delta == 0 || Platform.isAndroid || Platform.isIOS) {
       return;
     }
-    final current = player.state.volume
-        .clamp(0.0, _sessionVolumeLimit)
-        .toDouble();
-    final target = (current + delta)
-        .clamp(0.0, _sessionVolumeLimit)
-        .toDouble();
+    final current =
+        player.state.volume.clamp(0.0, _sessionVolumeLimit).toDouble();
+    final target = (current + delta).clamp(0.0, _sessionVolumeLimit).toDouble();
     await setSessionPlayerVolume(target, persist: true);
     showGestureTipText(target > PlayerVolumePolicy.baseVolume
         ? "音量 ${target.round()}%（增强）"
@@ -1577,6 +1588,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     if (!Platform.isAndroid) {
       return _autoPipOnLeaveConfigured;
     }
+    if (!hasCreatedPlayer || _playerClosing) return false;
     final videoWidth = player.state.width ?? 0;
     final videoHeight = player.state.height ?? 0;
     if (_autoPipOnLeaveConfigured &&
@@ -1677,6 +1689,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   bool _iosPipOriginalHardwareDecode = true;
   String _iosPipOriginalHwdec = "auto-safe";
   Media? _iosPipMedia;
+
   /// 本会话是否执行了停播重建（后台保持画面开关开启时）；
   /// 退出时按标记决定是否还原解码/渲染配置
   bool _iosPipPipelineSwitched = false;
@@ -1939,6 +1952,7 @@ mixin PlayerGestureControlMixin
   }
 
   bool leftVerticalDrag = false;
+
   /// 音量手势基准（0-3，对应有效音量 0-300%）。
   var _currentVolume = 0.0;
   var _currentBrightness = 1.0;
@@ -2189,7 +2203,20 @@ class PlayerController extends BaseController
     return !_playerClosing && generation == playbackLoadGeneration;
   }
 
-  Future<void>? _playbackOpenFuture;
+  final _nativeOpenQueue = PlayerNativeOpenQueue();
+  Future<void>? _playerCloseFuture;
+  final Completer<void> _playerClosingSignal = Completer<void>();
+
+  Future<void> get playerClosingSignal => _playerClosingSignal.future;
+
+  /// Invalidates delayed recovery immediately, before asynchronous teardown.
+  void beginPlayerClose() {
+    _playerClosing = true;
+    if (!_playerClosingSignal.isCompleted) {
+      _playerClosingSignal.complete();
+    }
+    _cancelStablePlaybackTimer();
+  }
 
   bool _isPlaybackOwnerCurrent(
     int loadGeneration,
@@ -2203,9 +2230,9 @@ class PlayerController extends BaseController
 
   /// Serializes every media open so a stale recovery cannot finish after a
   /// newer room open and replace its media.
-  /// 单次 open 的最长等待。渲染管线挂死时 player.open 可能永不完成，
-  /// 所有恢复路径又串行排在同一个 open 后面，超时后强制放行，
-  /// 让下一路恢复（或换台）能继续推进，避免页面永久卡死。
+  /// Limits the UI wait only. The underlying native open retains ownership
+  /// until it really finishes; a timeout must never permit a concurrent open
+  /// or disposal of the same native handle.
   static const _playbackOpenTimeout = Duration(seconds: 20);
 
   Future<bool> openPlaybackMedia(
@@ -2214,33 +2241,22 @@ class PlayerController extends BaseController
     required int mediaGeneration,
     bool Function()? isStillOwner,
   }) async {
-    while (true) {
-      if (!_isPlaybackOwnerCurrent(
+    final status = await _nativeOpenQueue.open(
+      operation: () {
+        _surfaceRecoveryGraceUntil =
+            DateTime.now().add(_surfaceRecoveryGraceDuration);
+        return player.open(media);
+      },
+      isCurrent: () => _isPlaybackOwnerCurrent(
         loadGeneration,
         mediaGeneration,
         isStillOwner,
-      )) {
-        return false;
-      }
-      final activeOpen = _playbackOpenFuture;
-      if (activeOpen == null) {
-        break;
-      }
-      try {
-        await activeOpen.timeout(_playbackOpenTimeout);
-      } on TimeoutException {
-        Log.e(
-          "等待旧媒体打开超时(${_playbackOpenTimeout.inSeconds}s)，强制接管打开流程",
-          StackTrace.current,
-        );
-        if (identical(_playbackOpenFuture, activeOpen)) {
-          _playbackOpenFuture = null;
-        }
-      } catch (e, stackTrace) {
-        Log.e("等待旧媒体打开失败: $e", stackTrace);
-      }
-    }
-
+      ),
+      timeout: _playbackOpenTimeout,
+      onPreviousError: (error, stackTrace) {
+        Log.e('等待旧媒体打开失败：id=$playerInstanceId $error', stackTrace);
+      },
+    );
     if (!_isPlaybackOwnerCurrent(
       loadGeneration,
       mediaGeneration,
@@ -2248,38 +2264,41 @@ class PlayerController extends BaseController
     )) {
       return false;
     }
-    _surfaceRecoveryGraceUntil =
-        DateTime.now().add(_surfaceRecoveryGraceDuration);
-    final opening = Future<void>.microtask(() => player.open(media));
-    _playbackOpenFuture = opening;
-    try {
-      await opening.timeout(_playbackOpenTimeout);
-      return _isPlaybackOwnerCurrent(
-        loadGeneration,
-        mediaGeneration,
-        isStillOwner,
+    if (status == PlayerOpenStatus.timedOut) {
+      reportPlaybackOpenTimeout(
+        loadGeneration: loadGeneration,
+        mediaGeneration: mediaGeneration,
+        isStillOwner: isStillOwner,
       );
-    } on TimeoutException {
-      Log.e(
-        "打开媒体超时(${_playbackOpenTimeout.inSeconds}s)，放弃等待"
-        "（渲染管线可能已挂死）",
-        StackTrace.current,
-      );
-      return false;
-    } finally {
-      if (identical(_playbackOpenFuture, opening)) {
-        _playbackOpenFuture = null;
-      }
+    }
+    return status == PlayerOpenStatus.opened;
+  }
+
+  void reportPlaybackOpenTimeout({
+    required int loadGeneration,
+    required int mediaGeneration,
+    bool Function()? isStillOwner,
+  }) {
+    if (!_isPlaybackOwnerCurrent(
+      loadGeneration,
+      mediaGeneration,
+      isStillOwner,
+    )) {
+      return;
+    }
+    Log.e(
+        '播放器打开等待超时：id=$playerInstanceId '
+        'timeout=${_playbackOpenTimeout.inSeconds}s，保留原生操作所有权',
+        StackTrace.current);
+    if (!_playerClosing) {
+      errorMsg.value = '播放器响应超时，请稍后重试；持续无响应请重启应用';
+      SmartDialog.showToast(errorMsg.value);
     }
   }
 
   Future<void> waitForPlaybackOpen() async {
-    final activeOpen = _playbackOpenFuture;
-    if (activeOpen == null) {
-      return;
-    }
     try {
-      await activeOpen;
+      await _nativeOpenQueue.waitUntilIdle();
     } catch (e, stackTrace) {
       Log.e("等待媒体打开结束失败: $e", stackTrace);
     }
@@ -2287,13 +2306,26 @@ class PlayerController extends BaseController
 
   @override
   void onInit() {
-    unawaited(initSystem());
+    if (!deferPlayerBindings) initializePlayerBindings();
+    super.onInit();
+  }
+
+  /// Android single-room controllers defer every native resource until the
+  /// previous page has released its player. Other player uses stay immediate.
+  bool get deferPlayerBindings => false;
+  bool _playerBindingsInitialized = false;
+
+  void initializePlayerBindings() {
+    if (_playerBindingsInitialized || _playerClosing) return;
+    _playerBindingsInitialized = true;
+    unawaited(initSystem().catchError((Object error, StackTrace stackTrace) {
+      Log.e('播放器系统初始化失败：id=$playerInstanceId $error', stackTrace);
+    }));
     initStream();
     //设置音量
     final resolvedVolume = _resolvedPlayerVolume();
     effectiveVolume.value = resolvedVolume;
     player.setVolume(resolvedVolume);
-    super.onInit();
   }
 
   StreamSubscription<String>? _errorSubscription;
@@ -3144,6 +3176,7 @@ class PlayerController extends BaseController
     if (!Platform.isAndroid) {
       return;
     }
+    if (!hasCreatedPlayer) return;
     final service = BackgroundPlaybackService.instance;
     final forced = listenModeEnabled;
     final enabled =
@@ -3332,30 +3365,79 @@ class PlayerController extends BaseController
     );
   }
 
-  Future<void> closePlayerResources({bool exitingApp = false}) async {
-    if (_playerClosing) {
-      return;
-    }
-    _playerClosing = true;
-    _cancelStablePlaybackTimer();
+  Future<void> closePlayerResources({bool exitingApp = false}) {
+    beginPlayerClose();
+    return _playerCloseFuture ??= _closePlayerResources(exitingApp: exitingApp);
+  }
+
+  Future<void> _closePlayerResources({required bool exitingApp}) async {
+    final closingStopwatch = Stopwatch()..start();
+    Log.i('播放器释放开始：id=$playerInstanceId');
     clearTransientPlayerOverlays();
-    await stopBackgroundPlaybackService();
+    // No timeout here: disposing while native open still owns the handle is
+    // unsafe. Android handoff bounds the next room's wait independently.
     await waitForPlaybackOpen();
+    final initialization = _playerInitializationFuture;
+    if (initialization != null) {
+      try {
+        await initialization;
+      } catch (error, stackTrace) {
+        Log.e('等待播放器初始化失败：id=$playerInstanceId $error', stackTrace);
+      }
+    }
     // Windows 退出前先保存 mpv handle，dispose 后用于让核心立即停止。
     int? mpvHandle;
-    if (exitingApp && Platform.isWindows) {
+    if (hasCreatedPlayer && exitingApp && Platform.isWindows) {
       try {
         mpvHandle = await player.handle;
       } catch (_) {}
     }
-    await player.stop();
-    if (smallWindowState.value) {
-      await exitSmallWindow();
-    }
-    disposeStream();
-    disposeDanmakuController();
-    await resetSystem();
-    await player.dispose();
+    await releasePlayerResources(
+      steps: [
+        PlayerCleanupStep('background-service', () async {
+          if (_playerBindingsInitialized) await stopBackgroundPlaybackService();
+        }),
+        PlayerCleanupStep('stop', () async {
+          if (!hasCreatedPlayer) return;
+          final stopwatch = Stopwatch()..start();
+          try {
+            await player.stop();
+          } finally {
+            Log.i('播放器停止结束：id=$playerInstanceId '
+                '${stopwatch.elapsedMilliseconds}ms');
+          }
+        }),
+        PlayerCleanupStep('small-window', () async {
+          if (smallWindowState.value) await exitSmallWindow();
+        }),
+        PlayerCleanupStep('streams', disposeStream),
+        PlayerCleanupStep('danmaku-controller', disposeDanmakuController),
+        PlayerCleanupStep('system', () async {
+          if (_playerBindingsInitialized) await resetSystem();
+        }),
+      ],
+      dispose: () async {
+        if (!hasCreatedPlayer) {
+          Log.i('播放器无需dispose：id=$playerInstanceId（尚未创建原生实例）');
+          return;
+        }
+        final stopwatch = Stopwatch()..start();
+        try {
+          await player.dispose();
+          _livePlayerInstances -= 1;
+          Log.i('播放器dispose完成：id=$playerInstanceId '
+              '${stopwatch.elapsedMilliseconds}ms '
+              'total=${closingStopwatch.elapsedMilliseconds}ms '
+              'logicalInstances=$_livePlayerInstances');
+        } catch (error, stackTrace) {
+          Log.e('播放器原生释放失败：id=$playerInstanceId $error', stackTrace);
+          rethrow;
+        }
+      },
+      onError: (step, error, stackTrace) {
+        Log.e('播放器清理步骤失败：id=$playerInstanceId step=$step $error', stackTrace);
+      },
+    );
     // 渲染上下文已同步释放，让 mpv 核心线程在进程退出/DLL 卸载前结束。
     if (exitingApp && Platform.isWindows && mpvHandle != null) {
       try {
@@ -3368,8 +3450,13 @@ class PlayerController extends BaseController
 
   @override
   void onClose() async {
-    Log.w("播放器关闭");
-    await closePlayerResources();
-    super.onClose();
+    Log.w('播放器关闭：id=$playerInstanceId');
+    try {
+      await closePlayerResources();
+    } catch (error, stackTrace) {
+      Log.e('播放器关闭未完成：id=$playerInstanceId $error', stackTrace);
+    } finally {
+      super.onClose();
+    }
   }
 }

@@ -21,6 +21,7 @@ import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
+import 'package:simple_live_app/widgets/player_view_gate.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_menu.dart';
@@ -242,59 +243,65 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   @override
   Widget build(BuildContext context) {
-    final page = Obx(() {
+    return Obx(() {
       if (Platform.isAndroid && controller.androidInPipState.value) {
-        return _buildPipOnlyPage();
+        return PlayerViewGate(
+          ready: controller.playerViewReady.value,
+          waitingBuilder: (_) => const ColoredBox(color: Colors.black),
+          readyBuilder: (_) => Obx(_buildPipOnlyPage),
+        );
       }
-      if (controller.loadError.value) {
-        return MobilePageInsets(
-          enabled: !controller.fullScreenState.value &&
-              !controller.smallWindowState.value,
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text("直播间加载失败"),
-            ),
-            body: Padding(
+      return PlayerViewGate(
+        ready: controller.playerViewReady.value,
+        waitingBuilder: _buildPlayerWaitingPage,
+        readyBuilder: (_) => Obx(_buildReadyPage),
+      );
+    });
+  }
+
+  Widget _buildPlayerWaitingPage(BuildContext context) {
+    return Obx(() {
+      final hasError = controller.loadError.value;
+      final playerMessage = controller.errorMsg.value.trim();
+      final message = hasError
+          ? controller.error?.toString() ?? "直播间加载失败，请刷新重试"
+          : playerMessage.isEmpty
+              ? "正在等待上一直播间关闭，请稍候"
+              : playerMessage;
+      return MobilePageInsets(
+        enabled: !controller.fullScreenState.value &&
+            !controller.smallWindowState.value,
+        child: Scaffold(
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: Text(hasError ? "直播间加载失败" : "播放器准备中"),
+          ),
+          body: Center(
+            child: SingleChildScrollView(
               padding: AppStyle.edgeInsetsA12,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  LottieBuilder.asset(
-                    'assets/lotties/error.json',
-                    height: 140,
-                    repeat: false,
+                  Icon(
+                    hasError ? Icons.error_outline : Icons.hourglass_empty,
+                    size: 40,
                   ),
-                  const Text(
-                    "直播间加载失败",
-                    textAlign: TextAlign.center,
-                  ),
-                  AppStyle.vGap4,
-                  Text(
-                    controller.error?.toString() ?? "未知错误",
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  AppStyle.vGap4,
-                  Text(
-                    "${controller.rxSite.value.id} - ${controller.rxRoomId.value}",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  AppStyle.vGap12,
+                  Text(message, textAlign: TextAlign.center),
+                  AppStyle.vGap12,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
                     children: [
                       TextButton.icon(
-                        onPressed: controller.copyErrorDetail,
-                        icon: const Icon(Remix.file_copy_line),
-                        label: const Text("复制信息"),
+                        onPressed: controller.loadData,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text("刷新"),
                       ),
                       TextButton.icon(
-                        onPressed: controller.refreshRoom,
-                        icon: const Icon(Remix.refresh_line),
-                        label: const Text("刷新"),
+                        onPressed: () => _handleBack(context),
+                        icon: const Icon(Icons.arrow_back),
+                        label: const Text("返回"),
                       ),
                     ],
                   ),
@@ -302,25 +309,85 @@ class LiveRoomPage extends GetView<LiveRoomController> {
               ),
             ),
           ),
-        );
-      }
-      if (controller.fullScreenState.value) {
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) {
-            controller.exitPlayerWindowMode();
-          },
-          child: Scaffold(
-            body: buildMediaPlayer(),
-          ),
-        );
-      }
-      return MobilePageInsets(
-        enabled: !controller.smallWindowState.value,
-        child: buildPageUI(),
+        ),
       );
     });
-    return page;
+  }
+
+  Widget _buildReadyPage() {
+    if (controller.loadError.value) {
+      return MobilePageInsets(
+        enabled: !controller.fullScreenState.value &&
+            !controller.smallWindowState.value,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text("直播间加载失败"),
+          ),
+          body: Padding(
+            padding: AppStyle.edgeInsetsA12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                LottieBuilder.asset(
+                  'assets/lotties/error.json',
+                  height: 140,
+                  repeat: false,
+                ),
+                const Text(
+                  "直播间加载失败",
+                  textAlign: TextAlign.center,
+                ),
+                AppStyle.vGap4,
+                Text(
+                  controller.error?.toString() ?? "未知错误",
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                AppStyle.vGap4,
+                Text(
+                  "${controller.rxSite.value.id} - ${controller.rxRoomId.value}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: controller.copyErrorDetail,
+                      icon: const Icon(Remix.file_copy_line),
+                      label: const Text("复制信息"),
+                    ),
+                    TextButton.icon(
+                      onPressed: controller.refreshRoom,
+                      icon: const Icon(Remix.refresh_line),
+                      label: const Text("刷新"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (controller.fullScreenState.value) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          controller.exitPlayerWindowMode();
+        },
+        child: Scaffold(
+          body: buildMediaPlayer(),
+        ),
+      );
+    }
+    return MobilePageInsets(
+      enabled: !controller.smallWindowState.value,
+      child: buildPageUI(),
+    );
   }
 
   /// Android PiP captures the whole activity. Keep the activity tree limited
@@ -673,6 +740,18 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget _buildMediaPlayerContent({bool pipMode = false}) {
+    return Obx(
+      () => PlayerViewGate(
+        ready: controller.playerViewReady.value,
+        waitingBuilder: (_) => const ColoredBox(color: Colors.black),
+        readyBuilder: (_) => Obx(
+          () => _buildReadyMediaPlayerContent(pipMode: pipMode),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReadyMediaPlayerContent({bool pipMode = false}) {
     var boxFit = BoxFit.contain;
     double? aspectRatio;
     if (AppSettingsController.instance.scaleMode.value == 0) {

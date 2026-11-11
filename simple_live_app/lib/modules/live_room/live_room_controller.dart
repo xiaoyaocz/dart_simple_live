@@ -35,6 +35,7 @@ import 'package:simple_live_app/services/ios_audio_session_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
+import 'package:simple_live_app/services/player_resource_lifecycle.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
@@ -52,6 +53,67 @@ class LiveRoomController extends PlayerController
     with WidgetsBindingObserver, WindowListener {
   static const volumeSliderDialogTag = liveRoomVolumeSliderDialogTag;
   static const _appWindowChannel = MethodChannel('simple_live/app_window');
+  static final _androidPlayerRetirements = PlayerRetirementCoordinator();
+  final playerViewReady = (!Platform.isAndroid).obs;
+  Future<PlayerHandoffStatus>? _androidPlayerStartup;
+
+  @override
+  bool get deferPlayerBindings => Platform.isAndroid;
+
+  Future<PlayerHandoffStatus> _ensurePlayerReady() {
+    if (!Platform.isAndroid || playerViewReady.value) {
+      return Future.value(PlayerHandoffStatus.ready);
+    }
+    final active = _androidPlayerStartup;
+    if (active != null) return active;
+    final startup = _initializeAndroidPlayer();
+    _androidPlayerStartup = startup;
+    return startup.whenComplete(() {
+      if (identical(_androidPlayerStartup, startup)) {
+        _androidPlayerStartup = null;
+      }
+    });
+  }
+
+  Future<PlayerHandoffStatus> _initializeAndroidPlayer() async {
+    return _androidPlayerRetirements.initializeWhenReleased(
+      instanceId: playerInstanceId,
+      timeout: const Duration(seconds: 12),
+      cancelled: playerClosingSignal,
+      isCurrent: () => !_roomDisposed && !isPlayerClosing,
+      initialize: () {
+        initializePlayerBindings();
+        _bindPlayerPosition();
+        playerViewReady.value = true;
+      },
+    );
+  }
+
+  Future<void> _preparePlayerForLoad(int loadGeneration) async {
+    try {
+      final status = await _ensurePlayerReady();
+      if (!_isCurrentLoad(loadGeneration) ||
+          status == PlayerHandoffStatus.ready ||
+          status == PlayerHandoffStatus.cancelled) {
+        return;
+      }
+      errorMsg.value = status == PlayerHandoffStatus.releaseFailed
+          ? '上一直播间的播放器释放失败，请重启应用后重试'
+          : '上一直播间的播放器仍在关闭，请稍后刷新重试';
+    } catch (error, stackTrace) {
+      Log.e('安卓播放器创建失败：id=$playerInstanceId $error', stackTrace);
+      if (_isCurrentLoad(loadGeneration)) {
+        errorMsg.value = '播放器初始化失败，请刷新重试';
+      }
+    }
+  }
+
+  void _bindPlayerPosition() {
+    _positionSubscription ??= player.stream.position.listen((event) {
+      _lastKnownPlayerPosition = event;
+    });
+  }
+
   final Site pSite;
   final String pRoomId;
   final bool initialDesktopSidePanelCollapsed;
@@ -265,6 +327,39 @@ class LiveRoomController extends PlayerController
       LiveStatusRefreshPolicy();
   bool _volumeSliderPointerEntered = false;
   bool _autoPipAttempting = false;
+  bool _androidRoomSystemInitialized = false;
+  Future<void>? _androidRoomSystemInitialization;
+  Future<void>? _leavingAutoPipCancellation;
+
+  @override
+  Future<void> initSystem() {
+    if (!Platform.isAndroid) return super.initSystem();
+    if (_androidRoomSystemInitialized || _roomDisposed) {
+      return Future<void>.value();
+    }
+    final active = _androidRoomSystemInitialization;
+    if (active != null) return active;
+    final initialization = _initializeAndroidRoomSystem();
+    _androidRoomSystemInitialization = initialization;
+    return initialization.whenComplete(() {
+      if (identical(_androidRoomSystemInitialization, initialization)) {
+        _androidRoomSystemInitialization = null;
+      }
+    });
+  }
+
+  Future<void> _initializeAndroidRoomSystem() async {
+    final status = await _androidPlayerRetirements.waitUntilReleased(
+      instanceId: playerInstanceId,
+      timeout: const Duration(seconds: 12),
+      cancelled: playerClosingSignal,
+    );
+    if (status != PlayerHandoffStatus.ready || _roomDisposed) return;
+    // A previous room's system reset must finish before installing our volume
+    // listener, window channel or automatic fullscreen orientation.
+    await super.initSystem();
+    _androidRoomSystemInitialized = true;
+  }
 
   @override
   void onInit() {
@@ -292,9 +387,9 @@ class LiveRoomController extends PlayerController
     scrollController.addListener(scrollListener);
 
     super.onInit();
-    _positionSubscription = player.stream.position.listen((event) {
-      _lastKnownPlayerPosition = event;
-    });
+    if (!Platform.isAndroid) {
+      _bindPlayerPosition();
+    }
     _iosAudioEventSubscription =
         IosAudioSessionService.instance.events.listen(_handleIosAudioEvent);
   }
@@ -1084,8 +1179,8 @@ class LiveRoomController extends PlayerController
         }
         final confirmedOffline = _onlineStatusRefreshPolicy.confirmOffline(
           reportedLive: false,
-          hasActivePlaybackEvidence:
-              player.state.playing || player.state.buffering,
+          hasActivePlaybackEvidence: hasCreatedPlayer &&
+              (player.state.playing || player.state.buffering),
         );
         if (!confirmedOffline) {
           Log.d(
@@ -1349,7 +1444,9 @@ class LiveRoomController extends PlayerController
     await _runAutoExitStep("取消自动画中画", cancelAutoPipOnLeave);
     await _runAutoExitStep("停止后台播放服务", stopBackgroundPlaybackService);
     await _runAutoExitStep("停止弹幕", liveDanmaku.stop);
-    await _runAutoExitStep("停止播放器", player.stop);
+    if (hasCreatedPlayer) {
+      await _runAutoExitStep("停止播放器", player.stop);
+    }
     await _runAutoExitStep("释放唤醒锁", WakelockPlus.disable);
     // 定时关闭属于"正常收播"而非意外中断：清掉恢复标记，
     // 避免下次启动自动进房开播（闪退反馈的崩溃路径）
@@ -1580,8 +1677,10 @@ class LiveRoomController extends PlayerController
   }
 
   @override
-  void onClose() async {
+  void onClose() {
     _roomDisposed = true;
+    playerViewReady.value = false;
+    if (Platform.isAndroid) beginPlayerClose();
     clearTransientPlayerOverlays();
     disposeSystemVolumeListener();
     _loadGeneration += 1;
@@ -1591,7 +1690,7 @@ class LiveRoomController extends PlayerController
     if (_usesDesktopWindowManager) {
       windowManager.removeListener(this);
     }
-    unawaited(cancelAutoPipOnLeave());
+    _leavingAutoPipCancellation = cancelAutoPipOnLeave();
     CurrentRoomService.instance.clearRoom();
     scrollController.removeListener(scrollListener);
     liveRoomFollowScrollController.dispose();
@@ -1615,13 +1714,56 @@ class LiveRoomController extends PlayerController
     unawaited(
       AppSettingsController.instance.setLastLiveRoomResumePending(false),
     );
-    await _waitForPlayerReopen();
-    if (!isPlayerClosing) {
-      await player.stop();
+    final closing = _closeLiveRoomResources();
+    if (Platform.isAndroid) {
+      // Get's onClose is synchronous: publish the actual completion before the
+      // next page can attempt to open its media.
+      _androidPlayerRetirements.retire(playerInstanceId, closing);
+      Log.i('安卓播放器交接登记：id=$playerInstanceId '
+          'retiring=${_androidPlayerRetirements.pendingCount}');
     }
-    await liveDanmaku.stop();
-    LiveSubtitleService.instance.stop();
-    super.onClose();
+    unawaited(closing.catchError((Object error, StackTrace stackTrace) {
+      Log.e('直播间关闭失败：id=$playerInstanceId $error', stackTrace);
+    }));
+  }
+
+  Future<void> _closeLiveRoomResources() async {
+    try {
+      final pipCancellation = _leavingAutoPipCancellation;
+      if (pipCancellation != null) await pipCancellation;
+      final systemInitialization = _androidRoomSystemInitialization;
+      if (Platform.isAndroid && systemInitialization != null) {
+        try {
+          await systemInitialization;
+        } catch (error, stackTrace) {
+          Log.e('等待系统初始化结束失败：id=$playerInstanceId $error', stackTrace);
+        }
+      }
+      await _waitForPlayerReopen();
+      if (hasCreatedPlayer && !isPlayerClosing) {
+        try {
+          await player.stop();
+        } catch (error, stackTrace) {
+          Log.e('关闭直播间停止播放失败：id=$playerInstanceId $error', stackTrace);
+        }
+      }
+      try {
+        await liveDanmaku.stop();
+      } catch (error, stackTrace) {
+        Log.e('关闭直播间停止弹幕失败：id=$playerInstanceId $error', stackTrace);
+      }
+      if (Platform.isAndroid) {
+        await LiveSubtitleService.instance.stopAndWait();
+      } else {
+        LiveSubtitleService.instance.stop();
+      }
+    } finally {
+      try {
+        await closePlayerResources();
+      } finally {
+        super.onClose();
+      }
+    }
   }
 
   /// 聊天列表滚动到底部
@@ -1764,6 +1906,12 @@ class LiveRoomController extends PlayerController
     final targetSite = site;
     final targetRoomId = roomId;
     final loadStopwatch = Stopwatch()..start();
+    if (!playerViewReady.value) {
+      errorMsg.value = '';
+      // Startup also runs for offline rooms. A waiting-page refresh must retry
+      // the same retirement gate without requiring a media open to occur.
+      unawaited(_preparePlayerForLoad(loadGeneration));
+    }
     _dismissLiveRoomLoadingOverlay();
     _resetPlaybackRecoveryBookkeeping();
     totalViewers.value = 0;
@@ -2108,9 +2256,9 @@ class LiveRoomController extends PlayerController
       finalUrl = finalUrl.replaceAll("http://", "https://");
     }
 
-    final previousWidth = player.state.width;
-    final previousHeight = player.state.height;
-    final wasPlaying = player.state.playing;
+    final previousWidth = hasCreatedPlayer ? player.state.width : null;
+    final previousHeight = hasCreatedPlayer ? player.state.height : null;
+    final wasPlaying = hasCreatedPlayer && player.state.playing;
     Log.i(
       "准备打开播放器：target=${site.id}/$roomId "
       "quality=${currentQualityInfo.value} line=${currentLineIndex + 1}/${playUrls.length} "
@@ -2120,6 +2268,22 @@ class LiveRoomController extends PlayerController
 
     // 重新初始化播放器，并带上当前线路的请求头。
     final openStopwatch = Stopwatch()..start();
+    if (Platform.isAndroid) {
+      final status = await _ensurePlayerReady();
+      if (!_isCurrentLoad(loadGeneration)) return;
+      Log.i('安卓播放器交接结果：id=$playerInstanceId status=${status.name} '
+          'retiring=${_androidPlayerRetirements.pendingCount} '
+          '${openStopwatch.elapsedMilliseconds}ms');
+      if (status != PlayerHandoffStatus.ready) {
+        errorMsg.value = status == PlayerHandoffStatus.releaseFailed
+            ? '上一直播间的播放器释放失败，请重启应用后重试'
+            : '上一直播间的播放器仍在关闭，请稍后刷新重试';
+        SmartDialog.showToast(errorMsg.value);
+        return;
+      }
+      await initSystem();
+      if (!_isCurrentLoad(loadGeneration)) return;
+    }
     await initializePlayer();
     if (!_isCurrentLoad(loadGeneration)) {
       return;
@@ -2149,12 +2313,15 @@ class LiveRoomController extends PlayerController
       "line=${currentLineIndex + 1}/${playUrls.length} "
       "size=${player.state.width}x${player.state.height}",
     );
-    unawaited(
-      LiveSubtitleService.instance.syncPreviewFromSettings(
-        mediaUrl: finalUrl,
-        httpHeaders: playHeaders,
-      ),
-    );
+    final subtitleSync = LiveSubtitleService.instance
+        .syncPreviewFromSettings(
+          mediaUrl: finalUrl,
+          httpHeaders: playHeaders,
+        )
+        .then<void>((_) {});
+    unawaited(subtitleSync.catchError((Object error, StackTrace stackTrace) {
+      Log.e('字幕同步失败：id=$playerInstanceId $error', stackTrace);
+    }));
     Log.d("播放链接\n$finalUrl");
   }
 
@@ -2978,11 +3145,11 @@ class LiveRoomController extends PlayerController
                                     fontSize: 12,
                                     color:
                                         effectiveVolume.value.round() == preset
-                                        ? Theme.of(context).primaryColor
-                                        : Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.color,
+                                            ? Theme.of(context).primaryColor
+                                            : Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.color,
                                   ),
                                 ),
                               ),
@@ -3915,7 +4082,7 @@ class LiveRoomController extends PlayerController
         // 停止当前播放
         await stopBackgroundPlaybackService();
         await _waitForPlayerReopen();
-        await player.stop();
+        if (hasCreatedPlayer) await player.stop();
 
         // 重新拉取房间信息
         loadData();
@@ -4045,7 +4212,8 @@ ${errorStackTrace ?? ""}''');
     required Duration? previousPosition,
   }) async {
     final loadGeneration = _loadGeneration;
-    if (since == null ||
+    if (!hasCreatedPlayer ||
+        since == null ||
         previousPosition == null ||
         !liveStatus.value ||
         currentLineIndex < 0 ||
@@ -4116,9 +4284,8 @@ ${errorStackTrace ?? ""}''');
       }
       if (Platform.isAndroid && !_outputDropSamplePending) {
         // frame-drop-count 走 native IPC，省电模式下 8 秒采样一次
-        final dropSampleInterval = powerSave
-            ? const Duration(seconds: 8)
-            : const Duration(seconds: 2);
+        final dropSampleInterval =
+            powerSave ? const Duration(seconds: 8) : const Duration(seconds: 2);
         final lastDropSample = _lastVideoOutputDropSampleAt;
         if (lastDropSample == null ||
             DateTime.now().difference(lastDropSample) >= dropSampleInterval) {

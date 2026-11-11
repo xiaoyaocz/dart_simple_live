@@ -14,6 +14,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
+import 'package:simple_live_app/widgets/compact_player_bar.dart';
 import 'package:simple_live_app/widgets/corner_clock.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -731,7 +732,6 @@ Widget _buildNormalBottomBar(
   required GlobalKey volumeButtonKey,
 }) {
   return Obx(() {
-    final showDanmaku = controller.showDanmakuState.value;
     return AnimatedPositioned(
       left: 0,
       right: 0,
@@ -748,120 +748,243 @@ Widget _buildNormalBottomBar(
             ],
           ),
         ),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: controller.refreshRoom,
-              icon: const Icon(
-                Remix.refresh_line,
-                color: Colors.white,
-              ),
-            ),
-            Obx(
-              () => IconButton(
-                onPressed: controller.togglePlayPauseWithRefresh,
-                icon: Icon(
-                  controller.playingState.value
-                      ? Icons.pause
-                      : Icons.play_arrow,
-                  color: Colors.white,
+        child: LayoutBuilder(builder: (context, constraints) {
+          if (constraints.maxWidth < 600) {
+            return _buildCompactNormalBottomBar(controller, volumeButtonKey);
+          }
+          return Obx(() {
+            final showDanmaku = controller.showDanmakuState.value;
+            return Row(
+              children: [
+                IconButton(
+                  onPressed: controller.refreshRoom,
+                  icon: const Icon(
+                    Remix.refresh_line,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            ),
-            IconButton(
-              onPressed: () {
-                controller.setDanmakuVisible(!showDanmaku);
-              },
-              icon: ImageIcon(
-                AssetImage(
-                  showDanmaku
-                      ? 'assets/icons/icon_danmaku_close.png'
-                      : 'assets/icons/icon_danmaku_open.png',
+                Obx(
+                  () => IconButton(
+                    onPressed: controller.togglePlayPauseWithRefresh,
+                    icon: Icon(
+                      controller.playingState.value
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                size: 24,
-                color: Colors.white,
-              ),
-            ),
-            IconButton(
-              onPressed: () => showDanmakuSettings(controller),
-              icon: const ImageIcon(
-                AssetImage('assets/icons/icon_danmaku_setting.png'),
-                size: 24,
-                color: Colors.white,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Text(
-                controller.liveDuration.value,
-                style: const TextStyle(fontSize: 14, color: Colors.white),
-              ),
-            ),
-            const Expanded(child: SizedBox()),
-            IconButton(
-              key: volumeButtonKey,
-              onPressed: () {
-                final context = volumeButtonKey.currentContext;
-                if (context == null) {
-                  return;
-                }
-                controller.showVolumeSlider(
-                  context,
-                  keepAlive: true,
-                );
-              },
-              icon: Icon(
-                controller.mutedState.value
-                    ? Icons.volume_off
-                    : Icons.volume_down,
-                size: 24,
-                color: Colors.white,
-              ),
-            ),
-            IconButton(
-              onPressed: controller.toggleMute,
-              icon: Icon(
-                controller.mutedState.value
-                    ? Icons.volume_off
-                    : Icons.volume_up,
-                size: 24,
-                color: Colors.white,
-              ),
-            ),
-            if (!isPortrait)
-              TextButton(
-                onPressed: () => showQualitesInfo(controller),
-                child: Text(
-                  controller.currentQualityInfo.value,
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                IconButton(
+                  onPressed: () {
+                    controller.setDanmakuVisible(!showDanmaku);
+                  },
+                  icon: ImageIcon(
+                    AssetImage(
+                      showDanmaku
+                          ? 'assets/icons/icon_danmaku_close.png'
+                          : 'assets/icons/icon_danmaku_open.png',
+                    ),
+                    size: 24,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            if (!isPortrait)
-              TextButton(
-                onPressed: () => showLinesInfo(controller),
-                child: Text(
-                  controller.currentLineInfo.value,
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                IconButton(
+                  onPressed: () => showDanmakuSettings(controller),
+                  icon: const ImageIcon(
+                    AssetImage('assets/icons/icon_danmaku_setting.png'),
+                    size: 24,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            if (!Platform.isAndroid && !Platform.isIOS)
-              IconButton(
-                onPressed: controller.enterSmallWindow,
-                icon: const Icon(
-                  Icons.picture_in_picture,
-                  color: Colors.white,
-                  size: 24,
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    controller.liveDuration.value,
+                    style: const TextStyle(fontSize: 14, color: Colors.white),
+                  ),
                 ),
-              ),
-            IconButton(
-              onPressed: controller.enterFullScreen,
-              icon: const Icon(
-                Remix.fullscreen_line,
-                color: Colors.white,
-              ),
-            ),
-          ],
+                const Expanded(child: SizedBox()),
+                IconButton(
+                  key: volumeButtonKey,
+                  onPressed: () {
+                    final context = volumeButtonKey.currentContext;
+                    if (context == null) {
+                      return;
+                    }
+                    controller.showVolumeSlider(
+                      context,
+                      keepAlive: true,
+                    );
+                  },
+                  icon: Icon(
+                    controller.mutedState.value
+                        ? Icons.volume_off
+                        : Icons.volume_down,
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+                IconButton(
+                  onPressed: controller.toggleMute,
+                  icon: Icon(
+                    controller.mutedState.value
+                        ? Icons.volume_off
+                        : Icons.volume_up,
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+                if (!isPortrait)
+                  TextButton(
+                    onPressed: () => showQualitesInfo(controller),
+                    child: Text(
+                      controller.currentQualityInfo.value,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
+                if (!isPortrait)
+                  TextButton(
+                    onPressed: () => showLinesInfo(controller),
+                    child: Text(
+                      controller.currentLineInfo.value,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
+                if (!Platform.isAndroid && !Platform.isIOS)
+                  IconButton(
+                    onPressed: controller.enterSmallWindow,
+                    icon: const Icon(
+                      Icons.picture_in_picture,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                IconButton(
+                  onPressed: controller.enterFullScreen,
+                  icon: const Icon(
+                    Remix.fullscreen_line,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          });
+        }),
+      ),
+    );
+  });
+}
+
+enum _CompactPlayerAction {
+  refresh,
+  danmakuSettings,
+  mute,
+  quality,
+  line,
+  smallWindow
+}
+
+Widget _buildCompactNormalBottomBar(
+  LiveRoomController controller,
+  GlobalKey volumeButtonKey,
+) {
+  return Obx(() {
+    final showDanmaku = controller.showDanmakuState.value;
+    final muted = controller.mutedState.value;
+    final playing = controller.playingState.value;
+    return CompactPlayerBar(
+      duration: controller.liveDuration.value,
+      primaryActions: [
+        IconButton(
+          tooltip: playing ? "暂停" : "播放",
+          onPressed: controller.togglePlayPauseWithRefresh,
+          icon: Icon(playing ? Icons.pause : Icons.play_arrow,
+              color: Colors.white),
         ),
+        IconButton(
+          tooltip: showDanmaku ? "关闭弹幕" : "开启弹幕",
+          onPressed: () => controller.setDanmakuVisible(!showDanmaku),
+          icon: ImageIcon(
+            AssetImage(showDanmaku
+                ? 'assets/icons/icon_danmaku_close.png'
+                : 'assets/icons/icon_danmaku_open.png'),
+            size: 24,
+            color: Colors.white,
+          ),
+        ),
+        IconButton(
+          key: volumeButtonKey,
+          tooltip: "音量",
+          onPressed: () {
+            final context = volumeButtonKey.currentContext;
+            if (context != null) {
+              controller.showVolumeSlider(context, keepAlive: true);
+            }
+          },
+          icon: Icon(muted ? Icons.volume_off : Icons.volume_up,
+              color: Colors.white),
+        ),
+      ],
+      overflowAction: PopupMenuButton<_CompactPlayerAction>(
+        tooltip: "更多播放操作",
+        icon: const Icon(Icons.more_horiz, color: Colors.white),
+        onOpened: () => controller.hideControlsTimer?.cancel(),
+        onCanceled: controller.resetHideControlsTimer,
+        onSelected: (action) {
+          controller.resetHideControlsTimer();
+          switch (action) {
+            case _CompactPlayerAction.refresh:
+              controller.refreshRoom();
+              break;
+            case _CompactPlayerAction.danmakuSettings:
+              showDanmakuSettings(controller);
+              break;
+            case _CompactPlayerAction.mute:
+              controller.toggleMute();
+              break;
+            case _CompactPlayerAction.quality:
+              showQualitesInfo(controller);
+              break;
+            case _CompactPlayerAction.line:
+              showLinesInfo(controller);
+              break;
+            case _CompactPlayerAction.smallWindow:
+              controller.enterSmallWindow();
+              break;
+          }
+        },
+        itemBuilder: (_) => [
+          const PopupMenuItem(
+            value: _CompactPlayerAction.refresh,
+            child: Text("刷新直播"),
+          ),
+          const PopupMenuItem(
+            value: _CompactPlayerAction.danmakuSettings,
+            child: Text("弹幕设置"),
+          ),
+          PopupMenuItem(
+            value: _CompactPlayerAction.mute,
+            child: Text(muted ? "取消静音" : "静音"),
+          ),
+          const PopupMenuItem(
+            value: _CompactPlayerAction.quality,
+            child: Text("清晰度"),
+          ),
+          const PopupMenuItem(
+            value: _CompactPlayerAction.line,
+            child: Text("播放线路"),
+          ),
+          if (!Platform.isAndroid && !Platform.isIOS)
+            const PopupMenuItem(
+              value: _CompactPlayerAction.smallWindow,
+              child: Text("小窗播放"),
+            ),
+        ],
+      ),
+      fullscreenAction: IconButton(
+        tooltip: "全屏",
+        onPressed: controller.enterFullScreen,
+        icon: const Icon(Remix.fullscreen_line, color: Colors.white),
       ),
     );
   });

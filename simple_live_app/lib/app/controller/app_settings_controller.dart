@@ -443,9 +443,11 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kFollowShowLiveCover,
       false,
     );
+    // 未手动收起过时默认展开：升级后的老用户仍能看到标签/分组筛选，
+    // 用户一旦显式收起，后续启动按持久化值保持折叠。
     followTagPanelExpanded.value = LocalStorageService.instance.getValue(
       LocalStorageService.kFollowTagPanelExpanded,
-      false,
+      true,
     );
 
     rememberWindowPlacement.value = LocalStorageService.instance.getValue(

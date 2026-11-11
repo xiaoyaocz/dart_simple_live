@@ -392,6 +392,7 @@ class FollowUserPage extends GetView<FollowUserController> {
   }
 
   Widget _buildActiveFilterBar(BuildContext context) {
+    final settings = AppSettingsController.instance;
     final chips = <Widget>[];
     if (controller.selectedTagId.value != FollowUserController.allTagId) {
       chips.add(
@@ -407,6 +408,23 @@ class FollowUserPage extends GetView<FollowUserController> {
         InputChip(
           label: Text("搜索：${controller.searchKeyword.value}"),
           onDeleted: controller.clearSearchKeyword,
+        ),
+      );
+    }
+    // 这两个开关开启时常驻可关，避免折叠面板里的提示文本只能看不能操作。
+    if (settings.followOnlyLive.value) {
+      chips.add(
+        InputChip(
+          label: const Text("仅显示开播"),
+          onDeleted: () => controller.setOnlyLive(false),
+        ),
+      );
+    }
+    if (settings.followRefreshOnEnter.value) {
+      chips.add(
+        InputChip(
+          label: const Text("进页自动刷新"),
+          onDeleted: () => controller.setRefreshOnEnter(false),
         ),
       );
     }

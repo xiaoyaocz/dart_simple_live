@@ -181,6 +181,9 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   List<Widget> _buildDesktopOverlayButtons(BuildContext context) {
+    // 竖屏不会构建展开侧栏，更多入口只能靠悬浮按钮保留。
+    final keepMoreOverlay =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
     return [
       Obx(() {
         if (!controller.showControlsState.value) {
@@ -197,15 +200,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 onPressed: () => _handleBack(context),
               ),
             ),
-            Positioned(
-              right: 8,
-              top: controller.desktopSidePanelCollapsed.value ? 56 : 8,
-              child: _buildDesktopOverlayIconButton(
-                tooltip: "更多",
-                icon: Icons.more_horiz,
-                onPressed: showMore,
+            if (controller.desktopSidePanelCollapsed.value || keepMoreOverlay)
+              Positioned(
+                right: 8,
+                top: controller.desktopSidePanelCollapsed.value ? 56 : 8,
+                child: _buildDesktopOverlayIconButton(
+                  tooltip: "更多",
+                  icon: Icons.more_horiz,
+                  onPressed: showMore,
+                ),
               ),
-            ),
             if (Platform.isWindows &&
                 controller.desktopSidePanelCollapsed.value)
               Positioned(
@@ -675,13 +679,28 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   ),
                 ),
               ),
-              alignment: Alignment.centerLeft,
-              child: Tooltip(
-                message: "折叠聊天区",
-                child: IconButton(
-                  onPressed: controller.toggleDesktopSidePanel,
-                  icon: const Icon(Icons.chevron_right),
-                ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: "折叠聊天区",
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: controller.toggleDesktopSidePanel,
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ),
+                  const Spacer(),
+                  Tooltip(
+                    message: "更多",
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: showMore,
+                      icon: const Icon(Icons.more_horiz),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
               ),
             ),
           Expanded(
@@ -1644,10 +1663,12 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   void showMore() {
+    final sheetMaxHeight = MediaQuery.sizeOf(Get.context!).height * 0.85;
     showModalBottomSheet(
       context: Get.context!,
-      constraints: const BoxConstraints(
+      constraints: BoxConstraints(
         maxWidth: 600,
+        maxHeight: sheetMaxHeight,
       ),
       isScrollControlled: true,
       useSafeArea: true,

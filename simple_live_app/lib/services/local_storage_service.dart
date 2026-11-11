@@ -31,6 +31,7 @@ class LocalStorageService extends GetxService {
   static const String kFollowOnlyLive = "FollowOnlyLive";
   static const String kFollowRefreshOnEnter = "FollowRefreshOnEnter";
   static const String kFollowShowLiveCover = "FollowShowLiveCover";
+  static const String kFollowTagPanelExpanded = "FollowTagPanelExpanded";
   static const String kRememberWindowPlacement = "RememberWindowPlacement";
   static const String kDesktopWindowBounds = "DesktopWindowBounds";
   static const String kDesktopWindowMaximized = "DesktopWindowMaximized";

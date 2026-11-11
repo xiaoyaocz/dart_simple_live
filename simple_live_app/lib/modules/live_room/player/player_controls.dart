@@ -498,7 +498,7 @@ Widget _buildFullTopBar(
             IconButton(
               onPressed: () => showPlayerSettings(controller),
               icon: const Icon(
-                Icons.more_horiz,
+                Icons.tune,
                 color: Colors.white,
                 size: 24,
               ),
@@ -927,7 +927,7 @@ Widget _buildCompactNormalBottomBar(
       ],
       overflowAction: PopupMenuButton<_CompactPlayerAction>(
         tooltip: "更多播放操作",
-        icon: const Icon(Icons.more_horiz, color: Colors.white),
+        icon: const Icon(Icons.tune, color: Colors.white),
         onOpened: () => controller.hideControlsTimer?.cancel(),
         onCanceled: controller.resetHideControlsTimer,
         onSelected: (action) {

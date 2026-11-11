@@ -22,6 +22,7 @@ class PageGridView extends StatelessWidget {
   final double? childAspectRatio;
   final double? mainAxisExtent;
   final bool useFixedGrid;
+  final Widget? header;
   const PageGridView({
     required this.itemBuilder,
     required this.pageController,
@@ -35,6 +36,7 @@ class PageGridView extends StatelessWidget {
     this.childAspectRatio,
     this.mainAxisExtent,
     this.useFixedGrid = false,
+    this.header,
     required this.crossAxisCount,
     Key? key,
   }) : super(key: key);
@@ -56,7 +58,40 @@ class PageGridView extends StatelessWidget {
             firstRefresh: firstRefresh,
             onLoad: pageController.loadData,
             onRefresh: pageController.refreshData,
-            child: useFixedGrid
+            child: header != null
+                ? CustomScrollView(
+                    controller: pageController.scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(child: header),
+                      SliverPadding(
+                        padding: padding ?? EdgeInsets.zero,
+                        sliver: useFixedGrid
+                            ? SliverGrid(
+                                delegate: SliverChildBuilderDelegate(
+                                  itemBuilder,
+                                  childCount: pageController.list.length,
+                                ),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: crossAxisSpacing,
+                                  mainAxisSpacing: mainAxisSpacing,
+                                  childAspectRatio:
+                                      childAspectRatio ?? 3.4,
+                                  mainAxisExtent: mainAxisExtent,
+                                ),
+                              )
+                            : SliverMasonryGrid.count(
+                                crossAxisCount: crossAxisCount,
+                                mainAxisSpacing: mainAxisSpacing,
+                                crossAxisSpacing: crossAxisSpacing,
+                                itemBuilder: itemBuilder,
+                                childCount: pageController.list.length,
+                              ),
+                      ),
+                    ],
+                  )
+                : useFixedGrid
                 ? GridView.builder(
                     padding: padding,
                     controller: pageController.scrollController,

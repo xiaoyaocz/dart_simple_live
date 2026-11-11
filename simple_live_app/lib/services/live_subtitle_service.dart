@@ -60,6 +60,28 @@ class LiveSubtitleService extends GetxService {
   Map<String, String>? _playbackHeaders;
   String? _activeDesktopKey;
   static bool _sherpaBindingsInitialized = false;
+  final Set<Future<void>> _pendingSynchronizations = {};
+  final Set<Future<void>> _pendingStops = {};
+  Future<void>? _roomHandoffStop;
+
+  Future<T> _trackRuntimeOperation<T>(
+    Future<T> operation,
+    Set<Future<void>> pending,
+  ) {
+    // Track completion independently of success: even a failed initialization
+    // must finish before the final stop can safely retire the shared engine.
+    final completion = operation.then<void>((_) {},
+        onError: (Object error, StackTrace stackTrace) {});
+    pending.add(completion);
+    completion.then((_) => pending.remove(completion));
+    return operation;
+  }
+
+  Future<void> _waitForRuntimeOperations(Set<Future<void>> pending) async {
+    while (pending.isNotEmpty) {
+      await Future.wait<void>(pending.toList());
+    }
+  }
 
   void setEngine(LiveSubtitleEngine value) {
     engine = value;
@@ -206,6 +228,17 @@ class LiveSubtitleService extends GetxService {
   }
 
   Future<bool> syncPreviewFromSettings({
+    String? mediaUrl,
+    Map<String, String>? httpHeaders,
+  }) {
+    if (_roomHandoffStop != null) return Future<bool>.value(false);
+    return _trackRuntimeOperation(
+      _syncPreviewFromSettings(mediaUrl: mediaUrl, httpHeaders: httpHeaders),
+      _pendingSynchronizations,
+    );
+  }
+
+  Future<bool> _syncPreviewFromSettings({
     String? mediaUrl,
     Map<String, String>? httpHeaders,
   }) async {
@@ -383,16 +416,28 @@ class LiveSubtitleService extends GetxService {
   }
 
   void _stopRuntimeOnly() {
+    unawaited(_stopRuntimeOnlyAndWait());
+  }
+
+  Future<void> _stopRuntimeOnlyAndWait() {
+    return _trackRuntimeOperation(_stopRuntime(), _pendingStops);
+  }
+
+  Future<void> _stopRuntime() async {
     _previewTimer?.cancel();
     _previewTimer = null;
     _engineSubscription?.cancel();
     _engineSubscription = null;
     _desktopSubscription?.cancel();
     _desktopSubscription = null;
-    unawaited(_desktopEngine?.stop());
+    final desktopStop = _desktopEngine?.stop();
     _desktopEngine = null;
     _activeDesktopKey = null;
-    unawaited(engine?.stop());
+    final mobileStop = engine?.stop();
+    await Future.wait<void>([
+      if (desktopStop != null) desktopStop,
+      if (mobileStop != null) mobileStop,
+    ]);
   }
 
   void stop() {
@@ -400,6 +445,34 @@ class LiveSubtitleService extends GetxService {
     running.value = false;
     subtitleText.value = "";
     statusText.value = "";
+  }
+
+  /// A room handoff must not start a new session while the previous engine's
+  /// asynchronous stop can still change the shared subtitle service.
+  Future<void> stopAndWait() {
+    final active = _roomHandoffStop;
+    if (active != null) return active;
+    // Publish the barrier before its async body can start another operation.
+    final stopping = Future<void>.microtask(_stopForRoomHandoff);
+    _roomHandoffStop = stopping;
+    return stopping.whenComplete(() {
+      if (identical(_roomHandoffStop, stopping)) _roomHandoffStop = null;
+    });
+  }
+
+  Future<void> _stopForRoomHandoff() async {
+    await _waitForRuntimeOperations(_pendingSynchronizations);
+    final stopped = _stopRuntimeOnlyAndWait();
+    running.value = false;
+    subtitleText.value = "";
+    statusText.value = "";
+    try {
+      await stopped;
+    } finally {
+      // Include stop() calls already issued by settings or earlier syncs, whose
+      // engines may have been detached before this final stop.
+      await _waitForRuntimeOperations(_pendingStops);
+    }
   }
 
   List<String> _previewLabels(String language) {
@@ -711,8 +784,7 @@ class _DesktopLiveSubtitleEngine {
     if (_lastEmitted.isEmpty) {
       return;
     }
-    if (DateTime.now().difference(_lastChange).inMilliseconds >
-        _hideAfterMs) {
+    if (DateTime.now().difference(_lastChange).inMilliseconds > _hideAfterMs) {
       _finalText = "";
       _lastEmitted = "";
       _recreateOnlineStream();

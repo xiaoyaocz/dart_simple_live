@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:ffi' show Abi;
+import 'dart:convert' show utf8;
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -73,7 +75,6 @@ class Log {
     addDebugLog(message, Colors.blue);
     logger.i("${DateTime.now().toString()}\n$message");
     if (writeFile) {
-      logFileWriter?.write("[INFO] $_currentTime：$message");
       writeLog(message, Level.info);
     }
   }
@@ -124,7 +125,7 @@ class LogFileWriter {
       await logDir.create();
     }
     var logFile = File("${logDir.path}/$fileName");
-    fileWriter = logFile.openWrite(mode: FileMode.append);
+    fileWriter = logFile.openWrite(mode: FileMode.append, encoding: utf8);
     writeSystemInfo();
   }
 
@@ -154,6 +155,7 @@ class LogFileWriter {
     write("System Info:");
     write("Current Time: ${DateTime.now()}");
     write("Platform: ${Platform.operatingSystem}");
+    write("Process ABI: ${Abi.current()}");
     write("Version: ${Platform.operatingSystemVersion}");
     write("Local: ${Platform.localeName}");
     write(

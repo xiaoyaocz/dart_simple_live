@@ -560,8 +560,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   Widget buildTabletUI(BuildContext context) {
     return Obx(() {
+      // 平板横屏路径必须至少同步读取一次 Rx，否则 GetX 首帧抛
+      // improper use of a GetX（release 表现为灰屏），因此无条件先读再短路。
       final collapsed =
-          _isDesktop && controller.desktopSidePanelCollapsed.value;
+          controller.desktopSidePanelCollapsed.value && _isDesktop;
       return Column(
         children: [
           Expanded(

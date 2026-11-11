@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/mobile_safe_insets.dart';
+import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 
 class AppstyleSettingPage extends GetView<AppSettingsController> {
@@ -17,6 +22,50 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
       body: ListView(
         padding: AppStyle.pagePadding(),
         children: [
+          if (Platform.isAndroid || Platform.isIOS) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
+              child: Text(
+                "安全区域调整",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+            SettingsCard(
+              child: Obx(
+                () => Column(
+                  children: [
+                    SettingsNumber(
+                      title: "顶部额外留白",
+                      subtitle: "在系统安全区域之外，将顶栏向下移动",
+                      value: controller.mobileTopExtraInset.value,
+                      max: mobileExtraInsetMax,
+                      unit: "dp",
+                      onChanged: controller.setMobileTopExtraInset,
+                    ),
+                    AppStyle.divider,
+                    SettingsNumber(
+                      title: "底部额外留白",
+                      subtitle: "将底栏向上移动，全屏和画中画不受影响",
+                      value: controller.mobileBottomExtraInset.value,
+                      max: mobileExtraInsetMax,
+                      unit: "dp",
+                      onChanged: controller.setMobileBottomExtraInset,
+                    ),
+                    AppStyle.divider,
+                    SettingsAction(
+                      title: "恢复自动安全区域",
+                      subtitle: "额外留白归零，仅使用系统安全区域；只保存在本设备",
+                      onTap: () {
+                        controller.setMobileTopExtraInset(0);
+                        controller.setMobileBottomExtraInset(0);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AppStyle.vGap12,
+          ],
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
             child: Text(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 
 /// 听直播模式：纯音频页面。
 /// 禁用视频轨只保留音频，隐藏弹幕与视频，Android 前台服务无条件保持，
@@ -60,9 +61,8 @@ class _ListenLivePageState extends State<ListenLivePage> {
     Widget buildOption(int minutes) {
       return ListTile(
         title: Text(minutes == 0 ? "不关闭" : "$minutes 分钟"),
-        trailing: current == minutes
-            ? const Icon(Icons.check_circle_rounded)
-            : null,
+        trailing:
+            current == minutes ? const Icon(Icons.check_circle_rounded) : null,
         onTap: () {
           controller.setListenExitTimer(minutes);
           Get.back();
@@ -99,6 +99,10 @@ class _ListenLivePageState extends State<ListenLivePage> {
 
   @override
   Widget build(BuildContext context) {
+    return MobilePageInsets(child: Builder(builder: _buildContent));
+  }
+
+  Widget _buildContent(BuildContext context) {
     final detail = controller.detail.value;
     final siteName = controller.rxSite.value.name;
     return Scaffold(
@@ -180,10 +184,9 @@ class _ListenLivePageState extends State<ListenLivePage> {
                 child: CircleAvatar(
                   radius: 56,
                   backgroundColor: Colors.white12,
-                  backgroundImage:
-                      (detail?.userAvatar.isNotEmpty ?? false)
-                          ? NetworkImage(detail!.userAvatar)
-                          : null,
+                  backgroundImage: (detail?.userAvatar.isNotEmpty ?? false)
+                      ? NetworkImage(detail!.userAvatar)
+                      : null,
                   child: (detail?.userAvatar.isNotEmpty ?? false)
                       ? null
                       : const Icon(
@@ -196,14 +199,15 @@ class _ListenLivePageState extends State<ListenLivePage> {
               const SizedBox(height: 16),
               Text(
                 detail?.userName ?? siteName,
-                style: Get.textTheme.titleLarge
-                    ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                style: Get.textTheme.titleLarge?.copyWith(
+                    color: Colors.white, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
                 "$siteName · ${detail?.introduction?.isNotEmpty ?? false ? detail!.introduction : "音频模式播放中"}",
-                style: Get.textTheme.bodyMedium?.copyWith(color: Colors.white60),
+                style:
+                    Get.textTheme.bodyMedium?.copyWith(color: Colors.white60),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -229,8 +233,7 @@ class _ListenLivePageState extends State<ListenLivePage> {
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color:
-                                live ? Colors.greenAccent : Colors.white38,
+                            color: live ? Colors.greenAccent : Colors.white38,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -275,7 +278,8 @@ class _ListenLivePageState extends State<ListenLivePage> {
               const SizedBox(height: 12),
               Text(
                 "退出听直播回到视频画面",
-                style: Get.textTheme.labelSmall?.copyWith(color: Colors.white38),
+                style:
+                    Get.textTheme.labelSmall?.copyWith(color: Colors.white38),
               ),
               const SizedBox(height: 16),
             ],

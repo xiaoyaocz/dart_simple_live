@@ -3,6 +3,7 @@
 import 'dart:io';
 
 import 'package:get/get.dart';
+import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_controller.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_page.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
@@ -118,10 +119,10 @@ class AppPages {
         if (args is Map<String, dynamic>) {
           Get.put(
             CategoryDetailController(
-            site: args["site"],
-            subCategory: args["category"],
-            onRoomSelected: args["onRoomSelected"] as RoomSelectionCallback?,
-            excludedRoomId: args["excludedRoomId"] as String?,
+              site: args["site"],
+              subCategory: args["category"],
+              onRoomSelected: args["onRoomSelected"] as RoomSelectionCallback?,
+              excludedRoomId: args["excludedRoomId"] as String?,
             ),
             tag: args["controllerTag"] as String?,
           );
@@ -348,5 +349,13 @@ class AppPages {
       name: RoutePath.kSettingsFollow,
       page: () => const FollowSettingsPage(),
     ),
-  ];
+  ].map((route) {
+    // 直播间自行区分普通页面、全屏和画中画，其余导航页统一适配。
+    if (route.name == RoutePath.kLiveRoomDetail) {
+      return route;
+    }
+    return route.copy(
+      page: () => MobilePageInsets(child: route.page()),
+    );
+  }).toList();
 }

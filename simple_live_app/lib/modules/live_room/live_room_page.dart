@@ -12,12 +12,14 @@ import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/mobile_safe_insets.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
 import 'package:simple_live_app/modules/live_room/widgets/live_contribution_rank_panel.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
+import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
@@ -35,23 +37,11 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   const LiveRoomPage({Key? key}) : super(key: key);
 
-  double _bottomSafeInset(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final viewPadding = mediaQuery.viewPadding.bottom;
-    final padding = mediaQuery.padding.bottom;
-    return viewPadding > padding ? viewPadding : padding;
-  }
-
   double _bottomActionInset(BuildContext context) {
-    if (Platform.isIOS &&
-        MediaQuery.of(context).orientation == Orientation.landscape) {
-      return 0;
-    }
-    final safeInset = _bottomSafeInset(context);
-    if (!Platform.isIOS) {
-      return safeInset;
-    }
-    return safeInset.clamp(0.0, 16.0).toDouble();
+    return mobileBottomActionInset(
+      MediaQuery.of(context),
+      isIOS: Platform.isIOS,
+    );
   }
 
   bool get _isDesktop {
@@ -257,55 +247,59 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         return _buildPipOnlyPage();
       }
       if (controller.loadError.value) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text("直播间加载失败"),
-          ),
-          body: Padding(
-            padding: AppStyle.edgeInsetsA12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                LottieBuilder.asset(
-                  'assets/lotties/error.json',
-                  height: 140,
-                  repeat: false,
-                ),
-                const Text(
-                  "直播间加载失败",
-                  textAlign: TextAlign.center,
-                ),
-                AppStyle.vGap4,
-                Text(
-                  controller.error?.toString() ?? "未知错误",
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                AppStyle.vGap4,
-                Text(
-                  "${controller.rxSite.value.id} - ${controller.rxRoomId.value}",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    TextButton.icon(
-                      onPressed: controller.copyErrorDetail,
-                      icon: const Icon(Remix.file_copy_line),
-                      label: const Text("复制信息"),
-                    ),
-                    TextButton.icon(
-                      onPressed: controller.refreshRoom,
-                      icon: const Icon(Remix.refresh_line),
-                      label: const Text("刷新"),
-                    ),
-                  ],
-                ),
-              ],
+        return MobilePageInsets(
+          enabled: !controller.fullScreenState.value &&
+              !controller.smallWindowState.value,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text("直播间加载失败"),
+            ),
+            body: Padding(
+              padding: AppStyle.edgeInsetsA12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  LottieBuilder.asset(
+                    'assets/lotties/error.json',
+                    height: 140,
+                    repeat: false,
+                  ),
+                  const Text(
+                    "直播间加载失败",
+                    textAlign: TextAlign.center,
+                  ),
+                  AppStyle.vGap4,
+                  Text(
+                    controller.error?.toString() ?? "未知错误",
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  AppStyle.vGap4,
+                  Text(
+                    "${controller.rxSite.value.id} - ${controller.rxRoomId.value}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: controller.copyErrorDetail,
+                        icon: const Icon(Remix.file_copy_line),
+                        label: const Text("复制信息"),
+                      ),
+                      TextButton.icon(
+                        onPressed: controller.refreshRoom,
+                        icon: const Icon(Remix.refresh_line),
+                        label: const Text("刷新"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -321,7 +315,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           ),
         );
       }
-      return buildPageUI();
+      return MobilePageInsets(
+        enabled: !controller.smallWindowState.value,
+        child: buildPageUI(),
+      );
     });
     return page;
   }

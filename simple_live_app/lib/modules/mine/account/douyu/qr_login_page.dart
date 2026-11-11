@@ -3,12 +3,17 @@ import 'package:get/get.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/mine/account/douyu/qr_login_controller.dart';
+import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 
 class DouyuQRLoginPage extends GetView<DouyuQRLoginController> {
   const DouyuQRLoginPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    return MobilePageInsets(child: Builder(builder: _buildContent));
+  }
+
+  Widget _buildContent(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("斗鱼账号登录")),
       body: Column(
@@ -59,7 +64,8 @@ class DouyuQRLoginPage extends GetView<DouyuQRLoginController> {
                     ),
                     AppStyle.vGap8,
                     Visibility(
-                      visible: controller.qrStatus.value == DouyuQRStatus.scanned,
+                      visible:
+                          controller.qrStatus.value == DouyuQRStatus.scanned,
                       child: const Text("已扫描，请在斗鱼APP内确认登录"),
                     ),
                   ],

@@ -104,9 +104,10 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget _buildLandscapeAppBarTitle(BuildContext context) {
-    if (_isDesktop) {
-      return Obx(() => _buildLandscapeAppBarTitleContent(context));
-    }
+    // 当前唯一调用方是移动端 Scaffold 的 AppBar（桌面分支不经过这里）。
+    // 注意：内容里的 Rx 读取发生在 LayoutBuilder 回调（布局期），
+    // Obx 追踪不到，禁止在外层包 Obx，否则桌面窄窗口路径零读会抛
+    // improper use of a GetX。
     return _buildLandscapeAppBarTitleContent(context);
   }
 

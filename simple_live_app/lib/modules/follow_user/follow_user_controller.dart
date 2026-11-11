@@ -55,6 +55,8 @@ class FollowUserController extends BasePageController<FollowUser> {
   var selectedGroupId = "all".obs;
   var selectedTagId = allTagId.obs;
   var searchKeyword = "".obs;
+  RxBool get tagPanelExpanded =>
+      AppSettingsController.instance.followTagPanelExpanded;
   var multiSelectMode = false.obs;
   RxSet<String> selectedMultiRoomKeys = <String>{}.obs;
   var currentDisplayPage = 1.obs;
@@ -443,12 +445,14 @@ class FollowUserController extends BasePageController<FollowUser> {
     selectedTagId.value = tag.id;
     currentDisplayPage.value = 1;
     filterData();
+    _jumpToTop();
   }
 
   void setSearchKeyword(String value) {
     searchKeyword.value = value.trim();
     currentDisplayPage.value = 1;
     filterData();
+    _jumpToTop();
   }
 
   void clearSearchKeyword() {
@@ -458,6 +462,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     searchKeyword.value = "";
     currentDisplayPage.value = 1;
     filterData();
+    _jumpToTop();
   }
 
   void _requestVisiblePreviews(List<FollowUser> items) {
@@ -477,6 +482,7 @@ class FollowUserController extends BasePageController<FollowUser> {
     AppSettingsController.instance.setFollowOnlyLive(value);
     currentDisplayPage.value = 1;
     filterData();
+    _jumpToTop();
   }
 
   void setRefreshOnEnter(bool value) {
@@ -493,12 +499,14 @@ class FollowUserController extends BasePageController<FollowUser> {
     selectedGroupId.value = "all";
     _saveGroupSelection();
     filterData();
+    _jumpToTop();
   }
 
   void setGroupOption(FollowGroupOption option) {
     selectedGroupId.value = option.id;
     _saveGroupSelection();
     filterData();
+    _jumpToTop();
   }
 
   void _saveGroupSelection() {
@@ -508,6 +516,18 @@ class FollowUserController extends BasePageController<FollowUser> {
           : "liveStatus",
       groupId: selectedGroupId.value,
     );
+  }
+
+  void toggleTagPanel() {
+    AppSettingsController.instance
+        .setFollowTagPanelExpanded(!tagPanelExpanded.value);
+  }
+
+  /// 切换筛选后内容整组替换，停留在原滚动位置只会停在新内容半途。
+  void _jumpToTop() {
+    if (scrollController.hasClients) {
+      scrollController.jumpTo(0);
+    }
   }
 
   void removeItem(FollowUser item) async {

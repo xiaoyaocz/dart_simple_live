@@ -89,7 +89,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 child: Obx(
                   () => SettingsMenu<String>(
                     title: "Windows GPU 偏好",
-                    subtitle: "选择高性能/NVIDIA 可减少游戏本误用核显；修改后必须完全重启应用",
+                    subtitle: "适用于 AMD、NVIDIA、Intel，由系统按偏好选择；修改后必须完全重启应用",
                     value: AppSettingsController
                         .instance.windowsGpuPreference.value,
                     valueMap: AppSettingsController.windowsGpuPreferenceOptions,

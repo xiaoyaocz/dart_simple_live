@@ -2746,7 +2746,7 @@ class AppSettingsController extends GetxController {
   static const windowsGpuPreferenceOptions = <String, String>{
     "auto": "自动（由系统选择）",
     "low_power": "省电/核显",
-    "high_performance": "高性能/NVIDIA 独显",
+    "high_performance": "高性能 GPU（独显优先）",
   };
 
   var windowsGpuPreference = "auto".obs;

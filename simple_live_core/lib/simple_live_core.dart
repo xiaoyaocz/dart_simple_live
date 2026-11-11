@@ -20,6 +20,7 @@ export 'src/common/kuaishou_live_link.dart';
 export 'src/common/live_url_parser.dart';
 export 'src/common/player_error_classifier.dart';
 export 'src/common/player_volume_policy.dart';
+export 'src/common/windows_video_acceleration_policy.dart';
 export 'src/common/quality_memory.dart';
 export 'src/model/live_message.dart';
 export 'src/danmaku/bilibili_danmaku.dart';

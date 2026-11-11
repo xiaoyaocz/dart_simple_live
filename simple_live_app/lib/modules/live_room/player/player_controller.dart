@@ -3286,13 +3286,20 @@ class PlayerController extends BaseController
 
     Log.i(
       '播放诊断：hwdec=$hwdec codec=$codec fps=$fps bitrate=$videoBitrate '
-      'source=$sourceResolution output=$outputResolution',
+      'source=$sourceResolution output=$outputResolution '
+      '${MpvOptionsService.diagnosticsSummary()}',
     );
     Utils.showBottomSheet(
       title: "播放信息",
       child: ListView(
         children: [
           diagnosticTile('实际硬件解码', hwdec),
+          if (Platform.isWindows)
+            diagnosticTile(
+                '视频渲染设置',
+                AppSettingsController.instance.videoRenderingAcceleration.value
+                    ? 'GPU 加速（设置值，初始化失败时可能回落为软件输出）'
+                    : '软件输出（设置值）'),
           diagnosticTile('视频编码', codec),
           diagnosticTile('视频 FPS', fps),
           diagnosticTile('视频码率（bit/s）', videoBitrate),

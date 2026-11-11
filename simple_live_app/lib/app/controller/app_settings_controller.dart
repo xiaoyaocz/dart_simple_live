@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/desktop_startup_args.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/mobile_safe_insets.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/danmu_shield_preset.dart';
 import 'package:simple_live_app/services/background_playback_service.dart';
@@ -113,8 +114,8 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
     danmuStrokeEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuStrokeEnable, true);
-    danmuMaxFps.value =
-        LocalStorageService.instance.getValue(LocalStorageService.kDanmuMaxFps, 0);
+    danmuMaxFps.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuMaxFps, 0);
     danmuTopMargin.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuTopMargin, 0.0);
     danmuBottomMargin.value = LocalStorageService.instance
@@ -126,6 +127,14 @@ class AppSettingsController extends GetxController {
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
+    mobileTopExtraInset.value = _normalizeMobileExtraInset(
+      LocalStorageService.instance
+          .getValue<dynamic>(LocalStorageService.kMobileTopExtraInset, 0),
+    );
+    mobileBottomExtraInset.value = _normalizeMobileExtraInset(
+      LocalStorageService.instance
+          .getValue<dynamic>(LocalStorageService.kMobileBottomExtraInset, 0),
+    );
     iosOriginalQualityPowerSaving.value = LocalStorageService.instance.getValue(
       LocalStorageService.kIosOriginalQualityPowerSaving,
       true,
@@ -658,6 +667,31 @@ class AppSettingsController extends GetxController {
     hardwareDecode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kHardwareDecode, e);
+  }
+
+  // 屏幕安全区补偿仅保存在本机，单位为逻辑像素。
+  var mobileTopExtraInset = 0.obs;
+  var mobileBottomExtraInset = 0.obs;
+
+  int _normalizeMobileExtraInset(dynamic value) {
+    final parsed = value is num && value.isFinite
+        ? value.toInt()
+        : int.tryParse(value.toString()) ?? 0;
+    return parsed.clamp(0, mobileExtraInsetMax).toInt();
+  }
+
+  void setMobileTopExtraInset(int value) {
+    final normalized = _normalizeMobileExtraInset(value);
+    mobileTopExtraInset.value = normalized;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kMobileTopExtraInset, normalized);
+  }
+
+  void setMobileBottomExtraInset(int value) {
+    final normalized = _normalizeMobileExtraInset(value);
+    mobileBottomExtraInset.value = normalized;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kMobileBottomExtraInset, normalized);
   }
 
   var iosOriginalQualityPowerSaving = true.obs;

@@ -23,8 +23,7 @@ class LocalStorageService extends GetxService {
   static const String kLiveRoomShortcutVolumeUp = "LiveRoomShortcutVolumeUp";
   static const String kLiveRoomShortcutVolumeDown =
       "LiveRoomShortcutVolumeDown";
-  static const String kLiveRoomShortcutPlayPause =
-      "LiveRoomShortcutPlayPause";
+  static const String kLiveRoomShortcutPlayPause = "LiveRoomShortcutPlayPause";
   static const String kLastSearchSiteId = "LastSearchSiteId";
   static const String kFollowGroupMode = "FollowGroupMode";
   static const String kFollowSelectedGroupId = "FollowSelectedGroupId";
@@ -61,6 +60,8 @@ class LocalStorageService extends GetxService {
   static const String kDanmuFontWeight = "DanmuFontWeight";
   static const String kContributionRankEnable = "ContributionRankEnable";
   static const String kHardwareDecode = "HardwareDecode";
+  static const String kMobileTopExtraInset = "MobileTopExtraInset";
+  static const String kMobileBottomExtraInset = "MobileBottomExtraInset";
   static const String kIosOriginalQualityPowerSaving =
       "IosOriginalQualityPowerSaving";
   static const String kChatTextSize = "ChatTextSize";
@@ -163,7 +164,8 @@ class LocalStorageService extends GetxService {
   // 小窗弹幕设置
   static const String kSmallWindowDanmuScale = "SmallWindowDanmuScale";
   static const String kSmallWindowDanmuMaxLines = "SmallWindowDanmuMaxLines";
-  static const String kSmallWindowDanmuAutoTransparent = "SmallWindowDanmuAutoTransparent";
+  static const String kSmallWindowDanmuAutoTransparent =
+      "SmallWindowDanmuAutoTransparent";
 
   // PIP弹幕设置
   static const String kEnablePipDanmu = "EnablePipDanmu";
@@ -173,7 +175,8 @@ class LocalStorageService extends GetxService {
   static const String kPipKeepBackgroundVideo = "PipKeepBackgroundVideo";
 
   // SuperChat 全屏滚动
-  static const String kSuperChatScrollInFullscreen = "SuperChatScrollInFullscreen";
+  static const String kSuperChatScrollInFullscreen =
+      "SuperChatScrollInFullscreen";
 
   // 全屏四角时钟
   static const String kPlayerClockEnable = "PlayerClockEnable";

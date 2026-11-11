@@ -36,6 +36,8 @@ class ProfileBackupService extends GetxService {
     // 斗鱼匿名设备号是本设备身份，不随配置包/备份/恢复迁移：
     // 每台设备保持独立 did，避免多设备共用同一"设备"触发风控
     LocalStorageService.kDouyuDeviceId,
+    LocalStorageService.kMobileTopExtraInset,
+    LocalStorageService.kMobileBottomExtraInset,
   };
 
   /// 只随本机、绝不随任何备份/同步通道迁移的键。
@@ -45,6 +47,8 @@ class ProfileBackupService extends GetxService {
     LocalStorageService.kDouyuDeviceId,
     // 全屏方向依设备形态而定（手机/平板不同），不随同步迁移
     LocalStorageService.kPlayerFullscreenOrientation,
+    LocalStorageService.kMobileTopExtraInset,
+    LocalStorageService.kMobileBottomExtraInset,
   };
 
   /// 导出/上传前剔除本机专属键
@@ -54,7 +58,7 @@ class ProfileBackupService extends GetxService {
     return {
       for (final entry in raw.entries)
         if (!deviceLocalSettings.contains(entry.key.toString()))
-            entry.key: entry.value,
+          entry.key: entry.value,
     };
   }
 

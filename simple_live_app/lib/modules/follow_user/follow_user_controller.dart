@@ -42,6 +42,7 @@ class FollowGroupOption {
 
 class FollowUserController extends BasePageController<FollowUser> {
   static const int paginationThreshold = 400;
+  static const double backToTopOffset = 400;
   static const String allTagId = "0";
 
   /// 伪标签：按直播状态自动归类，不承载成员关系
@@ -59,6 +60,7 @@ class FollowUserController extends BasePageController<FollowUser> {
   var currentDisplayPage = 1.obs;
   var totalDisplayPages = 1.obs;
   var paginationEnabled = false.obs;
+  var showBackToTop = false.obs;
   RxList<FollowUserTag> tagList = [
     FollowUserTag(id: "0", tag: "全部", userId: []),
     FollowUserTag(id: "1", tag: "直播中", userId: []),
@@ -70,6 +72,7 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   @override
   void onInit() {
+    scrollController.addListener(updateBackToTopVisibility);
     pageSize = AppSettingsController.instance.followPageSize.value;
     _restoreGroupSelection();
     unawaited(_loadInitialData());
@@ -87,6 +90,28 @@ class FollowUserController extends BasePageController<FollowUser> {
       filterData();
     });
     super.onInit();
+  }
+
+  void updateBackToTopVisibility() {
+    if (isClosed) {
+      return;
+    }
+    if (scrollController.positions.length != 1) {
+      showBackToTop.value = false;
+      return;
+    }
+    final position = scrollController.position;
+    showBackToTop.value =
+        position.hasPixels && position.pixels >= backToTopOffset;
+  }
+
+  void scrollBackToTop() {
+    if (scrollController.positions.length != 1 ||
+        !scrollController.position.hasPixels ||
+        scrollController.offset <= 0) {
+      return;
+    }
+    scrollToTopOrRefresh();
   }
 
   Future<void> _loadInitialData() async {
@@ -789,6 +814,7 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   @override
   void onClose() {
+    scrollController.removeListener(updateBackToTopVisibility);
     onUpdatedIndexedStream?.cancel();
     onUpdatedListStream?.cancel();
     super.onClose();

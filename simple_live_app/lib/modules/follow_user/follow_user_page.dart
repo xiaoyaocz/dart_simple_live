@@ -304,69 +304,77 @@ class FollowUserPage extends GetView<FollowUserController> {
                 ),
               ),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Obx(
-                    () {
-                      final layout = _resolveLayoutSpec(constraints.maxWidth);
-                      return GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onHorizontalDragEnd: (details) {
-                          if (!controller.paginationEnabled.value) {
-                            return;
-                          }
-                          final velocity = details.primaryVelocity ?? 0;
-                          if (velocity < -260) {
-                            controller.goToNextPage();
-                          } else if (velocity > 260) {
-                            controller.goToPreviousPage();
-                          }
-                        },
-                        child: PageGridView(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 96),
-                          crossAxisSpacing: layout.crossAxisSpacing,
-                          mainAxisSpacing: layout.mainAxisSpacing,
-                          mainAxisExtent: layout.mainAxisExtent,
-                          childAspectRatio: layout.childAspectRatio,
-                          useFixedGrid: layout.useFixedGrid,
-                          crossAxisCount: layout.crossAxisCount,
-                          pageController: controller,
-                          firstRefresh: false,
-                          showPCRefreshButton: false,
-                          itemBuilder: (_, i) {
-                            final item = controller.list[i];
-                            final isCurrent = "${item.siteId}_${item.roomId}" ==
-                                CurrentRoomService.instance.currentKey;
-                            return FollowUserItem(
-                              item: item,
-                              style: layout.itemStyle,
-                              showLiveCover: AppSettingsController
-                                  .instance.followShowLiveCover.value,
-                              multiSelectMode: controller.multiSelectMode.value,
-                              selectedForMultiRoom:
-                                  controller.isSelectedForMultiRoom(item),
-                              onSpecialTap: () {
-                                controller.toggleSpecialFollow(item);
-                              },
-                              onRemove: () {
-                                controller.removeItem(item);
-                              },
-                              onTap: () {
-                                if (PlatformUtils.supportsInlineMultiRoom &&
-                                    controller.multiSelectMode.value) {
-                                  controller.toggleMultiRoomItem(item);
-                                  return;
-                                }
-                                controller.openFollowRoom(item);
-                              },
-                              onLongPress: () {
-                                setFollowTagDialog(item);
-                              },
-                              playing: isCurrent,
-                            );
+                child: NotificationListener<ScrollMetricsNotification>(
+                  onNotification: (_) {
+                    controller.updateBackToTopVisibility();
+                    return false;
+                  },
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => Obx(
+                      () {
+                        final layout = _resolveLayoutSpec(constraints.maxWidth);
+                        return GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onHorizontalDragEnd: (details) {
+                            if (!controller.paginationEnabled.value) {
+                              return;
+                            }
+                            final velocity = details.primaryVelocity ?? 0;
+                            if (velocity < -260) {
+                              controller.goToNextPage();
+                            } else if (velocity > 260) {
+                              controller.goToPreviousPage();
+                            }
                           },
-                        ),
-                      );
-                    },
+                          child: PageGridView(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 96),
+                            crossAxisSpacing: layout.crossAxisSpacing,
+                            mainAxisSpacing: layout.mainAxisSpacing,
+                            mainAxisExtent: layout.mainAxisExtent,
+                            childAspectRatio: layout.childAspectRatio,
+                            useFixedGrid: layout.useFixedGrid,
+                            crossAxisCount: layout.crossAxisCount,
+                            pageController: controller,
+                            firstRefresh: false,
+                            showPCRefreshButton: false,
+                            itemBuilder: (_, i) {
+                              final item = controller.list[i];
+                              final isCurrent =
+                                  "${item.siteId}_${item.roomId}" ==
+                                      CurrentRoomService.instance.currentKey;
+                              return FollowUserItem(
+                                item: item,
+                                style: layout.itemStyle,
+                                showLiveCover: AppSettingsController
+                                    .instance.followShowLiveCover.value,
+                                multiSelectMode:
+                                    controller.multiSelectMode.value,
+                                selectedForMultiRoom:
+                                    controller.isSelectedForMultiRoom(item),
+                                onSpecialTap: () {
+                                  controller.toggleSpecialFollow(item);
+                                },
+                                onRemove: () {
+                                  controller.removeItem(item);
+                                },
+                                onTap: () {
+                                  if (PlatformUtils.supportsInlineMultiRoom &&
+                                      controller.multiSelectMode.value) {
+                                    controller.toggleMultiRoomItem(item);
+                                    return;
+                                  }
+                                  controller.openFollowRoom(item);
+                                },
+                                onLongPress: () {
+                                  setFollowTagDialog(item);
+                                },
+                                playing: isCurrent,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -379,6 +387,26 @@ class FollowUserPage extends GetView<FollowUserController> {
                     right: 16,
                     bottom: Platform.isAndroid || Platform.isIOS ? 12 : 18,
                     child: _buildFloatingPaginationBar(context),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          Obx(
+            () => controller.showBackToTop.value
+                ? Positioned(
+                    right: 16,
+                    bottom: controller.paginationEnabled.value
+                        ? (Platform.isAndroid || Platform.isIOS ? 84 : 90)
+                        : 16,
+                    child: SafeArea(
+                      top: false,
+                      left: false,
+                      child: FloatingActionButton.small(
+                        heroTag: null,
+                        tooltip: "回到顶部",
+                        onPressed: controller.scrollBackToTop,
+                        child: const Icon(Icons.arrow_upward),
+                      ),
+                    ),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -970,8 +998,7 @@ class FollowUserPage extends GetView<FollowUserController> {
                     ? null
                     : () async {
                         Get.back();
-                        final (added, _) =
-                            await controller.moveFollowsToTag(
+                        final (added, _) = await controller.moveFollowsToTag(
                           selected.toList(),
                           tag,
                         );
@@ -990,9 +1017,8 @@ class FollowUserPage extends GetView<FollowUserController> {
 
   /// 把 source 标签合并到其他用户标签
   void mergeTagDialog(FollowUserTag source) {
-    final candidates = controller.userTagList
-        .where((t) => t.id != source.id)
-        .toList();
+    final candidates =
+        controller.userTagList.where((t) => t.id != source.id).toList();
     if (candidates.isEmpty) {
       SmartDialog.showToast("没有其他标签可合并");
       return;

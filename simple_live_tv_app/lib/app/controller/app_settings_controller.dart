@@ -135,6 +135,8 @@ class AppSettingsController extends GetxController {
 
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
+    videoRenderingAcceleration.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kVideoRenderingAcceleration, true);
     chatTextSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextSize, 14.0);
 
@@ -164,14 +166,13 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kPlayerCompatMode, false);
     mpvProfile.value = LocalStorageService.instance
         .getValue(LocalStorageService.kMpvProfile, "balanced");
-    playerVolume.value =
-        (LocalStorageService.instance.getValue(
-                  LocalStorageService.kPlayerVolume,
-                  100.0,
-                ) as num? ??
-                100.0)
-            .clamp(0.0, 300.0)
-            .toDouble();
+    playerVolume.value = (LocalStorageService.instance.getValue(
+              LocalStorageService.kPlayerVolume,
+              100.0,
+            ) as num? ??
+            100.0)
+        .clamp(0.0, 300.0)
+        .toDouble();
     volumeBoostEnable.value = LocalStorageService.instance.getValue(
       LocalStorageService.kVolumeBoostEnable,
       false,
@@ -208,9 +209,10 @@ class AppSettingsController extends GetxController {
       false,
     );
     autoSwitchListMode.value = LocalStorageService.instance.getValue(
-      LocalStorageService.kAutoSwitchListMode,
-      0,
-    ) == 1
+              LocalStorageService.kAutoSwitchListMode,
+              0,
+            ) ==
+            1
         ? 1
         : 0;
 
@@ -303,6 +305,13 @@ class AppSettingsController extends GetxController {
     hardwareDecode.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kHardwareDecode, e);
+  }
+
+  var videoRenderingAcceleration = true.obs;
+  void setVideoRenderingAcceleration(bool value) {
+    videoRenderingAcceleration.value = value;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kVideoRenderingAcceleration, value);
   }
 
   var chatTextSize = 14.0.obs;

@@ -147,7 +147,9 @@ class SettingsPage extends GetView<SettingsController> {
       padding: AppStyle.edgeInsetsA48,
       children: [
         Text(
-          "部分电视或盒子如果出现黑屏、只有声音没有画面，优先尝试打开“兼容模式”，仍异常时再关闭“硬件解码”。",
+          Platform.isWindows
+              ? "硬件解码与视频渲染加速可分别调整；关闭后 CPU 占用可能上升，重新进入直播间后生效。"
+              : "部分电视或盒子如果出现黑屏、只有声音没有画面，优先尝试打开“兼容模式”，仍异常时再关闭“硬件解码”。",
           style: AppStyle.subTextStyleWhite,
         ),
         AppStyle.vGap24,
@@ -197,6 +199,26 @@ class SettingsPage extends GetView<SettingsController> {
             },
           ),
         ),
+        if (Platform.isWindows) ...[
+          AppStyle.vGap24,
+          Obx(
+            () => SettingsItemWidget(
+              foucsNode: controller.videoRenderingAccelerationFocusNode,
+              autofocus: controller
+                  .videoRenderingAccelerationFocusNode.isFoucsed.value,
+              title: "视频渲染加速",
+              items: const {0: "关", 1: "开"},
+              value: AppSettingsController
+                      .instance.videoRenderingAcceleration.value
+                  ? 1
+                  : 0,
+              onChanged: (e) {
+                AppSettingsController.instance
+                    .setVideoRenderingAcceleration(e == 1);
+              },
+            ),
+          ),
+        ],
         AppStyle.vGap24,
         Obx(
           () => SettingsItemWidget(
@@ -221,9 +243,8 @@ class SettingsPage extends GetView<SettingsController> {
             foucsNode: AppFocusNode(),
             title: "音量增强",
             items: const {0: "关", 1: "开"},
-            value: AppSettingsController.instance.volumeBoostEnable.value
-                ? 1
-                : 0,
+            value:
+                AppSettingsController.instance.volumeBoostEnable.value ? 1 : 0,
             onChanged: (e) {
               AppSettingsController.instance.setVolumeBoostEnable(e == 1);
             },
@@ -317,9 +338,8 @@ class SettingsPage extends GetView<SettingsController> {
             foucsNode: AppFocusNode(),
             title: "全屏四角时钟",
             items: const {0: "关", 1: "开"},
-            value: AppSettingsController.instance.playerClockEnable.value
-                ? 1
-                : 0,
+            value:
+                AppSettingsController.instance.playerClockEnable.value ? 1 : 0,
             onChanged: (e) {
               AppSettingsController.instance.setPlayerClockEnable(e == 1);
             },
@@ -926,18 +946,18 @@ class SettingsPage extends GetView<SettingsController> {
         AppStyle.vGap24,
         Obx(
           () => HighlightListTile(
-          focusNode: AppFocusNode(),
-          title: "斗鱼账号",
-          subtitle: DouyuAccountService.instance.hasCookie.value
-              ? "已配置 Cookie，支持稳定高画质播放"
-              : "未配置 Cookie，匿名高画质可能约 10 分钟后断流",
-          leading: Image.asset(
-            "assets/images/douyu.png",
-            width: 64.w,
-            height: 64.w,
+            focusNode: AppFocusNode(),
+            title: "斗鱼账号",
+            subtitle: DouyuAccountService.instance.hasCookie.value
+                ? "已配置 Cookie，支持稳定高画质播放"
+                : "未配置 Cookie，匿名高画质可能约 10 分钟后断流",
+            leading: Image.asset(
+              "assets/images/douyu.png",
+              width: 64.w,
+              height: 64.w,
+            ),
+            onTap: controller.douyuTap,
           ),
-          onTap: controller.douyuTap,
-        ),
         ),
         AppStyle.vGap24,
         HighlightListTile(

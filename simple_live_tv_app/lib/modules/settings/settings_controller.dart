@@ -46,6 +46,7 @@ class SettingsController extends BaseController
     });
   }
   var hardwareDecodeFocusNode = AppFocusNode()..isFoucsed.value = true;
+  final videoRenderingAccelerationFocusNode = AppFocusNode();
   var compatibleModeFocusNode = AppFocusNode();
   var mpvProfileFocusNode = AppFocusNode();
   var scaleFoucsNode = AppFocusNode();

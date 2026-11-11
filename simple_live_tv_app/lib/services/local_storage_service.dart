@@ -85,6 +85,10 @@ class LocalStorageService extends GetxService {
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
 
+  /// Windows 视频纹理渲染加速，与硬件解码独立。
+  static const String kVideoRenderingAcceleration =
+      "VideoRenderingAcceleration";
+
   /// 聊天区文字大小
   static const String kChatTextSize = "ChatTextSize";
 

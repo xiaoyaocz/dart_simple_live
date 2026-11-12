@@ -1,43 +1,25 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="" group-title="国内",兰州新闻综合
-https://liveplus.lzr.com.cn/xwzh/HD/live.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",兰州文旅
-https://liveplus.lzr.com.cn/wlpd/HD/live.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",河北卫视
+#EXTINF:-1 tvg-id="" group-title="河北",河北卫视
 https://event.pull.hebtv.com/live/live101.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",浙江国际
-https://ali-m-l.cztv.com/channels/lantian/channel10/1080p.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",哈尔滨新闻
-https://stream.hrbtv.net/xwzh/playlist.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",荆门新闻
-https://stream.jmtv.com.cn/xwzh/sd/live.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",宜昌三峡综合
-https://liveplay.ycrmt.cn/sxgd/zhpd.m3u8
-#EXTINF:-1 tvg-id="" group-title="国内",西藏藏语
+#EXTINF:-1 tvg-id="" group-title="西藏",西藏藏语
 https://live.vtibet.cn/live/ZYWS20261016.stream.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",CGTN
-https://amg00405-rakutentv-cgtn-rakuten-i9tar.amagi.tv/master.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",France 24 English
-https://static.france24.com/live/F24_EN_HI_HLS/live_web.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",Red Bull TV
-https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",ABN China
-https://mediaserver.abnvideos.com/streams/abnchina.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",Al Jazeera English
-https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",DW English
-https://amg01644-amg01644c1-amgplt0343.playout.now3.amagi.tv/ts-eu-w1-n2/playlist/amg01644-amg01644c1-amgplt0343/playlist.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",ABC News Live
-https://abcnews-streams.akamaized.net/hls/live/2023560/abcnewshudson1/master.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",CBS News 24/7
-https://jmp2.uk/plu-6350fdd266e9ea0007bedec5.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",Euronews English
-https://jmp2.uk/plu-61de96114757070008d33cae.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",NHK World Japan
-https://cdn.pishow.tv/ott/live/455/master.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",Sky News
-https://dash4.antik.sk/live/test_skynews/playlist.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",NASA TV Public
-https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8
-#EXTINF:-1 tvg-id="" group-title="国际",TV BRICS 中文
-https://chibrics.mediacdn.ru/cdn/brics/chinese/playlist.m3u8
+#EXTINF:-1 tvg-id="" group-title="甘肃",兰州新闻综合
+https://liveplus.lzr.com.cn/xwzh/HD/live.m3u8
+#EXTINF:-1 tvg-id="" group-title="甘肃",兰州文旅
+https://liveplus.lzr.com.cn/wlpd/HD/live.m3u8
+#EXTINF:-1 tvg-id="" group-title="黑龙江",哈尔滨新闻
+https://stream.hrbtv.net/xwzh/playlist.m3u8
+#EXTINF:-1 tvg-id="" group-title="黑龙江",哈尔滨生活
+https://stream.hrbtv.net/shpd/playlist.m3u8
+#EXTINF:-1 tvg-id="" group-title="黑龙江",哈尔滨影视
+https://stream.hrbtv.net/yspd/playlist.m3u8
+#EXTINF:-1 tvg-id="" group-title="湖北",荆门新闻
+https://stream.jmtv.com.cn/xwzh/sd/live.m3u8
+#EXTINF:-1 tvg-id="" group-title="湖北",宜昌三峡综合
+https://liveplay.ycrmt.cn/sxgd/zhpd.m3u8
+#EXTINF:-1 tvg-id="" group-title="广东",广州综合
+https://tencentplaybusiness.gztv.com/live/zonghes.m3u8
+#EXTINF:-1 tvg-id="" group-title="山东",青岛QTV-2
+http://video10.qtv.com.cn/drm/qtv2at/manifest.m3u8
+#EXTINF:-1 tvg-id="" group-title="山东",青岛QTV-5
+http://video10.qtv.com.cn/drm/qtv5at/manifest.m3u8

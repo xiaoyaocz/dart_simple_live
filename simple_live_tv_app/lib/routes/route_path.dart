@@ -45,4 +45,13 @@ class RoutePath {
 
   /// 分类详情
   static const kCategoryDetail = "/category/detail";
+
+  /// IPTV 订阅源管理
+  static const kIptvPlaylist = "/iptv/playlist";
+
+  /// IPTV 频道浏览
+  static const kIptvChannels = "/iptv/channels";
+
+  /// IPTV 播放
+  static const kIptvPlayer = "/iptv/player";
 }

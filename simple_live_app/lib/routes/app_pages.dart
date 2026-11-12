@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/widgets/mobile_page_insets.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_controller.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_page.dart';
+import 'package:simple_live_app/modules/iptv/playlist/iptv_playlist_controller.dart';
+import 'package:simple_live_app/modules/iptv/playlist/iptv_playlist_page.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
@@ -200,6 +202,14 @@ class AppPages {
       page: () => const ParsePage(),
       bindings: [
         BindingsBuilder.put(() => ParseController()),
+      ],
+    ),
+    //IPTV 订阅源管理
+    GetPage(
+      name: RoutePath.kIptvPlaylists,
+      page: () => const IptvPlaylistPage(),
+      bindings: [
+        BindingsBuilder.put(() => IptvPlaylistController()),
       ],
     ),
     //关键词屏蔽

@@ -13,6 +13,8 @@ import 'package:simple_live_tv_app/modules/history/history_controller.dart';
 import 'package:simple_live_tv_app/modules/history/history_page.dart';
 import 'package:simple_live_tv_app/modules/home/home_controller.dart';
 import 'package:simple_live_tv_app/modules/home/home_page.dart';
+import 'package:simple_live_tv_app/modules/iptv/channels/iptv_channels_controller.dart';
+import 'package:simple_live_tv_app/modules/iptv/channels/iptv_channels_page.dart';
 import 'package:simple_live_tv_app/modules/iptv/playlist/iptv_playlist_controller.dart';
 import 'package:simple_live_tv_app/modules/iptv/playlist/iptv_playlist_page.dart';
 import 'package:simple_live_tv_app/modules/hot_live/hot_live_controller.dart';
@@ -124,6 +126,12 @@ class AppPages {
       name: RoutePath.kIptvPlaylist,
       page: () => const IptvPlaylistPage(),
       binding: BindingsBuilder.put(() => IptvPlaylistController()),
+    ),
+    // IPTV 频道浏览
+    GetPage(
+      name: RoutePath.kIptvChannels,
+      page: () => const IptvChannelsPage(),
+      binding: BindingsBuilder.put(() => IptvChannelsController()),
     ),
     //热门直播
     GetPage(

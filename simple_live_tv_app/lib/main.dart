@@ -21,6 +21,7 @@ import 'package:simple_live_tv_app/app/log.dart';
 import 'package:simple_live_tv_app/app/sites.dart';
 import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/models/db/follow_user.dart';
+import 'package:simple_live_tv_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_tv_app/models/db/history.dart';
 import 'package:simple_live_tv_app/models/db/iptv_favorite.dart';
 import 'package:simple_live_tv_app/models/db/iptv_playlist.dart';
@@ -242,6 +243,7 @@ Future initServices() async {
   };
 
   Hive.registerAdapter(FollowUserAdapter());
+  Hive.registerAdapter(FollowUserTagAdapter());
   Hive.registerAdapter(HistoryAdapter());
   Hive.registerAdapter(IptvPlaylistAdapter());
   Hive.registerAdapter(IptvFavoriteAdapter());

@@ -84,6 +84,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   sherpa_onnx: 1.13.4
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_lints: ^2.0.0

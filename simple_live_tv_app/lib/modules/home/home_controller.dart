@@ -54,4 +54,8 @@ class HomeController extends BaseController {
   void toCategory() {
     Get.toNamed(RoutePath.kCategory);
   }
+
+  void toIptv() {
+    Get.toNamed(RoutePath.kIptvPlaylist);
+  }
 }

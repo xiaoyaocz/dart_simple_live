@@ -141,6 +141,15 @@ class _HomePageState extends State<HomePage> {
                           onTap: controller.toSync,
                         ),
                       ),
+                      AppStyle.hGap48,
+                      Expanded(
+                        child: HomeBigButton(
+                          focusNode: AppFocusNode(),
+                          text: "IPTV",
+                          iconData: Icons.live_tv,
+                          onTap: controller.toIptv,
+                        ),
+                      ),
                     ],
                   ),
                 ),

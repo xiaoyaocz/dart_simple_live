@@ -61,6 +61,17 @@ http://stream/d.m3u8
     expect(M3uParser.parse(content).channels.first.group, "体育");
   });
 
+  test('属性值含逗号时频道名不被截断', () {
+    const content = '''
+#EXTM3U
+#EXTINF:-1 tvg-id="c5" group-title="新闻,财经",CCTV-1 综合
+http://stream/e.m3u8
+''';
+    final channel = M3uParser.parse(content).channels.first;
+    expect(channel.group, "新闻,财经");
+    expect(channel.name, "CCTV-1 综合");
+  });
+
   test('相对地址按 baseUrl 补全', () {
     const content = '''
 #EXTM3U

@@ -43,7 +43,7 @@ class M3uParser {
         for (final match in _attrReg.allMatches(line)) {
           attrs[match.group(1)!] = match.group(2)!;
         }
-        final comma = line.indexOf(",");
+        final comma = _findNameSeparator(line);
         pendingAttrs = attrs;
         pendingName = comma >= 0 ? line.substring(comma + 1).trim() : "";
         continue;
@@ -77,6 +77,20 @@ class M3uParser {
     }
 
     return M3uParseResult(channels: channels, epgUrls: epgUrls);
+  }
+
+  /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外的首个逗号
+  static int _findNameSeparator(String line) {
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      final ch = line[i];
+      if (ch == '"') {
+        inQuotes = !inQuotes;
+      } else if (ch == ',' && !inQuotes) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /// 相对地址按订阅源 URL 补全，绝对地址原样返回

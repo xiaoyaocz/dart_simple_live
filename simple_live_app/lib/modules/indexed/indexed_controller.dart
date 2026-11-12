@@ -13,6 +13,8 @@ import 'package:simple_live_app/modules/home/home_controller.dart';
 import 'package:simple_live_app/modules/home/home_page.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_page.dart';
+import 'package:simple_live_app/modules/iptv/channels/iptv_channels_controller.dart';
+import 'package:simple_live_app/modules/iptv/channels/iptv_channels_page.dart';
 import 'package:simple_live_app/modules/mine/mine_page.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 
@@ -21,6 +23,7 @@ class IndexedController extends GetxController {
 
   var index = 0.obs;
   RxList<Widget> pages = RxList<Widget>([
+    const SizedBox(),
     const SizedBox(),
     const SizedBox(),
     const SizedBox(),
@@ -44,6 +47,10 @@ class IndexedController extends GetxController {
           break;
         case 3:
           pages[i] = const MinePage();
+          break;
+        case 4:
+          Get.put(IptvChannelsController());
+          pages[i] = const IptvChannelsPage();
           break;
         default:
       }

@@ -26,6 +26,11 @@ class Constant {
       title: "我的",
       index: 3,
     ),
+    "iptv": HomePageItem(
+      iconData: Remix.tv_line,
+      title: "IPTV",
+      index: 4,
+    ),
   };
 
   static final Map<String, LiveRoomTabItem> allLiveRoomTabs = {

@@ -172,12 +172,8 @@ class DouyinSite implements LiveSite {
         children: subs,
         id: id,
         name: asT<String?>(item["partition"]["title"]) ?? "",
-        pic:
-            DouyinGameArtwork.assetUriForCategory(
-              categoryId: id,
-              categoryName: asT<String?>(item["partition"]["title"]) ?? "",
-            ) ??
-            _pickPartitionImageUrl(item["partition"]),
+        // 抖音已不再维护细分游戏图标，统一使用分区返回的网络图标
+        pic: _pickPartitionImageUrl(item["partition"]),
       );
       subs.insert(
         0,
@@ -209,14 +205,7 @@ class DouyinSite implements LiveSite {
       id: id,
       name: name,
       parentId: parentId,
-      // Attribution and non-commercial terms for local artwork are retained
-      // centrally in DouyinGameArtwork and THANKS.md.
-      pic:
-          DouyinGameArtwork.assetUriForCategory(
-            categoryId: id,
-            categoryName: name,
-          ) ??
-          _pickPartitionImageUrl(item["partition"]),
+      pic: _pickPartitionImageUrl(item["partition"]),
       children: children,
     );
   }

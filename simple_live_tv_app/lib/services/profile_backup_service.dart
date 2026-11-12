@@ -13,15 +13,18 @@ import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/douyu_account_service.dart';
 import 'package:simple_live_tv_app/services/douyin_account_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
+import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
+import 'package:simple_live_tv_app/models/db/iptv_favorite.dart';
+import 'package:simple_live_tv_app/models/db/iptv_playlist.dart';
 
 class ProfileBackupService extends GetxService {
   static ProfileBackupService get instance => Get.find<ProfileBackupService>();
 
   static const schema = "simple_live_profile";
-  static const schemaVersion = 3;
-  static const Set<int> _supportedSchemaVersions = {2, 3};
+  static const schemaVersion = 4;
+  static const Set<int> _supportedSchemaVersions = {2, 3, 4};
 
   static const Set<String> _excludedSettings = {
     LocalStorageService.kFirstRun,
@@ -65,6 +68,14 @@ class ProfileBackupService extends GetxService {
         .toList();
     final histories =
         DBService.instance.getHistores().map((item) => item.toJson()).toList();
+    final iptvPlaylists = IptvService.instance
+        .getPlaylists()
+        .map((item) => item.toJson())
+        .toList();
+    final iptvFavorites = IptvService.instance
+        .getFavorites()
+        .map((item) => item.toJson())
+        .toList();
     return {
       "schema": schema,
       "schemaVersion": schemaVersion,
@@ -78,6 +89,8 @@ class ProfileBackupService extends GetxService {
       "followUsers": followUsers,
       "followUserTags": followTags,
       "histories": histories,
+      "iptvPlaylists": iptvPlaylists,
+      "iptvFavorites": iptvFavorites,
       "summary": {
         "settingCount": settingsPayload.length,
         "keywordShieldCount": (shieldPayload["keywords"] as List).length,
@@ -85,6 +98,8 @@ class ProfileBackupService extends GetxService {
         "followUserCount": followUsers.length,
         "followTagCount": followTags.length,
         "historyCount": histories.length,
+        "iptvPlaylistCount": iptvPlaylists.length,
+        "iptvFavoriteCount": iptvFavorites.length,
         "accountCount": (_exportAccounts()["items"] as List).length,
       },
     };
@@ -178,6 +193,9 @@ class ProfileBackupService extends GetxService {
         onProgress,
       );
     }
+    if (options.follows) {
+      await _importIptv(payload, summary, overwrite);
+    }
 
     if (options.settings || options.shields) {
       AppSettingsController.instance.onInit();
@@ -185,6 +203,42 @@ class ProfileBackupService extends GetxService {
     EventBus.instance.emit(Constant.kUpdateFollow, 0);
     EventBus.instance.emit(Constant.kUpdateHistory, 0);
     return summary;
+  }
+
+  /// 导入 IPTV 订阅源与收藏，覆盖模式先清空现有数据
+  Future<void> _importIptv(
+    Map<String, dynamic> payload,
+    ProfileImportSummary summary,
+    bool overwrite,
+  ) async {
+    final service = IptvService.instance;
+    if (overwrite) {
+      for (final playlist in service.getPlaylists()) {
+        await service.deletePlaylist(playlist.id);
+      }
+      await service.favoriteBox.clear();
+    }
+
+    final rawPlaylists = payload["iptvPlaylists"];
+    if (rawPlaylists is List) {
+      for (final item in rawPlaylists) {
+        if (item is! Map) continue;
+        final playlist = IptvPlaylist.fromJson(item.cast<String, dynamic>());
+        if (playlist.id.isEmpty) continue;
+        await service.playlistBox.put(playlist.id, playlist);
+        summary.iptvPlaylists++;
+      }
+    }
+
+    final rawFavorites = payload["iptvFavorites"];
+    if (rawFavorites is List) {
+      for (final item in rawFavorites) {
+        if (item is! Map) continue;
+        final favorite = IptvFavorite.fromJson(item.cast<String, dynamic>());
+        await service.favoriteBox.put(favorite.id, favorite);
+        summary.iptvFavorites++;
+      }
+    }
   }
 
   Future<ProfileImportSummary> importLegacyProfileMap(
@@ -634,11 +688,13 @@ class ProfileImportSummary {
   int followUsers = 0;
   int followTags = 0;
   int histories = 0;
+  int iptvPlaylists = 0;
+  int iptvFavorites = 0;
   int skipped = 0;
 
   String get message {
     final base =
-        "设置 $settings 项，屏蔽 $shields 项，关注 $followUsers 个，标签 $followTags 个，历史 $histories 条";
+        "设置 $settings 项，屏蔽 $shields 项，关注 $followUsers 个，标签 $followTags 个，历史 $histories 条，IPTV 源 $iptvPlaylists 个，IPTV 收藏 $iptvFavorites 个";
     return skipped > 0 ? "$base，跳过异常 $skipped 条" : base;
   }
 }

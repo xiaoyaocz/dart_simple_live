@@ -17,6 +17,9 @@ class LocalStorageService extends GetxService {
   /// 首页排序
   static const String kHomeSort = "HomeSort";
 
+  /// 内置默认 IPTV 源是否已初始化
+  static const String kIptvDefaultInited = "IptvDefaultInited";
+
   /// 多开布局间距
   static const String kMultiRoomGap = "MultiRoomGap";
 

@@ -22,6 +22,8 @@ import 'package:simple_live_tv_app/app/sites.dart';
 import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/models/db/follow_user.dart';
 import 'package:simple_live_tv_app/models/db/history.dart';
+import 'package:simple_live_tv_app/models/db/iptv_favorite.dart';
+import 'package:simple_live_tv_app/models/db/iptv_playlist.dart';
 import 'package:simple_live_tv_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_tv_app/routes/app_navigation.dart';
 import 'package:simple_live_tv_app/routes/app_pages.dart';
@@ -34,6 +36,7 @@ import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/douyu_account_service.dart';
 import 'package:simple_live_tv_app/services/douyin_account_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
+import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
 import 'package:simple_live_tv_app/services/profile_backup_service.dart';
@@ -240,6 +243,8 @@ Future initServices() async {
 
   Hive.registerAdapter(FollowUserAdapter());
   Hive.registerAdapter(HistoryAdapter());
+  Hive.registerAdapter(IptvPlaylistAdapter());
+  Hive.registerAdapter(IptvFavoriteAdapter());
 
   //包信息
   Utils.packageInfo = await PackageInfo.fromPlatform();
@@ -247,6 +252,8 @@ Future initServices() async {
   Log.d("Init LocalStorage Service");
   await Get.put(LocalStorageService()).init();
   await Get.put(DBService()).init();
+  await Get.put(IptvService()).init();
+  await IptvService.instance.ensureDefaultPlaylist();
   Get.put(CurrentRoomService());
   //初始化设置控制器
   Get.put(AppSettingsController());

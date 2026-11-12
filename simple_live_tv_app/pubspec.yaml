@@ -24,6 +24,7 @@ dependencies:
   flutter_screenutil: ^5.9.3 #UI适配
   uuid: ^4.5.1 #UUID
   collection: ^1.19.0 #集合工具（firstWhereOrNull等）
+  xml: ^6.6.1 #XMLTV EPG解析
   web_socket_channel: ^3.0.1 #远程同步WebSocket
   crypto: ^3.0.6
   webdav_client: ^1.2.2 # WebDAV

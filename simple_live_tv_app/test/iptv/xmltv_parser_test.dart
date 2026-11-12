@@ -58,4 +58,21 @@ void main() {
     final EpgData data = XmltvParser.parse(bad);
     expect(data.programsOf("c1"), isEmpty);
   });
+
+  test('单条节目时间损坏只跳过该节目，不影响其余节目', () {
+    const mixed = '''
+<tv>
+  <programme start="20260101120000 +0800" stop="20260101130000 +0800" channel="c1"><title>正常</title></programme>
+  <programme start="2026AB01120000 +0800" stop="20260101140000 +0800" channel="c1"><title>损坏</title></programme>
+  <programme start="20260101140000 +0800" stop="20260101150000 +0800" channel="c1"><title>恢复</title></programme>
+</tv>''';
+    final data = XmltvParser.parse(mixed);
+    final titles = data.programsOf("c1").map((p) => p.title).toList();
+    expect(titles, ["正常", "恢复"]);
+  });
+
+  test('时区偏移损坏时按 UTC 处理', () {
+    expect(XmltvParser.parseTime("20260101120000 +ZZ00"), DateTime.utc(2026, 1, 1, 12));
+    expect(XmltvParser.parseTime("2026010112000"), isNull);
+  });
 }

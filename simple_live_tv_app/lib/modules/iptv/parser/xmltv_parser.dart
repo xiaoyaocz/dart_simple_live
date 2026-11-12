@@ -31,29 +31,36 @@ class XmltvParser {
     return EpgData(result);
   }
 
-  /// 解析 XMLTV 时间：YYYYMMDDHHMMSS +HHMM，统一转 UTC
+  /// 解析 XMLTV 时间：YYYYMMDDHHMMSS +HHMM，统一转 UTC；格式异常返回 null 由调用方跳过
   static DateTime? parseTime(String raw) {
     final value = raw.trim();
     if (value.length < 14) return null;
-    int part(int start, int end) => int.parse(value.substring(start, end));
+    int? part(int start, int end) => int.tryParse(value.substring(start, end));
+    final year = part(0, 4);
+    final month = part(4, 6);
+    final day = part(6, 8);
+    final hour = part(8, 10);
+    final minute = part(10, 12);
+    final second = part(12, 14);
+    if (year == null ||
+        month == null ||
+        day == null ||
+        hour == null ||
+        minute == null ||
+        second == null) {
+      return null;
+    }
 
-    final wallTime = DateTime.utc(
-      part(0, 4),
-      part(4, 6),
-      part(6, 8),
-      part(8, 10),
-      part(10, 12),
-      part(12, 14),
-    );
+    final wallTime = DateTime.utc(year, month, day, hour, minute, second);
 
     // 时区偏移缺省视为 UTC
     final tz = value.substring(14).replaceAll(" ", "");
     if (tz.length < 5) return wallTime;
+    final offsetHour = int.tryParse(tz.substring(1, 3));
+    final offsetMinute = int.tryParse(tz.substring(3, 5));
+    if (offsetHour == null || offsetMinute == null) return wallTime;
     final sign = tz.startsWith("-") ? -1 : 1;
-    final offset = Duration(
-      hours: int.parse(tz.substring(1, 3)),
-      minutes: int.parse(tz.substring(3, 5)),
-    ) * sign;
+    final offset = Duration(hours: offsetHour, minutes: offsetMinute) * sign;
     return wallTime.subtract(offset);
   }
 

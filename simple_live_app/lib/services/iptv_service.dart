@@ -1,14 +1,18 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../app/log.dart';
 import '../models/db/iptv_favorite.dart';
 import '../models/db/iptv_playlist.dart';
 import '../modules/iptv/parser/iptv_channel.dart';
 import '../modules/iptv/parser/m3u_parser.dart';
 import '../requests/http_client.dart';
+import 'local_storage_service.dart';
 
 class IptvService extends GetxService {
   static IptvService get instance => Get.find<IptvService>();
@@ -27,6 +31,30 @@ class IptvService extends GetxService {
   Future<void> init() async {
     playlistBox = await Hive.openBox<IptvPlaylist>(playlistBoxName);
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
+  }
+
+  /// 首次启动把内置精选源复制到文档目录并注册，成功后才标记；用户删除后不再重建
+  Future<void> ensureDefaultPlaylist() async {
+    final storage = LocalStorageService.instance;
+    if (storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
+      return;
+    }
+    try {
+      final content = await rootBundle.loadString("assets/iptv/default.m3u");
+      final docDir = await getApplicationDocumentsDirectory();
+      final target = File(
+        "${docDir.path}${Platform.pathSeparator}iptv_default.m3u",
+      );
+      await target.writeAsString(content);
+      await addPlaylist(
+        name: "默认精选频道",
+        url: target.path,
+        type: IptvPlaylist.typeLocal,
+      );
+      await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
+    } catch (e) {
+      Log.w("内置 IPTV 源初始化失败: $e");
+    }
   }
 
   // ============ 订阅源 ============

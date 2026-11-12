@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -69,10 +70,16 @@ class IptvPlayerController extends GetxController {
 
   Future<void> _setup() async {
     await MpvOptionsService.applyToPlayer(player);
+    // 播放失败仅提示，不中断使用
+    player.stream.error.listen((message) {
+      Log.w("IPTV 播放失败: $message");
+      SmartDialog.showToast("播放失败，可尝试切换其他频道");
+    });
     WakelockPlus.enable();
     showControls();
-    await loadEpg();
+    // 先开播，节目单后台加载，避免大 EPG 拖慢起播
     play(currentIndex);
+    await loadEpg();
     // 每分钟刷新当前/下一档节目
     _epgTimer = Timer.periodic(
       const Duration(minutes: 1),

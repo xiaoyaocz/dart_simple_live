@@ -124,15 +124,22 @@ class IptvChannelsController extends BaseController {
     );
   }
 
-  /// 收藏频道进入播放页
+  /// 收藏频道进入播放页；所属订阅源存在且已缓存解析结果时回查其 EPG
   void openFavoritePlayer(IptvFavorite favorite, int index) {
+    final playlist = IptvService.instance
+        .getPlaylists()
+        .firstWhereOrNull((item) => item.id == favorite.playlistId);
+    final epgUrls = playlist == null
+        ? const <String>[]
+        : IptvService.instance.cachedParse(playlist.id)?.epgUrls ??
+            const <String>[];
     Get.toNamed(
       RoutePath.kIptvPlayer,
       arguments: {
         "playlist": null,
         "favorites": favorites,
         "index": index,
-        "epgUrls": const <String>[],
+        "epgUrls": epgUrls,
       },
     );
   }

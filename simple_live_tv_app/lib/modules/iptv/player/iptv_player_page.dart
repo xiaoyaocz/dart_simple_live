@@ -17,6 +17,32 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
 
   static final DateFormat _timeFormat = DateFormat("HH:mm");
 
+  // LogicalKeyboardKey 重写了 == 与 hashCode，不能作为 const map 的键
+  static final Map<LogicalKeyboardKey, String> _digitKeys = {
+    LogicalKeyboardKey.digit0: "0",
+    LogicalKeyboardKey.digit1: "1",
+    LogicalKeyboardKey.digit2: "2",
+    LogicalKeyboardKey.digit3: "3",
+    LogicalKeyboardKey.digit4: "4",
+    LogicalKeyboardKey.digit5: "5",
+    LogicalKeyboardKey.digit6: "6",
+    LogicalKeyboardKey.digit7: "7",
+    LogicalKeyboardKey.digit8: "8",
+    LogicalKeyboardKey.digit9: "9",
+    LogicalKeyboardKey.numpad0: "0",
+    LogicalKeyboardKey.numpad1: "1",
+    LogicalKeyboardKey.numpad2: "2",
+    LogicalKeyboardKey.numpad3: "3",
+    LogicalKeyboardKey.numpad4: "4",
+    LogicalKeyboardKey.numpad5: "5",
+    LogicalKeyboardKey.numpad6: "6",
+    LogicalKeyboardKey.numpad7: "7",
+    LogicalKeyboardKey.numpad8: "8",
+    LogicalKeyboardKey.numpad9: "9",
+  };
+
+  static String? _digitOf(LogicalKeyboardKey key) => _digitKeys[key];
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -71,6 +97,27 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
                   child: IgnorePointer(child: _buildControls()),
                 ),
               ),
+              // 数字跳台 OSD
+              Obx(() {
+                final number = controller.channelNumberInput.value;
+                if (number.isEmpty) return const SizedBox.shrink();
+                return Center(
+                  child: Container(
+                    padding: AppStyle.edgeInsetsA32,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: AppStyle.radius16,
+                    ),
+                    child: Text(
+                      number,
+                      style: AppStyle.titleStyleWhite.copyWith(
+                        fontSize: 80.w,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -82,6 +129,13 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     if (key is KeyUpEvent) return;
 
     final logical = key.logicalKey;
+    // 数字键：直接跳台（中央 OSD 显示已输频道号）
+    final digit = _digitOf(logical);
+    if (digit != null) {
+      controller.appendChannelDigit(digit);
+      return;
+    }
+    controller.clearChannelNumber();
     // 退出
     if (logical == LogicalKeyboardKey.escape ||
         logical == LogicalKeyboardKey.backspace ||
@@ -198,7 +252,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           _buildEpg(),
           AppStyle.vGap16,
           Text(
-            "上/下键切台 · 右键或菜单键打开频道列表 · OK 隐藏信息栏",
+            "上/下键切台 · 数字键直接跳台 · 右键或菜单键打开频道列表 · OK 隐藏信息栏",
             style: AppStyle.subTextStyleWhite,
           ),
         ],

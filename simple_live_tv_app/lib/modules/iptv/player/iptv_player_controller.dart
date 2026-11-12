@@ -102,6 +102,39 @@ class IptvPlayerController extends GetxController {
 
   void switchChannel(int delta) => play(currentIndex + delta);
 
+  // ===== 数字键跳台 =====
+
+  final channelNumberInput = "".obs;
+  Timer? _numberTimer;
+
+  /// 数字键输入，1.5 秒无后续输入或位数达上限后跳台
+  void appendChannelDigit(String digit) {
+    final next = channelNumberInput.value + digit;
+    if (next.length > 3) return;
+    channelNumberInput.value = next;
+    _numberTimer?.cancel();
+    if (next.length >= items.length.toString().length) {
+      _commitChannelJump();
+      return;
+    }
+    _numberTimer = Timer(const Duration(milliseconds: 1500), _commitChannelJump);
+  }
+
+  void clearChannelNumber() {
+    _numberTimer?.cancel();
+    if (channelNumberInput.value.isNotEmpty) {
+      channelNumberInput.value = "";
+    }
+  }
+
+  void _commitChannelJump() {
+    final value = int.tryParse(channelNumberInput.value) ?? 0;
+    clearChannelNumber();
+    if (value >= 1 && value <= items.length) {
+      play(value - 1);
+    }
+  }
+
   void togglePlayPause() {
     if (player.state.playing) {
       player.pause();
@@ -203,6 +236,7 @@ class IptvPlayerController extends GetxController {
   void onClose() {
     _epgTimer?.cancel();
     _hideTimer?.cancel();
+    _numberTimer?.cancel();
     WakelockPlus.disable();
     player.dispose();
     focusNode.dispose();

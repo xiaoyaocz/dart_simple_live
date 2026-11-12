@@ -99,6 +99,9 @@ class RoutePath {
   /// IPTV 订阅源管理
   static const kIptvPlaylists = "/iptv/playlists";
 
+  /// IPTV 播放页
+  static const kIptvPlayer = "/iptv/player";
+
   /// 测试页面
   static const kTest = "/test";
 }

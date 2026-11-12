@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_controller.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_page.dart';
@@ -8,6 +9,13 @@ import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+
+/// 跳过存储初始化，仅提供 MobilePageInsets 所需的默认安全区值
+class _FakeAppSettingsController extends AppSettingsController {
+  @override
+  // ignore: must_call_super
+  void onInit() {}
+}
 
 void main() {
   testWidgets('parent category renders its children before any room grid', (
@@ -74,6 +82,8 @@ void main() {
       logo: '',
       liveSite: LiveSite(),
     );
+
+    Get.put<AppSettingsController>(_FakeAppSettingsController());
 
     await tester.pumpWidget(
       GetMaterialApp(

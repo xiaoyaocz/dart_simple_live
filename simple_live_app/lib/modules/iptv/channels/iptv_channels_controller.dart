@@ -119,6 +119,7 @@ class IptvChannelsController extends BaseController {
         "playlist": playlist,
         "channels": channels,
         "index": index,
+        "epgUrls": parseResult.value?.epgUrls ?? const <String>[],
       },
     );
   }
@@ -131,6 +132,7 @@ class IptvChannelsController extends BaseController {
         "playlist": null,
         "favorites": favorites,
         "index": index,
+        "epgUrls": const <String>[],
       },
     );
   }

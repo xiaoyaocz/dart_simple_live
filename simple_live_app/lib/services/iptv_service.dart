@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
@@ -19,6 +22,7 @@ class IptvService extends GetxService {
 
   static const String playlistBoxName = "IptvPlaylist";
   static const String favoriteBoxName = "IptvFavorite";
+  static const String defaultPlaylistName = "默认精选频道";
 
   late Box<IptvPlaylist> playlistBox;
   late Box<IptvFavorite> favoriteBox;
@@ -33,28 +37,64 @@ class IptvService extends GetxService {
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
   }
 
-  /// 首次启动把内置精选源复制到文档目录并注册，成功后才标记；用户删除后不再重建
+  /// 首次启动把内置精选源复制到文档目录并注册，成功后才标记；
+  /// 已初始化时若内置清单版本更新且默认源未被删除，静默同步本地副本；用户删除后不再重建
   Future<void> ensureDefaultPlaylist() async {
     final storage = LocalStorageService.instance;
-    if (storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
+    final String content;
+    try {
+      content = await rootBundle.loadString("assets/iptv/default.m3u");
+    } catch (e) {
+      Log.w("内置 IPTV 源读取失败: $e");
       return;
     }
-    try {
-      final content = await rootBundle.loadString("assets/iptv/default.m3u");
-      final docDir = await getApplicationDocumentsDirectory();
-      final target = File(
-        "${docDir.path}${Platform.pathSeparator}iptv_default.m3u",
-      );
-      await target.writeAsString(content);
-      await addPlaylist(
-        name: "默认精选频道",
-        url: target.path,
-        type: IptvPlaylist.typeLocal,
-      );
-      await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
-    } catch (e) {
-      Log.w("内置 IPTV 源初始化失败: $e");
+    final hash = sha256.convert(utf8.encode(content)).toString();
+
+    if (!storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
+      try {
+        final target = await _defaultFile();
+        await target.writeAsString(content);
+        await addPlaylist(
+          name: defaultPlaylistName,
+          url: target.path,
+          type: IptvPlaylist.typeLocal,
+        );
+        await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
+        await storage.setValue(LocalStorageService.kIptvDefaultVersion, hash);
+      } catch (e) {
+        Log.w("内置 IPTV 源初始化失败: $e");
+      }
+      return;
     }
+
+    // 已初始化：内置清单有更新且默认源仍存在时同步本地副本
+    if (storage.getValue(LocalStorageService.kIptvDefaultVersion, "") == hash) {
+      return;
+    }
+    await storage.setValue(LocalStorageService.kIptvDefaultVersion, hash);
+    try {
+      final target = await _defaultFile();
+      final playlist = playlistBox.values
+          .firstWhereOrNull((item) => item.url == target.path);
+      if (playlist == null) {
+        // 用户已删除默认源，尊重其选择
+        return;
+      }
+      await target.writeAsString(content);
+      _cache.remove(playlist.id);
+      playlist.updateTime = DateTime.now();
+      await playlistBox.put(playlist.id, playlist);
+      Log.d("内置 IPTV 源已同步到新版本");
+    } catch (e) {
+      Log.w("内置 IPTV 源同步失败: $e");
+    }
+  }
+
+  Future<File> _defaultFile() async {
+    final docDir = await getApplicationDocumentsDirectory();
+    return File(
+      "${docDir.path}${Platform.pathSeparator}iptv_default.m3u",
+    );
   }
 
   // ============ 订阅源 ============
@@ -105,6 +145,9 @@ class IptvService extends GetxService {
     final cached = _cache[playlist.id];
     return cached ?? await refresh(playlist);
   }
+
+  /// 仅查询内存缓存，不发起网络请求
+  M3uParseResult? cachedParse(String playlistId) => _cache[playlistId];
 
   // ============ 频道与分组 ============
 

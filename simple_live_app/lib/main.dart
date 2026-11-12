@@ -22,6 +22,8 @@ import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/models/db/iptv_favorite.dart';
+import 'package:simple_live_app/models/db/iptv_playlist.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
 import 'package:simple_live_app/routes/app_pages.dart';
@@ -467,6 +469,8 @@ Future initServices() async {
   Hive.registerAdapter(FollowUserAdapter());
   Hive.registerAdapter(HistoryAdapter());
   Hive.registerAdapter(FollowUserTagAdapter());
+  Hive.registerAdapter(IptvPlaylistAdapter());
+  Hive.registerAdapter(IptvFavoriteAdapter());
 
   //包信息
   Utils.packageInfo = await PackageInfo.fromPlatform();

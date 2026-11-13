@@ -21,7 +21,7 @@ class IptvSourceMeta {
   const IptvSourceMeta({
     required this.name,
     required this.author,
-    required this.projectUrl,
+    this.projectUrl = "",
     required this.description,
     required this.urls,
   });
@@ -33,62 +33,6 @@ class IptvService extends GetxService {
   static const String playlistBoxName = "IptvPlaylist";
   static const String favoriteBoxName = "IptvFavorite";
   static const String defaultPlaylistName = "全国IPTV直播源";
-
-  /// 公开稳定直播源池，按可靠性排序，所有源均保留作者原始频道与公告
-  static const List<IptvSourceMeta> sourcePool = [
-    IptvSourceMeta(
-      name: "vbskycn 全量源",
-      author: "vbskycn",
-      projectUrl: "https://github.com/vbskycn/iptv",
-      description: "427个频道，含完整地方省份台，6小时自动更新",
-      urls: [
-        "https://live.zbds.top/tv/iptv4.m3u",
-        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
-        "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
-        "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
-      ],
-    ),
-    IptvSourceMeta(
-      name: "范明明直连源",
-      author: "fanmingming",
-      projectUrl: "https://github.com/fanmingming/live",
-      description: "国内自有域名直连，主流央视卫视稳定，GPL-3.0协议",
-      urls: [
-        "https://live.fanmingming.com/tv/m3u/ipv4.m3u",
-        "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
-        "https://gh-proxy.com/raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
-      ],
-    ),
-    IptvSourceMeta(
-      name: "YanG 聚合源",
-      author: "YanG-1989",
-      projectUrl: "https://github.com/YanG-1989/m3u",
-      description: "每日自动更新，主流频道聚合，多镜像分流",
-      urls: [
-        "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
-        "https://gh-proxy.com/raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
-      ],
-    ),
-    IptvSourceMeta(
-      name: "HerbertHe CDN源",
-      author: "HerbertHe",
-      projectUrl: "https://github.com/HerbertHe/iptv-sources",
-      description: "2小时自动更新，多上游聚合，国内CDN加速，GPL-3.0协议",
-      urls: [
-        "https://m3u.ibert.me/ipv4.m3u",
-        "https://raw.githubusercontent.com/HerbertHe/iptv-sources/main/ipv4.m3u",
-      ],
-    ),
-    IptvSourceMeta(
-      name: "peterh 镜像源",
-      author: "peterhchina",
-      projectUrl: "https://peterhchina.github.io/iptv/",
-      description: "vbsky源同步镜像，每日自动更新",
-      urls: [
-        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
-      ],
-    ),
-  ];
 
   late Box<IptvPlaylist> playlistBox;
   late Box<IptvFavorite> favoriteBox;
@@ -107,16 +51,128 @@ class IptvService extends GetxService {
   // ==================== 预置源启用状态管理 ====================
   /// 用户启用的源名称列表，默认全部启用，持久化存储
   final RxList<String> enabledSourceNames = <String>[].obs;
+  /// 用户自定义源列表，持久化存储
+  final RxList<IptvSourceMeta> customSources = <IptvSourceMeta>[].obs;
+
+  /// 所有可用源：预置源 + 自定义源，自定义源排在最后
+  List<IptvSourceMeta> get sourcePool => [
+    ...presetSourcePool,
+    ...customSources,
+  ];
+
+  /// 预置公开源池，不可删除
+  static const List<IptvSourceMeta> presetSourcePool = [
+    IptvSourceMeta(
+      name: "vbskycn全量源",
+      author: "vbskycn",
+      description: "400+频道，省份分组完整",
+      urls: [
+        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+        "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "范明明直连源",
+      author: "fanmingming",
+      description: "国内直连，延迟低",
+      urls: [
+        "https://live.fanmingming.com/tv/m3u/ipv4.m3u",
+        "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "YanG聚合源",
+      author: "YanG-1989",
+      description: "多源聚合，频道丰富",
+      urls: [
+        "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "HerbertHe CDN源",
+      author: "HerbertHe",
+      description: "CDN加速，稳定性高",
+      urls: [
+        "https://m3u.ibert.me/ipv4.m3u",
+        "https://raw.githubusercontent.com/HerbertHe/iptv-sources/main/ipv4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "peterh镜像源",
+      author: "peterhchina",
+      description: "vbskycn镜像，备用源",
+      urls: [
+        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+      ],
+    ),
+  ];
 
   Future<void> init() async {
     playlistBox = await Hive.openBox<IptvPlaylist>(playlistBoxName);
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
     // 加载源启用状态，默认全部启用
-    final saved = LocalStorageService.instance.getValue<List<dynamic>>(
+    final savedEnabled = LocalStorageService.instance.getValue<List<dynamic>>(
       LocalStorageService.kIptvSourceEnabled,
-      sourcePool.map((e) => e.name).toList(),
+      presetSourcePool.map((e) => e.name).toList(),
     );
-    enabledSourceNames.assignAll(saved.cast<String>());
+    enabledSourceNames.assignAll(savedEnabled.cast<String>());
+    // 加载保存的自定义源
+    final savedCustom = LocalStorageService.instance.getValue<List<dynamic>>(
+      LocalStorageService.kIptvCustomSources,
+      [],
+    );
+    customSources.assignAll(savedCustom.map((e) {
+      final map = Map<String, dynamic>.from(e as Map);
+      return IptvSourceMeta(
+        name: map["name"],
+        author: "自定义",
+        description: "用户自定义源",
+        urls: List<String>.from(map["urls"]),
+      );
+    }));
+  }
+
+  /// 添加自定义源，支持用户自定义名称
+  Future<void> addCustomSource({required String name, required String url}) async {
+    final meta = IptvSourceMeta(
+      name: name,
+      author: "自定义",
+      description: "用户自定义源",
+      urls: [url],
+    );
+    customSources.add(meta);
+    enabledSourceNames.add(name);
+    await _saveCustomSources();
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvSourceEnabled,
+      enabledSourceNames.toList(),
+    );
+  }
+
+  /// 删除自定义源，预置源不可删除
+  Future<void> deleteCustomSource(IptvSourceMeta source) async {
+    customSources.remove(source);
+    enabledSourceNames.remove(source.name);
+    await _saveCustomSources();
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvSourceEnabled,
+      enabledSourceNames.toList(),
+    );
+  }
+
+  /// 持久化自定义源列表
+  Future<void> _saveCustomSources() async {
+    final data = customSources.map((e) => {
+      "name": e.name,
+      "urls": e.urls,
+    }).toList();
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvCustomSources,
+      data,
+    );
   }
 
   /// 切换源启用/禁用状态，自动持久化

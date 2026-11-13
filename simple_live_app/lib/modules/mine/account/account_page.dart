@@ -107,20 +107,89 @@ class AccountPage extends GetView<AccountController> {
             Obx(() {
               final service = IptvService.instance;
               return Column(
-                children: IptvService.sourcePool.map((source) {
-                  final enabled = service.enabledSourceNames.contains(source.name);
-                  return SwitchListTile(
-                    contentPadding: AppStyle.edgeInsetsH12,
-                    title: Text(source.name),
-                    subtitle: Text("${source.author} · ${source.description}"),
-                    value: enabled,
-                    onChanged: (_) => service.toggleSourceEnabled(source),
-                  );
-                }).toList(),
+                children: [
+                  ...IptvService.instance.sourcePool.map((source) {
+                    final enabled = service.enabledSourceNames.contains(source.name);
+                    final isCustom = source.author == "自定义";
+                    return ListTile(
+                      contentPadding: AppStyle.edgeInsetsH12,
+                      title: Text(source.name),
+                      subtitle: Text("${source.author} · ${source.description}"),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Switch(
+                            value: enabled,
+                            onChanged: (_) => service.toggleSourceEnabled(source),
+                          ),
+                          if (isCustom)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => service.deleteCustomSource(source),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                  AppStyle.vGap8,
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text("添加自定义源"),
+                    onPressed: () => _showAddCustomDialog(context),
+                  ),
+                ],
               );
             }),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 弹出添加自定义源对话框，用户输入名称与URL
+  Future<void> _showAddCustomDialog(BuildContext context) async {
+    final nameController = TextEditingController();
+    final urlController = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("添加自定义源"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: "源名称",
+                hintText: "例如：我的自建源",
+              ),
+            ),
+            AppStyle.vGap12,
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: "M3U 地址",
+                hintText: "https://example.com/live.m3u",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: const Text("取消"),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final url = urlController.text.trim();
+              if (name.isEmpty || url.isEmpty) return;
+              await IptvService.instance.addCustomSource(name: name, url: url);
+              Get.back();
+            },
+            child: const Text("添加"),
+          ),
+        ],
       ),
     );
   }

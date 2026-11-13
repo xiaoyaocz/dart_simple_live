@@ -11,21 +11,7 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("订阅源管理"),
-        actions: [
-          IconButton(
-            tooltip: "添加本地文件",
-            onPressed: controller.addLocal,
-            icon: const Icon(Icons.folder_open),
-          ),
-          IconButton(
-            tooltip: "添加网络源",
-            onPressed: controller.addRemote,
-            icon: const Icon(Icons.add_link),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text("直播源管理")),
       body: Obx(
         () => controller.playlists.isEmpty
             ? _buildEmpty(context)
@@ -33,10 +19,8 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
                 padding: AppStyle.edgeInsetsV8,
                 itemCount: controller.playlists.length,
                 separatorBuilder: (_, __) => AppStyle.divider,
-                itemBuilder: (_, index) => _buildItem(
-                  context,
-                  controller.playlists[index],
-                ),
+                itemBuilder: (_, index) =>
+                    _buildItem(controller.playlists[index]),
               ),
       ),
     );
@@ -54,36 +38,24 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
           ),
           AppStyle.vGap12,
           Text(
-            "还没有订阅源，添加一个开始观看",
+            "直播源已被删除，重置应用后可恢复",
             style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          AppStyle.vGap24,
-          FilledButton.icon(
-            onPressed: controller.addRemote,
-            icon: const Icon(Icons.add_link),
-            label: const Text("添加网络订阅源"),
-          ),
-          AppStyle.vGap8,
-          OutlinedButton.icon(
-            onPressed: controller.addLocal,
-            icon: const Icon(Icons.folder_open),
-            label: const Text("导入本地 M3U 文件"),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildItem(BuildContext context, IptvPlaylist item) {
+  Widget _buildItem(IptvPlaylist item) {
     return ListTile(
-      leading: Icon(item.isLocal ? Icons.folder : Icons.cloud_outlined),
+      leading: const Icon(Icons.cloud_outlined),
       title: Text(
         item.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
-        "${item.isLocal ? "本地文件" : "网络订阅"} · 更新于 ${Utils.parseTime(item.updateTime)}",
+        "自动更新 · 更新于 ${Utils.parseTime(item.updateTime)}",
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

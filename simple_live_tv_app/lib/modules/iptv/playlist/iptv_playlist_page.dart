@@ -33,7 +33,7 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
               ),
               AppStyle.hGap32,
               Text(
-                "订阅源管理",
+                "直播源管理",
                 style: AppStyle.titleStyleWhite.copyWith(
                   fontSize: 36.w,
                   fontWeight: FontWeight.bold,
@@ -42,19 +42,7 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
               const Spacer(),
             ],
           ),
-          AppStyle.vGap24,
-          Row(
-            children: [
-              AppStyle.hGap48,
-              HighlightButton(
-                focusNode: AppFocusNode(),
-                iconData: Icons.add_link,
-                text: "添加网络源",
-                onTap: controller.addRemote,
-              ),
-            ],
-          ),
-          AppStyle.vGap24,
+          AppStyle.vGap32,
           Expanded(
             child: Obx(
               () => controller.playlists.isEmpty
@@ -79,15 +67,8 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
         children: [
           Icon(Icons.live_tv_outlined, size: 80.w, color: Colors.white54),
           AppStyle.vGap24,
-          Text("还没有订阅源，添加一个开始观看",
+          Text("直播源已被删除，重置应用后可恢复",
               style: AppStyle.textStyleWhite),
-          AppStyle.vGap32,
-          HighlightButton(
-            focusNode: AppFocusNode(),
-            iconData: Icons.add_link,
-            text: "添加网络订阅源",
-            onTap: controller.addRemote,
-          ),
         ],
       ),
     );
@@ -101,10 +82,9 @@ class IptvPlaylistPage extends GetView<IptvPlaylistController> {
           Expanded(
             child: HighlightListTile(
               focusNode: AppFocusNode(),
-              leading: Icon(item.isLocal ? Icons.folder : Icons.cloud_outlined),
+              leading: const Icon(Icons.cloud_outlined),
               title: item.name,
-              subtitle:
-                  "${item.isLocal ? "本地文件" : "网络订阅"} · 更新于 ${Utils.parseTime(item.updateTime)}",
+              subtitle: "自动更新 · 更新于 ${Utils.parseTime(item.updateTime)}",
               onTap: () => Get.toNamed(
                 RoutePath.kIptvChannels,
                 arguments: item,

@@ -63,15 +63,33 @@ class IptvService extends GetxService {
     ...customSources,
   ];
 
-  /// 预置公开源池，不可删除，按优先级排序，所有源均明确展示具体名称
+  /// 预置公开源池，不可删除，按优先级排序，海外源优先适配境外网络，所有源均明确展示具体名称
   static const List<IptvSourceMeta> presetSourcePool = [
+    IptvSourceMeta(
+      name: "DataShare海外源",
+      author: "DataShare-duo",
+      projectUrl: "https://github.com/DataShare-duo/IPTV-Source",
+      description: "海外节点直连，CDN加速，央视频道完整，适配境外网络",
+      urls: [
+        "https://raw.githubusercontent.com/DataShare-duo/IPTV-Source/refs/heads/main/movie_live.txt",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "suxuang全量源",
+      author: "suxuang",
+      projectUrl: "https://github.com/suxuang/myIPTV",
+      description: "频道数量全，多节点容灾，每日自动更新，央视频道完整",
+      urls: [
+        "https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
+      ],
+    ),
     IptvSourceMeta(
       name: "范明明直连源",
       author: "fanmingming",
       projectUrl: "https://github.com/fanmingming/live",
       description: "国内直连，延迟低，央视频道完整，GPL-3.0协议",
       urls: [
-        "https://live.fanmingming.com/tv/m3u/ipv4.m3u",
         "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
         "https://gh-proxy.com/raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
       ],
@@ -103,7 +121,6 @@ class IptvService extends GetxService {
       projectUrl: "https://github.com/HerbertHe/iptv-sources",
       description: "CDN加速，稳定性高，2小时自动更新，GPL-3.0协议",
       urls: [
-        "https://m3u.ibert.me/ipv4.m3u",
         "https://raw.githubusercontent.com/HerbertHe/iptv-sources/main/ipv4.m3u",
       ],
     ),

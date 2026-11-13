@@ -19,62 +19,86 @@ class M3uParser {
     final channels = <IptvChannel>[];
     final epgUrls = <String>[];
 
-    // 待与下一条播放地址配对的 EXTINF 信息
-    Map<String, String>? pendingAttrs;
-    String pendingName = "";
-    String pendingGroup = "";
-
-    for (final raw in lines) {
-      final line = raw.trim();
-      if (line.isEmpty) continue;
-
-      if (line.startsWith("#EXTM3U")) {
-        // 头部可声明一个或多个 url-tvg
-        for (final match in _attrReg.allMatches(line)) {
-          if (match.group(1) == "url-tvg") {
-            final value = match.group(2)!.trim();
-            if (value.isNotEmpty) epgUrls.add(_resolve(value, baseUrl));
-          }
+    // 兼容TXT格式直播源，自动识别分组标记
+    if (!content.contains("#EXTM3U") && content.contains("#genre#")) {
+      var currentGroup = defaultGroup;
+      for (final raw in lines) {
+        final line = raw.trim();
+        if (line.isEmpty) continue;
+        if (line.endsWith("#genre#")) {
+          currentGroup = line.replaceAll("#genre#", "").trim();
+          continue;
         }
-        continue;
-      }
-
-      if (line.startsWith("#EXTINF")) {
-        final attrs = <String, String>{};
-        for (final match in _attrReg.allMatches(line)) {
-          attrs[match.group(1)!] = match.group(2)!;
-        }
-        final comma = _findNameSeparator(line);
-        pendingAttrs = attrs;
-        pendingName = comma >= 0 ? line.substring(comma + 1).trim() : "";
-        continue;
-      }
-
-      if (line.startsWith("#EXTGRP")) {
-        pendingGroup = line.split(":").last.trim();
-        continue;
-      }
-
-      if (line.startsWith("#")) continue;
-
-      final url = _resolve(line, baseUrl);
-      final attrs = pendingAttrs ?? const <String, String>{};
-      final group = (attrs["group-title"]?.trim().isNotEmpty ?? false)
-          ? attrs["group-title"]!.trim()
-          : (pendingGroup.isNotEmpty ? pendingGroup : defaultGroup);
-      final tvgId = attrs["tvg-id"]?.trim() ?? "";
-      channels.add(
-        IptvChannel(
-          id: tvgId.isNotEmpty ? tvgId : url,
-          name: pendingName.isNotEmpty ? pendingName : url,
-          logo: _resolve(attrs["tvg-logo"] ?? "", baseUrl),
-          group: group,
+        final commaIndex = line.indexOf(",");
+        if (commaIndex <= 0) continue;
+        final name = line.substring(0, commaIndex).trim();
+        final url = _resolve(line.substring(commaIndex + 1).trim(), baseUrl);
+        channels.add(IptvChannel(
+          id: url,
+          name: name,
+          logo: "",
+          group: currentGroup,
           url: url,
-        ),
-      );
-      pendingAttrs = null;
-      pendingName = "";
-      pendingGroup = "";
+        ));
+      }
+    } else {
+      // 待与下一条播放地址配对的 EXTINF 信息
+      Map<String, String>? pendingAttrs;
+      String pendingName = "";
+      String pendingGroup = "";
+
+      for (final raw in lines) {
+        final line = raw.trim();
+        if (line.isEmpty) continue;
+
+        if (line.startsWith("#EXTM3U")) {
+          // 头部可声明一个或多个 url-tvg
+          for (final match in _attrReg.allMatches(line)) {
+            if (match.group(1) == "url-tvg") {
+              final value = match.group(2)!.trim();
+              if (value.isNotEmpty) epgUrls.add(_resolve(value, baseUrl));
+            }
+          }
+          continue;
+        }
+
+        if (line.startsWith("#EXTINF")) {
+          final attrs = <String, String>{};
+          for (final match in _attrReg.allMatches(line)) {
+            attrs[match.group(1)!] = match.group(2)!;
+          }
+          final comma = _findNameSeparator(line);
+          pendingAttrs = attrs;
+          pendingName = comma >= 0 ? line.substring(comma + 1).trim() : "";
+          continue;
+        }
+
+        if (line.startsWith("#EXTGRP")) {
+          pendingGroup = line.split(":").last.trim();
+          continue;
+        }
+
+        if (line.startsWith("#")) continue;
+
+        final url = _resolve(line, baseUrl);
+        final attrs = pendingAttrs ?? const <String, String>{};
+        final group = (attrs["group-title"]?.trim().isNotEmpty ?? false)
+            ? attrs["group-title"]!.trim()
+            : (pendingGroup.isNotEmpty ? pendingGroup : defaultGroup);
+        final tvgId = attrs["tvg-id"]?.trim() ?? "";
+        channels.add(
+          IptvChannel(
+            id: tvgId.isNotEmpty ? tvgId : url,
+            name: pendingName.isNotEmpty ? pendingName : url,
+            logo: _resolve(attrs["tvg-logo"] ?? "", baseUrl),
+            group: group,
+            url: url,
+          ),
+        );
+        pendingAttrs = null;
+        pendingName = "";
+        pendingGroup = "";
+      }
     }
 
     // 拆分地方频道为省份分组

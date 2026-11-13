@@ -95,9 +95,6 @@ Widget buildFullControls(
     ),
   );
 
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    return DragToMoveArea(child: controls);
-  }
   return controls;
 }
 
@@ -422,90 +419,177 @@ Widget _buildFullTopBar(
       right: 0,
       top: visible ? 0 : -(48 + padding.top),
       duration: const Duration(milliseconds: 200),
-      child: Container(
-        height: 48 + padding.top,
-        padding: EdgeInsets.only(
-          left: padding.left + 12,
-          right: padding.right + 12,
-          top: padding.top,
-        ),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black87,
-            ],
-          ),
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: () {
-                if (controller.smallWindowState.value) {
-                  controller.exitSmallWindow();
-                } else {
-                  controller.exitFull();
-                }
-              },
-              icon: const Icon(
-                Icons.arrow_back,
-                color: Colors.white,
-                size: 24,
+      child: Platform.isWindows || Platform.isLinux || Platform.isMacOS
+          ? DragToMoveArea(
+              child: Container(
+                height: 48 + padding.top,
+                padding: EdgeInsets.only(
+                  left: padding.left + 12,
+                  right: padding.right + 12,
+                  top: padding.top,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black87,
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (controller.smallWindowState.value) {
+                          controller.exitSmallWindow();
+                        } else {
+                          controller.exitFull();
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    AppStyle.hGap12,
+                    Expanded(
+                      child: Text(
+                        displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    AppStyle.hGap12,
+                    if (!controller.smallWindowState.value)
+                      IconButton(
+                        onPressed: controller.saveScreenshot,
+                        icon: const Icon(
+                          Icons.camera_alt_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    if (!controller.smallWindowState.value)
+                      IconButton(
+                        onPressed: () => showQuickAccess(controller),
+                        icon: const Icon(
+                          Remix.play_list_2_line,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    if (Platform.isAndroid || Platform.isIOS)
+                      IconButton(
+                        onPressed: controller.enablePIP,
+                        icon: const Icon(
+                          Icons.picture_in_picture,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    IconButton(
+                      onPressed: () => showPlayerSettings(controller),
+                      icon: const Icon(
+                        Icons.tune,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Container(
+              height: 48 + padding.top,
+              padding: EdgeInsets.only(
+                left: padding.left + 12,
+                right: padding.right + 12,
+                top: padding.top,
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black87,
+                  ],
+                ),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      if (controller.smallWindowState.value) {
+                        controller.exitSmallWindow();
+                      } else {
+                        controller.exitFull();
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  AppStyle.hGap12,
+                  Expanded(
+                    child: Text(
+                      displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  AppStyle.hGap12,
+                  if (!controller.smallWindowState.value)
+                    IconButton(
+                      onPressed: controller.saveScreenshot,
+                      icon: const Icon(
+                        Icons.camera_alt_outlined,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  if (!controller.smallWindowState.value)
+                    IconButton(
+                      onPressed: () => showQuickAccess(controller),
+                      icon: const Icon(
+                        Remix.play_list_2_line,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  if (Platform.isAndroid || Platform.isIOS)
+                    IconButton(
+                      onPressed: controller.enablePIP,
+                      icon: const Icon(
+                        Icons.picture_in_picture,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  IconButton(
+                    onPressed: () => showPlayerSettings(controller),
+                    icon: const Icon(
+                      Icons.tune,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ],
               ),
             ),
-            AppStyle.hGap12,
-            Expanded(
-              child: Text(
-                displayTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            AppStyle.hGap12,
-            if (!controller.smallWindowState.value)
-              IconButton(
-                onPressed: controller.saveScreenshot,
-                icon: const Icon(
-                  Icons.camera_alt_outlined,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            if (!controller.smallWindowState.value)
-              IconButton(
-                onPressed: () => showQuickAccess(controller),
-                icon: const Icon(
-                  Remix.play_list_2_line,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            if (Platform.isAndroid || Platform.isIOS)
-              IconButton(
-                onPressed: controller.enablePIP,
-                icon: const Icon(
-                  Icons.picture_in_picture,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            IconButton(
-              onPressed: () => showPlayerSettings(controller),
-              icon: const Icon(
-                Icons.tune,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   });
 }

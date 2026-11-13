@@ -129,6 +129,11 @@ class AccountPage extends GetView<AccountController> {
                   value: enabled,
                   onChanged: (_) => service.toggleSourceEnabled(source),
                 ),
+                if (source.author == "自定义")
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    onPressed: () => _showEditCustomDialog(context, source, service),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   onPressed: () => _showDeleteConfirm(context, source, service),
@@ -156,13 +161,17 @@ class AccountPage extends GetView<AccountController> {
     );
   }
 
-  /// 删除源确认对话框，避免误操作
+  /// 删除源确认对话框，区分预置源与自定义源提示
   Future<void> _showDeleteConfirm(BuildContext context, source, service) async {
+    final isCustom = source.author == "自定义";
+    final content = isCustom
+        ? "确定要删除自定义源「${source.name}」吗？删除后无法恢复，请谨慎操作。"
+        : "确定要删除预置源「${source.name}」吗？删除后可通过「恢复默认源」找回。";
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("删除源"),
-        content: Text("确定要删除「${source.name}」吗？删除后可通过恢复默认找回预置源。"),
+        content: Text(content),
         actions: [
           TextButton(onPressed: () => Get.back(result: false), child: const Text("取消")),
           FilledButton(onPressed: () => Get.back(result: true), child: const Text("删除")),
@@ -200,6 +209,39 @@ class AccountPage extends GetView<AccountController> {
               Get.back();
             },
             child: const Text("添加"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 编辑自定义源对话框
+  Future<void> _showEditCustomDialog(BuildContext context, source, service) async {
+    final nameController = TextEditingController(text: source.name);
+    final urlController = TextEditingController(text: source.urls.first);
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("编辑自定义源"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: "源名称")),
+            AppStyle.vGap12,
+            TextField(controller: urlController, decoration: const InputDecoration(labelText: "M3U 地址")),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text("取消")),
+          FilledButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final url = urlController.text.trim();
+              if (name.isEmpty || url.isEmpty) return;
+              await service.updateCustomSource(source, name: name, url: url);
+              Get.back();
+            },
+            child: const Text("保存"),
           ),
         ],
       ),

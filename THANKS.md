@@ -27,9 +27,8 @@ Simple Live 会继续保持开源和免费使用。感谢赞助维护、提供�
 - 感谢 [DataShare-duo](https://github.com/DataShare-duo/IPTV-Source) 提供海外节点直播源，适配境外网络，CDN加速，央视频道完整。
 - 感谢 [suxuang](https://github.com/suxuang/myIPTV) 提供全量多节点直播源，频道覆盖全面，每日自动更新。
 - 感谢 [vbskycn](https://github.com/vbskycn/iptv) 提供全量 IPv4 直播源，每 6 小时自动更新，覆盖完整央视、卫视与地方省份频道。
-- 感谢 [YanG-1989](https://github.com/YanG-1989/m3u) 提供每日更新的聚合直播源，多镜像部署保障可用性。
 - 感谢 [peterhchina](https://peterhchina.github.io/iptv/) 提供直播源同步镜像，每日自动同步更新。
-- 原 fanmingming、HerbertHe 源已确认公开地址全部失效，本版本不再内置，感谢作者此前的公益维护。
+- 原 fanmingming、HerbertHe、YanG-1989 源已确认公开地址失效或频道连通性不达标，本版本不再内置，感谢作者此前的公益维护。
 
 ## 资源参考
 

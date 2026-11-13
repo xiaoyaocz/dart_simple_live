@@ -160,9 +160,8 @@ TV 下载建议：
 | DataShare海外源 | DataShare-duo | [DataShare-duo/IPTV-Source](https://github.com/DataShare-duo/IPTV-Source) | 项目开源 | 海外节点直连，CDN加速，适配境外网络，央视频道完整 |
 | suxuang全量源 | suxuang | [suxuang/myIPTV](https://github.com/suxuang/myIPTV) | 项目开源 | 全量多节点源，频道覆盖全面，每日自动更新 |
 | vbskycn 全量源 | vbskycn | [vbskycn/iptv](https://github.com/vbskycn/iptv) | 项目开源 | 427 个频道，覆盖完整央视、卫视与地方省份台，每 6 小时自动更新 |
-| YanG 聚合源 | YanG-1989 | [YanG-1989/m3u](https://github.com/YanG-1989/m3u) | 项目开源 | 每日自动更新，多镜像部署的主流频道聚合源 |
 | peterh 镜像源 | peterhchina | [peterhchina.github.io/iptv/](https://peterhchina.github.io/iptv/) | 项目开源 | 全量源同步镜像，每日自动更新 |
-| 原范明明、HerbertHe源 | - | - | - | 公开地址已全部失效，不再内置，感谢此前公益维护 |
+| 原范明明、HerbertHe、YanG源 | - | - | - | 公开地址已失效或连通性不达标，不再内置，感谢此前公益维护 |
 
 ### 作者重要提示
 根据 vbskycn 源官方说明：

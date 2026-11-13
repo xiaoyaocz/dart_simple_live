@@ -103,16 +103,6 @@ class IptvService extends GetxService {
       ],
     ),
     IptvSourceMeta(
-      name: "YanG聚合源",
-      author: "YanG-1989",
-      projectUrl: "https://github.com/YanG-1989/m3u",
-      description: "多源聚合，频道丰富，每日自动更新",
-      urls: [
-        "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
-        "https://gh-proxy.com/raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
-      ],
-    ),
-    IptvSourceMeta(
       name: "peterh镜像源",
       author: "peterhchina",
       projectUrl: "https://peterhchina.github.io/iptv/",
@@ -167,6 +157,29 @@ class IptvService extends GetxService {
     );
     customSources.add(meta);
     enabledSourceNames.add(name);
+    await _saveCustomSources();
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvSourceEnabled,
+      enabledSourceNames.toList(),
+    );
+  }
+
+  /// 修改自定义源的名称与地址
+  Future<void> updateCustomSource(IptvSourceMeta oldSource, {required String name, required String url}) async {
+    final index = customSources.indexOf(oldSource);
+    if (index < 0) return;
+    final updated = IptvSourceMeta(
+      name: name,
+      author: "自定义",
+      description: "用户自定义源",
+      urls: [url],
+    );
+    customSources[index] = updated;
+    // 同步更新启用状态中的名称
+    final enabledIndex = enabledSourceNames.indexOf(oldSource.name);
+    if (enabledIndex >= 0) {
+      enabledSourceNames[enabledIndex] = name;
+    }
     await _saveCustomSources();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvSourceEnabled,

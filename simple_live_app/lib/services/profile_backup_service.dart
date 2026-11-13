@@ -387,7 +387,7 @@ class ProfileBackupService extends GetxService {
   /// 导入后刷新已打开的 IPTV 页面，未打开则无需处理
   void _refreshIptvPages() {
     if (Get.isRegistered<IptvChannelsController>()) {
-      Get.find<IptvChannelsController>().loadPlaylists();
+      Get.find<IptvChannelsController>().loadData();
     }
   }
 

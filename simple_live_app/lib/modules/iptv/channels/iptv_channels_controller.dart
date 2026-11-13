@@ -1,59 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
-import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/models/db/iptv_favorite.dart';
-import 'package:simple_live_app/models/db/iptv_playlist.dart';
-import 'package:simple_live_app/modules/iptv/parser/iptv_channel.dart';
-import 'package:simple_live_app/modules/iptv/parser/m3u_parser.dart';
+import 'package:simple_live_app/modules/iptv/parser/aggregated_channel.dart';
 import 'package:simple_live_app/services/iptv_service.dart';
 
 class IptvChannelsController extends BaseController {
-  final playlists = <IptvPlaylist>[].obs;
-  final currentPlaylist = Rxn<IptvPlaylist>();
-  final parseResult = Rxn<M3uParseResult>();
-
+  final parseResult = Rxn<AggregatedParseResult>();
   final groups = <String>[].obs;
   final currentGroup = "".obs;
-  final channels = <IptvChannel>[].obs;
+  final channels = <AggregatedChannel>[].obs;
   final favorites = <IptvFavorite>[].obs;
-
   final showFavorites = false.obs;
-  final searching = false.obs;
   final keyword = "".obs;
 
-  // ==================== 横向条滚动与自动居中 ====================
-  // 横向选择条滚动控制器，支持手动滚动与选中项自动居中
-  final ScrollController playlistScrollController = ScrollController();
+  // 横向分组条滚动控制器，选中项自动居中
   final ScrollController groupScrollController = ScrollController();
-  // 每个按钮的GlobalKey，用于定位选中项并滚动居中
-  final Map<String, GlobalKey> playlistItemKeys = {};
   final Map<String, GlobalKey> groupItemKeys = {};
 
   @override
+  void onInit() {
+    refreshFavorites();
+    loadData();
+    super.onInit();
+  }
+
+  @override
   void onClose() {
-    playlistScrollController.dispose();
     groupScrollController.dispose();
     super.onClose();
   }
 
-  @override
-  void onInit() {
-    loadPlaylists();
-    super.onInit();
-  }
-
-  /// 从本地读取订阅源，首次进入自动加载第一个源
-  void loadPlaylists() {
-    playlists.value = IptvService.instance.getPlaylists();
-    refreshFavorites();
-    if (currentPlaylist.value == null && playlists.isNotEmpty) {
-      selectPlaylist(playlists.first);
+  /// 加载聚合数据，支持手动刷新
+  Future<void> loadData({bool forceRefresh = false}) async {
+    pageLoadding.value = true;
+    try {
+      final result = await IptvService.instance.getAggregated(forceRefresh: forceRefresh);
+      parseResult.value = result;
+      groups.value = IptvService.instance.getAggregatedGroups(result);
+      currentGroup.value = "";
+      keyword.value = "";
+      applyFilter();
+    } catch (e) {
+      handleError(e, showPageError: true);
+    } finally {
+      pageLoadding.value = false;
     }
   }
 
-  /// 将选中项平滑滚动到视口中间位置，实现自动居中
-  void _scrollItemToCenter(GlobalKey? key, ScrollController controller) {
+  /// 手动刷新所有源
+  Future<void> onRefresh() async {
+    await loadData(forceRefresh: true);
+  }
+
+  /// 选中项平滑滚动到视口中间
+  void _scrollItemToCenter(GlobalKey? key) {
     if (key?.currentContext == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Scrollable.ensureVisible(
@@ -65,54 +66,11 @@ class IptvChannelsController extends BaseController {
     });
   }
 
-  /// 选择订阅源并加载其频道
-  Future<void> selectPlaylist(IptvPlaylist playlist) async {
-    currentPlaylist.value = playlist;
-    showFavorites.value = false;
-    pageLoadding.value = true;
-    try {
-      final result = await IptvService.instance.getOrLoad(playlist);
-      parseResult.value = result;
-      // 自定义分组排序：央视频道、卫视频道置顶，其余按类型+名称排序
-      final sortedGroups = IptvService.instance.getGroups(result);
-      sortedGroups.sort((a, b) {
-        if (a == "央视频道") return -1;
-        if (b == "央视频道") return 1;
-        if (a == "卫视频道") return -1;
-        if (b == "卫视频道") return 1;
-        return a.compareTo(b);
-      });
-      groups.value = sortedGroups;
-      currentGroup.value = "";
-      keyword.value = "";
-      // 全部频道下央视、卫视置顶，央视频道按数字自然排序，避免CCTV13排在CCTV5前面
-      result.channels.sort((a, b) {
-        final aGroup = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
-        final bGroup = b.group == "央视频道" ? 0 : (b.group == "卫视频道" ? 1 : 2);
-        if (aGroup != bGroup) return aGroup.compareTo(bGroup);
-        if (aGroup == 0) {
-          final aNum = _extractCctvNumber(a.name);
-          final bNum = _extractCctvNumber(b.name);
-          if (aNum != null && bNum != null) return aNum.compareTo(bNum);
-        }
-        return a.name.compareTo(b.name);
-      });
-      applyFilter();
-      // 选中源自动居中
-      _scrollItemToCenter(playlistItemKeys[playlist.id], playlistScrollController);
-    } catch (e) {
-      handleError(e, showPageError: true);
-    } finally {
-      pageLoadding.value = false;
-    }
-  }
-
   void selectGroup(String group) {
     currentGroup.value = group;
     applyFilter();
-    // 选中分组自动居中
     final key = groupItemKeys[group.isEmpty ? "全部" : group];
-    _scrollItemToCenter(key, groupScrollController);
+    _scrollItemToCenter(key);
   }
 
   void setKeyword(String value) {
@@ -125,19 +83,19 @@ class IptvChannelsController extends BaseController {
     refreshFavorites();
   }
 
-  /// 按当前分组与关键词过滤频道
+  /// 按分组与关键词过滤
   void applyFilter() {
     final result = parseResult.value;
     if (result == null) {
       channels.clear();
       return;
     }
-    var list = IptvService.instance.channelsOfGroup(result, currentGroup.value);
+    var list = result.channels
+        .where((e) => currentGroup.value.isEmpty || e.group == currentGroup.value)
+        .toList();
     if (keyword.value.isNotEmpty) {
       final kw = keyword.value.toLowerCase();
-      list = list
-          .where((channel) => channel.name.toLowerCase().contains(kw))
-          .toList();
+      list = list.where((e) => e.name.toLowerCase().contains(kw)).toList();
     }
     channels.value = list;
   }
@@ -146,68 +104,30 @@ class IptvChannelsController extends BaseController {
     favorites.value = IptvService.instance.getFavorites();
   }
 
-  bool isFavoriteChannel(IptvChannel channel) {
-    final playlist = currentPlaylist.value;
-    return playlist != null &&
-        IptvService.instance.isFavorite(
-          IptvService.favoriteId(playlist.id, channel.url),
-        );
+  bool isFavoriteChannel(AggregatedChannel channel) {
+    return favorites.any((e) =>
+        e.name == channel.name && e.url == channel.defaultLine.url);
   }
 
-  void toggleFavorite(IptvChannel channel) {
-    final playlist = currentPlaylist.value;
-    if (playlist == null) return;
+  void toggleFavorite(AggregatedChannel channel) {
+    final line = channel.defaultLine;
     IptvService.instance.toggleFavorite(
-      playlistId: playlist.id,
+      playlistId: "aggregated",
       channel: channel,
+      line: line,
     );
     refreshFavorites();
   }
 
-  /// 进入播放页，携带当前频道列表与起始位置以便切台
-  /// 提取CCTV频道名称中的数字，用于自然排序，非数字频道返回null
-  int? _extractCctvNumber(String name) {
-    final match = RegExp(r'CCTV-?(\d+)').firstMatch(name);
-    return match == null ? null : int.tryParse(match.group(1)!);
-  }
-
-  void openPlayer(IptvChannel channel, int index) {
-    final playlist = currentPlaylist.value;
-    if (playlist == null) return;
+  /// 进入播放器，携带聚合频道与起始位置
+  void openPlayer(AggregatedChannel channel, int index) {
     Get.toNamed(
-      RoutePath.kIptvPlayer,
+      "/iptv/player",
       arguments: {
-        "playlist": playlist,
         "channels": channels,
         "index": index,
         "epgUrls": parseResult.value?.epgUrls ?? const <String>[],
       },
     );
-  }
-
-  /// 收藏频道进入播放页；所属订阅源存在且已缓存解析结果时回查其 EPG
-  void openFavoritePlayer(IptvFavorite favorite, int index) {
-    final playlist = IptvService.instance
-        .getPlaylists()
-        .firstWhereOrNull((item) => item.id == favorite.playlistId);
-    final epgUrls = playlist == null
-        ? const <String>[]
-        : IptvService.instance.cachedParse(playlist.id)?.epgUrls ??
-            const <String>[];
-    Get.toNamed(
-      RoutePath.kIptvPlayer,
-      arguments: {
-        "playlist": null,
-        "favorites": favorites,
-        "index": index,
-        "epgUrls": epgUrls,
-      },
-    );
-  }
-
-  /// 管理订阅源后返回，重新加载
-  Future<void> goManage() async {
-    await Get.toNamed(RoutePath.kIptvPlaylists);
-    loadPlaylists();
   }
 }

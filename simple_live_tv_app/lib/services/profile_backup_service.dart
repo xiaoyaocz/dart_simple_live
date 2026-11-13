@@ -17,7 +17,6 @@ import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
 import 'package:simple_live_tv_app/models/db/iptv_favorite.dart';
-import 'package:simple_live_tv_app/models/db/iptv_playlist.dart';
 
 class ProfileBackupService extends GetxService {
   static ProfileBackupService get instance => Get.find<ProfileBackupService>();
@@ -68,10 +67,8 @@ class ProfileBackupService extends GetxService {
         .toList();
     final histories =
         DBService.instance.getHistores().map((item) => item.toJson()).toList();
-    final iptvPlaylists = IptvService.instance
-        .getPlaylists()
-        .map((item) => item.toJson())
-        .toList();
+    // 旧版订阅源已废弃，聚合逻辑不再使用本地playlist
+    const iptvPlaylists = <dynamic>[];
     final iptvFavorites = IptvService.instance
         .getFavorites()
         .map((item) => item.toJson())
@@ -213,23 +210,10 @@ class ProfileBackupService extends GetxService {
   ) async {
     final service = IptvService.instance;
     if (overwrite) {
-      for (final playlist in service.getPlaylists()) {
-        await service.deletePlaylist(playlist.id);
-      }
       await service.favoriteBox.clear();
     }
 
-    final rawPlaylists = payload["iptvPlaylists"];
-    if (rawPlaylists is List) {
-      for (final item in rawPlaylists) {
-        if (item is! Map) continue;
-        final playlist = IptvPlaylist.fromJson(item.cast<String, dynamic>());
-        if (playlist.id.isEmpty) continue;
-        await service.playlistBox.put(playlist.id, playlist);
-        summary.iptvPlaylists++;
-      }
-    }
-
+    // 旧版playlist数据忽略，仅导入收藏
     final rawFavorites = payload["iptvFavorites"];
     if (rawFavorites is List) {
       for (final item in rawFavorites) {

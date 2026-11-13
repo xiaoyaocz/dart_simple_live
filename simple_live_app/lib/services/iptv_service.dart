@@ -104,6 +104,7 @@ class IptvService extends GetxService {
   final RxInt totalSourceCount = 0.obs;
   final RxString loadingMessage = "正在加载直播源...".obs;
 
+  // ==================== 预置源启用状态管理 ====================
   /// 用户启用的源名称列表，默认全部启用，持久化存储
   final RxList<String> enabledSourceNames = <String>[].obs;
 
@@ -187,6 +188,8 @@ class IptvService extends GetxService {
 
   /// 拉取并解析订阅源，依次尝试所有源与镜像，全失败才抛出错误
   /// 完整保留作者原始频道、公告、赞助提示，不做任何过滤
+  // ==================== 多源刷新与容灾 ====================
+  /// 遍历所有启用的源与镜像地址，5秒超时自动切换，全部失败才抛出错误
   Future<M3uParseResult> refresh(IptvPlaylist playlist) async {
     isLoading.value = true;
     Object? lastError;

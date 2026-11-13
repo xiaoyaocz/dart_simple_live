@@ -22,6 +22,7 @@ class IptvChannelsController extends BaseController {
   final searching = false.obs;
   final keyword = "".obs;
 
+  // ==================== 横向条滚动与自动居中 ====================
   // 横向选择条滚动控制器，遥控器切换时自动居中
   final ScrollController playlistScrollController = ScrollController();
   final ScrollController groupScrollController = ScrollController();
@@ -49,7 +50,7 @@ class IptvChannelsController extends BaseController {
     super.onInit();
   }
 
-  /// 将选中项滚动到视口中间位置，自动居中
+  /// 将选中项平滑滚动到视口中间位置，遥控器切换时自动居中
   void _scrollItemToCenter(GlobalKey? key, ScrollController controller) {
     if (key?.currentContext == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {

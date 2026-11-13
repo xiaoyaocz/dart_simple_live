@@ -356,6 +356,9 @@ Widget _buildBufferingIndicator(VideoState videoState) {
   );
 }
 
+// ==================== 播放器手势层 ====================
+/// 覆盖整个播放器的手势识别层，统一处理点击、双击、长按与拖拽手势
+/// [enableQuickAccessLongPress] 全屏模式下开启，用于响应长按呼出快捷入口
 Widget _buildGestureLayer(
   LiveRoomController controller, {
   bool enableQuickAccessLongPress = false,
@@ -402,6 +405,7 @@ Widget _buildGestureLayer(
   );
 }
 
+// ==================== 全屏顶部控制栏 ====================
 Widget _buildFullTopBar(
   LiveRoomController controller, {
   required EdgeInsets padding,
@@ -419,6 +423,7 @@ Widget _buildFullTopBar(
       right: 0,
       top: visible ? 0 : -(48 + padding.top),
       duration: const Duration(milliseconds: 200),
+      // 桌面端仅顶部栏支持拖动窗口，避免全局拖动拦截播放器区域的双击、长按手势
       child: Platform.isWindows || Platform.isLinux || Platform.isMacOS
           ? DragToMoveArea(
               child: Container(
@@ -1369,6 +1374,8 @@ void showPlayerSettings(LiveRoomController controller) {
   );
 }
 
+// ==================== 长按快捷入口 ====================
+/// 长按呼出的快捷入口，包含关注页、分类等用户自定义快捷项
 void showQuickAccess(LiveRoomController controller) {
   final keys = controller.enabledQuickAccessKeys;
   if (keys.isEmpty) {

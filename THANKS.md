@@ -22,6 +22,14 @@ Simple Live 会继续保持开源和免费使用。感谢赞助维护、提供�
 - 感谢某位用户 “*。” 的支持。
 - 感谢某位用户 “*、” 的支持。
 
+## IPTV 公开直播源作者
+特别感谢所有公开维护 IPTV 直播源的作者，本项目所有直播源均完整保留作者原始内容、公告频道与赞助提示，不做任何过滤删除：
+- 感谢 [vbskycn](https://github.com/vbskycn/iptv) 提供全量 IPv4 直播源，每 6 小时自动更新，覆盖完整央视、卫视与地方省份频道。
+- 感谢 [fanmingming](https://github.com/fanmingming/live) 提供国内直连稳定直播源，项目基于 GPL-3.0 协议开源，长期公益维护，支持 IPv4/IPv6 双栈。
+- 感谢 [YanG-1989](https://github.com/YanG-1989/m3u) 提供每日更新的聚合直播源，多镜像部署保障可用性。
+- 感谢 [HerbertHe](https://github.com/HerbertHe/iptv-sources) 提供 CDN 加速的聚合源，项目基于 GPL-3.0 协议开源，每 2 小时自动更新。
+- 感谢 [peterhchina](https://peterhchina.github.io/iptv/) 提供直播源同步镜像，每日自动同步更新。
+
 ## 资源参考
 
 - 感谢 [EmojiAll 抖音平台表情](https://www.emojiall.com/zh-hans/platform-douyin) 提供抖音平台表情参考。

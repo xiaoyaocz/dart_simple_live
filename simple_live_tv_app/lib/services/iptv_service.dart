@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -10,6 +12,23 @@ import '../modules/iptv/parser/m3u_parser.dart';
 import '../requests/http_client.dart';
 import 'local_storage_service.dart';
 
+/// 公开直播源元数据，保留作者完整信息
+class IptvSourceMeta {
+  final String name;
+  final String author;
+  final String projectUrl;
+  final String description;
+  final List<String> urls;
+
+  const IptvSourceMeta({
+    required this.name,
+    required this.author,
+    required this.projectUrl,
+    required this.description,
+    required this.urls,
+  });
+}
+
 class IptvService extends GetxService {
   static IptvService get instance => Get.find<IptvService>();
 
@@ -17,12 +36,60 @@ class IptvService extends GetxService {
   static const String favoriteBoxName = "IptvFavorite";
   static const String defaultPlaylistName = "全国IPTV直播源";
 
-  /// 按优先级排序的备用源地址，前一个失败自动切换下一个
-  static const List<String> sourceUrls = [
-    "https://live.zbds.top/tv/iptv4.m3u",
-    "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
-    "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
-    "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+  /// 公开稳定直播源池，按可靠性排序，所有源均保留作者原始频道与公告
+  static const List<IptvSourceMeta> sourcePool = [
+    IptvSourceMeta(
+      name: "vbskycn 全量源",
+      author: "vbskycn",
+      projectUrl: "https://github.com/vbskycn/iptv",
+      description: "427个频道，含完整地方省份台，6小时自动更新",
+      urls: [
+        "https://live.zbds.top/tv/iptv4.m3u",
+        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+        "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "范明明直连源",
+      author: "fanmingming",
+      projectUrl: "https://github.com/fanmingming/live",
+      description: "国内自有域名直连，主流央视卫视稳定，GPL-3.0协议",
+      urls: [
+        "https://live.fanmingming.com/tv/m3u/ipv4.m3u",
+        "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "YanG 聚合源",
+      author: "YanG-1989",
+      projectUrl: "https://github.com/YanG-1989/m3u",
+      description: "每日自动更新，主流频道聚合，多镜像分流",
+      urls: [
+        "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "HerbertHe CDN源",
+      author: "HerbertHe",
+      projectUrl: "https://github.com/HerbertHe/iptv-sources",
+      description: "2小时自动更新，多上游聚合，国内CDN加速，GPL-3.0协议",
+      urls: [
+        "https://m3u.ibert.me/ipv4.m3u",
+        "https://raw.githubusercontent.com/HerbertHe/iptv-sources/main/ipv4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "peterh 镜像源",
+      author: "peterhchina",
+      projectUrl: "https://peterhchina.github.io/iptv/",
+      description: "vbsky源同步镜像，每日自动更新",
+      urls: [
+        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+      ],
+    ),
   ];
 
   late Box<IptvPlaylist> playlistBox;
@@ -36,7 +103,7 @@ class IptvService extends GetxService {
   /// 加载状态可观察变量，供页面显示进度
   final RxBool isLoading = false.obs;
   final RxInt currentSourceIndex = 0.obs;
-  final RxInt totalSourceCount = sourceUrls.length.obs;
+  final RxInt totalSourceCount = 0.obs;
   final RxString loadingMessage = "正在加载直播源...".obs;
 
   Future<void> init() async {
@@ -44,16 +111,19 @@ class IptvService extends GetxService {
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
   }
 
-  /// 首次启动自动注册全国直播源，用户删除后不再自动重建
+  /// 首次启动随机选择全量源，自动分摊服务器流量
   Future<void> ensureDefaultPlaylist() async {
     final storage = LocalStorageService.instance;
     if (storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
       return;
     }
     try {
+      // 从前3个全量源随机选择，避免所有用户压在同一服务器
+      final random = Random();
+      final selected = sourcePool[random.nextInt(3)];
       await addPlaylist(
         name: defaultPlaylistName,
-        url: sourceUrls.first,
+        url: selected.urls.first,
         type: IptvPlaylist.typeRemote,
       );
       await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
@@ -90,29 +160,39 @@ class IptvService extends GetxService {
     await playlistBox.delete(id);
   }
 
-  /// 拉取并解析订阅源，依次尝试所有备用地址，全失败才抛出最后一个错误
+  /// 拉取并解析订阅源，依次尝试所有源与镜像，全失败才抛出错误
+  /// 完整保留作者原始频道、公告、赞助提示，不做任何过滤
   Future<M3uParseResult> refresh(IptvPlaylist playlist) async {
     isLoading.value = true;
     Object? lastError;
-    for (var i = 0; i < sourceUrls.length; i++) {
-      currentSourceIndex.value = i;
-      final url = sourceUrls[i];
-      loadingMessage.value = "正在尝试直播源 ${i + 1}/${sourceUrls.length}...";
-      try {
-        final content = await HttpClient.instance.getText(
-          url,
-          header: {},
-        ).timeout(const Duration(seconds: 5));
-        final result = M3uParser.parse(content, baseUrl: url);
-        _cache[playlist.id] = result;
-        playlist.updateTime = DateTime.now();
-        playlist.url = url;
-        await playlistBox.put(playlist.id, playlist);
-        isLoading.value = false;
-        return result;
-      } catch (e) {
-        lastError = e;
-        Log.w("直播源地址 $url 访问失败，尝试下一个备用地址");
+    // 统计总地址数用于进度显示
+    var totalUrls = sourcePool.fold<int>(0, (p, e) => p + e.urls.length);
+    totalSourceCount.value = totalUrls;
+    var urlIndex = 0;
+
+    for (var sourceIndex = 0; sourceIndex < sourcePool.length; sourceIndex++) {
+      final source = sourcePool[sourceIndex];
+      for (var mirrorIndex = 0; mirrorIndex < source.urls.length; mirrorIndex++) {
+        urlIndex++;
+        currentSourceIndex.value = urlIndex;
+        final url = source.urls[mirrorIndex];
+        loadingMessage.value = "正在尝试源 $urlIndex/$totalUrls...";
+        try {
+          final content = await HttpClient.instance.getText(
+            url,
+            header: {},
+          ).timeout(const Duration(seconds: 5));
+          final result = M3uParser.parse(content, baseUrl: url);
+          _cache[playlist.id] = result;
+          playlist.updateTime = DateTime.now();
+          playlist.url = url;
+          await playlistBox.put(playlist.id, playlist);
+          isLoading.value = false;
+          return result;
+        } catch (e) {
+          lastError = e;
+          Log.w("直播源地址 $url 访问失败，尝试下一个地址");
+        }
       }
     }
     isLoading.value = false;

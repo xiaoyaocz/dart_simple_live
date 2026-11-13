@@ -83,11 +83,16 @@ class IptvChannelsController extends BaseController {
       groups.value = sortedGroups;
       currentGroup.value = "";
       keyword.value = "";
-      // 全部频道下央视、卫视置顶，方便快速找到央视频道
+      // 全部频道下央视、卫视置顶，央视频道按数字自然排序，避免CCTV13排在CCTV5前面
       result.channels.sort((a, b) {
-        final aCctv = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
-        final bCctv = b.group == "央视频道" ? 0 : (b.group == "卫视频道" ? 1 : 2);
-        if (aCctv != bCctv) return aCctv.compareTo(bCctv);
+        final aGroup = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
+        final bGroup = b.group == "央视频道" ? 0 : (b.group == "卫视频道" ? 1 : 2);
+        if (aGroup != bGroup) return aGroup.compareTo(bGroup);
+        if (aGroup == 0) {
+          final aNum = _extractCctvNumber(a.name);
+          final bNum = _extractCctvNumber(b.name);
+          if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+        }
         return a.name.compareTo(b.name);
       });
       applyFilter();
@@ -159,6 +164,12 @@ class IptvChannelsController extends BaseController {
       channel: channel,
     );
     refreshFavorites();
+  }
+
+  /// 提取CCTV频道名称中的数字，用于自然排序，非数字频道返回null
+  int? _extractCctvNumber(String name) {
+    final match = RegExp(r'CCTV-?(\d+)').firstMatch(name);
+    return match == null ? null : int.tryParse(match.group(1)!);
   }
 
   /// 进入播放页，携带当前频道列表与起始位置以便切台

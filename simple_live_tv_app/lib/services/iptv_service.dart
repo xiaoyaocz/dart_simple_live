@@ -34,22 +34,13 @@ class IptvService extends GetxService {
   static const String favoriteBoxName = "IptvFavorite";
   static const String defaultPlaylistName = "全国IPTV直播源";
 
-  /// 预置公开源池，不可删除
+  /// 预置公开源池，不可删除，按优先级排序，所有源均明确展示具体名称
   static const List<IptvSourceMeta> presetSourcePool = [
-    IptvSourceMeta(
-      name: "vbskycn全量源",
-      author: "vbskycn",
-      description: "400+频道，省份分组完整",
-      urls: [
-        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
-        "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
-        "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
-      ],
-    ),
     IptvSourceMeta(
       name: "范明明直连源",
       author: "fanmingming",
-      description: "国内直连，延迟低",
+      projectUrl: "https://github.com/fanmingming/live",
+      description: "国内直连，延迟低，央视频道完整，GPL-3.0协议",
       urls: [
         "https://live.fanmingming.com/tv/m3u/ipv4.m3u",
         "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
@@ -57,9 +48,21 @@ class IptvService extends GetxService {
       ],
     ),
     IptvSourceMeta(
+      name: "vbskycn全量源",
+      author: "vbskycn",
+      projectUrl: "https://github.com/vbskycn/iptv",
+      description: "400+频道，省份分组完整，6小时自动更新",
+      urls: [
+        "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+        "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
       name: "YanG聚合源",
       author: "YanG-1989",
-      description: "多源聚合，频道丰富",
+      projectUrl: "https://github.com/YanG-1989/m3u",
+      description: "多源聚合，频道丰富，每日自动更新",
       urls: [
         "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
         "https://gh-proxy.com/raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u",
@@ -68,7 +71,8 @@ class IptvService extends GetxService {
     IptvSourceMeta(
       name: "HerbertHe CDN源",
       author: "HerbertHe",
-      description: "CDN加速，稳定性高",
+      projectUrl: "https://github.com/HerbertHe/iptv-sources",
+      description: "CDN加速，稳定性高，2小时自动更新，GPL-3.0协议",
       urls: [
         "https://m3u.ibert.me/ipv4.m3u",
         "https://raw.githubusercontent.com/HerbertHe/iptv-sources/main/ipv4.m3u",
@@ -77,7 +81,8 @@ class IptvService extends GetxService {
     IptvSourceMeta(
       name: "peterh镜像源",
       author: "peterhchina",
-      description: "vbskycn镜像，备用源",
+      projectUrl: "https://peterhchina.github.io/iptv/",
+      description: "vbskycn镜像，备用源，每日自动更新",
       urls: [
         "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
       ],

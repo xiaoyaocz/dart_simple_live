@@ -117,17 +117,19 @@ class M3uParser {
   }
 
   /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外的首个逗号
+  /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外最后一个逗号，兼容-1后多余逗号的异常格式
   static int _findNameSeparator(String line) {
     var inQuotes = false;
+    var lastComma = -1;
     for (var i = 0; i < line.length; i++) {
       final ch = line[i];
       if (ch == '"') {
         inQuotes = !inQuotes;
       } else if (ch == ',' && !inQuotes) {
-        return i;
+        lastComma = i;
       }
     }
-    return -1;
+    return lastComma;
   }
 
   /// 相对地址按订阅源 URL 补全，绝对地址原样返回

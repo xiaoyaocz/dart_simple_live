@@ -92,3 +92,7 @@ images/todo/
 !**/README.md
 .codex/project-experience.md
 /learning/
+
+test_*.m3u
+*.tmp
+.DS_Store

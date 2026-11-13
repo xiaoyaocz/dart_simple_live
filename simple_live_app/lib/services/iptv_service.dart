@@ -1,12 +1,5 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:collection/collection.dart';
-import 'package:crypto/crypto.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../app/log.dart';
@@ -22,7 +15,15 @@ class IptvService extends GetxService {
 
   static const String playlistBoxName = "IptvPlaylist";
   static const String favoriteBoxName = "IptvFavorite";
-  static const String defaultPlaylistName = "默认精选频道";
+  static const String defaultPlaylistName = "全国IPTV直播源";
+
+  /// 按优先级排序的备用源地址，前一个失败自动切换下一个
+  static const List<String> sourceUrls = [
+    "https://live.zbds.top/tv/iptv4.m3u",
+    "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+    "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+    "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+  ];
 
   late Box<IptvPlaylist> playlistBox;
   late Box<IptvFavorite> favoriteBox;
@@ -37,64 +38,22 @@ class IptvService extends GetxService {
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
   }
 
-  /// 首次启动把内置精选源复制到文档目录并注册，成功后才标记；
-  /// 已初始化时若内置清单版本更新且默认源未被删除，静默同步本地副本；用户删除后不再重建
+  /// 首次启动自动注册全国直播源，用户删除后不再自动重建
   Future<void> ensureDefaultPlaylist() async {
     final storage = LocalStorageService.instance;
-    final String content;
+    if (storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
+      return;
+    }
     try {
-      content = await rootBundle.loadString("assets/iptv/default.m3u");
+      await addPlaylist(
+        name: defaultPlaylistName,
+        url: sourceUrls.first,
+        type: IptvPlaylist.typeRemote,
+      );
+      await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
     } catch (e) {
-      Log.w("内置 IPTV 源读取失败: $e");
-      return;
+      Log.w("IPTV 源初始化失败: $e");
     }
-    final hash = sha256.convert(utf8.encode(content)).toString();
-
-    if (!storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
-      try {
-        final target = await _defaultFile();
-        await target.writeAsString(content);
-        await addPlaylist(
-          name: defaultPlaylistName,
-          url: target.path,
-          type: IptvPlaylist.typeLocal,
-        );
-        await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
-        await storage.setValue(LocalStorageService.kIptvDefaultVersion, hash);
-      } catch (e) {
-        Log.w("内置 IPTV 源初始化失败: $e");
-      }
-      return;
-    }
-
-    // 已初始化：内置清单有更新且默认源仍存在时同步本地副本
-    if (storage.getValue(LocalStorageService.kIptvDefaultVersion, "") == hash) {
-      return;
-    }
-    await storage.setValue(LocalStorageService.kIptvDefaultVersion, hash);
-    try {
-      final target = await _defaultFile();
-      final playlist = playlistBox.values
-          .firstWhereOrNull((item) => item.url == target.path);
-      if (playlist == null) {
-        // 用户已删除默认源，尊重其选择
-        return;
-      }
-      await target.writeAsString(content);
-      _cache.remove(playlist.id);
-      playlist.updateTime = DateTime.now();
-      await playlistBox.put(playlist.id, playlist);
-      Log.d("内置 IPTV 源已同步到新版本");
-    } catch (e) {
-      Log.w("内置 IPTV 源同步失败: $e");
-    }
-  }
-
-  Future<File> _defaultFile() async {
-    final docDir = await getApplicationDocumentsDirectory();
-    return File(
-      "${docDir.path}${Platform.pathSeparator}iptv_default.m3u",
-    );
   }
 
   // ============ 订阅源 ============
@@ -125,19 +84,24 @@ class IptvService extends GetxService {
     await playlistBox.delete(id);
   }
 
-  /// 拉取并解析订阅源，成功后更新缓存与刷新时间
+  /// 拉取并解析订阅源，依次尝试所有备用地址，全失败才抛出最后一个错误
   Future<M3uParseResult> refresh(IptvPlaylist playlist) async {
-    final content = playlist.isLocal
-        ? await File(playlist.url).readAsString()
-        : await HttpClient.instance.getText(playlist.url);
-    final result = M3uParser.parse(
-      content,
-      baseUrl: playlist.isLocal ? null : playlist.url,
-    );
-    _cache[playlist.id] = result;
-    playlist.updateTime = DateTime.now();
-    await playlistBox.put(playlist.id, playlist);
-    return result;
+    Object? lastError;
+    for (final url in sourceUrls) {
+      try {
+        final content = await HttpClient.instance.getText(url);
+        final result = M3uParser.parse(content, baseUrl: url);
+        _cache[playlist.id] = result;
+        playlist.updateTime = DateTime.now();
+        playlist.url = url;
+        await playlistBox.put(playlist.id, playlist);
+        return result;
+      } catch (e) {
+        lastError = e;
+        Log.w("直播源地址 $url 访问失败，尝试下一个备用地址");
+      }
+    }
+    throw lastError ?? Exception("所有直播源地址均无法访问");
   }
 
   /// 优先用缓存，未缓存时拉取

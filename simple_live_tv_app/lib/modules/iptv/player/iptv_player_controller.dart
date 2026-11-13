@@ -36,6 +36,8 @@ class IptvPlayerController extends GetxController {
   final favoriteVersion = 0.obs;
 
   final FocusNode focusNode = FocusNode();
+  /// 当前频道所属源名称
+  String sourceName = "";
   Timer? _epgTimer;
   Timer? _hideTimer;
 
@@ -45,6 +47,7 @@ class IptvPlayerController extends GetxController {
   void onInit() {
     final args = Get.arguments as Map<String, dynamic>;
     final playlist = args["playlist"] as IptvPlaylist?;
+    sourceName = playlist?.name ?? "收藏频道";
     final channels = args["channels"] as List<IptvChannel>?;
     final favorites = args["favorites"] as List<IptvFavorite>?;
     if (channels != null) {

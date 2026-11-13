@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/iptv/player/iptv_player_controller.dart';
@@ -26,8 +29,10 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           ),
           Positioned.fill(
             child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
+              behavior: HitTestBehavior.opaque,
               onTap: controller.toggleControls,
+              onDoubleTap: controller.onDoubleTap,
+              onLongPress: controller.onLongPress,
             ),
           ),
           Obx(
@@ -55,9 +60,9 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  // 顶部：返回与频道名
+  // 顶部：返回、频道名与源信息，桌面端仅此处可拖动窗口
   Widget _buildTopBar(BuildContext context) {
-    return Container(
+    final content = Container(
       padding: AppStyle.edgeInsetsH8.add(
         EdgeInsets.only(top: AppStyle.statusBarHeight),
       ),
@@ -77,14 +82,27 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           AppStyle.hGap8,
           Expanded(
             child: Obx(
-              () => Text(
-                controller.currentTitle.value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              () => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    controller.currentTitle.value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "来源：${controller.sourceName}",
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -96,6 +114,11 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
         ],
       ),
     );
+    // 桌面端仅顶部栏可拖动，不拦截播放器区域双击、长按
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      return DragToMoveArea(child: content);
+    }
+    return content;
   }
 
   // 底部：EPG 信息与切台

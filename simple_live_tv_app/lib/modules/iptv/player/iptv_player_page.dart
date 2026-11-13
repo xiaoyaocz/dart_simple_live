@@ -211,11 +211,21 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           AppStyle.hGap16,
           Expanded(
             child: Obx(
-              () => Text(
-                controller.currentTitle.value,
-                style: AppStyle.titleStyleWhite,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              () => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    controller.currentTitle.value,
+                    style: AppStyle.titleStyleWhite,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "来源：${controller.sourceName}",
+                    style: AppStyle.subTextStyleWhite,
+                  ),
+                ],
               ),
             ),
           ),

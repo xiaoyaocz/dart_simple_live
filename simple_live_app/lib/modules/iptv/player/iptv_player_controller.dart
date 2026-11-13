@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/models/db/iptv_favorite.dart';
+import 'package:simple_live_app/models/db/iptv_playlist.dart';
 import 'package:simple_live_app/modules/iptv/parser/iptv_channel.dart';
 import 'package:simple_live_app/modules/iptv/parser/iptv_program.dart';
 import 'package:simple_live_app/modules/iptv/parser/xmltv_parser.dart';
@@ -26,6 +29,9 @@ class IptvPlayerController extends GetxController {
   final nextProgram = Rxn<IptvProgram>();
   final loadingEpg = false.obs;
   final controlsVisible = true.obs;
+  final isFullScreen = false.obs;
+  /// 当前频道所属源名称
+  String sourceName = "";
 
   Timer? _epgTimer;
 
@@ -34,6 +40,8 @@ class IptvPlayerController extends GetxController {
   @override
   void onInit() {
     final args = Get.arguments as Map<String, dynamic>;
+    final playlist = args["playlist"] as IptvPlaylist?;
+    sourceName = playlist?.name ?? "收藏频道";
     final channels = args["channels"] as List<IptvChannel>?;
     final favorites = args["favorites"] as List<IptvFavorite>?;
     if (channels != null) {
@@ -127,10 +135,32 @@ class IptvPlayerController extends GetxController {
 
   void toggleControls() => controlsVisible.value = !controlsVisible.value;
 
+  /// 双击切换全屏/退出全屏，桌面端通过windowManager控制
+  Future<void> onDoubleTap() async {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      if (isFullScreen.value) {
+        await windowManager.unmaximize();
+        await windowManager.setFullScreen(false);
+        isFullScreen.value = false;
+      } else {
+        await windowManager.setFullScreen(true);
+        isFullScreen.value = true;
+      }
+    }
+  }
+
+  /// 长按呼出快捷入口，和普通直播体验一致
+  void onLongPress() {
+    SmartDialog.showToast("快捷入口");
+  }
+
   @override
   void onClose() {
     _epgTimer?.cancel();
     player.dispose();
+    if (isFullScreen.value) {
+      windowManager.setFullScreen(false);
+    }
   }
 }
 

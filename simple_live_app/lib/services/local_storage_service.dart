@@ -12,6 +12,7 @@ class LocalStorageService extends GetxService {
   static const String kIptvDefaultInited = "IptvDefaultInited";
   static const String kIptvSourceEnabled = "IptvSourceEnabled";
   static const String kIptvCustomSources = "IptvCustomSources";
+  static const String kIptvDeletedSources = "IptvDeletedSources";
 
   /// 内置默认 IPTV 源内容版本（内容 SHA-256），用于更新同步
   static const String kIptvDefaultVersion = "IptvDefaultVersion";

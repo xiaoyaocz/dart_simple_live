@@ -73,10 +73,22 @@ class AccountPage extends GetView<AccountController> {
               final service = IptvService.instance;
               return Column(
                 children: [
+                  Padding(
+                    padding: AppStyle.edgeInsetsH12,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          icon: const Icon(Icons.restore, size: 18),
+                          label: const Text("恢复默认源"),
+                          onPressed: () => service.restoreDefaultSources(),
+                        ),
+                      ],
+                    ),
+                  ),
                   ...service.sourcePool.map((source) {
                     final enabled = service.enabledSourceNames.contains(source.name);
-                    final isCustom = source.author == "自定义";
-                    return _buildSourceCard(context, source, enabled, isCustom, service);
+                    return _buildSourceCard(context, source, enabled, service);
                   }),
                   AppStyle.vGap8,
                   OutlinedButton.icon(
@@ -93,8 +105,8 @@ class AccountPage extends GetView<AccountController> {
     );
   }
 
-  /// IPTV源卡片，包含开关、完整镜像URL、复制按钮
-  Widget _buildSourceCard(BuildContext context, source, bool enabled, bool isCustom, service) {
+  /// IPTV源卡片，包含开关、删除、完整镜像URL、复制按钮
+  Widget _buildSourceCard(BuildContext context, source, bool enabled, service) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Padding(
@@ -117,11 +129,10 @@ class AccountPage extends GetView<AccountController> {
                   value: enabled,
                   onChanged: (_) => service.toggleSourceEnabled(source),
                 ),
-                if (isCustom)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    onPressed: () => service.deleteCustomSource(source),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  onPressed: () => service.deleteSource(source),
+                ),
               ],
             ),
             AppStyle.vGap8,

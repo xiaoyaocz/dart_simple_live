@@ -15,30 +15,34 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Video(controller: controller.videoController, controls: NoVideoControls),
-          ),
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: controller.toggleControls,
-              onDoubleTap: controller.onDoubleTap,
-              onLongPress: controller.onLongPress,
+      // 桌面端鼠标移动自动呼出控制栏，无需点击，5秒无操作自动隐藏
+      body: MouseRegion(
+        onHover: (_) => controller.showControls(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Video(controller: controller.videoController, controls: NoVideoControls),
             ),
-          ),
-          Obx(
-            () => AnimatedOpacity(
-              opacity: controller.controlsVisible.value ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: IgnorePointer(
-                ignoring: !controller.controlsVisible.value,
-                child: _buildControls(context),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: controller.toggleControls,
+                onDoubleTap: controller.onDoubleTap,
+                onLongPress: controller.onLongPress,
               ),
             ),
-          ),
-        ],
+            Obx(
+              () => AnimatedOpacity(
+                opacity: controller.controlsVisible.value ? 1 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: IgnorePointer(
+                  ignoring: !controller.controlsVisible.value,
+                  child: _buildControls(context),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -45,11 +45,15 @@ class IptvService extends GetxService {
 
   final RxList<String> enabledSourceNames = <String>[].obs;
   final RxList<IptvSourceMeta> customSources = <IptvSourceMeta>[].obs;
+  final RxList<String> deletedPresetNames = <String>[].obs;
 
-  List<IptvSourceMeta> get sourcePool => [...presetSourcePool, ...customSources];
+  List<IptvSourceMeta> get currentPresetSourcePool => defaultPresetSourcePool
+      .where((e) => !deletedPresetNames.contains(e.name)).toList();
 
-  /// 预置公开源池，海外源优先适配境外网络，不可删除，按优先级排序
-  static const List<IptvSourceMeta> presetSourcePool = [
+  List<IptvSourceMeta> get sourcePool => [...currentPresetSourcePool, ...customSources];
+
+  /// 默认预置公开源池，用户删除后可通过恢复默认还原
+  static const List<IptvSourceMeta> defaultPresetSourcePool = [
     IptvSourceMeta(
       name: "DataShare海外源",
       author: "DataShare-duo",
@@ -67,16 +71,6 @@ class IptvService extends GetxService {
       urls: [
         "https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
         "https://gh-proxy.com/raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
-      ],
-    ),
-    IptvSourceMeta(
-      name: "范明明直连源",
-      author: "fanmingming",
-      projectUrl: "https://github.com/fanmingming/live",
-      description: "国内直连，延迟低，央视频道完整，GPL-3.0协议",
-      urls: [
-        "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
-        "https://gh-proxy.com/raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u",
       ],
     ),
     IptvSourceMeta(
@@ -101,15 +95,6 @@ class IptvService extends GetxService {
       ],
     ),
     IptvSourceMeta(
-      name: "HerbertHe CDN源",
-      author: "HerbertHe",
-      projectUrl: "https://github.com/HerbertHe/iptv-sources",
-      description: "CDN加速，稳定性高，2小时自动更新，GPL-3.0协议",
-      urls: [
-        "https://raw.githubusercontent.com/HerbertHe/iptv-sources/main/ipv4.m3u",
-      ],
-    ),
-    IptvSourceMeta(
       name: "peterh镜像源",
       author: "peterhchina",
       projectUrl: "https://peterhchina.github.io/iptv/",
@@ -121,14 +106,22 @@ class IptvService extends GetxService {
   Future<void> init() async {
     playlistBox = await Hive.openBox<IptvPlaylist>(playlistBoxName);
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
-    final savedEnabled = LocalStorageService.instance.getValue<List<dynamic>>(
-      LocalStorageService.kIptvSourceEnabled,
-      presetSourcePool.map((e) => e.name).toList(),
+    // 加载删除的预置源
+    final savedDeleted = LocalStorageService.instance.getValue<List<dynamic>>(
+      LocalStorageService.kIptvDeletedSources, [],
     );
-    enabledSourceNames.assignAll(savedEnabled.cast<String>());
+    deletedPresetNames.assignAll(savedDeleted.cast<String>());
+    // 加载启用状态，过滤无效源
+    final defaultEnabled = currentPresetSourcePool.map((e) => e.name).toList();
+    final savedEnabled = LocalStorageService.instance.getValue<List<dynamic>>(
+      LocalStorageService.kIptvSourceEnabled, defaultEnabled,
+    );
+    enabledSourceNames.assignAll(savedEnabled.cast<String>().where((name) =>
+      currentPresetSourcePool.any((e) => e.name == name) || customSources.any((e) => e.name == name)
+    ).toList());
+    // 加载自定义源
     final savedCustom = LocalStorageService.instance.getValue<List<dynamic>>(
-      LocalStorageService.kIptvCustomSources,
-      [],
+      LocalStorageService.kIptvCustomSources, [],
     );
     customSources.assignAll(savedCustom.map((e) {
       final map = Map<String, dynamic>.from(e as Map);
@@ -157,9 +150,36 @@ class IptvService extends GetxService {
     );
   }
 
-  Future<void> deleteCustomSource(IptvSourceMeta source) async {
-    customSources.remove(source);
+  /// 删除任意源，预置源加入删除列表，自定义源直接移除
+  Future<void> deleteSource(IptvSourceMeta source) async {
+    if (source.author == "自定义") {
+      customSources.remove(source);
+      await _saveCustomSources();
+    } else {
+      deletedPresetNames.add(source.name);
+      await LocalStorageService.instance.setValue(
+        LocalStorageService.kIptvDeletedSources,
+        deletedPresetNames.toList(),
+      );
+    }
     enabledSourceNames.remove(source.name);
+    if (enabledSourceNames.isEmpty && sourcePool.isNotEmpty) {
+      enabledSourceNames.add(sourcePool.first.name);
+    }
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvSourceEnabled,
+      enabledSourceNames.toList(),
+    );
+  }
+
+  /// 恢复默认源，清空自定义与删除状态
+  Future<void> restoreDefaultSources() async {
+    deletedPresetNames.clear();
+    customSources.clear();
+    enabledSourceNames.assignAll(defaultPresetSourcePool.map((e) => e.name));
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvDeletedSources, [],
+    );
     await _saveCustomSources();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvSourceEnabled,

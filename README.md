@@ -157,11 +157,12 @@ TV 下载建议：
 ### 源列表与作者信息
 | 源名称 | 作者 | 项目地址 | 开源协议 | 说明 |
 | --- | --- | --- | --- | --- |
+| DataShare海外源 | DataShare-duo | [DataShare-duo/IPTV-Source](https://github.com/DataShare-duo/IPTV-Source) | 项目开源 | 海外节点直连，CDN加速，适配境外网络，央视频道完整 |
+| suxuang全量源 | suxuang | [suxuang/myIPTV](https://github.com/suxuang/myIPTV) | 项目开源 | 全量多节点源，频道覆盖全面，每日自动更新 |
 | vbskycn 全量源 | vbskycn | [vbskycn/iptv](https://github.com/vbskycn/iptv) | 项目开源 | 427 个频道，覆盖完整央视、卫视与地方省份台，每 6 小时自动更新 |
-| 范明明直连源 | fanmingming | [fanmingming/live](https://github.com/fanmingming/live) | GPL-3.0 | 国内自有域名直连，主流央视卫视稳定，长期公益维护，支持 IPv4/IPv6 双栈 |
 | YanG 聚合源 | YanG-1989 | [YanG-1989/m3u](https://github.com/YanG-1989/m3u) | 项目开源 | 每日自动更新，多镜像部署的主流频道聚合源 |
-| HerbertHe CDN 源 | HerbertHe | [HerbertHe/iptv-sources](https://github.com/HerbertHe/iptv-sources) | GPL-3.0 | 每 2 小时自动更新，多上游聚合，国内 CDN 加速 |
-| peterh 镜像源 | peterhchina | [peterhchina/iptv](https://peterhchina.github.io/iptv/) | 项目开源 | 全量源同步镜像，每日自动更新 |
+| peterh 镜像源 | peterhchina | [peterhchina.github.io/iptv/](https://peterhchina.github.io/iptv/) | 项目开源 | 全量源同步镜像，每日自动更新 |
+| 原范明明、HerbertHe源 | - | - | - | 公开地址已全部失效，不再内置，感谢此前公益维护 |
 
 ### 作者重要提示
 根据 vbskycn 源官方说明：

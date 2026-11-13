@@ -247,7 +247,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
               leading: NetImage(channel.logo,
                   width: 48.w, height: 48.w, borderRadius: 8),
               title: channel.name,
-              subtitle: channel.group,
+              subtitle: "${channel.group} · 来源：${controller.currentPlaylist.value?.name ?? ""}",
               onTap: () => controller.openPlayer(channel, index),
             ),
           ),

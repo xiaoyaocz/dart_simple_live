@@ -216,7 +216,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            channel.group,
+            "${channel.group} · 来源：${controller.currentPlaylist.value?.name ?? ""}",
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

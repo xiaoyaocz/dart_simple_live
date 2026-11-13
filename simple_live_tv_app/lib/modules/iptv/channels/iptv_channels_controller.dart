@@ -71,9 +71,25 @@ class IptvChannelsController extends BaseController {
     try {
       final result = await IptvService.instance.getOrLoad(playlist);
       parseResult.value = result;
-      groups.value = IptvService.instance.getGroups(result);
+      // 自定义分组排序：央视频道、卫视频道置顶，其余按名称排序
+      final sortedGroups = IptvService.instance.getGroups(result);
+      sortedGroups.sort((a, b) {
+        if (a == "央视频道") return -1;
+        if (b == "央视频道") return 1;
+        if (a == "卫视频道") return -1;
+        if (b == "卫视频道") return 1;
+        return a.compareTo(b);
+      });
+      groups.value = sortedGroups;
       currentGroup.value = "";
       keyword.value = "";
+      // 全部频道下央视、卫视置顶，方便快速找到央视频道
+      result.channels.sort((a, b) {
+        final aCctv = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
+        final bCctv = b.group == "央视频道" ? 0 : (b.group == "卫视频道" ? 1 : 2);
+        if (aCctv != bCctv) return aCctv.compareTo(bCctv);
+        return a.name.compareTo(b.name);
+      });
       applyFilter();
       _scrollItemToCenter(playlistItemKeys[playlist.id], playlistScrollController);
     } catch (e) {

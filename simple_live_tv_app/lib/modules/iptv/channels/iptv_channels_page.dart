@@ -107,10 +107,13 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHorizontalList(
+          controller: controller.playlistScrollController,
           itemCount: controller.playlists.length,
           itemBuilder: (_, i) {
             final item = controller.playlists[i];
+            final key = controller.playlistItemKeys.putIfAbsent(item.id, () => GlobalKey());
             return HighlightButton(
+              key: key,
               focusNode: AppFocusNode(),
               text: item.name,
               selected: controller.currentPlaylist.value?.id == item.id,
@@ -120,10 +123,13 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
         ),
         AppStyle.vGap12,
         _buildHorizontalList(
+          controller: controller.groupScrollController,
           itemCount: controller.groups.length + 1,
           itemBuilder: (_, i) {
             if (i == 0) {
+              final key = controller.groupItemKeys.putIfAbsent("全部", () => GlobalKey());
               return HighlightButton(
+                key: key,
                 focusNode: AppFocusNode(),
                 text: "全部",
                 selected: controller.currentGroup.value.isEmpty,
@@ -131,7 +137,9 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
               );
             }
             final group = controller.groups[i - 1];
+            final key = controller.groupItemKeys.putIfAbsent(group, () => GlobalKey());
             return HighlightButton(
+              key: key,
               focusNode: AppFocusNode(),
               text: group,
               selected: controller.currentGroup.value == group,
@@ -143,19 +151,28 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
     );
   }
 
-  /// 横向可滚动的焦点按钮条
+  /// 横向可滚动的焦点按钮条，支持手动滚动与选中项自动居中
   Widget _buildHorizontalList({
+    required ScrollController controller,
     required int itemCount,
     required IndexedWidgetBuilder itemBuilder,
   }) {
     return SizedBox(
       height: 64.w,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: AppStyle.edgeInsetsH48,
-        itemCount: itemCount,
-        separatorBuilder: (_, __) => AppStyle.hGap16,
-        itemBuilder: itemBuilder,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(Get.context!).copyWith(
+          scrollbars: true,
+          physics: const BouncingScrollPhysics(),
+        ),
+        child: ListView.separated(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: AppStyle.edgeInsetsH48,
+          itemCount: itemCount,
+          separatorBuilder: (_, __) => AppStyle.hGap16,
+          itemBuilder: itemBuilder,
+        ),
       ),
     );
   }

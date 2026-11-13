@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/mine/account/account_controller.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
 
 class AccountPage extends GetView<AccountController> {
   const AccountPage({Key? key}) : super(key: key);
@@ -97,6 +98,27 @@ class AccountPage extends GetView<AccountController> {
                 onTap: controller.kuaishouTap,
               ),
             ),
+            const Divider(height: 32),
+            const Padding(
+              padding: AppStyle.edgeInsetsH12,
+              child: Text("IPTV 公开直播源", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            AppStyle.vGap8,
+            Obx(() {
+              final service = IptvService.instance;
+              return Column(
+                children: IptvService.sourcePool.map((source) {
+                  final enabled = service.enabledSourceNames.contains(source.name);
+                  return SwitchListTile(
+                    contentPadding: AppStyle.edgeInsetsH12,
+                    title: Text(source.name),
+                    subtitle: Text("${source.author} · ${source.description}"),
+                    value: enabled,
+                    onChanged: (_) => service.toggleSourceEnabled(source),
+                  );
+                }).toList(),
+              );
+            }),
           ],
         ),
       ),

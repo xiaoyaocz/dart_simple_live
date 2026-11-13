@@ -120,21 +120,31 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   Widget _buildPlaylistSelector(BuildContext context) {
     return SizedBox(
       height: 48,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: AppStyle.edgeInsetsH12,
-        itemCount: controller.playlists.length,
-        separatorBuilder: (_, __) => AppStyle.hGap8,
-        itemBuilder: (_, index) {
-          final item = controller.playlists[index];
-          return Center(
-            child: FilterButton(
-              text: item.name,
-              selected: controller.currentPlaylist.value?.id == item.id,
-              onTap: () => controller.selectPlaylist(item),
-            ),
-          );
-        },
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          scrollbars: true,
+          physics: const BouncingScrollPhysics(),
+        ),
+        child: ListView.separated(
+          controller: controller.playlistScrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: AppStyle.edgeInsetsH12,
+          itemCount: controller.playlists.length,
+          separatorBuilder: (_, __) => AppStyle.hGap8,
+          itemBuilder: (_, index) {
+            final item = controller.playlists[index];
+            final key = controller.playlistItemKeys.putIfAbsent(item.id, () => GlobalKey());
+            return Center(
+              key: key,
+              child: FilterButton(
+                text: item.name,
+                selected: controller.currentPlaylist.value?.id == item.id,
+                onTap: () => controller.selectPlaylist(item),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -143,30 +153,42 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   Widget _buildGroupSelector(BuildContext context) {
     return SizedBox(
       height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: AppStyle.edgeInsetsH12,
-        itemCount: controller.groups.length + 1,
-        separatorBuilder: (_, __) => AppStyle.hGap8,
-        itemBuilder: (_, index) {
-          if (index == 0) {
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          scrollbars: true,
+          physics: const BouncingScrollPhysics(),
+        ),
+        child: ListView.separated(
+          controller: controller.groupScrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: AppStyle.edgeInsetsH12,
+          itemCount: controller.groups.length + 1,
+          separatorBuilder: (_, __) => AppStyle.hGap8,
+          itemBuilder: (_, index) {
+            if (index == 0) {
+              final key = controller.groupItemKeys.putIfAbsent("全部", () => GlobalKey());
+              return Center(
+                key: key,
+                child: FilterButton(
+                  text: "全部",
+                  selected: controller.currentGroup.value.isEmpty,
+                  onTap: () => controller.selectGroup(""),
+                ),
+              );
+            }
+            final group = controller.groups[index - 1];
+            final key = controller.groupItemKeys.putIfAbsent(group, () => GlobalKey());
             return Center(
+              key: key,
               child: FilterButton(
-                text: "全部",
-                selected: controller.currentGroup.value.isEmpty,
-                onTap: () => controller.selectGroup(""),
+                text: group,
+                selected: controller.currentGroup.value == group,
+                onTap: () => controller.selectGroup(group),
               ),
             );
-          }
-          final group = controller.groups[index - 1];
-          return Center(
-            child: FilterButton(
-              text: group,
-              selected: controller.currentGroup.value == group,
-              onTap: () => controller.selectGroup(group),
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

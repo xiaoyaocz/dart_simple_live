@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -21,6 +22,20 @@ class IptvChannelsController extends BaseController {
   final searching = false.obs;
   final keyword = "".obs;
 
+  // 横向选择条滚动控制器，支持手动滚动与选中项自动居中
+  final ScrollController playlistScrollController = ScrollController();
+  final ScrollController groupScrollController = ScrollController();
+  // 每个按钮的GlobalKey，用于定位选中项并滚动居中
+  final Map<String, GlobalKey> playlistItemKeys = {};
+  final Map<String, GlobalKey> groupItemKeys = {};
+
+  @override
+  void onClose() {
+    playlistScrollController.dispose();
+    groupScrollController.dispose();
+    super.onClose();
+  }
+
   @override
   void onInit() {
     loadPlaylists();
@@ -36,6 +51,19 @@ class IptvChannelsController extends BaseController {
     }
   }
 
+  /// 将选中项滚动到视口中间位置，自动居中
+  void _scrollItemToCenter(GlobalKey? key, ScrollController controller) {
+    if (key?.currentContext == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   /// 选择订阅源并加载其频道
   Future<void> selectPlaylist(IptvPlaylist playlist) async {
     currentPlaylist.value = playlist;
@@ -48,6 +76,8 @@ class IptvChannelsController extends BaseController {
       currentGroup.value = "";
       keyword.value = "";
       applyFilter();
+      // 选中源自动居中
+      _scrollItemToCenter(playlistItemKeys[playlist.id], playlistScrollController);
     } catch (e) {
       handleError(e, showPageError: true);
     } finally {
@@ -58,6 +88,9 @@ class IptvChannelsController extends BaseController {
   void selectGroup(String group) {
     currentGroup.value = group;
     applyFilter();
+    // 选中分组自动居中
+    final key = groupItemKeys[group.isEmpty ? "全部" : group];
+    _scrollItemToCenter(key, groupScrollController);
   }
 
   void setKeyword(String value) {

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -106,21 +104,48 @@ class IptvService extends GetxService {
   final RxInt totalSourceCount = 0.obs;
   final RxString loadingMessage = "正在加载直播源...".obs;
 
+  /// 用户启用的源名称列表，默认全部启用，持久化存储
+  final RxList<String> enabledSourceNames = <String>[].obs;
+
   Future<void> init() async {
     playlistBox = await Hive.openBox<IptvPlaylist>(playlistBoxName);
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
+    // 加载源启用状态，默认全部启用
+    final saved = LocalStorageService.instance.getValue<List<dynamic>>(
+      LocalStorageService.kIptvSourceEnabled,
+      sourcePool.map((e) => e.name).toList(),
+    );
+    enabledSourceNames.assignAll(saved.cast<String>());
   }
 
-  /// 首次启动随机选择全量源，自动分摊服务器流量
+  /// 切换源启用/禁用状态，自动持久化
+  Future<void> toggleSourceEnabled(IptvSourceMeta source) async {
+    if (enabledSourceNames.contains(source.name)) {
+      // 至少保留一个启用源，避免全部禁用无法加载
+      if (enabledSourceNames.length == 1) return;
+      enabledSourceNames.remove(source.name);
+    } else {
+      enabledSourceNames.add(source.name);
+    }
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvSourceEnabled,
+      enabledSourceNames.toList(),
+    );
+  }
+
+  /// 获取用户当前启用的源，按源池顺序排序
+  List<IptvSourceMeta> get enabledSources => sourcePool
+      .where((e) => enabledSourceNames.contains(e.name))
+      .toList();
+
+  /// 首次启动自动注册默认直播源，使用第一个启用的源
   Future<void> ensureDefaultPlaylist() async {
     final storage = LocalStorageService.instance;
     if (storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
       return;
     }
     try {
-      // 从前3个全量源随机选择，避免所有用户压在同一服务器
-      final random = Random();
-      final selected = sourcePool[random.nextInt(3)];
+      final selected = enabledSources.first;
       await addPlaylist(
         name: defaultPlaylistName,
         url: selected.urls.first,
@@ -165,13 +190,14 @@ class IptvService extends GetxService {
   Future<M3uParseResult> refresh(IptvPlaylist playlist) async {
     isLoading.value = true;
     Object? lastError;
+    final activeSources = enabledSources;
     // 统计总地址数用于进度显示
-    var totalUrls = sourcePool.fold<int>(0, (p, e) => p + e.urls.length);
+    var totalUrls = activeSources.fold<int>(0, (p, e) => p + e.urls.length);
     totalSourceCount.value = totalUrls;
     var urlIndex = 0;
 
-    for (var sourceIndex = 0; sourceIndex < sourcePool.length; sourceIndex++) {
-      final source = sourcePool[sourceIndex];
+    for (var sourceIndex = 0; sourceIndex < activeSources.length; sourceIndex++) {
+      final source = activeSources[sourceIndex];
       for (var mirrorIndex = 0; mirrorIndex < source.urls.length; mirrorIndex++) {
         urlIndex++;
         currentSourceIndex.value = urlIndex;

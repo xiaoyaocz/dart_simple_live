@@ -33,6 +33,12 @@ class IptvService extends GetxService {
   /// 订阅源解析结果的内存缓存，避免重复拉取
   final Map<String, M3uParseResult> _cache = <String, M3uParseResult>{};
 
+  /// 加载状态可观察变量，供页面显示进度
+  final RxBool isLoading = false.obs;
+  final RxInt currentSourceIndex = 0.obs;
+  final RxInt totalSourceCount = sourceUrls.length.obs;
+  final RxString loadingMessage = "正在加载直播源...".obs;
+
   Future<void> init() async {
     playlistBox = await Hive.openBox<IptvPlaylist>(playlistBoxName);
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
@@ -86,21 +92,30 @@ class IptvService extends GetxService {
 
   /// 拉取并解析订阅源，依次尝试所有备用地址，全失败才抛出最后一个错误
   Future<M3uParseResult> refresh(IptvPlaylist playlist) async {
+    isLoading.value = true;
     Object? lastError;
-    for (final url in sourceUrls) {
+    for (var i = 0; i < sourceUrls.length; i++) {
+      currentSourceIndex.value = i;
+      final url = sourceUrls[i];
+      loadingMessage.value = "正在尝试直播源 ${i + 1}/${sourceUrls.length}...";
       try {
-        final content = await HttpClient.instance.getText(url);
+        final content = await HttpClient.instance.getText(
+          url,
+          header: {},
+        ).timeout(const Duration(seconds: 5));
         final result = M3uParser.parse(content, baseUrl: url);
         _cache[playlist.id] = result;
         playlist.updateTime = DateTime.now();
         playlist.url = url;
         await playlistBox.put(playlist.id, playlist);
+        isLoading.value = false;
         return result;
       } catch (e) {
         lastError = e;
         Log.w("直播源地址 $url 访问失败，尝试下一个备用地址");
       }
     }
+    isLoading.value = false;
     throw lastError ?? Exception("所有直播源地址均无法访问");
   }
 

@@ -6,6 +6,7 @@ import 'package:simple_live_tv_app/app/app_style.dart';
 import 'package:simple_live_tv_app/models/db/iptv_favorite.dart';
 import 'package:simple_live_tv_app/modules/iptv/channels/iptv_channels_controller.dart';
 import 'package:simple_live_tv_app/modules/iptv/parser/iptv_channel.dart';
+import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/app_text_field.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
@@ -161,7 +162,39 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
 
   Widget _buildBody() {
     if (controller.pageLoadding.value) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Padding(
+          padding: AppStyle.edgeInsetsA24,
+          child: Obx(() {
+            final service = IptvService.instance;
+            final progress = (service.currentSourceIndex.value + 1) /
+                service.totalSourceCount.value;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 50.w,
+                  height: 50.w,
+                  child: CircularProgressIndicator(strokeWidth: 3.w),
+                ),
+                AppStyle.vGap32,
+                SizedBox(
+                  width: 400.w,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8.w,
+                  ),
+                ),
+                AppStyle.vGap16,
+                Text(
+                  service.loadingMessage.value,
+                  style: AppStyle.textStyleWhite.copyWith(fontSize: 24.w),
+                ),
+              ],
+            );
+          }),
+        ),
+      );
     }
     if (controller.showFavorites.value) {
       return _buildFavorites();

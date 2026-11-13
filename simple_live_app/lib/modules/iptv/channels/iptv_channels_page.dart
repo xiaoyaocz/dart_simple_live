@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/models/db/iptv_favorite.dart';
 import 'package:simple_live_app/modules/iptv/channels/iptv_channels_controller.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 
@@ -62,7 +63,39 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
 
   Widget _buildBody(BuildContext context) {
     if (controller.pageLoadding.value) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Padding(
+          padding: AppStyle.edgeInsetsA24,
+          child: Obx(() {
+            final service = IptvService.instance;
+            final progress = (service.currentSourceIndex.value + 1) /
+                service.totalSourceCount.value;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                AppStyle.vGap24,
+                SizedBox(
+                  width: 280,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                  ),
+                ),
+                AppStyle.vGap12,
+                Text(
+                  service.loadingMessage.value,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            );
+          }),
+        ),
+      );
     }
     if (controller.showFavorites.value) {
       return _buildFavorites(context);

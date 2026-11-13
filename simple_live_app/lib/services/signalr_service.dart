@@ -97,6 +97,12 @@ class SignalRService {
   Stream<RoomSyncPayload> get onKuaishouAccountStream =>
       _onKuaishouAccountStreamController.stream;
 
+  /// IPTV频道收藏同步流
+  final _onIptvFavoriteStreamController =
+      StreamController<RoomSyncPayload>.broadcast();
+  Stream<RoomSyncPayload> get onIptvFavoriteStream =>
+      _onIptvFavoriteStreamController.stream;
+
   final _onRoomDestroyedStreamController = StreamController<String>.broadcast();
   Stream<String> get onRoomDestroyedStream =>
       _onRoomDestroyedStreamController.stream;
@@ -342,6 +348,7 @@ class SignalRService {
     _onDouyuAccountStreamController.close();
     _onDouyinAccountStreamController.close();
     _onKuaishouAccountStreamController.close();
+    _onIptvFavoriteStreamController.close();
     _onRoomDestroyedStreamController.close();
     _onRoomUserUpdatedStreamController.close();
     _stopHeartbeat();
@@ -441,6 +448,9 @@ class SignalRService {
           break;
         case "kuaishouAccountReceived":
           _emitBoolString(data, _onKuaishouAccountStreamController);
+          break;
+        case "iptvFavoriteReceived":
+          _emitBoolString(data, _onIptvFavoriteStreamController);
           break;
         case "roomDestroyed":
           _onRoomDestroyedStreamController
@@ -599,6 +609,8 @@ class SignalRService {
         return "sendDouyinAccount";
       case "SendKuaishouAccount":
         return "sendKuaishouAccount";
+      case "SendIptvFavorite":
+        return "sendIptvFavorite";
       default:
         return action;
     }

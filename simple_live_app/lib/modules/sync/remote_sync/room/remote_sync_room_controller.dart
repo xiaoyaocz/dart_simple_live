@@ -18,6 +18,9 @@ import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
+import 'package:simple_live_app/models/db/iptv_favorite.dart';
+import 'package:simple_live_app/modules/iptv/channels/iptv_channels_controller.dart';
 import 'package:simple_live_app/services/signalr_service.dart';
 import 'package:simple_live_app/widgets/sync_progress_dialog.dart';
 import 'package:simple_live_core/simple_live_core.dart';
@@ -39,6 +42,7 @@ class RemoteSyncRoomController extends BaseController {
   StreamSubscription? _onDouyuAccountSubscription;
   StreamSubscription? _onDouyinAccountSubscription;
   StreamSubscription? _onKuaishouAccountSubscription;
+  StreamSubscription? _onIptvFavoriteSubscription;
   var currentRoomId = "--".obs;
   RxList<RoomUser> roomUsers = <RoomUser>[].obs;
   bool get hasValidRoomId =>
@@ -230,6 +234,10 @@ class RemoteSyncRoomController extends BaseController {
     _onKuaishouAccountSubscription =
         signalR.onKuaishouAccountStream.listen((data) {
       onReceiveKuaishouAccount(data);
+    });
+    _onIptvFavoriteSubscription =
+        signalR.onIptvFavoriteStream.listen((data) {
+      onReceiveIptvFavorite(data);
     });
   }
 
@@ -438,6 +446,33 @@ class RemoteSyncRoomController extends BaseController {
       SmartDialog.showToast('已同步快手账号');
     } catch (e) {
       SmartDialog.showToast("同步失败:$e");
+      Log.logPrint(e);
+    }
+  }
+
+  /// 接收IPTV频道收藏并写入本地
+  void onReceiveIptvFavorite(RoomSyncPayload payload) async {
+    try {
+      SyncProgressDialog.show(_stageProgress("接收IPTV收藏", payload));
+      final jsonBody = json.decode(payload.content);
+      if (jsonBody is! List) throw const FormatException("IPTV收藏格式错误");
+      final service = IptvService.instance;
+      // 覆盖模式先清空现有收藏
+      if (payload.overlay) {
+        for (final fav in service.getFavorites()) {
+          await service.favoriteBox.delete(fav.id);
+        }
+      }
+      for (final item in jsonBody) {
+        final fav = IptvFavorite.fromJson(Map<String, dynamic>.from(item as Map));
+        await service.favoriteBox.put(fav.id, fav);
+      }
+      SmartDialog.showToast("已同步IPTV收藏");
+      if (Get.isRegistered<IptvChannelsController>()) {
+        Get.find<IptvChannelsController>().refreshFavorites();
+      }
+    } catch (e) {
+      SmartDialog.showToast("IPTV收藏同步失败:$e");
       Log.logPrint(e);
     }
   }
@@ -680,6 +715,36 @@ class RemoteSyncRoomController extends BaseController {
     }
   }
 
+  /// 发送IPTV频道收藏列表
+  void syncIptvFavorite() async {
+    try {
+      if (roomUsers.length <= 1) {
+        SmartDialog.showToast("无设备连接");
+        return;
+      }
+      final overlay = await showOverlayDialog();
+      SyncProgressDialog.show(const SyncProgress(stage: "发送IPTV收藏"));
+      final favorites = IptvService.instance.getFavorites();
+      final data = favorites.map((e) => e.toJson()).toList();
+      final resp = await signalR.sendContent(
+        roomName: currentRoomId.value,
+        action: "SendIptvFavorite",
+        overlay: overlay,
+        content: json.encode(data),
+      );
+      if (resp.isSuccess) {
+        SmartDialog.showToast("已发送IPTV收藏列表");
+      } else {
+        SmartDialog.showToast("发送失败:${resp.message}");
+      }
+    } catch (e) {
+      SmartDialog.showToast("同步失败:$e");
+      Log.logPrint(e);
+    } finally {
+      SyncProgressDialog.dismiss();
+    }
+  }
+
   void showQRInfo() {
     if (!hasValidRoomId) {
       SmartDialog.showToast("房间号还未创建完成");
@@ -725,6 +790,7 @@ class RemoteSyncRoomController extends BaseController {
     _onDouyuAccountSubscription?.cancel();
     _onDouyinAccountSubscription?.cancel();
     _onKuaishouAccountSubscription?.cancel();
+    _onIptvFavoriteSubscription?.cancel();
     signalR.dispose();
     super.onClose();
   }

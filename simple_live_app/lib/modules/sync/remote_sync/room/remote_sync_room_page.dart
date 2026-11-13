@@ -239,6 +239,15 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
                     controller.syncKuaishouAccount();
                   },
                 ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Icons.live_tv_outlined),
+                  title: const Text("发送IPTV频道收藏"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncIptvFavorite();
+                  },
+                ),
               ],
             ),
           ),

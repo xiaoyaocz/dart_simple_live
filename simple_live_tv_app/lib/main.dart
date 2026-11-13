@@ -255,7 +255,6 @@ Future initServices() async {
   await Get.put(LocalStorageService()).init();
   await Get.put(DBService()).init();
   await Get.put(IptvService()).init();
-  await IptvService.instance.ensureDefaultPlaylist();
   Get.put(CurrentRoomService());
   //初始化设置控制器
   Get.put(AppSettingsController());

@@ -2,18 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/iptv/player/iptv_player_controller.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 
 class IptvPlayerPage extends GetView<IptvPlayerController> {
   const IptvPlayerPage({Key? key}) : super(key: key);
-
-  static final DateFormat _timeFormat = DateFormat("HH:mm");
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +18,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Video(
-              controller: controller.videoController,
-              controls: NoVideoControls,
-            ),
+            child: Video(controller: controller.videoController, controls: NoVideoControls),
           ),
           Positioned.fill(
             child: GestureDetector(
@@ -60,12 +53,10 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  // 顶部：返回、频道名与源信息，桌面端仅此处可拖动窗口
+  // 顶部栏：桌面端仅此处可拖动窗口，展示频道与源信息
   Widget _buildTopBar(BuildContext context) {
     final content = Container(
-      padding: AppStyle.edgeInsetsH8.add(
-        EdgeInsets.only(top: AppStyle.statusBarHeight),
-      ),
+      padding: AppStyle.edgeInsetsH8.add(EdgeInsets.only(top: AppStyle.statusBarHeight)),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -75,10 +66,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: Get.back,
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
+          IconButton(onPressed: Get.back, icon: const Icon(Icons.arrow_back, color: Colors.white)),
           AppStyle.hGap8,
           Expanded(
             child: Obx(
@@ -88,19 +76,13 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
                 children: [
                   Text(
                     controller.currentTitle.value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    "来源：${controller.sourceName}",
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    "来源：${controller.currentChannel.sourceNames.join("、")}",
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -114,19 +96,16 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
         ],
       ),
     );
-    // 桌面端仅顶部栏可拖动，不拦截播放器区域双击、长按
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       return DragToMoveArea(child: content);
     }
     return content;
   }
 
-  // 底部：EPG 信息与切台
+  // 底部控制栏：对齐普通直播，包含播放、切台、线路、音量、全屏
   Widget _buildBottomBar(BuildContext context) {
     return Container(
-      padding: AppStyle.edgeInsetsH12.add(
-        EdgeInsets.only(bottom: AppStyle.bottomBarHeight + 8),
-      ),
+      padding: AppStyle.edgeInsetsH12.add(EdgeInsets.only(bottom: AppStyle.bottomBarHeight + 8)),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
@@ -136,29 +115,46 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildEpg(context),
-          AppStyle.vGap12,
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              OutlinedButton.icon(
-                style: _lightButton,
-                onPressed: controller.currentIndex > 0
-                    ? () => controller.switchChannel(-1)
-                    : null,
-                icon: const Icon(Icons.skip_previous),
-                label: const Text("上一台"),
+              IconButton(
+                icon: const Icon(Icons.play_arrow, color: Colors.white),
+                onPressed: controller.togglePlayPause,
+              ),
+              IconButton(
+                icon: const Icon(Icons.skip_previous, color: Colors.white),
+                onPressed: controller.currentIndex > 0 ? () => controller.switchChannel(-1) : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.skip_next, color: Colors.white),
+                onPressed: controller.currentIndex < controller.channels.length - 1
+                    ? () => controller.switchChannel(1) : null,
               ),
               AppStyle.hGap16,
-              OutlinedButton.icon(
-                style: _lightButton,
-                onPressed: controller.currentIndex < controller.items.length - 1
-                    ? () => controller.switchChannel(1)
-                    : null,
-                icon: const Icon(Icons.skip_next),
-                label: const Text("下一台"),
+              // 线路选择按钮
+              TextButton.icon(
+                icon: const Icon(Icons.dns, color: Colors.white),
+                label: const Text("线路选择", style: TextStyle(color: Colors.white)),
+                onPressed: () => _showLineSelector(context),
+              ),
+              const Spacer(),
+              // 音量滑块
+              const Icon(Icons.volume_up, color: Colors.white),
+              SizedBox(
+                width: 120,
+                child: Obx(
+                  () => Slider(
+                    value: controller.currentVolume.value,
+                    min: 0,
+                    max: 100,
+                    onChanged: controller.setVolume,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.fullscreen, color: Colors.white),
+                onPressed: controller.onDoubleTap,
               ),
             ],
           ),
@@ -167,56 +163,45 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  Widget _buildEpg(BuildContext context) {
-    return Obx(() {
-      final now = controller.nowProgram.value;
-      final next = controller.nextProgram.value;
-      if (now == null && next == null) {
-        return Text(
-          controller.loadingEpg.value ? "节目单加载中…" : "暂无节目单信息",
-          style: const TextStyle(color: Colors.white70),
-        );
-      }
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (now != null)
-            Text(
-              "正在播出：${now.title}（${_span(now.start, now.stop)}）",
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          if (next != null)
-            Text(
-              "稍后 ${_timeFormat.format(next.start.toLocal())}：${next.title}",
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
-      );
-    });
-  }
-
-  // 频道选择列表
-  void _showChannelList(BuildContext context) {
-    Utils.showBottomSheet(
-      title: "频道列表",
-      child: ListView.separated(
-        itemCount: controller.items.length,
+  /// 线路选择弹窗，展示所有可用线路，标注源名称
+  void _showLineSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => ListView.separated(
+        padding: AppStyle.edgeInsetsA12,
+        itemCount: controller.currentChannel.lines.length,
         separatorBuilder: (_, __) => AppStyle.divider,
         itemBuilder: (_, index) {
-          final item = controller.items[index];
+          final line = controller.currentChannel.lines[index];
+          final selected = index == controller.currentLineIndex;
+          return ListTile(
+            leading: NetImage(line.logo, width: 36, height: 36, borderRadius: 8),
+            title: Text(line.sourceName),
+            trailing: selected ? const Icon(Icons.check) : null,
+            onTap: () {
+              controller.switchLine(index);
+              Get.back();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showChannelList(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => ListView.separated(
+        padding: AppStyle.edgeInsetsA12,
+        itemCount: controller.channels.length,
+        separatorBuilder: (_, __) => AppStyle.divider,
+        itemBuilder: (_, index) {
+          final ch = controller.channels[index];
           final active = index == controller.currentIndex;
           return ListTile(
-            selected: active,
-            leading: NetImage(item.logo, width: 36, height: 36, borderRadius: 8),
-            title: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            leading: NetImage(ch.logo, width: 36, height: 36, borderRadius: 8),
+            title: Text(ch.name),
+            subtitle: Text("共${ch.lines.length}条线路 · ${ch.sourceNames.join("、")}"),
             trailing: active ? const Icon(Icons.play_arrow) : null,
             onTap: () {
               controller.play(index);
@@ -227,13 +212,4 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
       ),
     );
   }
-
-  String _span(DateTime start, DateTime stop) {
-    return "${_timeFormat.format(start.toLocal())}-${_timeFormat.format(stop.toLocal())}";
-  }
-
-  ButtonStyle get _lightButton => OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: const BorderSide(color: Colors.white54),
-      );
 }

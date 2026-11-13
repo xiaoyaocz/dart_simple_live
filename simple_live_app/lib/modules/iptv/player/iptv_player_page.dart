@@ -71,6 +71,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
       child: Row(
         children: [
           IconButton(onPressed: Get.back, icon: const Icon(Icons.arrow_back, color: Colors.white)),
+          IconButton(onPressed: controller.reloadCurrent, icon: const Icon(Icons.refresh, color: Colors.white)),
           AppStyle.hGap8,
           Expanded(
             child: Obx(
@@ -122,10 +123,13 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.play_arrow, color: Colors.white),
+              Obx(() => IconButton(
+                icon: Icon(
+                  controller.isPlaying.value ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                ),
                 onPressed: controller.togglePlayPause,
-              ),
+              )),
               IconButton(
                 icon: const Icon(Icons.skip_previous, color: Colors.white),
                 onPressed: controller.currentIndex > 0 ? () => controller.switchChannel(-1) : null,

@@ -157,9 +157,9 @@ class MpvOptionsService {
     'stream-lavf-o':
         'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=10',
     'cache': 'yes',
-    'demuxer-readahead-secs': '2',
-    'demuxer-max-bytes': '16MiB',
-    'demuxer-max-back-bytes': '8MiB',
+    'demuxer-readahead-secs': '10',
+    'demuxer-max-bytes': '64MiB',
+    'demuxer-max-back-bytes': '32MiB',
   };
 
   /// 音频默认参数：扩大 mpv softvol 范围以支持 >100% 的音量增益档

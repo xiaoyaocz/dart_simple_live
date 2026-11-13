@@ -23,8 +23,11 @@ class IptvPlayerController extends GetxController {
   final controlsVisible = true.obs;
   final isFullScreen = false.obs;
   final currentVolume = 100.0.obs;
+  /// 响应式播放状态，驱动按钮图标切换
+  final isPlaying = false.obs;
 
   Timer? _hideTimer;
+  Timer? _bufferingTimer;
 
   IptvPlayerController() : currentIndex = 0;
 
@@ -51,6 +54,15 @@ class IptvPlayerController extends GetxController {
       SmartDialog.showToast("播放失败，可尝试切换线路");
     });
     player.stream.volume.listen((v) => currentVolume.value = v);
+    // 同步播放器播放状态到响应式变量
+    player.stream.playing.listen((v) => isPlaying.value = v);
+    // 监听缓冲状态，长时间缓冲自动重试，避免卡死暂停
+    player.stream.buffering.listen((buffering) {
+      _bufferingTimer?.cancel();
+      if (buffering) {
+        _bufferingTimer = Timer(const Duration(seconds: 8), reloadCurrent);
+      }
+    });
     play(currentIndex);
     showControls();
   }
@@ -74,6 +86,12 @@ class IptvPlayerController extends GetxController {
     currentLineIndex = lineIndex;
     player.open(Media(currentLine.url), play: true);
     SmartDialog.showToast("已切换到 ${currentLine.sourceName} 线路");
+  }
+
+  /// 重新加载当前线路，解决临时卡顿问题
+  void reloadCurrent() {
+    player.open(Media(currentLine.url), play: true);
+    showControls();
   }
 
   void switchChannel(int delta) => play(currentIndex + delta);
@@ -130,6 +148,7 @@ class IptvPlayerController extends GetxController {
   @override
   void onClose() {
     _hideTimer?.cancel();
+    _bufferingTimer?.cancel();
     player.dispose();
     if (isFullScreen.value) windowManager.setFullScreen(false);
   }

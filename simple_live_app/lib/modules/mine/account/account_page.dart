@@ -131,7 +131,7 @@ class AccountPage extends GetView<AccountController> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
-                  onPressed: () => service.deleteSource(source),
+                  onPressed: () => _showDeleteConfirm(context, source, service),
                 ),
               ],
             ),
@@ -154,6 +154,24 @@ class AccountPage extends GetView<AccountController> {
         ),
       ),
     );
+  }
+
+  /// 删除源确认对话框，避免误操作
+  Future<void> _showDeleteConfirm(BuildContext context, source, service) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("删除源"),
+        content: Text("确定要删除「${source.name}」吗？删除后可通过恢复默认找回预置源。"),
+        actions: [
+          TextButton(onPressed: () => Get.back(result: false), child: const Text("取消")),
+          FilledButton(onPressed: () => Get.back(result: true), child: const Text("删除")),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await service.deleteSource(source);
+    }
   }
 
   Future<void> _showAddCustomDialog(BuildContext context) async {

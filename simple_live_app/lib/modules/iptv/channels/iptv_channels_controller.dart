@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
@@ -17,6 +18,9 @@ class IptvChannelsController extends BaseController {
   // 横向分组条滚动控制器，选中项自动居中
   final ScrollController groupScrollController = ScrollController();
   final Map<String, GlobalKey> groupItemKeys = {};
+
+  /// 线路连通状态：0=检测中，1=绿色（连通快），2=黄色（连通慢），3=红色（失败）
+  final lineStatus = <String, int>{}.obs;
 
   @override
   void onInit() {
@@ -41,10 +45,35 @@ class IptvChannelsController extends BaseController {
       currentGroup.value = "";
       keyword.value = "";
       applyFilter();
+      _startLineStatusCheck(result.channels);
     } catch (e) {
       handleError(e, showPageError: true);
     } finally {
       pageLoadding.value = false;
+    }
+  }
+
+  /// 异步检测所有线路连通性，控制并发避免压力过大
+  Future<void> _startLineStatusCheck(List<AggregatedChannel> channels) async {
+    final allLines = channels.expand((e) => e.lines).toList();
+    // 初始化全部为检测中状态
+    for (final line in allLines) {
+      lineStatus[line.url] = 0;
+    }
+    const concurrency = 5;
+    final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 5), receiveTimeout: const Duration(seconds: 5)));
+    for (var i = 0; i < allLines.length; i += concurrency) {
+      final batch = allLines.skip(i).take(concurrency).toList();
+      await Future.wait(batch.map((line) async {
+        final sw = Stopwatch()..start();
+        try {
+          await dio.head(line.url);
+          sw.stop();
+          lineStatus[line.url] = sw.elapsedMilliseconds < 2000 ? 1 : 2;
+        } catch (_) {
+          lineStatus[line.url] = 3;
+        }
+      }));
     }
   }
 

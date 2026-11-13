@@ -111,12 +111,39 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
     final fav = controller.isFavoriteChannel(channel);
     return Card(
       child: ListTile(
-        leading: NetImage(channel.logo, width: 44, height: 44, borderRadius: 8),
+        leading: NetImage(channel.logo, width: 60, height: 60, borderRadius: 8, fit: BoxFit.contain),
         title: Text(channel.name),
-        subtitle: Text(
-          "${channel.group} · 共${channel.lines.length}条线路 · 来源：${channel.sourceNames.join("、")}",
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("${channel.group} · 共${channel.lines.length}条线路", style: const TextStyle(fontSize: 12)),
+            AppStyle.vGap4,
+            Obx(() => Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: channel.lines.map((line) {
+                final status = controller.lineStatus[line.url] ?? 0;
+                final color = switch (status) {
+                  1 => Colors.green,
+                  2 => Colors.amber,
+                  3 => Colors.red,
+                  _ => Colors.grey,
+                };
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    ),
+                    AppStyle.hGap4,
+                    Text(line.sourceName, style: const TextStyle(fontSize: 11)),
+                  ],
+                );
+              }).toList(),
+            )),
+          ],
         ),
         trailing: IconButton(
           icon: Icon(fav ? Icons.star : Icons.star_border),

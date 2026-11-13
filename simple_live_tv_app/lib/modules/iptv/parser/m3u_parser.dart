@@ -1,3 +1,4 @@
+import 'province_mapper.dart';
 import 'iptv_channel.dart';
 
 /// M3U 解析结果：频道列表与头部声明的 EPG 地址（url-tvg）
@@ -76,7 +77,20 @@ class M3uParser {
       pendingGroup = "";
     }
 
-    return M3uParseResult(channels: channels, epgUrls: epgUrls);
+    // 拆分地方频道为省份分组
+    final processedChannels = channels.map((channel) {
+      if (channel.group != "地方频道") return channel;
+      final province = ProvinceMapper.matchProvince(channel.name);
+      return IptvChannel(
+        id: channel.id,
+        name: channel.name,
+        logo: channel.logo,
+        group: province != null ? "$province地方台" : "其他地方台",
+        url: channel.url,
+      );
+    }).toList();
+
+    return M3uParseResult(channels: processedChannels, epgUrls: epgUrls);
   }
 
   /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外的首个逗号

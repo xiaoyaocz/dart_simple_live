@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart';
@@ -18,6 +18,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/webdav/webdav_client.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/bulk_data_import_service.dart';
+import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/profile_backup_service.dart';
@@ -67,6 +68,7 @@ class RemoteSyncWebDAVController extends BaseController {
   var isSyncFollows = true.obs;
   var isSyncHistories = true.obs;
   var isSyncBlockWord = true.obs;
+  var isSyncCustomCategories = true.obs;
   var isSyncBilibiliAccount = true.obs;
   var isSyncDouyinAccount = true.obs;
 
@@ -82,6 +84,7 @@ class RemoteSyncWebDAVController extends BaseController {
   final _userDouyinAccountJsonName = 'SimpleLive_douyin_account.json';
   final _userSettingsJsonName = 'SimpleLive_Settings.json';
   final _userTagsJsonName = 'SimpleLive_Tags.json';
+  final _userCustomCategoriesJsonName = 'SimpleLive_custom_categories.json';
   final _profileJsonName = 'SimpleLive_Profile_v3.json';
   final _legacyProfileJsonName = 'SimpleLive_Profile_v2.json';
 
@@ -207,68 +210,74 @@ class RemoteSyncWebDAVController extends BaseController {
 
   // 备份所有数据
   Future<List<int>> _backupData() async {
-    final archive = Archive();
-    List<int> zipBytes = [];
     try {
-      final profileMap = ProfileBackupService.instance.exportProfileMap();
-      final profileJson =
-          const JsonEncoder.withIndent("  ").convert(profileMap);
-      archive.addFile(
-        ArchiveFile.string(
-          _profileJsonName,
-          profileJson,
-        ),
-      );
-      _addJsonFile(
-        archive,
-        _userFollowJsonName,
-        {'data': profileMap['followUsers'] ?? const []},
-      );
-      _addJsonFile(
-        archive,
-        _userTagsJsonName,
-        {'data': profileMap['followUserTags'] ?? const []},
-      );
-      _addJsonFile(
-        archive,
-        _userHistoriesJsonName,
-        {'data': profileMap['histories'] ?? const []},
-      );
-      _addJsonFile(
-        archive,
-        _userBlockedWordJsonName,
-        {'data': AppSettingsController.instance.allShieldValues.toList()},
-      );
-      _addJsonFile(
-        archive,
-        _userBilibiliAccountJsonName,
-        {
-          'data': {'cookie': BiliBiliAccountService.instance.cookie}
-        },
-      );
-      _addJsonFile(
-        archive,
-        _userDouyinAccountJsonName,
-        {
-          'data': {'cookie': DouyinAccountService.instance.cookie}
-        },
-      );
-      _addJsonFile(
-        archive,
-        _userSettingsJsonName,
-        {
-          'data': ProfileBackupService.stripDeviceLocalSettings(
-            LocalStorageService.instance.settingsBox.toMap(),
-          ),
-        },
-      );
-      final zipEncoder = ZipEncoder();
-      zipBytes = zipEncoder.encode(archive);
+      return await buildBackupArchiveBytes();
     } catch (e) {
       Log.logPrint(e);
       SmartDialog.showToast("备份失败：$e");
+      return [];
     }
-    return zipBytes;
+  }
+
+  @visibleForTesting
+  Future<List<int>> buildBackupArchiveBytes() async {
+    final archive = Archive();
+    final profileMap = ProfileBackupService.instance.exportProfileMap();
+    final profileJson = const JsonEncoder.withIndent("  ").convert(profileMap);
+    archive.addFile(
+      ArchiveFile.string(
+        _profileJsonName,
+        profileJson,
+      ),
+    );
+    _addJsonFile(
+      archive,
+      _userFollowJsonName,
+      {'data': profileMap['followUsers'] ?? const []},
+    );
+    _addJsonFile(
+      archive,
+      _userTagsJsonName,
+      {'data': profileMap['followUserTags'] ?? const []},
+    );
+    _addJsonFile(
+      archive,
+      _userCustomCategoriesJsonName,
+      {'data': profileMap['customCategories'] ?? const []},
+    );
+    _addJsonFile(
+      archive,
+      _userHistoriesJsonName,
+      {'data': profileMap['histories'] ?? const []},
+    );
+    _addJsonFile(
+      archive,
+      _userBlockedWordJsonName,
+      {'data': AppSettingsController.instance.allShieldValues.toList()},
+    );
+    _addJsonFile(
+      archive,
+      _userBilibiliAccountJsonName,
+      {
+        'data': {'cookie': BiliBiliAccountService.instance.cookie}
+      },
+    );
+    _addJsonFile(
+      archive,
+      _userDouyinAccountJsonName,
+      {
+        'data': {'cookie': DouyinAccountService.instance.cookie}
+      },
+    );
+    final rawSettings = ProfileBackupService.stripDeviceLocalSettings(
+      LocalStorageService.instance.settingsBox.toMap(),
+    )..remove(LocalStorageService.kCustomCategories);
+    _addJsonFile(
+      archive,
+      _userSettingsJsonName,
+      {'data': rawSettings},
+    );
+    return ZipEncoder().encode(archive);
   }
 
   void _addJsonFile(Archive archive, String name, Map<String, dynamic> data) {
@@ -299,45 +308,10 @@ class RemoteSyncWebDAVController extends BaseController {
       }
       SyncProgressDialog.update(const SyncProgress(stage: "正在解压备份"));
       final data = await downloadFile.readAsBytes();
-      final archive = _decodeWebDavBackupArchive(data);
-      final profileFile = archive
-          .where(
-            (file) =>
-                file.isFile &&
-                (file.name == _profileJsonName ||
-                    file.name == _legacyProfileJsonName),
-          )
-          .firstOrNull;
-      if (profileFile != null) {
-        try {
-          final summary = await ProfileBackupService.instance.importProfileJson(
-            utf8.decode(profileFile.content),
-            overwrite: true,
-            options: ProfileImportOptions(
-              settings: true,
-              follows: isSyncFollows.value,
-              histories: isSyncHistories.value,
-              shields: isSyncBlockWord.value,
-              shieldPresets: isSyncBlockWord.value,
-            ),
-            onProgress: SyncProgressDialog.update,
-          );
-          Log.i("已同步完整配置包：${summary.message}");
-        } catch (e) {
-          Log.e("同步完整配置包失败：$e", StackTrace.current);
-          rethrow;
-        }
-        for (ArchiveFile file in archive) {
-          if (file.name == _userBilibiliAccountJsonName ||
-              file.name == _userDouyinAccountJsonName) {
-            await _recovery(file, onProgress: SyncProgressDialog.update);
-          }
-        }
-      } else {
-        for (ArchiveFile file in archive) {
-          await _recovery(file, onProgress: SyncProgressDialog.update);
-        }
-      }
+      await applyWebDAVBackupBytes(
+        data,
+        onProgress: SyncProgressDialog.update,
+      );
       SmartDialog.showToast('同步完成');
       DateTime recoverTime = DateTime.now();
       lastRecoverTime.value = Utils.parseTime(recoverTime);
@@ -361,9 +335,111 @@ class RemoteSyncWebDAVController extends BaseController {
     }
   }
 
+  @visibleForTesting
+  Future<void> applyWebDAVBackupBytes(
+    List<int> data, {
+    SyncProgressCallback? onProgress,
+  }) async {
+    final archive = _decodeWebDavBackupArchive(data);
+    final profileFile = archive
+        .where(
+          (file) =>
+              file.isFile &&
+              (file.name == _profileJsonName ||
+                  file.name == _legacyProfileJsonName),
+        )
+        .firstOrNull;
+    if (profileFile != null) {
+      final profileJson = utf8.decode(profileFile.content);
+      try {
+        final summary = await ProfileBackupService.instance.importProfileJson(
+          profileJson,
+          overwrite: true,
+          options: ProfileImportOptions(
+            settings: true,
+            follows: isSyncFollows.value,
+            histories: isSyncHistories.value,
+            shields: isSyncBlockWord.value,
+            shieldPresets: isSyncBlockWord.value,
+            customCategories: isSyncCustomCategories.value,
+          ),
+          onProgress: onProgress,
+        );
+        Log.i("已同步完整配置包：${summary.message}");
+      } catch (e) {
+        Log.e("同步完整配置包失败：$e", StackTrace.current);
+        rethrow;
+      }
+      if (isSyncCustomCategories.value) {
+        await _fallbackCustomCategoriesFromArchive(profileJson, archive);
+      }
+      for (ArchiveFile file in archive) {
+        if (file.name == _userBilibiliAccountJsonName ||
+            file.name == _userDouyinAccountJsonName) {
+          await _recovery(file, onProgress: onProgress);
+        }
+      }
+    } else {
+      final hasCustomCategoriesFile = archive.any(
+        (file) => file.isFile && file.name == _userCustomCategoriesJsonName,
+      );
+      for (ArchiveFile file in archive) {
+        await _recovery(
+          file,
+          onProgress: onProgress,
+          hasCustomCategoriesFile: hasCustomCategoriesFile,
+        );
+      }
+    }
+  }
+
+  Future<void> _fallbackCustomCategoriesFromArchive(
+    String profileJson,
+    Archive archive,
+  ) async {
+    try {
+      final decoded = json.decode(profileJson);
+      if (decoded is Map) {
+        final rawSettings = decoded['settings'];
+        final hasEmbedded = decoded.containsKey('customCategories') ||
+            (rawSettings is Map &&
+                rawSettings.containsKey(LocalStorageService.kCustomCategories));
+        if (hasEmbedded) {
+          return;
+        }
+      }
+      final customCatFile = archive.firstWhereOrNull(
+        (file) => file.isFile && file.name == _userCustomCategoriesJsonName,
+      );
+      if (customCatFile == null) {
+        return;
+      }
+      final payload = json.decode(utf8.decode(customCatFile.content));
+      if (payload is Map && payload.containsKey('data')) {
+        await _applyCustomCategoriesSyncData(
+          payload['data'],
+          overwrite: true,
+        );
+      }
+    } catch (e) {
+      Log.e('补充同步自定义分区失败:$e', StackTrace.current);
+    }
+  }
+
+  Future<int> _applyCustomCategoriesSyncData(
+    dynamic rawData, {
+    required bool overwrite,
+  }) async {
+    final service = Get.isRegistered<CustomCategoryService>()
+        ? CustomCategoryService.instance
+        : (CustomCategoryService()..onInit());
+    return service.applySyncData(rawData, overwrite: overwrite);
+  }
+
   Future<void> _recovery(
     ArchiveFile file, {
     SyncProgressCallback? onProgress,
+    bool hasCustomCategoriesFile = false,
   }) async {
     if (file.isFile && file.name.endsWith('.json')) {
       var jsonString = utf8.decode(file.content);
@@ -432,12 +508,41 @@ class RemoteSyncWebDAVController extends BaseController {
           // 携带的其他设备号，避免多设备共用同一"设备"身份
           final preserved =
               ProfileBackupService.deviceLocalSettingsSnapshot();
+          final preservedCustomCategories = LocalStorageService
+              .instance
+              .settingsBox
+              .get(LocalStorageService.kCustomCategories);
           await LocalStorageService.instance.settingsBox.clear();
           final incoming =
               jsonData is Map ? Map<dynamic, dynamic>.from(jsonData) : {};
-          preserved.addAll(ProfileBackupService.stripDeviceLocalSettings(incoming));
+          final legacyCustomCategories =
+              incoming.remove(LocalStorageService.kCustomCategories);
+          preserved.addAll(
+            ProfileBackupService.stripDeviceLocalSettings(incoming),
+          );
+          if (!isSyncCustomCategories.value ||
+              hasCustomCategoriesFile ||
+              legacyCustomCategories == null) {
+            // 关闭自定义分区同步、存在独立文件（避免顺序导致被 clear() 清空）或老备份不含该键时，保留本地自定义分区
+            if (preservedCustomCategories != null) {
+              preserved[LocalStorageService.kCustomCategories] =
+                  preservedCustomCategories;
+            }
+          }
           await LocalStorageService.instance.settingsBox.putAll(preserved);
-          AppSettingsController.instance.reloadFromStorage();
+          if (isSyncCustomCategories.value &&
+              !hasCustomCategoriesFile &&
+              legacyCustomCategories != null) {
+            await _applyCustomCategoriesSyncData(
+              legacyCustomCategories,
+              overwrite: true,
+            );
+          }
+          if (Get.isRegistered<AppSettingsController>()) {
+            AppSettingsController.instance.reloadFromStorage();
+          } else if (Get.isRegistered<CustomCategoryService>()) {
+            CustomCategoryService.instance.reloadFromStorage();
+          }
           Log.i('已同步用户设置');
         } catch (e) {
           Log.e("同步用户设置失败：$e", StackTrace.current);
@@ -453,6 +558,17 @@ class RemoteSyncWebDAVController extends BaseController {
           Log.i('已同步用户自定义标签：${result.logSummary}');
         } catch (e) {
           Log.e('同步用户自定义标签失败:$e', StackTrace.current);
+        }
+      } else if (file.name == _userCustomCategoriesJsonName &&
+          isSyncCustomCategories.value) {
+        try {
+          final count = await _applyCustomCategoriesSyncData(
+            jsonData,
+            overwrite: true,
+          );
+          Log.i('已同步自定义分区：$count 个');
+        } catch (e) {
+          Log.e('同步自定义分区失败:$e', StackTrace.current);
         }
       } else {
         return;
@@ -477,6 +593,10 @@ class RemoteSyncWebDAVController extends BaseController {
 
   void changeIsSyncBlockWord() {
     isSyncBlockWord.value = !isSyncBlockWord.value;
+  }
+
+  void changeIsSyncCustomCategories() {
+    isSyncCustomCategories.value = !isSyncCustomCategories.value;
   }
 
   void changeIsSyncBilibiliAccount() {

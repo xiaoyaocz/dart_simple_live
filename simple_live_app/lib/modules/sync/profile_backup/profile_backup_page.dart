@@ -30,7 +30,7 @@ class ProfileBackupPage extends GetView<ProfileBackupController> {
                 ListTile(
                   leading: const Icon(Remix.download_2_line),
                   title: const Text("导出配置包"),
-                  subtitle: const Text("包含设置、关注、历史、屏蔽词、屏蔽用户和预设"),
+                  subtitle: const Text("包含设置、关注、历史、屏蔽词、自定义分区、屏蔽用户和预设"),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: controller.exportProfile,
                 ),

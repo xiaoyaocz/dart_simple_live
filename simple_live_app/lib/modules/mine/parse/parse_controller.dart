@@ -114,7 +114,20 @@ class ParseController extends GetxController {
     }
   }
 
-  Future<List> parse(String url, {int depth = 0}) async {
+  Future<List> parse(String url, {int depth = 0}) {
+    return resolveRoomUrl(
+      url,
+      redirectClient: _redirectClient,
+      depth: depth,
+    );
+  }
+
+  /// 解析直播间链接（支持分享口令提取与短链重定向），返回 `[roomId, Site]` 或空列表。
+  static Future<List> resolveRoomUrl(
+    String url, {
+    Dio? redirectClient,
+    int depth = 0,
+  }) async {
     final extractedUrl = extractHttpUrl(url);
     if (extractedUrl.isNotEmpty) {
       url = extractedUrl;
@@ -125,39 +138,56 @@ class ParseController extends GetxController {
       return [];
     }
 
-    // 快手短链沿用原有流程，其重定向目标需通过受信域名校验。
-    if (parsed.isShortLink && parsed.siteId == LiveUrlParser.siteKuaishou) {
-      final roomId = await resolveKuaishouRoomId(url);
-      if (roomId.isEmpty) {
-        return [];
+    final client = redirectClient ?? Dio();
+    try {
+      // 快手短链沿用原有流程，其重定向目标需通过受信域名校验。
+      if (parsed.isShortLink && parsed.siteId == LiveUrlParser.siteKuaishou) {
+        final roomId = await _resolveKuaishouRoomIdWith(client, url);
+        if (roomId.isEmpty) {
+          return [];
+        }
+        return [roomId, Sites.allSites[LiveUrlParser.siteKuaishou]!];
       }
-      return [roomId, Sites.allSites[LiveUrlParser.siteKuaishou]!];
-    }
 
-    // 短链需要先跟随重定向，再对最终地址重新解析。
-    if (parsed.isShortLink) {
-      if (depth >= _maxParseDepth) {
-        return [];
+      // 短链需要先跟随重定向，再对最终地址重新解析。
+      if (parsed.isShortLink) {
+        if (depth >= _maxParseDepth) {
+          return [];
+        }
+        final location = await _getLocationWith(client, parsed.uri.toString());
+        if (location.isEmpty) {
+          return [];
+        }
+        return resolveRoomUrl(
+          location,
+          redirectClient: client,
+          depth: depth + 1,
+        );
       }
-      final location = await getLocation(parsed.uri.toString());
-      if (location.isEmpty) {
-        return [];
-      }
-      return parse(location, depth: depth + 1);
-    }
 
-    if (parsed.roomId.isEmpty) {
-      return [];
+      if (parsed.roomId.isEmpty) {
+        return [];
+      }
+      final site = Sites.allSites[parsed.siteId];
+      if (site == null) {
+        return [];
+      }
+      return [parsed.roomId, site];
+    } finally {
+      if (redirectClient == null) {
+        client.close();
+      }
     }
-    final site = Sites.allSites[parsed.siteId];
-    if (site == null) {
-      return [];
-    }
-    return [parsed.roomId, site];
   }
 
   /// Resolves only known Kuaishou live-room links without account cookies.
-  Future<String> resolveKuaishouRoomId(String value) async {
+  Future<String> resolveKuaishouRoomId(String value) =>
+      _resolveKuaishouRoomIdWith(_redirectClient, value);
+
+  static Future<String> _resolveKuaishouRoomIdWith(
+    Dio client,
+    String value,
+  ) async {
     final initial = KuaishouLiveLink.parseHttpUrl(value);
     if (initial == null) {
       return "";
@@ -180,7 +210,7 @@ class ParseController extends GetxController {
         if (!visited.add(current.toString())) {
           return "";
         }
-        final response = await _redirectClient.getUri<dynamic>(
+        final response = await client.getUri<dynamic>(
           current,
           options: Options(
             followRedirects: false,
@@ -217,7 +247,10 @@ class ParseController extends GetxController {
     return "";
   }
 
-  Future<String> getLocation(String url) async {
+  Future<String> getLocation(String url) =>
+      _getLocationWith(_redirectClient, url);
+
+  static Future<String> _getLocationWith(Dio client, String url) async {
     final parsed = Uri.tryParse(url);
     if (parsed == null || !parsed.hasScheme) {
       return "";
@@ -227,7 +260,7 @@ class ParseController extends GetxController {
       for (var redirectCount = 0;
           redirectCount < _maxRedirects;
           redirectCount++) {
-        final response = await _redirectClient.getUri<dynamic>(
+        final response = await client.getUri<dynamic>(
           current,
           options: Options(
             followRedirects: false,

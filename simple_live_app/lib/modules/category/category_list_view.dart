@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyrefresh/easy_refresh.dart';
 
 import 'package:get/get.dart';
-import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/category/category_list_controller.dart';
+import 'package:simple_live_app/modules/category/custom_category_dialogs.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/widgets/default_category_icon.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/shadow_card.dart';
@@ -34,6 +35,8 @@ class CategoryListView extends StatelessWidget {
             controller: controller.scrollController,
             itemBuilder: (_, i) {
               var item = controller.list[i];
+              final isCustomGroup =
+                  item.id == CategoryListController.kCustomGroupId;
               return Column(
                 children: [
                   StickyHeader(
@@ -41,10 +44,50 @@ class CategoryListView extends StatelessWidget {
                       padding: AppStyle.edgeInsetsV8.copyWith(left: 4),
                       color: Theme.of(context).scaffoldBackgroundColor,
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                      child: Row(
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          if (isCustomGroup) ...[
+                            AppStyle.hGap8,
+                            Text(
+                              '长按或右键可编辑',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              onPressed: () =>
+                                  CustomCategoryDialogs.showAddOrEditDialog(
+                                initialSiteId: controller.site.id,
+                              ),
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('新增'),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              onPressed: () =>
+                                  CustomCategoryDialogs.showManageSheet(
+                                initialSiteId: controller.site.id,
+                              ),
+                              child: const Text('管理'),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     content: Obx(
@@ -61,12 +104,20 @@ class CategoryListView extends StatelessWidget {
                         children: item.showAll.value
                             ? (item.children
                                 .map(
-                                  (e) => buildSubCategory(context, e),
+                                  (e) => buildSubCategory(
+                                    context,
+                                    e,
+                                    isCustom: isCustomGroup,
+                                  ),
                                 )
                                 .toList())
                             : (item.take15
                                 .map(
-                                  (e) => buildSubCategory(context, e),
+                                  (e) => buildSubCategory(
+                                    context,
+                                    e,
+                                    isCustom: isCustomGroup,
+                                  ),
                                 )
                                 .toList()
                               ..add(buildShowMore(item))),
@@ -82,117 +133,89 @@ class CategoryListView extends StatelessWidget {
     );
   }
 
-  Widget buildSubCategory(BuildContext context, LiveSubCategory item) {
-    final pic = (item.pic ?? "").trim();
-    final isLocalGameArtwork = DouyinGameArtwork.isLocalGameArtwork(pic);
-    final cacheWidth = (40 * MediaQuery.of(context).devicePixelRatio).ceil();
-    return Tooltip(
-      message: item.name,
-      waitDuration: const Duration(milliseconds: 300),
-      child: ShadowCard(
-        onTap: () {
-          AppNavigator.toCategoryDetail(site: controller.site, category: item);
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            pic.isNotEmpty
-                ? NetImage(
-                    pic,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 8,
-                    fit: isLocalGameArtwork ? BoxFit.contain : BoxFit.cover,
-                    cacheWidth: cacheWidth,
-                  )
-                : _buildFallbackCategoryIcon(context, item),
-            AppStyle.vGap4,
-            Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFallbackCategoryIcon(
+  Widget buildSubCategory(
     BuildContext context,
-    LiveSubCategory item,
-  ) {
-    final icon = controller.site.id == Constant.kDouyin
-        ? _douyinCategoryIcon(item.name)
-        : Icons.dashboard_customize_rounded;
-    final color = Theme.of(context).colorScheme.primary;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withAlpha(40),
-        ),
-        color: color.withAlpha(18),
-      ),
-      child: Icon(
-        icon,
-        size: 22,
-        color: color,
+    LiveSubCategory item, {
+    bool isCustom = false,
+  }) {
+    final pic = (item.pic ?? "").trim();
+    final isLocalAsset = pic.startsWith('asset://');
+    final cacheWidth = (40 * MediaQuery.of(context).devicePixelRatio).ceil();
+    void openCategory() {
+      AppNavigator.toCategoryDetail(site: controller.site, category: item);
+    }
+
+    void openCustomMenu() {
+      CustomCategoryDialogs.showCardActionMenu(
+        siteId: controller.site.id,
+        category: item,
+        onOpen: openCategory,
+      );
+    }
+
+    final fallbackIcon = DefaultCategoryIcon(
+      categoryName: item.name,
+      siteId: isCustom ? controller.site.id : null,
+    );
+
+    final card = ShadowCard(
+      onTap: openCategory,
+      child: Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  pic.isNotEmpty
+                      ? NetImage(
+                          pic,
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          fit: isLocalAsset ? BoxFit.contain : BoxFit.cover,
+                          cacheWidth: cacheWidth,
+                          fallbackWidget: fallbackIcon,
+                        )
+                      : fallbackIcon,
+                  AppStyle.vGap4,
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isCustom)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Icon(
+                Icons.push_pin_rounded,
+                size: 12,
+                color: Theme.of(context).colorScheme.primary.withAlpha(180),
+              ),
+            ),
+        ],
       ),
     );
-  }
 
-  IconData _douyinCategoryIcon(String name) {
-    if (name.contains("游戏") || name.contains("电竞") || name.contains("手游")) {
-      return Icons.sports_esports_rounded;
-    }
-    if (name.contains("唱") || name.contains("音乐") || name.contains("电台")) {
-      return Icons.music_note_rounded;
-    }
-    if (name.contains("舞") || name.contains("颜值") || name.contains("才艺")) {
-      return Icons.auto_awesome_rounded;
-    }
-    if (name.contains("聊天") || name.contains("交友") || name.contains("情感")) {
-      return Icons.forum_rounded;
-    }
-    if (name.contains("美食") || name.contains("吃")) {
-      return Icons.restaurant_rounded;
-    }
-    if (name.contains("户外") || name.contains("旅行") || name.contains("生活")) {
-      return Icons.park_rounded;
-    }
-    if (name.contains("体育") || name.contains("健身")) {
-      return Icons.sports_basketball_rounded;
-    }
-    if (name.contains("汽车") || name.contains("车")) {
-      return Icons.directions_car_rounded;
-    }
-    if (name.contains("知识") || name.contains("教育") || name.contains("课堂")) {
-      return Icons.school_rounded;
-    }
-    if (name.contains("二次元") || name.contains("动漫")) {
-      return Icons.face_retouching_natural_rounded;
-    }
-    if (name.contains("财经") || name.contains("股票")) {
-      return Icons.trending_up_rounded;
-    }
-    if (name.contains("科技") || name.contains("数码")) {
-      return Icons.memory_rounded;
-    }
-    if (name.contains("影视") || name.contains("电影") || name.contains("综艺")) {
-      return Icons.movie_rounded;
-    }
-    if (name.contains("购物") || name.contains("电商")) {
-      return Icons.shopping_bag_rounded;
-    }
-    if (name.contains("宠物")) {
-      return Icons.pets_rounded;
-    }
-    return Icons.grid_view_rounded;
+    return Tooltip(
+      message: isCustom ? '${item.name}（长按/右键管理）' : item.name,
+      waitDuration: const Duration(milliseconds: 300),
+      child: isCustom
+          ? GestureDetector(
+              onLongPress: openCustomMenu,
+              onSecondaryTap: openCustomMenu,
+              child: card,
+            )
+          : card,
+    );
   }
 
   Widget buildShowMore(AppLiveCategory item) {

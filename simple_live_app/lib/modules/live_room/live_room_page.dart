@@ -17,6 +17,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
 import 'package:simple_live_app/modules/live_room/widgets/live_contribution_rank_panel.dart';
+import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/mobile_page_insets.dart';
@@ -1787,6 +1788,32 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                         controller.openCategoryRecommendation();
                       },
               ),
+              if (Get.isRegistered<CustomCategoryService>())
+                Obx(() {
+                  final pinned = controller.isCurrentCategoryPinned;
+                  final enabled = controller.hasCategoryRecommendation;
+                  return ListTile(
+                    leading: Icon(
+                      pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                    ),
+                    title: Text(pinned ? "已添加到自定义分区" : "添加到自定义分区"),
+                    subtitle: Text(
+                      !enabled
+                          ? "当前直播间暂无可用的分区标签"
+                          : pinned
+                              ? "点击可从分类页自定义分组移除"
+                              : "固定到「分类」页顶部，方便下次直接进入",
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    enabled: enabled,
+                    onTap: !enabled
+                        ? null
+                        : () {
+                            Get.back();
+                            controller.togglePinCurrentCategory();
+                          },
+                  );
+                }),
               ListTile(
                 leading: const Icon(Icons.share_sharp),
                 title: const Text("分享直播间"),

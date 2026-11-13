@@ -30,6 +30,7 @@ import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/current_room_service.dart';
+import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
@@ -493,6 +494,7 @@ Future initServices() async {
   Get.put(KuaishouAccountService());
 
   Get.put(FollowService());
+  Get.put(CustomCategoryService());
   Get.put(LiveSubtitleService());
   Get.put(ProfileBackupService());
 

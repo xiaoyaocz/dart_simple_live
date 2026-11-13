@@ -355,6 +355,70 @@ class DouyuSite implements LiveSite {
     return LiveCategoryResult(hasMore: hasMore, items: items);
   }
 
+  static String? _firstNonEmpty(
+    List<dynamic> candidates, {
+    bool treatZeroAsEmpty = false,
+  }) {
+    for (final raw in candidates) {
+      if (raw == null) continue;
+      final value = raw.toString().trim();
+      if (value.isEmpty) continue;
+      if (treatZeroAsEmpty && (value == '0' || value == '-1')) continue;
+      return value;
+    }
+    return null;
+  }
+
+  /// 从斗鱼 `betard` 房间数据与 `h5room` 补充数据中解析所属分区信息。
+  static Map<String, String?> resolveCategoryInfo(
+    Map<dynamic, dynamic> roomInfo, [
+    dynamic h5Data,
+  ]) {
+    final h5 = h5Data is Map ? h5Data : const <dynamic, dynamic>{};
+    final categoryId = _firstNonEmpty([
+      roomInfo["cate2Id"],
+      roomInfo["cate2_id"],
+      roomInfo["cate_id"],
+      h5["cate_id"],
+      roomInfo["cid1"],
+    ], treatZeroAsEmpty: true);
+    final categoryName = _firstNonEmpty([
+      roomInfo["cate2Name"],
+      roomInfo["second_lvl_name"],
+      h5["game_name"],
+      roomInfo["game_name"],
+      roomInfo["cate_name"],
+    ]);
+    final rawParentId = _firstNonEmpty([
+      roomInfo["cate1Id"],
+      roomInfo["cate1_id"],
+      roomInfo["cid2"],
+      roomInfo["category_id"],
+    ], treatZeroAsEmpty: true);
+    final categoryParentId =
+        rawParentId != null && rawParentId != categoryId ? rawParentId : null;
+    final categoryParentName = categoryParentId == null
+        ? null
+        : _firstNonEmpty([
+            roomInfo["cate1Name"],
+            roomInfo["cate1_name"],
+            roomInfo["parent_cate_name"],
+          ]);
+    final categoryPic = _firstNonEmpty([
+      roomInfo["game_icon_url"],
+      h5["game_icon_url"],
+      roomInfo["game_icon"],
+      h5["game_icon"],
+    ]);
+    return {
+      "categoryId": categoryId,
+      "categoryName": categoryName,
+      "categoryParentId": categoryParentId,
+      "categoryParentName": categoryParentName,
+      "categoryPic": categoryPic,
+    };
+  }
+
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
     Map roomInfo = await _getRoomInfo(roomId);
@@ -364,7 +428,9 @@ class DouyuSite implements LiveSite {
       queryParameters: {},
       header: {..._requestHeaders, 'referer': 'https://www.douyu.com/$roomId'},
     );
-    String? showTime = h5RoomInfo["data"]?["show_time"]?.toString();
+    final h5Data = h5RoomInfo["data"];
+    String? showTime = h5Data?["show_time"]?.toString();
+    final categoryInfo = resolveCategoryInfo(roomInfo, h5Data);
 
     final playArgs = await _getFreshPlayArgs(roomInfo["room_id"].toString());
 
@@ -383,22 +449,11 @@ class DouyuSite implements LiveSite {
       url: "https://www.douyu.com/$roomId",
       isRecord: roomInfo["videoLoop"] == 1,
       showTime: showTime,
-      categoryId:
-          roomInfo["cate2Id"]?.toString() ??
-          roomInfo["cate_id"]?.toString() ??
-          roomInfo["cid1"]?.toString(),
-      categoryName:
-          roomInfo["cate2Name"]?.toString() ??
-          roomInfo["game_name"]?.toString() ??
-          roomInfo["cate_name"]?.toString(),
-      categoryParentId:
-          roomInfo["cate1Id"]?.toString() ?? roomInfo["cid2"]?.toString(),
-      categoryParentName:
-          roomInfo["cate1Name"]?.toString() ??
-          roomInfo["parent_cate_name"]?.toString(),
-      categoryPic:
-          roomInfo["game_icon"]?.toString() ??
-          roomInfo["game_icon_url"]?.toString(),
+      categoryId: categoryInfo["categoryId"],
+      categoryName: categoryInfo["categoryName"],
+      categoryParentId: categoryInfo["categoryParentId"],
+      categoryParentName: categoryInfo["categoryParentName"],
+      categoryPic: categoryInfo["categoryPic"],
     );
   }
 

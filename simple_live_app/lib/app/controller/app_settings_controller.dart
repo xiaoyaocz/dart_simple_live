@@ -9,6 +9,7 @@ import 'package:simple_live_app/app/mobile_safe_insets.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/danmu_shield_preset.dart';
 import 'package:simple_live_app/services/background_playback_service.dart';
+import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:path/path.dart' as p;
@@ -1569,6 +1570,9 @@ class AppSettingsController extends GetxController {
 
   void reloadFromStorage() {
     _loadFromStorage();
+    if (Get.isRegistered<CustomCategoryService>()) {
+      CustomCategoryService.instance.reloadFromStorage();
+    }
   }
 
   void importShieldValue(String rawValue) {

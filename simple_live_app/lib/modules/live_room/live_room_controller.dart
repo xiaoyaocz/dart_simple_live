@@ -19,6 +19,7 @@ import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/models/custom_category_item.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
@@ -30,6 +31,7 @@ import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/current_room_service.dart';
+import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/ios_audio_session_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
@@ -3331,6 +3333,40 @@ class LiveRoomController extends PlayerController
 
   bool get hasCategoryRecommendation => _buildRecommendationCategory() != null;
 
+  bool get isCurrentCategoryPinned {
+    if (!Get.isRegistered<CustomCategoryService>()) {
+      return false;
+    }
+    final category = _buildRecommendationCategory();
+    if (category == null) {
+      return false;
+    }
+    CustomCategoryService.instance.revision.value;
+    return CustomCategoryService.instance.contains(site.id, category.id);
+  }
+
+  Future<void> togglePinCurrentCategory() async {
+    if (!Get.isRegistered<CustomCategoryService>()) {
+      return;
+    }
+    final category = _buildRecommendationCategory();
+    if (category == null) {
+      SmartDialog.showToast("当前直播间还没有可用的分区标签");
+      return;
+    }
+    final item = CustomCategoryItem.normalized(
+      siteId: site.id,
+      id: category.id,
+      parentId: category.parentId,
+      name: category.name,
+      pic: category.pic,
+    );
+    final pinned = await CustomCategoryService.instance.togglePin(item);
+    SmartDialog.showToast(
+      pinned ? '已添加到自定义分区：${item.name}' : '已从自定义分区移除：${item.name}',
+    );
+  }
+
   String get currentRecommendationSubtitle {
     final roomDetail = detail.value;
     final category = _buildRecommendationCategory();
@@ -3589,12 +3625,38 @@ class LiveRoomController extends PlayerController
             if (i == 0) {
               return Padding(
                 padding: AppStyle.edgeInsetsB12,
-                child: Text(
-                  currentRecommendationSubtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        currentRecommendationSubtitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    if (Get.isRegistered<CustomCategoryService>())
+                      Obx(
+                        () => TextButton.icon(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: togglePinCurrentCategory,
+                          icon: Icon(
+                            isCurrentCategoryPinned
+                                ? Icons.push_pin_rounded
+                                : Icons.push_pin_outlined,
+                            size: 16,
+                          ),
+                          label: Text(
+                            isCurrentCategoryPinned ? '已固定' : '固定分区',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             }

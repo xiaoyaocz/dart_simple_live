@@ -210,13 +210,18 @@ class DouyinSite implements LiveSite {
     );
   }
 
-  String? _pickPartitionImageUrl(dynamic data) {
+  static String? _pickPartitionImageUrl(dynamic data) {
     if (data == null) {
       return null;
     }
     if (data is String) {
       final value = data.trim();
-      return value.isEmpty ? null : value;
+      if (value.startsWith("http://") ||
+          value.startsWith("https://") ||
+          value.startsWith("//")) {
+        return value;
+      }
+      return null;
     }
     if (data is List) {
       for (final item in data) {
@@ -258,7 +263,7 @@ class DouyinSite implements LiveSite {
     return null;
   }
 
-  String? _resolveCategoryValue(
+  static String? _resolveCategoryValue(
     dynamic source,
     List<String> keys, {
     int depth = 0,
@@ -293,53 +298,258 @@ class DouyinSite implements LiveSite {
     return null;
   }
 
-  Map<String, String?> _resolveDouyinCategoryInfo(dynamic roomData) {
+  static final RegExp _numericTokenPattern = RegExp(r'^\d+$');
+
+  /// 将不同写法的抖音分区 ID 统一规整为 `"<partitionId>,<partitionType>"`：
+  /// - `"1010016,1"` -> `"1010016,1"`
+  /// - `"4_103_1_2_1_1010016"` / `"1_1010016"` -> `"1010016,1"`
+  /// - `"1010016"` -> `"1010016,1"`（默认 sub-partition type=1）
+  static ({String partitionId, String partitionType})? parseCategoryId(
+    String raw,
+  ) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    if (trimmed.contains(',')) {
+      final parts = trimmed.split(',');
+      final id = parts.first.trim();
+      if (id.isEmpty) {
+        return null;
+      }
+      final type = parts.length > 1 && parts[1].trim().isNotEmpty
+          ? parts[1].trim()
+          : '1';
+      return (partitionId: id, partitionType: type);
+    }
+    if (trimmed.contains('_')) {
+      final parts = trimmed
+          .split('_')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (parts.length >= 2 &&
+          _numericTokenPattern.hasMatch(parts[parts.length - 1]) &&
+          _numericTokenPattern.hasMatch(parts[parts.length - 2])) {
+        return (
+          partitionId: parts[parts.length - 1],
+          partitionType: parts[parts.length - 2],
+        );
+      }
+    }
+    return (partitionId: trimmed, partitionType: '1');
+  }
+
+  static String normalizeCategoryId(String raw) {
+    final parsed = parseCategoryId(raw);
+    if (parsed == null) {
+      return '';
+    }
+    return '${parsed.partitionId},${parsed.partitionType}';
+  }
+
+  static String _appendCategoryTypeIfNeeded(String? id, String? type) {
+    final cleanId = id?.trim() ?? '';
+    if (cleanId.isEmpty) {
+      return '';
+    }
+    if (cleanId.contains(',')) {
+      return normalizeCategoryId(cleanId);
+    }
+    final cleanType = type?.trim() ?? '';
+    if (cleanType.isNotEmpty) {
+      return '$cleanId,$cleanType';
+    }
+    return cleanId;
+  }
+
+  static String? _cleanNonZeroCategoryId(String? raw) {
+    final clean = raw?.trim();
+    if (clean == null || clean.isEmpty || clean == '0' || clean == '-1') {
+      return null;
+    }
+    return clean;
+  }
+
+  static dynamic _unwrapPartitionNode(dynamic node) {
+    if (node is Map && node["partition"] is Map) {
+      return node["partition"];
+    }
+    return node is Map ? node : null;
+  }
+
+  static String? _extractGameTagFromStream(Map<dynamic, dynamic> room) {
+    final streamUrl = room["stream_url"];
+    if (streamUrl is! Map) return null;
+    final sdkData = streamUrl["live_core_sdk_data"];
+    if (sdkData is! Map) return null;
+    final pullData = sdkData["pull_data"];
+    if (pullData is! Map) return null;
+    final rawStreamData = pullData["stream_data"];
+    if (rawStreamData is! String || rawStreamData.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(rawStreamData);
+      if (decoded is! Map) return null;
+      final common = decoded["common"];
+      if (common is! Map) return null;
+      final rawTrace = common["common_trace"];
+      final trace = rawTrace is String && rawTrace.isNotEmpty
+          ? jsonDecode(rawTrace)
+          : rawTrace;
+      if (trace is! Map) return null;
+      final sceneTags = trace["SceneTags"];
+      if (sceneTags is! Map) return null;
+      return _cleanNonZeroCategoryId(sceneTags["douyin_game_tag"]?.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Map<String, String?> resolveCategoryInfo(
+    dynamic roomData, {
+    dynamic container,
+  }) {
     final room = roomData is Map ? roomData : <String, dynamic>{};
+    final parent = container is Map ? container : <String, dynamic>{};
     final partitionRoadMap =
-        room["partition_road_map"] ?? room["partitionRoadMap"];
+        room["partition_road_map"] ??
+        room["partitionRoadMap"] ??
+        parent["partition_road_map"] ??
+        parent["partitionRoadMap"];
+
+    dynamic roadTop;
+    dynamic roadSub;
+    if (partitionRoadMap is Map) {
+      roadTop = _unwrapPartitionNode(
+        partitionRoadMap["partition"] ??
+            partitionRoadMap["first"] ??
+            partitionRoadMap["parent_partition"],
+      );
+      roadSub = _unwrapPartitionNode(
+        partitionRoadMap["sub_partition"] ??
+            partitionRoadMap["subPartition"] ??
+            partitionRoadMap["child_partition"],
+      );
+    } else if (partitionRoadMap is List && partitionRoadMap.isNotEmpty) {
+      roadSub = _unwrapPartitionNode(partitionRoadMap.last);
+      if (partitionRoadMap.length > 1) {
+        roadTop = _unwrapPartitionNode(partitionRoadMap.first);
+      }
+    }
+
+    final gameData = room["game_data"] ?? parent["game_data"];
+    final gameTagInfo = gameData is Map
+        ? (gameData["game_tag_info"] ?? gameData["gameTagInfo"])
+        : null;
+    final gameTagId = _cleanNonZeroCategoryId(
+      _resolveCategoryValue(gameTagInfo, const [
+        "game_tag_id",
+        "gameTagId",
+        "id_str",
+        "id",
+      ]),
+    );
+    final gameTagName = _resolveCategoryValue(gameTagInfo, const [
+      "game_tag_name",
+      "gameTagName",
+      "title",
+      "name",
+    ]);
+    final streamGameTagId = _extractGameTagFromStream(room);
+
+    final directPartition = _unwrapPartitionNode(
+      room["partition"] ?? room["room_partition"] ?? room["partitionInfo"],
+    );
+    final useGameTagAsSub =
+        directPartition == null && roadSub == null && gameTagId != null;
+
     final partition =
-        room["partition"] ??
-        room["room_partition"] ??
-        room["partitionInfo"] ??
-        (partitionRoadMap is List && partitionRoadMap.isNotEmpty
-            ? partitionRoadMap.last
-            : null);
+        directPartition ?? roadSub ?? (useGameTagAsSub ? null : roadTop);
     final parentPartition =
         room["parent_partition"] ??
         room["partition_parent"] ??
         (partition is Map
-            ? partition["parent_partition"] ??
-                  partition["partition_parent"] ??
-                  partition["parent"]
+            ? _unwrapPartitionNode(
+                partition["parent_partition"] ??
+                    partition["partition_parent"] ??
+                    partition["parent"],
+              )
             : null) ??
-        (partitionRoadMap is List && partitionRoadMap.length > 1
-            ? partitionRoadMap.first
-            : null) ??
-        room["partitionInfo"];
+        ((roadSub != null || useGameTagAsSub) ? roadTop : null) ??
+        (roadSub == null ? _unwrapPartitionNode(room["partitionInfo"]) : null);
+
+    var rawCategoryId = _cleanNonZeroCategoryId(
+      _resolveCategoryValue(partition, const [
+        "id_str",
+        "id",
+        "partition_id",
+        "partition",
+      ]),
+    );
+    var rawCategoryType = partition is Map
+        ? (partition["type"] ?? partition["partition_type"])?.toString().trim()
+        : null;
+    var categoryName = partition is Map &&
+            partition.containsKey("title") &&
+            (partition["title"]?.toString().trim().isEmpty ?? true)
+        ? null
+        : _resolveCategoryValue(partition, const [
+            "title",
+            "name",
+            "partition_title",
+          ]);
+
+    if (rawCategoryId == null) {
+      rawCategoryId = gameTagId ?? streamGameTagId;
+      if (rawCategoryId != null &&
+          (rawCategoryType == null || rawCategoryType.isEmpty)) {
+        rawCategoryType = "1";
+      }
+    }
+    if ((categoryName == null || categoryName.isEmpty) &&
+        gameTagName != null &&
+        gameTagName.isNotEmpty &&
+        (gameTagId == null || rawCategoryId == gameTagId)) {
+      categoryName = gameTagName;
+    }
+
+    final resolvedCategoryId = _appendCategoryTypeIfNeeded(
+      rawCategoryId,
+      rawCategoryType,
+    );
+
+    final rawParentId = _cleanNonZeroCategoryId(
+      _resolveCategoryValue(parentPartition, const [
+        "id_str",
+        "id",
+        "partition_id",
+        "partition",
+      ]),
+    );
+    final rawParentType = parentPartition is Map
+        ? (parentPartition["type"] ?? parentPartition["partition_type"])
+              ?.toString()
+              .trim()
+        : null;
+    final resolvedParentId = _appendCategoryTypeIfNeeded(
+      rawParentId,
+      rawParentType,
+    );
+    final resolvedParentName = _resolveCategoryValue(parentPartition, const [
+      "title",
+      "name",
+      "partition_title",
+    ]);
+    final hasDistinctParent =
+        resolvedParentId.isNotEmpty && resolvedParentId != resolvedCategoryId;
 
     return {
-      "categoryId": _resolveCategoryValue(partition, const [
-        "id_str",
-        "id",
-        "partition_id",
-        "partition",
-      ]),
-      "categoryName": _resolveCategoryValue(partition, const [
-        "title",
-        "name",
-        "partition_title",
-      ]),
-      "categoryParentId": _resolveCategoryValue(parentPartition, const [
-        "id_str",
-        "id",
-        "partition_id",
-        "partition",
-      ]),
-      "categoryParentName": _resolveCategoryValue(parentPartition, const [
-        "title",
-        "name",
-        "partition_title",
-      ]),
+      "categoryId": resolvedCategoryId.isEmpty ? null : resolvedCategoryId,
+      "categoryName": (categoryName ?? "").isEmpty ? null : categoryName,
+      "categoryParentId": hasDistinctParent ? resolvedParentId : null,
+      "categoryParentName": hasDistinctParent ? resolvedParentName : null,
       "categoryPic":
           _pickPartitionImageUrl(partition) ??
           _pickPartitionImageUrl(parentPartition),
@@ -423,9 +633,12 @@ class DouyinSite implements LiveSite {
     LiveSubCategory category, {
     int page = 1,
   }) async {
-    var ids = category.id.split(',');
-    var partitionId = ids[0];
-    var partitionType = ids[1];
+    final parsedId = parseCategoryId(category.id);
+    if (parsedId == null) {
+      throw CoreError("无效的抖音分区 ID：${category.id}");
+    }
+    var partitionId = parsedId.partitionId;
+    var partitionType = parsedId.partitionType;
 
     String serverUrl =
         "https://live.douyin.com/webcast/web/partition/detail/room/v2/";
@@ -579,7 +792,10 @@ class DouyinSite implements LiveSite {
     var userUniqueId = generateRandomNumber(12).toString();
 
     var owner = room["owner"];
-    final categoryInfo = _resolveDouyinCategoryInfo(room);
+    final categoryInfo = DouyinSite.resolveCategoryInfo(
+      room,
+      container: roomData["data"],
+    );
 
     var status = asT<int?>(room["status"]) ?? 0;
 
@@ -656,7 +872,10 @@ class DouyinSite implements LiveSite {
     var roomData = data["data"][0];
     var userData = data["user"];
     var roomId = roomData["id_str"].toString();
-    final categoryInfo = _resolveDouyinCategoryInfo(roomData);
+    final categoryInfo = DouyinSite.resolveCategoryInfo(
+      roomData,
+      container: data,
+    );
 
     // 读取用户唯一ID，用于弹幕连接
     // 似乎这个参数不是必须的，先随机生成一个
@@ -742,7 +961,10 @@ class DouyinSite implements LiveSite {
 
     var owner = room["owner"];
     var anchor = roomInfo["anchor"];
-    final categoryInfo = _resolveDouyinCategoryInfo(room);
+    final categoryInfo = DouyinSite.resolveCategoryInfo(
+      room,
+      container: roomInfo,
+    );
     var roomStatus = (asT<int?>(room["status"]) ?? 0) == 2;
 
     // 主要是为了获取cookie,用于弹幕websocket连接

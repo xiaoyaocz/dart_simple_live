@@ -192,6 +192,9 @@ class LocalStorageService extends GetxService {
   static const String kPlayerClockEnable = "PlayerClockEnable";
   static const String kPlayerClockPosition = "PlayerClockPosition";
 
+  // 自定义分区列表（JSON）
+  static const String kCustomCategories = "CustomCategories";
+
   late Box settingsBox;
   late Box<String> shieldBox;
   late Box<String> shieldPresetBox;

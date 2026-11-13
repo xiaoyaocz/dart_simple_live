@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../app/log.dart';
 import '../models/db/iptv_favorite.dart';
 import '../models/db/iptv_playlist.dart';
+import '../modules/iptv/parser/aggregated_channel.dart';
 import '../modules/iptv/parser/iptv_channel.dart';
 import '../modules/iptv/parser/m3u_parser.dart';
 import '../requests/http_client.dart';
@@ -41,6 +42,8 @@ class IptvService extends GetxService {
 
   /// 订阅源解析结果的内存缓存，避免重复拉取
   final Map<String, M3uParseResult> _cache = <String, M3uParseResult>{};
+  /// 跨源聚合结果缓存
+  AggregatedParseResult? aggregatedCache;
 
   /// 加载状态可观察变量，供页面显示进度
   final RxBool isLoading = false.obs;
@@ -310,20 +313,18 @@ class IptvService extends GetxService {
         .toList();
   }
 
-  // ============ 收藏 ============
-
+  // ==================== 收藏功能 ====================
   List<IptvFavorite> getFavorites() => favoriteBox.values.toList();
-
   bool isFavorite(String id) => favoriteBox.containsKey(id);
+  static String favoriteId(String playlistId, String url) => "${playlistId}_$url";
 
-  static String favoriteId(String playlistId, String url) =>
-      "${playlistId}_$url";
-
+  /// 聚合频道收藏/取消
   Future<void> toggleFavorite({
     required String playlistId,
-    required IptvChannel channel,
+    required AggregatedChannel channel,
+    required IptvLine line,
   }) async {
-    final id = favoriteId(playlistId, channel.url);
+    final id = favoriteId(playlistId, line.url);
     if (favoriteBox.containsKey(id)) {
       await favoriteBox.delete(id);
       return;
@@ -333,12 +334,144 @@ class IptvService extends GetxService {
       IptvFavorite(
         id: id,
         playlistId: playlistId,
-        channelId: channel.id,
+        channelId: line.channelId,
         name: channel.name,
-        logo: channel.logo,
+        logo: line.logo,
         group: channel.group,
-        url: channel.url,
+        url: line.url,
+        sourceName: line.sourceName,
       ),
     );
+  }
+
+  // ==================== 跨源聚合逻辑 ====================
+
+  /// 标准化频道名称，用于跨源同名匹配：去除空格、横杠、转小写
+  String _normalizeName(String name) {
+    return name.replaceAll(RegExp(r'[\s\-_]+'), "").toLowerCase();
+  }
+
+  /// 拉取所有启用源并聚合频道，单源失败自动跳过，带进度提示
+  Future<AggregatedParseResult> refreshAggregated() async {
+    isLoading.value = true;
+    final activeSources = enabledSources;
+    totalSourceCount.value = activeSources.length;
+    final allSourceResults = <M3uParseResult>[];
+    final allEpg = <String>{};
+
+    for (var i = 0; i < activeSources.length; i++) {
+      currentSourceIndex.value = i + 1;
+      final source = activeSources[i];
+      loadingMessage.value = "正在拉取 ${source.name}（${i+1}/${activeSources.length}）...";
+      // 每个源尝试所有镜像，成功即停止
+      M3uParseResult? sourceResult;
+      for (final url in source.urls) {
+        try {
+          final content = await HttpClient.instance.getText(
+            url,
+            header: {},
+          ).timeout(const Duration(seconds: 5));
+          sourceResult = M3uParser.parse(content, baseUrl: url);
+          break;
+        } catch (e) {
+          Log.w("源 ${source.name} 地址 $url 拉取失败，尝试下一个镜像");
+        }
+      }
+      if (sourceResult != null) {
+        allSourceResults.add(sourceResult);
+        allEpg.addAll(sourceResult.epgUrls);
+      }
+    }
+
+    if (allSourceResults.isEmpty) {
+      isLoading.value = false;
+      throw Exception("所有启用源均无法访问");
+    }
+
+    // 按标准化名称聚合频道
+    final channelMap = <String, List<IptvLine>>{};
+    final channelBaseInfo = <String, ({String name, String group, String logo})>{};
+
+    for (var sourceIndex = 0; sourceIndex < allSourceResults.length; sourceIndex++) {
+      final result = allSourceResults[sourceIndex];
+      final sourceName = activeSources[sourceIndex].name;
+      for (final ch in result.channels) {
+        final key = _normalizeName(ch.name);
+        final line = IptvLine(
+          sourceName: sourceName,
+          url: ch.url,
+          logo: ch.logo,
+          channelId: ch.id,
+        );
+        if (!channelMap.containsKey(key)) {
+          channelMap[key] = <IptvLine>[];
+          channelBaseInfo[key] = (name: ch.name, group: ch.group, logo: ch.logo);
+        }
+        channelMap[key]!.add(line);
+      }
+    }
+
+    // 构建聚合频道列表
+    var channels = channelMap.entries.map((entry) {
+      final base = channelBaseInfo[entry.key]!;
+      return AggregatedChannel(
+        name: base.name,
+        group: base.group,
+        logo: base.logo,
+        lines: entry.value,
+      );
+    }).toList();
+
+    // 排序：央视、卫视置顶，央视按数字自然排序，其余按名称
+    channels = _sortAggregatedChannels(channels);
+
+    final result = AggregatedParseResult(
+      channels: channels,
+      epgUrls: allEpg.toList(),
+    );
+    aggregatedCache = result;
+    isLoading.value = false;
+    return result;
+  }
+
+  /// 聚合频道排序：央视、卫视置顶，央视数字自然排序
+  List<AggregatedChannel> _sortAggregatedChannels(List<AggregatedChannel> list) {
+    list.sort((a, b) {
+      final aGroup = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
+      final bGroup = b.group == "央视频道" ? 0 : (b.group == "卫视频道" ? 1 : 2);
+      if (aGroup != bGroup) return aGroup.compareTo(bGroup);
+      if (aGroup == 0) {
+        final aNum = _extractCctvNumber(a.name);
+        final bNum = _extractCctvNumber(b.name);
+        if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+      }
+      return a.name.compareTo(b.name);
+    });
+    return list;
+  }
+
+  /// 提取CCTV数字
+  int? _extractCctvNumber(String name) {
+    final match = RegExp(r'CCTV-?(\d+)').firstMatch(name);
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+
+  /// 获取聚合结果，优先缓存
+  Future<AggregatedParseResult> getAggregated({bool forceRefresh = false}) async {
+    if (!forceRefresh && aggregatedCache != null) return aggregatedCache!;
+    return await refreshAggregated();
+  }
+
+  /// 获取聚合分组列表
+  List<String> getAggregatedGroups(AggregatedParseResult result) {
+    final groups = result.channels.map((e) => e.group).toSet().toList();
+    groups.sort((a, b) {
+      if (a == "央视频道") return -1;
+      if (b == "央视频道") return 1;
+      if (a == "卫视频道") return -1;
+      if (b == "卫视频道") return 1;
+      return a.compareTo(b);
+    });
+    return groups;
   }
 }

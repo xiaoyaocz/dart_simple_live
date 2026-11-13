@@ -12,6 +12,7 @@ class IptvFavorite {
     required this.logo,
     required this.group,
     required this.url,
+    this.sourceName = "",
   });
 
   /// 唯一键：订阅源 id + 频道地址，避免跨源冲突
@@ -37,6 +38,10 @@ class IptvFavorite {
   @HiveField(6)
   String url;
 
+  /// 收藏线路所属的源名称，用于同步还原对应源的频道
+  @HiveField(7)
+  String sourceName;
+
   factory IptvFavorite.fromJson(Map<String, dynamic> json) {
     final playlistId = json["playlistId"]?.toString() ?? "";
     final url = json["url"]?.toString() ?? "";
@@ -50,6 +55,7 @@ class IptvFavorite {
       logo: json["logo"]?.toString() ?? "",
       group: json["group"]?.toString() ?? "",
       url: url,
+      sourceName: json["sourceName"]?.toString() ?? "",
     );
   }
 
@@ -61,5 +67,6 @@ class IptvFavorite {
         "logo": logo,
         "group": group,
         "url": url,
+        "sourceName": sourceName,
       };
 }

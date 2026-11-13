@@ -61,17 +61,27 @@ class IptvChannelsController extends BaseController {
       lineStatus[line.url] = 0;
     }
     const concurrency = 5;
-    final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 5), receiveTimeout: const Duration(seconds: 5)));
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
+      headers: {"Range": "bytes=0-1023"},
+    ));
     for (var i = 0; i < allLines.length; i += concurrency) {
       final batch = allLines.skip(i).take(concurrency).toList();
       await Future.wait(batch.map((line) async {
         final sw = Stopwatch()..start();
         try {
-          await dio.head(line.url);
+          // 用GET Range替代HEAD，兼容不支持HEAD的流媒体服务器
+          await dio.get(line.url);
           sw.stop();
           lineStatus[line.url] = sw.elapsedMilliseconds < 2000 ? 1 : 2;
-        } catch (_) {
-          lineStatus[line.url] = 3;
+        } catch (e) {
+          // 403/401但能连通也算可用，仅网络超时/连接失败标红
+          if (e is DioException && (e.response?.statusCode ?? 0) > 0) {
+            lineStatus[line.url] = sw.elapsedMilliseconds < 2000 ? 1 : 2;
+          } else {
+            lineStatus[line.url] = 3;
+          }
         }
       }));
     }

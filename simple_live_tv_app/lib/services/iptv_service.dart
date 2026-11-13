@@ -37,6 +37,10 @@ class IptvService extends GetxService {
   late Box<IptvFavorite> favoriteBox;
 
   AggregatedParseResult? aggregatedCache;
+  /// 聚合缓存生成时间，控制自动过期，同步源更新
+  DateTime? _aggregatedCacheTime;
+  /// 缓存自动过期时间：4小时，匹配公开源更新频率
+  static const Duration _cacheMaxAge = Duration(hours: 4);
 
   final RxBool isLoading = false.obs;
   final RxInt currentSourceIndex = 0.obs;
@@ -304,6 +308,7 @@ class IptvService extends GetxService {
     channels = _sortAggregatedChannels(channels);
     final result = AggregatedParseResult(channels: channels, epgUrls: allEpg.toList());
     aggregatedCache = result;
+    _aggregatedCacheTime = DateTime.now();
     isLoading.value = false;
     return result;
   }
@@ -329,7 +334,10 @@ class IptvService extends GetxService {
   }
 
   Future<AggregatedParseResult> getAggregated({bool forceRefresh = false}) async {
-    if (!forceRefresh && aggregatedCache != null) return aggregatedCache!;
+    final cacheValid = aggregatedCache != null &&
+        _aggregatedCacheTime != null &&
+        DateTime.now().difference(_aggregatedCacheTime!) < _cacheMaxAge;
+    if (!forceRefresh && cacheValid) return aggregatedCache!;
     return refreshAggregated();
   }
 

@@ -44,6 +44,10 @@ class IptvService extends GetxService {
   final Map<String, M3uParseResult> _cache = <String, M3uParseResult>{};
   /// 跨源聚合结果缓存
   AggregatedParseResult? aggregatedCache;
+  /// 聚合缓存生成时间，控制自动过期，同步源更新
+  DateTime? _aggregatedCacheTime;
+  /// 缓存自动过期时间：4小时，匹配公开源6小时/每日更新频率
+  static const Duration _cacheMaxAge = Duration(hours: 4);
 
   /// 加载状态可观察变量，供页面显示进度
   final RxBool isLoading = false.obs;
@@ -485,6 +489,7 @@ class IptvService extends GetxService {
       epgUrls: allEpg.toList(),
     );
     aggregatedCache = result;
+    _aggregatedCacheTime = DateTime.now();
     isLoading.value = false;
     return result;
   }
@@ -511,9 +516,12 @@ class IptvService extends GetxService {
     return match == null ? null : int.tryParse(match.group(1)!);
   }
 
-  /// 获取聚合结果，优先缓存
+  /// 获取聚合结果，优先未过期缓存，支持手动强制刷新
   Future<AggregatedParseResult> getAggregated({bool forceRefresh = false}) async {
-    if (!forceRefresh && aggregatedCache != null) return aggregatedCache!;
+    final cacheValid = aggregatedCache != null &&
+        _aggregatedCacheTime != null &&
+        DateTime.now().difference(_aggregatedCacheTime!) < _cacheMaxAge;
+    if (!forceRefresh && cacheValid) return aggregatedCache!;
     return await refreshAggregated();
   }
 

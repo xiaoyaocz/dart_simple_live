@@ -38,8 +38,19 @@ class Sites {
 
   static List<Site> get supportSites {
     return AppSettingsController.instance.siteSort
-        .map((key) => allSites[key]!)
+        .map((key) => allSites[key])
+        .whereType<Site>()
         .toList();
+  }
+
+  /// 分类页可见平台：只受「分类平台」显示开关影响，
+  /// 首页/搜索/关注等其它入口仍使用完整列表
+  static List<Site> get visibleSites {
+    final settings = AppSettingsController.instance;
+    final list =
+        supportSites.where((site) => settings.isSiteVisible(site.id)).toList();
+    // 防呆：配置异常导致全部隐藏时回退到完整列表
+    return list.isEmpty ? supportSites : list;
   }
 }
 

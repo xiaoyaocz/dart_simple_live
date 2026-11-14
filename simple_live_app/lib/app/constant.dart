@@ -5,6 +5,9 @@ class Constant {
   static const String kUpdateFollow = "UpdateFollow";
   static const String kUpdateHistory = "UpdateHistory";
 
+  /// “我的”入口 key，底栏允许自定义隐藏时它必须保留，避免设置入口丢失
+  static const String kHomeMine = "user";
+
   static final Map<String, HomePageItem> allHomePages = {
     "recommend": HomePageItem(
       iconData: Remix.home_smile_line,
@@ -21,7 +24,7 @@ class Constant {
       title: "分类",
       index: 2,
     ),
-    "user": HomePageItem(
+    kHomeMine: HomePageItem(
       iconData: Remix.user_smile_line,
       title: "我的",
       index: 3,

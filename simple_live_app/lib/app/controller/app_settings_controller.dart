@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/desktop_startup_args.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/mobile_safe_insets.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -468,6 +469,7 @@ class AppSettingsController extends GetxController {
 
     initSiteSort();
     initHomeSort();
+    initHiddenEntries();
     initLiveRoomTabSort();
     initLiveRoomQuickAccessSettings();
     initLiveRoomShortcutSettings();
@@ -529,6 +531,37 @@ class AppSettingsController extends GetxController {
     }
 
     homeSort.value = sort;
+  }
+
+  /// 读取底栏入口与平台的隐藏状态；新增入口默认可见
+  void initHiddenEntries() {
+    final homeKeys = Constant.allHomePages.keys.toSet();
+    final siteKeys = Sites.allSites.keys.toSet();
+    homeHidden
+      ..clear()
+      ..addAll(
+        LocalStorageService.instance
+            .getValue(LocalStorageService.kHomeHidden, "")
+            .split(",")
+            .where(
+              (item) =>
+                  item.isNotEmpty &&
+                  item != Constant.kHomeMine &&
+                  homeKeys.contains(item),
+            ),
+      );
+    siteHidden
+      ..clear()
+      ..addAll(
+        LocalStorageService.instance
+            .getValue(LocalStorageService.kSiteHidden, "")
+            .split(",")
+            .where((item) => item.isNotEmpty && siteKeys.contains(item)),
+      );
+    // 平台全部被隐藏会让分类页无标签可建，按损坏配置回退
+    if (siteHidden.length >= siteKeys.length) {
+      siteHidden.clear();
+    }
   }
 
   void initLiveRoomTabSort() {
@@ -1573,6 +1606,9 @@ class AppSettingsController extends GetxController {
     if (Get.isRegistered<CustomCategoryService>()) {
       CustomCategoryService.instance.reloadFromStorage();
     }
+    // 导入配置/重置后让底栏与平台标签立即跟随新配置
+    EventBus.instance.emit(EventBus.kUpdateHomeTabs, 0);
+    EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
   }
 
   void importShieldValue(String rawValue) {
@@ -2141,6 +2177,8 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kSiteSort,
       siteSort.join(","),
     );
+    EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
+    EventBus.instance.emit(Constant.kUpdateFollow, 0);
   }
 
   RxList<String> homeSort = RxList<String>();
@@ -2150,6 +2188,55 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kHomeSort,
       homeSort.join(","),
     );
+    EventBus.instance.emit(EventBus.kUpdateHomeTabs, 0);
+  }
+
+  /// 底栏被隐藏的入口 key；“我的”不可隐藏
+  RxSet<String> homeHidden = <String>{}.obs;
+
+  /// 分类页被隐藏的平台 key
+  RxSet<String> siteHidden = <String>{}.obs;
+
+  bool isHomeVisible(String key) => !homeHidden.contains(key);
+
+  bool isSiteVisible(String key) => !siteHidden.contains(key);
+
+  void setHomeVisible(String key, bool visible) {
+    if (!Constant.allHomePages.containsKey(key) || key == Constant.kHomeMine) {
+      return;
+    }
+    if (visible) {
+      homeHidden.remove(key);
+    } else {
+      homeHidden.add(key);
+    }
+    homeHidden.refresh();
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kHomeHidden,
+      homeHidden.join(","),
+    );
+    EventBus.instance.emit(EventBus.kUpdateHomeTabs, 0);
+  }
+
+  void setSiteVisible(String key, bool visible) {
+    if (!Sites.allSites.containsKey(key)) {
+      return;
+    }
+    if (visible) {
+      siteHidden.remove(key);
+    } else {
+      // 至少保留一个平台可见，否则分类页无标签可用
+      if (siteHidden.length >= Sites.allSites.length - 1) {
+        return;
+      }
+      siteHidden.add(key);
+    }
+    siteHidden.refresh();
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kSiteHidden,
+      siteHidden.join(","),
+    );
+    EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
   }
 
   RxList<String> liveRoomTabSort = RxList<String>();

@@ -25,6 +25,7 @@ class IptvPlayerController extends GetxController {
   final FocusNode focusNode = FocusNode();
 
   Timer? _hideTimer;
+  Timer? _bufferingTimer;
 
   IptvPlayerController() : currentIndex = 0;
 
@@ -51,6 +52,13 @@ class IptvPlayerController extends GetxController {
       SmartDialog.showToast("播放失败，可尝试切换线路");
     });
     player.stream.volume.listen((v) => currentVolume.value = v);
+    // 监听缓冲状态，长时间缓冲自动重试，避免卡死暂停
+    player.stream.buffering.listen((buffering) {
+      _bufferingTimer?.cancel();
+      if (buffering) {
+        _bufferingTimer = Timer(const Duration(seconds: 8), reloadCurrent);
+      }
+    });
     WakelockPlus.enable();
     play(currentIndex);
     showControls();
@@ -76,6 +84,12 @@ class IptvPlayerController extends GetxController {
   }
 
   void switchChannel(int delta) => play(currentIndex + delta);
+
+  /// 重新加载当前线路，解决临时卡顿问题
+  void reloadCurrent() {
+    player.open(Media(currentLine.url), play: true);
+    showControls();
+  }
 
   void togglePlayPause() {
     if (player.state.playing) {
@@ -112,6 +126,7 @@ class IptvPlayerController extends GetxController {
   @override
   void onClose() {
     _hideTimer?.cancel();
+    _bufferingTimer?.cancel();
     player.dispose();
     WakelockPlus.disable();
     focusNode.dispose();

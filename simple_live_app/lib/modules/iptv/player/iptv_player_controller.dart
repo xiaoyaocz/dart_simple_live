@@ -6,9 +6,11 @@ import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/modules/iptv/parser/aggregated_channel.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class IptvPlayerController extends GetxController {
   late final List<AggregatedChannel> channels;
@@ -162,6 +164,13 @@ class IptvPlayerController extends GetxController {
     currentVolume.value = value;
     player.setVolume(value);
   }
+
+  /// 音量上限：跟随设置页「音量增强」开关（开=300 软件增益，关=100），
+  /// 与主播放器共用 PlayerVolumePolicy；mpv 侧 volume-max=300 已在初始化时应用
+  double get volumeLimit =>
+      AppSettingsController.instance.volumeBoostEnable.value
+          ? PlayerVolumePolicy.maxVolume
+          : PlayerVolumePolicy.baseVolume;
 
   void toggleControls() {
     if (controlsVisible.value) {

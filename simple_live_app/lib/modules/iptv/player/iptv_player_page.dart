@@ -147,15 +147,16 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
                 onPressed: () => _showLineSelector(context),
               ),
               const Spacer(),
-              // 音量滑块
+              // 音量滑块：上限随「音量增强」开关在 300/100 间切换
               const Icon(Icons.volume_up, color: Colors.white),
               SizedBox(
                 width: 120,
                 child: Obx(
                   () => Slider(
-                    value: controller.currentVolume.value,
+                    value: controller.currentVolume.value
+                        .clamp(0, controller.volumeLimit),
                     min: 0,
-                    max: 100,
+                    max: controller.volumeLimit,
                     onChanged: controller.setVolume,
                   ),
                 ),

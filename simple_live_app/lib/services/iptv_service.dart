@@ -410,36 +410,48 @@ class IptvService extends GetxService {
     return name.replaceAll(RegExp(r'[\s\-_]+'), "").toLowerCase();
   }
 
-  /// 拉取所有启用源并聚合频道，单源失败自动跳过，带进度提示
+  /// 拉取单个源，依次尝试所有镜像，成功即返回；全部失败返回 null
+  Future<M3uParseResult?> _fetchSourceWithMirrors(IptvSourceMeta source) async {
+    for (final url in source.urls) {
+      try {
+        final content = await HttpClient.instance
+            .getText(url, header: {})
+            .timeout(const Duration(seconds: 5));
+        return M3uParser.parse(content, baseUrl: url);
+      } catch (e) {
+        Log.w("源 ${source.name} 地址 $url 拉取失败，尝试下一个镜像");
+      }
+    }
+    return null;
+  }
+
+  /// 拉取所有启用源并聚合频道，各源并发拉取（源内镜像串行容灾），单源失败自动跳过
   Future<AggregatedParseResult> refreshAggregated() async {
     isLoading.value = true;
     final activeSources = enabledSources;
     totalSourceCount.value = activeSources.length;
-    final allSourceResults = <M3uParseResult>[];
-    final allEpg = <String>{};
 
-    for (var i = 0; i < activeSources.length; i++) {
-      currentSourceIndex.value = i + 1;
-      final source = activeSources[i];
-      loadingMessage.value = "正在拉取 ${source.name}（${i+1}/${activeSources.length}）...";
-      // 每个源尝试所有镜像，成功即停止
-      M3uParseResult? sourceResult;
-      for (final url in source.urls) {
-        try {
-          final content = await HttpClient.instance.getText(
-            url,
-            header: {},
-          ).timeout(const Duration(seconds: 5));
-          sourceResult = M3uParser.parse(content, baseUrl: url);
-          break;
-        } catch (e) {
-          Log.w("源 ${source.name} 地址 $url 拉取失败，尝试下一个镜像");
-        }
-      }
-      if (sourceResult != null) {
-        allSourceResults.add(sourceResult);
-        allEpg.addAll(sourceResult.epgUrls);
-      }
+    var completed = 0;
+    final fetched = await Future.wait(
+      activeSources.map((source) async {
+        final result = await _fetchSourceWithMirrors(source);
+        completed++;
+        currentSourceIndex.value = completed;
+        loadingMessage.value =
+            result == null
+            ? "${source.name} 拉取失败，已跳过（$completed/${activeSources.length}）"
+            : "已拉取 ${source.name}（$completed/${activeSources.length}）...";
+        return (sourceName: source.name, result: result);
+      }),
+    );
+
+    final allSourceResults = fetched
+        .where((e) => e.result != null)
+        .map((e) => (sourceName: e.sourceName, result: e.result!))
+        .toList();
+    final allEpg = <String>{};
+    for (final entry in allSourceResults) {
+      allEpg.addAll(entry.result.epgUrls);
     }
 
     if (allSourceResults.isEmpty) {
@@ -451,13 +463,12 @@ class IptvService extends GetxService {
     final channelMap = <String, List<IptvLine>>{};
     final channelBaseInfo = <String, ({String name, String group, String logo})>{};
 
-    for (var sourceIndex = 0; sourceIndex < allSourceResults.length; sourceIndex++) {
-      final result = allSourceResults[sourceIndex];
-      final sourceName = activeSources[sourceIndex].name;
-      for (final ch in result.channels) {
+    // 源名随结果一起携带，避免中间源失败时后续源频道标签错位
+    for (final entry in allSourceResults) {
+      for (final ch in entry.result.channels) {
         final key = _normalizeName(ch.name);
         final line = IptvLine(
-          sourceName: sourceName,
+          sourceName: entry.sourceName,
           url: ch.url,
           logo: ch.logo,
           channelId: ch.id,

@@ -8,6 +8,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:simple_live_tv_app/app/log.dart';
 import 'package:simple_live_tv_app/modules/iptv/parser/aggregated_channel.dart';
+import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/services/mpv_options_service.dart';
 
 class IptvPlayerController extends GetxController {
@@ -78,7 +79,7 @@ class IptvPlayerController extends GetxController {
   void play(int index) {
     if (index < 0 || index >= channels.length) return;
     currentIndex = index;
-    currentLineIndex = 0;
+    currentLineIndex = _initialLineIndex();
     _failedLineUrls.clear();
     _bufferReloadCount = 0;
     currentTitle.value = currentChannel.name;
@@ -88,14 +89,24 @@ class IptvPlayerController extends GetxController {
     showControls();
   }
 
+  /// 频道起播线路：上次手动选择的源在该频道存在时优先使用，否则第一条
+  int _initialLineIndex() {
+    final preferred = IptvService.instance.preferredLineSource;
+    if (preferred.isEmpty) return 0;
+    final index = currentChannel.lines
+        .indexWhere((e) => e.sourceName == preferred);
+    return index >= 0 ? index : 0;
+  }
+
   void switchLine(int lineIndex) {
     if (lineIndex < 0 || lineIndex >= currentChannel.lines.length) return;
     currentLineIndex = lineIndex;
-    // 手动选择的线路视为全新开始
+    // 手动选择的线路视为全新开始，并记忆该源偏好
     _failedLineUrls.clear();
     _bufferReloadCount = 0;
     _bufferingTimer?.cancel();
     _openedUrl = currentLine.url;
+    IptvService.instance.setPreferredLineSource(currentLine.sourceName);
     player.open(Media(currentLine.url), play: true);
     SmartDialog.showToast("已切换到 ${currentLine.sourceName} 线路");
   }

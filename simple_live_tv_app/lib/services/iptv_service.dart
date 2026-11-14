@@ -368,6 +368,20 @@ class IptvService extends GetxService {
     }
   }
 
+  // ==================== 线路偏好记忆 ====================
+
+  /// 上次手动选择的线路源名称，起播时优先命中同名源的线路
+  String get preferredLineSource => LocalStorageService.instance
+      .getValue<String>(LocalStorageService.kIptvPreferredLineSource, "");
+
+  /// 记录手动选择的线路源名称
+  Future<void> setPreferredLineSource(String sourceName) async {
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvPreferredLineSource,
+      sourceName,
+    );
+  }
+
   // ==================== 聚合缓存持久化 ====================
 
   /// 启动时从磁盘恢复上次聚合结果

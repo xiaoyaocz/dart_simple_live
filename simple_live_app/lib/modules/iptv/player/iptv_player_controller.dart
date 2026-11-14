@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/modules/iptv/parser/aggregated_channel.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -80,11 +81,11 @@ class IptvPlayerController extends GetxController {
   AggregatedChannel get currentChannel => channels[currentIndex];
   IptvLine get currentLine => currentChannel.lines[currentLineIndex];
 
-  /// 播放指定频道，默认使用第一条线路
+  /// 播放指定频道，优先命中上次手动选择的线路源
   void play(int index) {
     if (index < 0 || index >= channels.length) return;
     currentIndex = index;
-    currentLineIndex = 0;
+    currentLineIndex = _initialLineIndex();
     _failedLineUrls.clear();
     _bufferReloadCount = 0;
     currentTitle.value = currentChannel.name;
@@ -94,15 +95,25 @@ class IptvPlayerController extends GetxController {
     showControls();
   }
 
+  /// 频道起播线路：上次手动选择的源在该频道存在时优先使用，否则第一条
+  int _initialLineIndex() {
+    final preferred = IptvService.instance.preferredLineSource;
+    if (preferred.isEmpty) return 0;
+    final index = currentChannel.lines
+        .indexWhere((e) => e.sourceName == preferred);
+    return index >= 0 ? index : 0;
+  }
+
   /// 切换当前频道的线路，无缝切换播放地址
   void switchLine(int lineIndex) {
     if (lineIndex < 0 || lineIndex >= currentChannel.lines.length) return;
     currentLineIndex = lineIndex;
-    // 手动选择的线路视为全新开始
+    // 手动选择的线路视为全新开始，并记忆该源偏好
     _failedLineUrls.clear();
     _bufferReloadCount = 0;
     _bufferingTimer?.cancel();
     _openedUrl = currentLine.url;
+    IptvService.instance.setPreferredLineSource(currentLine.sourceName);
     player.open(Media(currentLine.url), play: true);
     SmartDialog.showToast("已切换到 ${currentLine.sourceName} 线路");
   }

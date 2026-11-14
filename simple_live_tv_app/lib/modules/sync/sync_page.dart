@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
 import 'package:simple_live_tv_app/modules/sync/sync_controller.dart';
+import 'package:simple_live_tv_app/routes/route_path.dart';
 import 'package:simple_live_tv_app/services/signalr_service.dart';
 import 'package:simple_live_tv_app/services/sync_service.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
@@ -41,6 +42,15 @@ class SyncPage extends GetView<SyncController> {
                 ),
               ),
               const Spacer(),
+              HighlightButton(
+                focusNode: AppFocusNode(),
+                iconData: Icons.cloud_outlined,
+                text: "WebDAV",
+                onTap: () {
+                  Get.toNamed(RoutePath.kWebDAV);
+                },
+              ),
+              AppStyle.hGap48,
             ],
           ),
           AppStyle.vGap24,
@@ -59,10 +69,19 @@ class SyncPage extends GetView<SyncController> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      AppStyle.vGap12,
+                      Text(
+                        "当前服务：${SignalRService.configuredServerLabel}\n"
+                        "两台设备必须选择相同服务；自建服务器与 Cloudflare 的房间不互通",
+                        style: AppStyle.subTextStyleWhite,
+                        textAlign: TextAlign.center,
+                      ),
                       AppStyle.vGap16,
                       Obx(
                         () => Visibility(
-                          visible: SyncService.instance.httpRunning.value,
+                          visible: controller.currentRoomId.value.isNotEmpty &&
+                              controller.state.value ==
+                                  SignalRConnectionState.connected,
                           child: GestureDetector(
                             onTap: () {
                               Get.back();
@@ -186,9 +205,25 @@ class SyncPage extends GetView<SyncController> {
                         () => Visibility(
                           visible: !SyncService.instance.httpRunning.value,
                           child: Text(
-                            'HTTP服务未启动：${SyncService.instance.httpErrorMsg}，请尝试重启应用',
+                            SyncService.instance.lanErrorMsg.isEmpty
+                                ? 'HTTP服务未启动，请尝试重启应用'
+                                : SyncService.instance.lanErrorMsg,
                             style: AppStyle.textStyleWhite,
                             textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      Obx(
+                        () => Visibility(
+                          visible: SyncService.instance.httpRunning.value &&
+                              SyncService.instance.udpErrorMsg.value.isNotEmpty,
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 12.w),
+                            child: Text(
+                              SyncService.instance.udpErrorMsg.value,
+                              style: AppStyle.subTextStyleWhite,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
                       ),

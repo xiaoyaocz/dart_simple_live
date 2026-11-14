@@ -16,7 +16,7 @@ class AutoExitSettingsPage extends GetView<AppSettingsController> {
         title: const Text("定时关闭设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.pagePadding(),
         children: [
           SettingsCard(
             child: Column(

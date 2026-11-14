@@ -28,6 +28,12 @@ class Sites {
       name: "抖音直播",
       liveSite: DouyinSite(),
     ),
+    Constant.kKuaishou: Site(
+      id: Constant.kKuaishou,
+      logo: "assets/images/kuaishou.png",
+      name: "快手直播",
+      liveSite: KuaishouSite(),
+    ),
   };
 
   static List<Site> get supportSites {

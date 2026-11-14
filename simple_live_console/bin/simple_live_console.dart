@@ -39,7 +39,7 @@ void printHelp() {
 }
 
 Future printInfo(String url) async {
-  var urlInfo = parseUrl(url);
+  var urlInfo = await parseUrl(url);
   LiveSite site = urlInfo.first;
   var id = urlInfo.last;
   var detail = await site.getRoomDetail(roomId: id);
@@ -71,7 +71,7 @@ Future printInfo(String url) async {
 }
 
 Future printDanmaku(String url) async {
-  var urlInfo = parseUrl(url);
+  var urlInfo = await parseUrl(url);
   LiveSite site = urlInfo.first;
   var id = urlInfo.last;
   var detail = await site.getRoomDetail(roomId: id);
@@ -97,24 +97,54 @@ Future printDanmaku(String url) async {
   await Future(() {});
 }
 
-List parseUrl(String url) {
-  if (url.contains("bilibili.com")) {
-    var id =
-        RegExp(r"bilibili\.com/([\d|\w]+)").firstMatch(url)?.group(1) ?? "";
-    return [BiliBiliSite(), id];
+const int _maxParseDepth = 3;
+
+Future<List> parseUrl(String url) async {
+  var parsed = LiveUrlParser.parse(url);
+  if (parsed == null) {
+    throw Exception("链接解析失败");
   }
-  if (url.contains("huya.com")) {
-    var id = RegExp(r"huya\.com/([\d|\w]+)").firstMatch(url)?.group(1) ?? "";
-    return [HuyaSite(), id];
+  var depth = 0;
+  while (parsed.isShortLink) {
+    if (depth >= _maxParseDepth) {
+      throw Exception("链接解析失败");
+    }
+    final location = await _resolveLocation(parsed.uri);
+    parsed = location == null ? null : LiveUrlParser.parse(location);
+    if (parsed == null) {
+      throw Exception("链接解析失败");
+    }
+    depth++;
   }
-  if (url.contains("douyu.com")) {
-    var id = RegExp(r"douyu\.com/([\d|\w]+)").firstMatch(url)?.group(1) ?? "";
-    return [DouyuSite(), id];
+  if (parsed.roomId.isEmpty) {
+    throw Exception("链接解析失败");
   }
-  if (url.contains("live.douyin.com")) {
-    var id =
-        RegExp(r"live\.douyin\.com/([\d|\w]+)").firstMatch(url)?.group(1) ?? "";
-    return [DouyinSite(), id];
+  switch (parsed.siteId) {
+    case LiveUrlParser.siteBilibili:
+      return [BiliBiliSite(), parsed.roomId];
+    case LiveUrlParser.siteDouyu:
+      return [DouyuSite(), parsed.roomId];
+    case LiveUrlParser.siteHuya:
+      return [HuyaSite(), parsed.roomId];
+    case LiveUrlParser.siteDouyin:
+      return [DouyinSite(), parsed.roomId];
   }
   throw Exception("链接解析失败");
+}
+
+Future<String?> _resolveLocation(Uri uri) async {
+  final client = HttpClient();
+  try {
+    final request = await client.getUrl(uri);
+    request.followRedirects = false;
+    final response = await request.close();
+    if (!response.isRedirect) {
+      return null;
+    }
+    return response.headers.value(HttpHeaders.locationHeader);
+  } catch (e) {
+    return null;
+  } finally {
+    client.close();
+  }
 }

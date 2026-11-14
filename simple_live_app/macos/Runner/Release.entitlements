@@ -2,12 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- App Sandbox 已停用：沙盒进程对 /tmp 无写权限，而 media_kit 每次打开
+	     媒体都会把播放列表写到 Directory.systemTemp（TMPDIR 缺失时解析为 /tmp）
+	     再让 mpv loadlist 读取，写入失败被 safe_local_storage 静默吞掉，
+	     表现为 macOS 部分启动环境下所有直播间无法播放（Intel Mac 反馈实测）。
+	     本应用不走 App Store 分发，直接发 zip，无需沙盒。 -->
 	<key>com.apple.security.app-sandbox</key>
+	<false/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
 	<key>com.apple.security.network.client</key>
-    <true/>
-	<key>com.apple.security.files.user-selected.read-write</key>
-  	<true/>
+	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
 </dict>

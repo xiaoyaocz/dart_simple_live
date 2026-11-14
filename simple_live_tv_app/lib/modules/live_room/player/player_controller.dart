@@ -10,6 +10,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:simple_live_tv_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_tv_app/app/log.dart';
+import 'package:simple_live_tv_app/services/mpv_options_service.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 mixin PlayerMixin {
@@ -26,30 +28,15 @@ mixin PlayerMixin {
     ),
   );
 
-  /// 初始化播放器并设置 ao 参数
-  Future<void> initializePlayer() async {
-    var pp = player.platform as NativePlayer;
-
-    // media_kit 仓库更新导致的问题，临时解决办法
-    if (Platform.isAndroid) {
-      await pp.setProperty('force-seekable', 'yes');
-    }
-  }
-
   /// 视频控制器
   late final videoController = VideoController(
     player,
-    configuration: AppSettingsController.instance.playerCompatMode.value
-        ? const VideoControllerConfiguration(
-            vo: 'mediacodec_embed',
-            hwdec: 'mediacodec',
-          )
-        : VideoControllerConfiguration(
-            enableHardwareAcceleration:
-                AppSettingsController.instance.hardwareDecode.value,
-            androidAttachSurfaceAfterVideoParameters: false,
-          ),
+    configuration: MpvOptionsService.videoControllerConfiguration(),
   );
+
+  Future<void> initializePlayer() async {
+    await MpvOptionsService.applyToPlayer(player);
+  }
 }
 mixin PlayerStateMixin on PlayerMixin {
   /// 是否显示弹幕
@@ -235,13 +222,21 @@ class PlayerController extends BaseController
   StreamSubscription? _widthSubscription;
   StreamSubscription? _heightSubscription;
   StreamSubscription? _logSubscription;
+  DateTime? _lastAudioDiagnosticTime;
 
   void initStream() {
     _errorSubscription = player.stream.error.listen((event) {
-      Log.d("播放器错误：$event");
-      if (event.contains('no sound.')) {
+      if (PlayerErrorClassifier.isRecoverableAudioDiagnostic(event)) {
+        final now = DateTime.now();
+        if (_lastAudioDiagnosticTime == null ||
+            now.difference(_lastAudioDiagnosticTime!) >=
+                const Duration(seconds: 15)) {
+          _lastAudioDiagnosticTime = now;
+          Log.d("播放器音频诊断（已忽略）：$event");
+        }
         return;
       }
+      Log.d("播放器错误：$event");
       //SmartDialog.showToast(event);
       mediaError(event);
     });
@@ -253,6 +248,7 @@ class PlayerController extends BaseController
     });
     _logSubscription = player.stream.log.listen((event) {
       Log.d("播放器日志：$event");
+      _trackVideoDecodeError(event);
     });
     _widthSubscription = player.stream.width.listen((event) {
       Log.w(
@@ -260,6 +256,7 @@ class PlayerController extends BaseController
       width.value = event ?? 0;
       // isVertical.value =
       //     (player.state.height ?? 9) > (player.state.width ?? 16);
+      _checkInvalidVideoSize(event);
     });
     _heightSubscription = player.stream.height.listen((event) {
       Log.w(
@@ -267,8 +264,88 @@ class PlayerController extends BaseController
       height.value = event ?? 0;
       // isVertical.value =
       //     (player.state.height ?? 9) > (player.state.width ?? 16);
+      _checkInvalidVideoSize(event);
     });
   }
+
+  int _invalidVideoSizeSamples = 0;
+
+  /// 播放中视频尺寸连续异常（null/0）：Surface/解码输出失效的信号
+  /// （对齐移动端 Issue#57），连续 2 次后交给 onInvalidVideoSize 恢复
+  void _checkInvalidVideoSize(int? event) {
+    if (event != null && event > 0) {
+      _invalidVideoSizeSamples = 0;
+      return;
+    }
+    if (!player.state.playing) {
+      return;
+    }
+    _invalidVideoSizeSamples += 1;
+    if (_invalidVideoSizeSamples >= 2) {
+      _invalidVideoSizeSamples = 0;
+      onInvalidVideoSize();
+    }
+  }
+
+  /// 视频输出失效回调，由 LiveRoomController 实现恢复（重开当前流）
+  void onInvalidVideoSize() {}
+
+  Future<int?> readVideoOutputDropCount() async {
+    if (!Platform.isAndroid || player.platform is! NativePlayer) {
+      return null;
+    }
+    try {
+      final value = await (player.platform as NativePlayer)
+          .getProperty('frame-drop-count');
+      return int.tryParse(value.trim());
+    } catch (e) {
+      Log.d("读取 mpv 输出丢帧数失败: $e");
+      return null;
+    }
+  }
+
+  /// 黑屏判据（音频时钟在走但视频不渲染，位置看门狗看不见）：
+  /// mpv 的 vd（视频解码器）持续报 error 说明解码管线已挂，
+  /// 按窗口计数超阈值即交由 onVideoDecodeStall 走停滞恢复链。
+  /// 阈值取 15 次/30 秒：正常流偶尔的解码毛刺到不了这个量级，
+  /// 而 25fps 的死视频轨约 1 秒就能报够。
+  final List<DateTime> _videoDecodeErrorTimes = [];
+  DateTime? _lastVideoDecodeStallAt;
+  static const int _videoDecodeErrorThreshold = 15;
+  static const Duration _videoDecodeErrorWindow = Duration(seconds: 30);
+  static const Duration _videoDecodeStallCooldown = Duration(seconds: 30);
+
+  void _trackVideoDecodeError(PlayerLog event) {
+    if (event.prefix != "vd" || event.level != "error") {
+      return;
+    }
+    if (!player.state.playing || player.state.completed) {
+      return;
+    }
+    final now = DateTime.now();
+    _videoDecodeErrorTimes.add(now);
+    _videoDecodeErrorTimes.removeWhere(
+      (t) => t.isBefore(now.subtract(_videoDecodeErrorWindow)),
+    );
+    if (_videoDecodeErrorTimes.length < _videoDecodeErrorThreshold) {
+      return;
+    }
+    if (_lastVideoDecodeStallAt != null &&
+        now.difference(_lastVideoDecodeStallAt!) < _videoDecodeStallCooldown) {
+      return;
+    }
+    _lastVideoDecodeStallAt = now;
+    _videoDecodeErrorTimes.clear();
+    Log.w(
+      "${_videoDecodeErrorWindow.inSeconds}秒内视频解码错误达"
+      "$_videoDecodeErrorThreshold 次，判定画面停滞",
+    );
+    onVideoDecodeStall();
+  }
+
+  /// 画面停滞回调（声音正常但视频解码持续失败），由 LiveRoomController
+  /// 接入停滞恢复链（重刷→风暴记账→自动换台）
+  void onVideoDecodeStall() {}
 
   void disposeStream() {
     _errorSubscription?.cancel();

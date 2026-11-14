@@ -16,20 +16,24 @@ class IndexedPage extends GetView<IndexedController> {
             children: [
               Visibility(
                 visible: orientation == Orientation.landscape,
-                child: Obx(
-                  () => NavigationRail(
-                    selectedIndex: controller.index.value,
-                    onDestinationSelected: controller.setIndex,
-                    labelType: NavigationRailLabelType.none,
-                    destinations: controller.items
-                        .map(
-                          (item) => NavigationRailDestination(
-                            icon: Icon(item.iconData),
-                            label: Text(item.title),
-                            padding: AppStyle.edgeInsetsV8,
-                          ),
-                        )
-                        .toList(),
+                child: SafeArea(
+                  child: Obx(
+                    () => NavigationRail(
+                      selectedIndex: controller.index.value,
+                      onDestinationSelected: controller.setIndex,
+                      labelType: NavigationRailLabelType.none,
+                      groupAlignment: -1,
+                      scrollable: true,
+                      destinations: controller.items
+                          .map(
+                            (item) => NavigationRailDestination(
+                              icon: Icon(item.iconData),
+                              label: Text(item.title),
+                              padding: AppStyle.edgeInsetsV8,
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ),
               ),

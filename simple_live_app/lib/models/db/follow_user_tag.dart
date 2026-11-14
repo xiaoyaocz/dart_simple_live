@@ -22,10 +22,13 @@ class FollowUserTag {
   });
 
   factory FollowUserTag.fromJson(Map<String, dynamic> json) {
+    final rawUserIds = json['userId'];
     return FollowUserTag(
-      id: json['id'],
-      tag: json['tag'],
-      userId: List<String>.from(json['userId']),
+      id: json['id']?.toString().trim() ?? "",
+      tag: json['tag']?.toString().trim() ?? "",
+      userId: rawUserIds is List
+          ? rawUserIds.map((e) => e.toString()).toList()
+          : <String>[],
     );
   }
 

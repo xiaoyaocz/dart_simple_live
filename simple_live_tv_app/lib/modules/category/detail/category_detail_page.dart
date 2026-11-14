@@ -3,16 +3,29 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:get/get.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
+import 'package:simple_live_tv_app/modules/category/category_controller.dart';
 import 'package:simple_live_tv_app/modules/category/detail/category_detail_controller.dart';
 import 'package:simple_live_tv_app/routes/app_navigation.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 import 'package:simple_live_tv_app/widgets/card/live_room_card.dart';
+import 'package:simple_live_tv_app/widgets/highlight_widget.dart';
+import 'package:simple_live_tv_app/widgets/net_image.dart';
+import 'package:simple_live_tv_app/widgets/status/app_empty_widget.dart';
+import 'package:simple_live_tv_app/widgets/status/app_error_widget.dart';
 
 class CategoryDetailPage extends GetView<CategoryDetailController> {
-  const CategoryDetailPage({Key? key}) : super(key: key);
+  final String? _controllerTag;
+
+  @override
+  String? get tag => _controllerTag;
+
+  const CategoryDetailPage({Key? key, String? tag})
+      : _controllerTag = tag,
+        super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -70,40 +83,123 @@ class CategoryDetailPage extends GetView<CategoryDetailController> {
           ),
           AppStyle.vGap24,
           Expanded(
-            child: Obx(
-              () => MasonryGridView.count(
-                padding: AppStyle.edgeInsetsA48,
-                itemCount: controller.list.length,
-                crossAxisCount: 5,
-                crossAxisSpacing: 48.w,
-                mainAxisSpacing: 40.w,
-                controller: controller.scrollController,
-                itemBuilder: (_, i) {
-                  var item = controller.list[i];
-
-                  if (i == 0) {
-                    Future.delayed(Duration.zero, () {
-                      if (controller.currentPage == 2) {
-                        item.focusNode.requestFocus();
-                      }
-                    });
-                  }
-                  return LiveRoomCard(
-                    cover: item.cover,
-                    anchor: item.userName,
-                    title: item.title,
-                    focusNode: item.focusNode,
-                    roomId: item.roomId,
-                    online: item.online,
-                    onTap: () {
-                      AppNavigator.toLiveRoomDetail(
-                        site: controller.site,
-                        roomId: item.roomId,
+            child: controller.subCategory.hasChildren
+                ? _buildSubCategoryGrid(context)
+                : Obx(() {
+                    if (controller.pageError.value) {
+                      return AppErrorWidget(
+                        errorMsg: controller.errorMsg.value,
+                        onRefresh: controller.refreshData,
                       );
-                    },
-                  );
-                },
-              ),
+                    }
+                    if (controller.pageEmpty.value &&
+                        !controller.loadding.value) {
+                      return AppEmptyWidget(
+                        text: "暂无主播，请稍后再试",
+                        onRefresh: controller.refreshData,
+                      );
+                    }
+                    return MasonryGridView.count(
+                        padding: AppStyle.edgeInsetsA48,
+                        itemCount: controller.list.length,
+                        crossAxisCount: 5,
+                        crossAxisSpacing: 48.w,
+                        mainAxisSpacing: 40.w,
+                        controller: controller.scrollController,
+                        itemBuilder: (_, i) {
+                          var item = controller.list[i];
+
+                          if (i == 0) {
+                            Future.delayed(Duration.zero, () {
+                              if (controller.currentPage == 2) {
+                                item.focusNode.requestFocus();
+                              }
+                            });
+                          }
+                          return LiveRoomCard(
+                            cover: item.cover,
+                            anchor: item.userName,
+                            title: item.title,
+                            focusNode: item.focusNode,
+                            roomId: item.roomId,
+                            online: item.online,
+                            onTap: () {
+                              AppNavigator.toLiveRoomDetail(
+                                site: controller.site,
+                                roomId: item.roomId,
+                              );
+                            },
+                          );
+                        });
+                  }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubCategoryGrid(BuildContext context) {
+    return GridView.count(
+      padding: AppStyle.edgeInsetsA48,
+      crossAxisCount: 5,
+      crossAxisSpacing: 48.w,
+      mainAxisSpacing: 40.w,
+      children: controller.subCategory.childrenExt
+          .asMap()
+          .entries
+          .map(
+            (entry) => _buildSubCategory(context, entry.key, entry.value),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildSubCategory(
+    BuildContext context,
+    int index,
+    LiveSubCategoryExt item,
+  ) {
+    if (index == 0) {
+      Future.delayed(Duration.zero, item.focusNode.requestFocus);
+    }
+    final pic = (item.pic ?? "").trim();
+    final imageSize = 64.w;
+    final isLocalGameArtwork = DouyinGameArtwork.isLocalGameArtwork(pic);
+    final cacheWidth =
+        (imageSize * MediaQuery.of(context).devicePixelRatio).ceil();
+    return HighlightWidget(
+      focusNode: item.focusNode,
+      onTap: () {
+        AppNavigator.toCategoryDetail(site: item.site, category: item);
+      },
+      color: Colors.white10,
+      borderRadius: AppStyle.radius16,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          pic.isNotEmpty
+              ? NetImage(
+                  pic,
+                  width: imageSize,
+                  height: imageSize,
+                  borderRadius: 16.w,
+                  fit: isLocalGameArtwork ? BoxFit.contain : BoxFit.cover,
+                  cacheWidth: cacheWidth,
+                )
+              : Image.asset(
+                  "assets/images/${item.site.id}.png",
+                  width: 64.w,
+                  height: 64.w,
+                ),
+          AppStyle.vGap12,
+          Obx(
+            () => Text(
+              item.name,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: item.focusNode.isFoucsed.value
+                  ? AppStyle.textStyleBlack
+                  : AppStyle.textStyleWhite,
             ),
           ),
         ],

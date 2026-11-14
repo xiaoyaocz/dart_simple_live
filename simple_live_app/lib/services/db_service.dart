@@ -49,13 +49,20 @@ class DBService extends GetxService {
   }
 
   // 添加标签
-  Future<FollowUserTag> addFollowTag(String tag) async {
-    // 限制标签唯一且长度不超过8个字符
-    if (getFollowTagExistByTag(tag) && tag.length > 8) {
-      return getFollowTag(tag)!;
+  // 限制标签唯一且长度不超过8个字符，非法输入返回 null
+  Future<FollowUserTag?> addFollowTag(String tag) async {
+    final String name = tag.trim();
+    if (name.isEmpty) {
+      return null;
+    }
+    if (getFollowTagExistByTag(name)) {
+      return getFollowTag(name);
+    }
+    if (name.length > 8) {
+      return null;
     }
     final String uniqueId = uuid.v4();
-    final followUserTag = FollowUserTag(id: uniqueId, tag: tag, userId: []);
+    final followUserTag = FollowUserTag(id: uniqueId, tag: name, userId: []);
     await tagBox.put(uniqueId, followUserTag);
     return followUserTag;
   }
@@ -79,6 +86,12 @@ class DBService extends GetxService {
 
   Future addFollow(FollowUser follow) async {
     await followBox.put(follow.id, follow);
+  }
+
+  Future addFollows(Iterable<FollowUser> follows) async {
+    await followBox.putAll({
+      for (final follow in follows) follow.id: follow,
+    });
   }
 
   Future deleteFollow(String id) async {

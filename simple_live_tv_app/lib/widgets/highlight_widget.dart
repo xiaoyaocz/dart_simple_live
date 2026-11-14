@@ -65,7 +65,11 @@ class HighlightWidget extends StatelessWidget {
             if (e.logicalKey == LogicalKeyboardKey.enter ||
                 e.logicalKey == LogicalKeyboardKey.select ||
                 e.logicalKey == LogicalKeyboardKey.space) {
-              return onTap?.call() ?? KeyEventResult.ignored;
+              if (onTap == null) {
+                return KeyEventResult.ignored;
+              }
+              onTap!.call();
+              return KeyEventResult.handled;
             }
           }
 

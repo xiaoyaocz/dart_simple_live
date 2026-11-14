@@ -17,6 +17,20 @@ class LocalStorageService extends GetxService {
   /// 首页排序
   static const String kHomeSort = "HomeSort";
 
+  /// 内置默认 IPTV 源是否已初始化
+  static const String kIptvDefaultInited = "IptvDefaultInited";
+  static const String kIptvSourceEnabled = "IptvSourceEnabled";
+  static const String kIptvCustomSources = "IptvCustomSources";
+  static const String kIptvDeletedSources = "IptvDeletedSources";
+
+  /// IPTV 聚合频道缓存（JSON，含时间戳），冷启动秒开与断网兜底
+  static const String kIptvAggregatedCache = "IptvAggregatedCache";
+  /// IPTV 上次手动选择的线路源名称，起播时优先命中
+  static const String kIptvPreferredLineSource = "IptvPreferredLineSource";
+
+  /// 多开布局间距
+  static const String kMultiRoomGap = "MultiRoomGap";
+
   /// 显示模式
   /// * [0] 跟随系统
   /// * [1] 浅色模式
@@ -59,8 +73,32 @@ class LocalStorageService extends GetxService {
   /// 弹幕开启
   static const String kDanmuEnable = "DanmuEnable";
 
+  /// 显示弹幕表情
+  static const String kDanmuRenderEmoji = "DanmuRenderEmoji";
+
+  /// 重点动态
+  static const String kLiveEventFlowEnable = "LiveEventFlowEnable";
+  static const String kLiveEventFlowLimit = "LiveEventFlowLimit";
+  static const String kLiveEventFlowOverlayEnable =
+      "LiveEventFlowOverlayEnable";
+  static const String kLiveEventFlowWindowSeconds =
+      "LiveEventFlowWindowSeconds";
+  static const String kLiveEventFlowDisplaySeconds =
+      "LiveEventFlowDisplaySeconds";
+  static const String kLiveEventFlowMinCount = "LiveEventFlowMinCount";
+
+  /// 重复弹幕过滤
+  static const String kDanmuDedupeEnable = "DanmuDedupeEnable";
+  static const String kDanmuDedupeMode = "DanmuDedupeMode";
+  static const String kDanmuDedupeWindow = "DanmuDedupeWindow";
+  static const String kDanmuDedupeStep = "DanmuDedupeStep";
+
   /// 硬件解码
   static const String kHardwareDecode = "HardwareDecode";
+
+  /// Windows 视频纹理渲染加速，与硬件解码独立。
+  static const String kVideoRenderingAcceleration =
+      "VideoRenderingAcceleration";
 
   /// 聊天区文字大小
   static const String kChatTextSize = "ChatTextSize";
@@ -71,11 +109,14 @@ class LocalStorageService extends GetxService {
   /// 聊天区-气泡样式
   static const String kChatBubbleStyle = "ChatBubbleStyle";
 
-  /// 播放清晰度，0=低，1=中，2=高
+  /// 播放清晰度，0=低，1=中，2=高，3=记住上次
   static const String kQualityLevel = "QualityLevel";
 
-  /// 蜂窝网络下播放清晰度，0=低，1=中，2=高
+  /// 蜂窝网络下播放清晰度，0=低，1=中，2=高，3=记住上次
   static const String kQualityLevelCellular = "QualityLevelCellular";
+
+  /// 清晰度记忆：Map<siteId, {name, offset}>
+  static const String kQualityMemory = "QualityMemory";
 
   /// 开启定时关闭
   static const String kAutoExitEnable = "AutoExitEnable";
@@ -93,8 +134,31 @@ class LocalStorageService extends GetxService {
   /// 播放器后台自动暂停
   static const String kPlayerAutoPause = "PlayerAutoPause";
 
+  /// 遥控器OK键行为：0=显示/隐藏控制栏（默认） 1=暂停/继续
+  static const String kOkKeyAction = "OkKeyAction";
+
+  /// 全屏四角时钟：开关与位置（0=左上 1=右上 2=左下 3=右下，默认右上）
+  static const String kPlayerClockEnable = "PlayerClockEnable";
+  static const String kPlayerClockPosition = "PlayerClockPosition";
+
+  /// 自定义分区列表（与移动端备份/局域网同步共享）
+  static const String kCustomCategories = "CustomCategories";
+
   /// 播放器缓冲区大小
   static const String kPlayerBufferSize = "PlayerBufferSize";
+  static const String kPlayerForceHttps = "PlayerForceHttps";
+  static const String kAutoSwitchNextOnLiveEnd = "AutoSwitchNextOnLiveEnd";
+  static const String kAutoSwitchNextOnPlaybackFailure =
+      "AutoSwitchNextOnPlaybackFailure";
+
+  /// 自动换台轮播列表：开关、顺序模式（0=顺序 1=随机）与成员快照
+  static const String kAutoSwitchListEnabled = "AutoSwitchListEnabled";
+  static const String kAutoSwitchListMode = "AutoSwitchListMode";
+  static const String kAutoSwitchListItems = "AutoSwitchListItems";
+  static const String kPlayerVolume = "PlayerVolume";
+  static const String kVolumeBoostEnable = "VolumeBoostEnable";
+  static const String kLogEnable = "LogEnable";
+  static const String kMpvProfile = "MpvProfile";
 
   /// 自动全屏
   static const String kAutoFullScreen = "AutoFullScreen";
@@ -104,6 +168,24 @@ class LocalStorageService extends GetxService {
 
   /// 哔哩哔哩cookie
   static const String kBilibiliCookie = "BilibiliCookie";
+
+  /// 斗鱼cookie
+  static const String kDouyuCookie = "DouyuCookie";
+
+  /// 斗鱼本设备持久化设备号（匿名身份用）
+  static const String kDouyuDeviceId = "DouyuDeviceId";
+
+  /// 斗鱼扫码登录续期凭据
+  static const String kDouyuLtp0 = "DouyuLtp0";
+  static const String kDouyuPassportDid = "DouyuPassportDid";
+
+  /// 抖音cookie
+  static const String kDouyinCookie = "DouyinCookie";
+
+  /// 快手 Cookie 与弹幕签名参数
+  static const String kKuaishouCookie = "KuaishouCookie";
+  static const String kKuaishouKww = "KuaishouKww";
+  static const String kKuaishouCookieExpiresAt = "KuaishouCookieExpiresAt";
 
   ///主题色
   static const String kStyleColor = "kStyleColor";
@@ -122,6 +204,25 @@ class LocalStorageService extends GetxService {
 
   /// 开启多线程更新关注
   static const String kUpdateFollowThreadCount = "UpdateFollowThreadCount";
+  static const String kFollowPageSize = "FollowPageSize";
+  static const String kFollowDisplayStyle = "FollowDisplayStyle";
+  static const String kFollowOnlyLive = "FollowOnlyLive";
+  static const String kFollowRefreshOnEnter = "FollowRefreshOnEnter";
+  static const String kFollowShowLiveCover = "FollowShowLiveCover";
+  static const String kFollowRefreshTaskState = "FollowRefreshTaskState";
+  static const String kFollowRefreshTaskTargets = "FollowRefreshTaskTargets";
+
+  /// 远程同步服务地址
+  static const String kSyncServerUrl = "SyncServerUrl";
+
+  /// 远程同步代理地址
+  static const String kSyncProxyUrl = "SyncProxyUrl";
+
+  static const String kWebDAVUri = "WebDAVUri";
+  static const String kWebDAVUser = "WebDAVUser";
+  static const String kWebDAVPassword = "kWebDAVPassword";
+  static const String kWebDAVLastUploadTime = "kWebDAVLastUploadTime";
+  static const String kWebDAVLastRecoverTime = "kWebDAVLastRecoverTime";
 
   late Box settingsBox;
   late Box<String> shieldBox;
@@ -138,7 +239,7 @@ class LocalStorageService extends GetxService {
   T getValue<T>(dynamic key, T defaultValue) {
     try {
       var value = settingsBox.get(key, defaultValue: defaultValue) as T;
-      Log.d("Get LocalStorage：$key\r\n$value");
+      Log.d("Get LocalStorage：$key");
       return value;
     } catch (e) {
       Log.logPrint(e);
@@ -147,7 +248,7 @@ class LocalStorageService extends GetxService {
   }
 
   Future setValue<T>(dynamic key, T value) async {
-    Log.d("Set LocalStorage：$key\r\n$value");
+    Log.d("Set LocalStorage：$key");
     return await settingsBox.put(key, value);
   }
 

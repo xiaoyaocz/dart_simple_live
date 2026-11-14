@@ -31,6 +31,7 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 
 # Compilation settings that should be applied to most targets.
 #
@@ -42,6 +43,7 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
+  target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 endfunction()
 
@@ -65,7 +67,8 @@ include(flutter/generated_plugins.cmake)
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 # Make the "install" step default, as it's required to run.
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT OR
+   CMAKE_INSTALL_PREFIX MATCHES "^C:/Program Files/${BINARY_NAME}$")
   set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
 endif()
 
@@ -88,10 +91,21 @@ if(PLUGIN_BUNDLED_LIBRARIES)
 endif()
 
 # Copy the native assets provided by the build.dart from all packages.
-set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
-install(DIRECTORY "${NATIVE_ASSETS_DIR}"
-   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-   COMPONENT Runtime)
+set(NATIVE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../build/native_assets/windows")
+set(DART_QUICKJS_DLL "${NATIVE_ASSETS_DIR}/dart_quickjs.dll")
+if(NOT EXISTS "${DART_QUICKJS_DLL}")
+  file(GLOB_RECURSE DART_QUICKJS_CANDIDATES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../.dart_tool/hooks_runner/shared/dart_quickjs/build/*/dart_quickjs.dll")
+  list(LENGTH DART_QUICKJS_CANDIDATES DART_QUICKJS_CANDIDATE_COUNT)
+  if(DART_QUICKJS_CANDIDATE_COUNT GREATER 0)
+    list(GET DART_QUICKJS_CANDIDATES 0 DART_QUICKJS_DLL)
+  endif()
+endif()
+if(EXISTS "${DART_QUICKJS_DLL}")
+  install(FILES "${DART_QUICKJS_DLL}"
+    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+    COMPONENT Runtime)
+endif()
 
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.

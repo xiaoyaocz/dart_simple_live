@@ -35,18 +35,27 @@ class SettingsAction extends StatelessWidget {
           ? null
           : Text(
               subtitle!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Get.textTheme.bodySmall!.copyWith(color: Colors.grey),
             ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (value != null)
-            Text(
-              value!,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium!
-                  .copyWith(color: Colors.grey),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.32,
+              ),
+              child: Text(
+                value!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium!
+                    .copyWith(color: Colors.grey),
+              ),
             ),
           AppStyle.hGap4,
           const Icon(

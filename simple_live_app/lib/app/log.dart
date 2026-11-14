@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:ffi' show Abi;
+import 'dart:convert' show utf8;
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +10,8 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'build_tag.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class Log {
   static LogFileWriter? logFileWriter;
@@ -15,9 +19,14 @@ class Log {
     logFileWriter = LogFileWriter();
   }
 
-  static void disposeWriter() {
-    logFileWriter?.close();
+  static Future<void> disposeWriter() async {
+    final writer = logFileWriter;
     logFileWriter = null;
+    await writer?.close();
+  }
+
+  static Future<void> flushWriter() async {
+    await logFileWriter?.flush();
   }
 
   static void writeLog(content, [Level level = Level.info]) {
@@ -66,7 +75,6 @@ class Log {
     addDebugLog(message, Colors.blue);
     logger.i("${DateTime.now().toString()}\n$message");
     if (writeFile) {
-      logFileWriter?.write("[INFO] $_currentTime：$message");
       writeLog(message, Level.info);
     }
   }
@@ -117,17 +125,29 @@ class LogFileWriter {
       await logDir.create();
     }
     var logFile = File("${logDir.path}/$fileName");
-    fileWriter = logFile.openWrite(mode: FileMode.append);
+    fileWriter = logFile.openWrite(mode: FileMode.append, encoding: utf8);
     writeSystemInfo();
   }
 
   void write(String content) {
-    fileWriter?.write(content);
+    // 所有落盘日志经统一脱敏：凭据类字段（cookie/token/ltp0 等）打码，
+    // 避免账号信息随 .log 文件外泄
+    fileWriter?.write(HttpLogSanitizer.redactText(content));
     fileWriter?.write("\r\n");
   }
 
+  Future<void> flush() async {
+    await fileWriter?.flush();
+  }
+
   Future close() async {
-    await fileWriter?.close();
+    final writer = fileWriter;
+    fileWriter = null;
+    if (writer == null) {
+      return;
+    }
+    await writer.flush();
+    await writer.close();
   }
 
   void writeSystemInfo() async {
@@ -135,10 +155,11 @@ class LogFileWriter {
     write("System Info:");
     write("Current Time: ${DateTime.now()}");
     write("Platform: ${Platform.operatingSystem}");
+    write("Process ABI: ${Abi.current()}");
     write("Version: ${Platform.operatingSystemVersion}");
     write("Local: ${Platform.localeName}");
     write(
-        "App Version: ${Utils.packageInfo.version}+${Utils.packageInfo.buildNumber}");
+        "App Version: ${Utils.packageInfo.version}+${Utils.packageInfo.buildNumber}$kBuildTag");
     if (Platform.isAndroid) {
       write((await deviceInfo.androidInfo).data.toString());
     } else if (Platform.isIOS) {

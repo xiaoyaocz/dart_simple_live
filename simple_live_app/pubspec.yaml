@@ -116,7 +116,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/statement.txt
-    - assets/iptv/default.m3u
     - assets/images/
     - assets/images/douyin_emoji/
     - assets/icons/

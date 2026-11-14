@@ -6,6 +6,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/modules/iptv/player/iptv_player_controller.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 
 class IptvPlayerPage extends GetView<IptvPlayerController> {
@@ -186,7 +187,9 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           return ListTile(
             leading: NetImage(line.logo, width: 36, height: 36, borderRadius: 8),
             title: Text(line.sourceName),
-            trailing: selected ? const Icon(Icons.check) : null,
+            trailing: selected
+                ? const Icon(Icons.check)
+                : _lineStatusDot(line.url),
             onTap: () {
               controller.switchLine(index);
               Get.back();
@@ -195,6 +198,19 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
         },
       ),
     );
+  }
+
+  /// 线路连通状态圆点：复用频道页红黄绿探测缓存，未检测过不显示
+  Widget? _lineStatusDot(String url) {
+    final status = IptvService.instance.freshLineStatus(url);
+    final color = switch (status) {
+      1 => Colors.green,
+      2 => Colors.amber,
+      3 => Colors.red,
+      _ => null,
+    };
+    if (color == null) return null;
+    return Icon(Icons.circle, color: color, size: 12);
   }
 
   void _showChannelList(BuildContext context) {

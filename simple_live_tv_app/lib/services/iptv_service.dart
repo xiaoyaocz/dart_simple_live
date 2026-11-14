@@ -343,12 +343,11 @@ class IptvService extends GetxService {
 
   List<String> getAggregatedGroups(AggregatedParseResult result) {
     final groups = result.channels.map((e) => e.group).toSet().toList();
+    // 央视/卫视置顶，其余按名称；比较器必须自洽（同组互比返回 0）
+    int rank(String g) => g == "央视频道" ? 0 : (g == "卫视频道" ? 1 : 2);
     groups.sort((a, b) {
-      if (a == "央视频道") return -1;
-      if (b == "央视频道") return 1;
-      if (a == "卫视频道") return -1;
-      if (b == "卫视频道") return 1;
-      return a.compareTo(b);
+      final r = rank(a).compareTo(rank(b));
+      return r != 0 ? r : a.compareTo(b);
     });
     return groups;
   }

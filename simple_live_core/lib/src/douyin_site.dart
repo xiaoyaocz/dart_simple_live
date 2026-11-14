@@ -304,6 +304,7 @@ class DouyinSite implements LiveSite {
   /// - `"1010016,1"` -> `"1010016,1"`
   /// - `"4_103_1_2_1_1010016"` / `"1_1010016"` -> `"1010016,1"`
   /// - `"1010016"` -> `"1010016,1"`（默认 sub-partition type=1）
+  /// 分区 ID 与 type 必须为纯数字，否则返回 null。
   static ({String partitionId, String partitionType})? parseCategoryId(
     String raw,
   ) {
@@ -314,12 +315,15 @@ class DouyinSite implements LiveSite {
     if (trimmed.contains(',')) {
       final parts = trimmed.split(',');
       final id = parts.first.trim();
-      if (id.isEmpty) {
+      if (id.isEmpty || !_numericTokenPattern.hasMatch(id)) {
         return null;
       }
       final type = parts.length > 1 && parts[1].trim().isNotEmpty
           ? parts[1].trim()
           : '1';
+      if (!_numericTokenPattern.hasMatch(type)) {
+        return null;
+      }
       return (partitionId: id, partitionType: type);
     }
     if (trimmed.contains('_')) {
@@ -336,6 +340,9 @@ class DouyinSite implements LiveSite {
           partitionType: parts[parts.length - 2],
         );
       }
+    }
+    if (!_numericTokenPattern.hasMatch(trimmed)) {
+      return null;
     }
     return (partitionId: trimmed, partitionType: '1');
   }

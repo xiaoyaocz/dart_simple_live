@@ -21,6 +21,13 @@ void main() {
       expect(DouyinSite.normalizeCategoryId('1010016'), '1010016,1');
       expect(DouyinSite.normalizeCategoryId('   '), '');
     });
+
+    test('rejects non-numeric ids and types', () {
+      expect(DouyinSite.normalizeCategoryId('abc'), '');
+      expect(DouyinSite.normalizeCategoryId('abc,1'), '');
+      expect(DouyinSite.normalizeCategoryId('1010016,x'), '');
+      expect(DouyinSite.normalizeCategoryId('4_103_1_2_1_abc'), '');
+    });
   });
 
   group('CategoryUrlParser', () {
@@ -41,6 +48,19 @@ void main() {
       expect(direct!.categoryId, '1010016,1');
     });
 
+    test('rejects non-numeric douyin category tokens', () {
+      expect(
+        CategoryUrlParser.parse('https://live.douyin.com/category/abc'),
+        isNull,
+      );
+      expect(
+        CategoryUrlParser.parse(
+          'https://live.douyin.com/categorynew/4_103_1_2_1_abc',
+        ),
+        isNull,
+      );
+    });
+
     test('parses bilibili area-tags URL', () {
       final parsed = CategoryUrlParser.parse(
         'https://live.bilibili.com/p/eden/area-tags?parentAreaId=2&areaId=235',
@@ -49,6 +69,15 @@ void main() {
       expect(parsed!.siteId, LiveUrlParser.siteBilibili);
       expect(parsed.categoryId, '235');
       expect(parsed.parentId, '2');
+    });
+
+    test('rejects bilibili room URL carrying areaId query', () {
+      expect(
+        CategoryUrlParser.parse(
+          'https://live.bilibili.com/21699623?areaId=1034&parentAreaId=3',
+        ),
+        isNull,
+      );
     });
 
     test('parses huya numeric and slug category URLs', () {

@@ -70,6 +70,12 @@ class CategoryUrlParser {
 
     // B站：live.bilibili.com/p/eden/area-tags?parentAreaId=2&areaId=235
     if (host == 'live.bilibili.com') {
+      // 仅接受分区页路径，避免携带 areaId 参数的房间链接被误判为分区链接
+      final path = uri.path.toLowerCase();
+      if (path != '/p/eden/area-tags' &&
+          !path.startsWith('/p/eden/area-tags/')) {
+        return null;
+      }
       final areaId = (uri.queryParameters['areaId'] ?? '').trim();
       final parentAreaId = (uri.queryParameters['parentAreaId'] ?? '').trim();
       if (_numericPattern.hasMatch(areaId)) {

@@ -22,6 +22,10 @@ class IptvChannelsController extends BaseController {
   /// 线路连通状态：0=检测中，1=绿色（连通快），2=黄色（连通慢），3=红色（失败）
   final lineStatus = <String, int>{}.obs;
 
+  /// 线路探测取消标记与独立客户端，离开页面即中止
+  bool _probeCancelled = false;
+  Dio? _probeDio;
+
   @override
   void onInit() {
     refreshFavorites();
@@ -32,6 +36,7 @@ class IptvChannelsController extends BaseController {
   @override
   void onClose() {
     groupScrollController.dispose();
+    _cancelLineStatusCheck();
     super.onClose();
   }
 
@@ -53,38 +58,67 @@ class IptvChannelsController extends BaseController {
     }
   }
 
-  /// 异步检测所有线路连通性，控制并发避免压力过大
+  /// 异步检测线路连通性：URL 去重 + TTL 缓存复用 + 控制并发，离开页面立即中止
   Future<void> _startLineStatusCheck(List<AggregatedChannel> channels) async {
-    final allLines = channels.expand((e) => e.lines).toList();
-    // 初始化全部为检测中状态
-    for (final line in allLines) {
-      lineStatus[line.url] = 0;
+    // 上一次探测若还在跑，先作废
+    _cancelLineStatusCheck();
+    final service = IptvService.instance;
+    final pending = <String>[];
+    final seen = <String>{};
+    for (final line in channels.expand((e) => e.lines)) {
+      // 镜像源重复 URL 只探测一次
+      if (!seen.add(line.url)) continue;
+      final cached = service.freshLineStatus(line.url);
+      if (cached != null) {
+        lineStatus[line.url] = cached;
+      } else {
+        lineStatus[line.url] = 0;
+        pending.add(line.url);
+      }
     }
-    const concurrency = 5;
+    if (pending.isEmpty) return;
+    _probeCancelled = false;
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 5),
       headers: {"Range": "bytes=0-1023"},
     ));
-    for (var i = 0; i < allLines.length; i += concurrency) {
-      final batch = allLines.skip(i).take(concurrency).toList();
-      await Future.wait(batch.map((line) async {
+    _probeDio = dio;
+    const concurrency = 5;
+    for (var i = 0; i < pending.length; i += concurrency) {
+      if (_probeCancelled) return;
+      final batch = pending.skip(i).take(concurrency).toList();
+      await Future.wait(batch.map((url) async {
         final sw = Stopwatch()..start();
         try {
           // 用GET Range替代HEAD，兼容不支持HEAD的流媒体服务器
-          await dio.get(line.url);
+          await dio.get(url);
           sw.stop();
-          lineStatus[line.url] = sw.elapsedMilliseconds < 2000 ? 1 : 2;
+          _recordLineStatus(url, sw.elapsedMilliseconds < 2000 ? 1 : 2);
         } catch (e) {
           // 403/401但能连通也算可用，仅网络超时/连接失败标红
           if (e is DioException && (e.response?.statusCode ?? 0) > 0) {
-            lineStatus[line.url] = sw.elapsedMilliseconds < 2000 ? 1 : 2;
+            _recordLineStatus(url, sw.elapsedMilliseconds < 2000 ? 1 : 2);
           } else {
-            lineStatus[line.url] = 3;
+            _recordLineStatus(url, 3);
           }
         }
       }));
     }
+  }
+
+  /// 记录探测结果：写 UI 状态并进入服务层 TTL 缓存
+  void _recordLineStatus(String url, int status) {
+    if (_probeCancelled) return;
+    lineStatus[url] = status;
+    IptvService.instance.cacheLineStatus(url, status);
+  }
+
+  /// 中止进行中的线路探测
+  void _cancelLineStatusCheck() {
+    _probeCancelled = true;
+    _probeDio?.close();
+    _probeDio = null;
   }
 
   /// 手动刷新所有源

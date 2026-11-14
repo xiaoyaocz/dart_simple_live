@@ -481,6 +481,9 @@ class IptvService extends GetxService {
           channelMap[key] = <IptvLine>[];
           channelBaseInfo[key] = (name: ch.name, group: ch.group, logo: ch.logo);
         }
+        // 镜像源（如 peterh 镜像 vbskycn）同频道会给出相同播放地址，按 URL 去重避免线路列表重复
+        final isDuplicateUrl = channelMap[key]!.any((e) => e.url == line.url);
+        if (isDuplicateUrl) continue;
         channelMap[key]!.add(line);
       }
     }
@@ -548,6 +551,30 @@ class IptvService extends GetxService {
       }
       rethrow;
     }
+  }
+
+  // ==================== 线路连通状态缓存 ====================
+
+  /// 线路连通状态探测结果缓存：key 为线路 URL，TTL 内重复进入频道页不再重新探测
+  final Map<String, ({int status, DateTime time})> _lineStatusCache =
+      <String, ({int status, DateTime time})>{};
+  /// 状态缓存有效期：红绿灯只是参考信息，10 分钟足够
+  static const Duration _lineStatusTtl = Duration(minutes: 10);
+
+  /// 查询未过期的线路状态缓存，未命中返回 null（1绿/2黄/3红）
+  int? freshLineStatus(String url) {
+    final cached = _lineStatusCache[url];
+    if (cached == null) return null;
+    if (DateTime.now().difference(cached.time) >= _lineStatusTtl) {
+      _lineStatusCache.remove(url);
+      return null;
+    }
+    return cached.status;
+  }
+
+  /// 写入线路状态缓存
+  void cacheLineStatus(String url, int status) {
+    _lineStatusCache[url] = (status: status, time: DateTime.now());
   }
 
   // ==================== 聚合缓存持久化 ====================

@@ -309,6 +309,9 @@ class IptvService extends GetxService {
           channelMap[key] = <IptvLine>[];
           channelBaseInfo[key] = (name: ch.name, group: ch.group, logo: ch.logo);
         }
+        // 镜像源（如 peterh 镜像 vbskycn）同频道会给出相同播放地址，按 URL 去重避免线路列表重复
+        final isDuplicateUrl = channelMap[key]!.any((e) => e.url == line.url);
+        if (isDuplicateUrl) continue;
         channelMap[key]!.add(line);
       }
     }

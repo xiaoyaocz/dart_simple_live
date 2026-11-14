@@ -10,6 +10,10 @@ class LocalStorageService extends GetxService {
   static const String kSiteSort = "SiteSort";
   static const String kHomeSort = "HomeSort";
 
+  /// 完整排序（含新版本新增的入口/平台），旧版本读不懂的 key 不写进 kSiteSort/kHomeSort
+  static const String kSiteSortV2 = "SiteSortV2";
+  static const String kHomeSortV2 = "HomeSortV2";
+
   /// 主页底栏中隐藏的入口 key（逗号分隔），\"user\" 始终可见
   static const String kHomeHidden = "HomeHidden";
 
@@ -27,6 +31,9 @@ class LocalStorageService extends GetxService {
   static const String kIptvPreferredLineSource = "IptvPreferredLineSource";
   static const String kLiveRoomTabSort = "LiveRoomTabSort";
   static const String kLiveRoomQuickAccessSort = "LiveRoomQuickAccessSort";
+
+  /// 完整快捷入口排序；kLiveRoomQuickAccessSort 只写旧版本认识的子集
+  static const String kLiveRoomQuickAccessSortV2 = "LiveRoomQuickAccessSortV2";
   static const String kLiveRoomQuickAccessEnabled =
       "LiveRoomQuickAccessEnabled";
   static const String kLiveRoomShortcutFullScreen =

@@ -494,43 +494,60 @@ class AppSettingsController extends GetxController {
   }
 
   void initSiteSort() {
-    var sort = LocalStorageService.instance
-        .getValue(
-          LocalStorageService.kSiteSort,
-          Sites.allSites.keys.join(","),
-        )
-        .split(",");
-    //如果数量与allSites的数量不一致，将缺失的添加上
-    if (sort.length != Sites.allSites.length) {
-      var keys = Sites.allSites.keys.toList();
-      for (var i = 0; i < keys.length; i++) {
-        if (!sort.contains(keys[i])) {
-          sort.add(keys[i]);
-        }
-      }
-    }
-
-    siteSort.value = sort;
+    final keys = Sites.allSites.keys.toList();
+    siteSort.value = _readSort(
+      LocalStorageService.kSiteSortV2,
+      LocalStorageService.kSiteSort,
+      keys,
+    );
   }
 
   void initHomeSort() {
-    var sort = LocalStorageService.instance
-        .getValue(
-          LocalStorageService.kHomeSort,
-          Constant.allHomePages.keys.join(","),
-        )
-        .split(",");
-    //如果数量与allSites的数量不一致，将缺失的添加上
-    if (sort.length != Constant.allHomePages.length) {
-      var keys = Constant.allHomePages.keys.toList();
-      for (var i = 0; i < keys.length; i++) {
-        if (!sort.contains(keys[i])) {
-          sort.add(keys[i]);
-        }
+    final keys = Constant.allHomePages.keys.toList();
+    homeSort.value = _readSort(
+      LocalStorageService.kHomeSortV2,
+      LocalStorageService.kHomeSort,
+      keys,
+    );
+  }
+
+  /// 优先读新版完整排序键；没有则回退旧键，并补全当前版本缺失的项
+  List<String> _readSort(String v2Key, String legacyKey, List<String> keys) {
+    final v2 = LocalStorageService.instance
+        .getValue(v2Key, "")
+        .split(",")
+        .where((item) => keys.contains(item))
+        .toList();
+    final source = v2.isNotEmpty
+        ? v2
+        : LocalStorageService.instance
+            .getValue(legacyKey, keys.join(","))
+            .split(",")
+            .where((item) => keys.contains(item))
+            .toList();
+    return normalizeSortKeys(source, keys);
+  }
+
+  /// 过滤未知 key 并按当前版本的完整集合补全
+  static List<String> normalizeSortKeys(
+    List<String> value,
+    List<String> keys,
+  ) {
+    final result = value.where(keys.contains).toList();
+    for (final key in keys) {
+      if (!result.contains(key)) {
+        result.add(key);
       }
     }
+    return result;
+  }
 
-    homeSort.value = sort;
+  /// 旧版本只认识 legacyKeys，写旧键时投影出这个子集
+  static List<String> projectLegacyKeys(
+    List<String> value,
+    List<String> legacyKeys,
+  ) {
+    return value.where(legacyKeys.contains).toList();
   }
 
   /// 读取底栏入口与平台的隐藏状态；新增入口默认可见
@@ -585,21 +602,11 @@ class AppSettingsController extends GetxController {
 
   void initLiveRoomQuickAccessSettings() {
     final keys = Constant.allLiveRoomQuickAccess.keys.toList();
-    var sort = LocalStorageService.instance
-        .getValue(
-          LocalStorageService.kLiveRoomQuickAccessSort,
-          keys.join(","),
-        )
-        .split(",")
-        .where((item) => item.trim().isNotEmpty)
-        .toList();
-    sort.removeWhere((item) => !keys.contains(item));
-    for (final key in keys) {
-      if (!sort.contains(key)) {
-        sort.add(key);
-      }
-    }
-    liveRoomQuickAccessSort.value = sort;
+    liveRoomQuickAccessSort.value = _readSort(
+      LocalStorageService.kLiveRoomQuickAccessSortV2,
+      LocalStorageService.kLiveRoomQuickAccessSort,
+      keys,
+    );
 
     final enabledRaw = LocalStorageService.instance.getValue(
       LocalStorageService.kLiveRoomQuickAccessEnabled,
@@ -2172,10 +2179,16 @@ class AppSettingsController extends GetxController {
 
   RxList<String> siteSort = RxList<String>();
   void setSiteSort(List<String> e) {
-    siteSort.value = e;
+    final value = normalizeSortKeys(e, Sites.allSites.keys.toList());
+    siteSort.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kSiteSortV2,
+      value.join(","),
+    );
+    // 旧版本只认识内置平台，读旧键时不能出现未知平台
     LocalStorageService.instance.setValue(
       LocalStorageService.kSiteSort,
-      siteSort.join(","),
+      projectLegacyKeys(value, Sites.legacySiteIds).join(","),
     );
     EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
     EventBus.instance.emit(Constant.kUpdateFollow, 0);
@@ -2183,10 +2196,19 @@ class AppSettingsController extends GetxController {
 
   RxList<String> homeSort = RxList<String>();
   void setHomeSort(List<String> e) {
-    homeSort.value = e;
+    final value = normalizeSortKeys(
+      e,
+      Constant.allHomePages.keys.toList(),
+    );
+    homeSort.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kHomeSortV2,
+      value.join(","),
+    );
+    // 旧版本只认识四个内置入口，读旧键时不能出现 IPTV 等新入口
     LocalStorageService.instance.setValue(
       LocalStorageService.kHomeSort,
-      homeSort.join(","),
+      projectLegacyKeys(value, Constant.legacyHomeSortKeys).join(","),
     );
     EventBus.instance.emit(EventBus.kUpdateHomeTabs, 0);
   }
@@ -2260,16 +2282,19 @@ class AppSettingsController extends GetxController {
 
   void setLiveRoomQuickAccessSort(List<String> e) {
     final keys = Constant.allLiveRoomQuickAccess.keys.toList();
-    final value = e.where((item) => keys.contains(item)).toList();
-    for (final key in keys) {
-      if (!value.contains(key)) {
-        value.add(key);
-      }
-    }
+    final value = normalizeSortKeys(e, keys);
     liveRoomQuickAccessSort.value = value;
     LocalStorageService.instance.setValue(
+      LocalStorageService.kLiveRoomQuickAccessSortV2,
+      value.join(","),
+    );
+    // 旧版本只认识四个内置快捷入口
+    LocalStorageService.instance.setValue(
       LocalStorageService.kLiveRoomQuickAccessSort,
-      liveRoomQuickAccessSort.join(","),
+      projectLegacyKeys(
+        value,
+        Constant.legacyLiveRoomQuickAccessKeys,
+      ).join(","),
     );
   }
 

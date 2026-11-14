@@ -3,6 +3,16 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class Sites {
+  /// 1.13.x 及更早版本认识的平台。
+  /// 完整顺序写 SiteSortV2，旧键 SiteSort 只写这个子集，避免旧版本读到新平台时空断言。
+  static const List<String> legacySiteIds = [
+    Constant.kBiliBili,
+    Constant.kDouyu,
+    Constant.kHuya,
+    Constant.kDouyin,
+    Constant.kKuaishou,
+  ];
+
   static final Map<String, Site> allSites = {
     Constant.kBiliBili: Site(
       id: Constant.kBiliBili,

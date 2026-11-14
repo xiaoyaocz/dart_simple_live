@@ -25,6 +25,8 @@ class LocalStorageService extends GetxService {
 
   /// 内置默认 IPTV 源内容版本（内容 SHA-256），用于更新同步
   static const String kIptvDefaultVersion = "IptvDefaultVersion";
+  /// IPTV 聚合频道缓存（JSON，含时间戳），冷启动秒开与断网兜底
+  static const String kIptvAggregatedCache = "IptvAggregatedCache";
 
   /// 多开布局间距
   static const String kMultiRoomGap = "MultiRoomGap";

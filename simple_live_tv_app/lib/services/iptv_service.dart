@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 
@@ -126,6 +128,8 @@ class IptvService extends GetxService {
         urls: List<String>.from(map["urls"]),
       );
     }));
+    // 启动时从磁盘恢复上次聚合结果（可能已过期，用于秒开与拉取全败兜底）
+    _loadPersistedAggregated();
   }
 
   Future<void> addCustomSource({required String name, required String url}) async {
@@ -323,6 +327,7 @@ class IptvService extends GetxService {
     final result = AggregatedParseResult(channels: channels, epgUrls: allEpg.toList());
     aggregatedCache = result;
     _aggregatedCacheTime = DateTime.now();
+    await _persistAggregated(result);
     isLoading.value = false;
     return result;
   }
@@ -352,7 +357,121 @@ class IptvService extends GetxService {
         _aggregatedCacheTime != null &&
         DateTime.now().difference(_aggregatedCacheTime!) < _cacheMaxAge;
     if (!forceRefresh && cacheValid) return aggregatedCache!;
-    return refreshAggregated();
+    try {
+      return await refreshAggregated();
+    } catch (e) {
+      // 自动刷新全败时回退磁盘陈旧缓存（哪怕已过期），保证有台可看；手动刷新仍如实报错
+      if (!forceRefresh && aggregatedCache != null) {
+        Log.w("聚合拉取失败，回退陈旧缓存: $e");
+        return aggregatedCache!;
+      }
+      rethrow;
+    }
+  }
+
+  // ==================== 聚合缓存持久化 ====================
+
+  /// 启动时从磁盘恢复上次聚合结果
+  void _loadPersistedAggregated() {
+    try {
+      final raw = LocalStorageService.instance.getValue<String>(
+        LocalStorageService.kIptvAggregatedCache,
+        "",
+      );
+      final decoded = decodeAggregatedCache(raw);
+      if (decoded == null) return;
+      aggregatedCache = decoded.result;
+      _aggregatedCacheTime = decoded.time;
+      Log.i("已从磁盘恢复 IPTV 聚合缓存：${decoded.result.channels.length} 个频道");
+    } catch (e) {
+      Log.w("恢复 IPTV 聚合缓存失败: $e");
+    }
+  }
+
+  /// 聚合成功后写入磁盘
+  Future<void> _persistAggregated(AggregatedParseResult result) async {
+    try {
+      await LocalStorageService.instance.setValue(
+        LocalStorageService.kIptvAggregatedCache,
+        _encodeAggregated(result),
+      );
+    } catch (e) {
+      Log.w("写入 IPTV 聚合缓存失败: $e");
+    }
+  }
+
+  String _encodeAggregated(AggregatedParseResult result) {
+    return jsonEncode({
+      "time": DateTime.now().millisecondsSinceEpoch,
+      "epgUrls": result.epgUrls,
+      "channels": result.channels
+          .map((ch) => {
+                "name": ch.name,
+                "group": ch.group,
+                "logo": ch.logo,
+                "lines": ch.lines
+                    .map((line) => {
+                          "sourceName": line.sourceName,
+                          "url": line.url,
+                          "logo": line.logo,
+                          "channelId": line.channelId,
+                        })
+                    .toList(),
+              })
+          .toList(),
+    });
+  }
+
+  /// 解析落盘的聚合缓存，损坏或为空返回 null
+  static ({AggregatedParseResult result, DateTime time})? decodeAggregatedCache(
+    String raw,
+  ) {
+    if (raw.trim().isEmpty) return null;
+    try {
+      final map = jsonDecode(raw);
+      if (map is! Map) return null;
+      final rawChannels = map["channels"];
+      if (rawChannels is! List) return null;
+      final channels = <AggregatedChannel>[];
+      for (final entry in rawChannels) {
+        if (entry is! Map) continue;
+        final name = entry["name"]?.toString() ?? "";
+        if (name.isEmpty) continue;
+        final rawLines = entry["lines"];
+        if (rawLines is! List) continue;
+        final lines = <IptvLine>[];
+        for (final rawLine in rawLines) {
+          if (rawLine is! Map) continue;
+          final url = rawLine["url"]?.toString() ?? "";
+          if (url.isEmpty) continue;
+          lines.add(IptvLine(
+            sourceName: rawLine["sourceName"]?.toString() ?? "未知源",
+            url: url,
+            logo: rawLine["logo"]?.toString() ?? "",
+            channelId: rawLine["channelId"]?.toString() ?? "",
+          ));
+        }
+        if (lines.isEmpty) continue;
+        channels.add(AggregatedChannel(
+          name: name,
+          group: entry["group"]?.toString() ?? "",
+          logo: entry["logo"]?.toString() ?? "",
+          lines: lines,
+        ));
+      }
+      if (channels.isEmpty) return null;
+      final epgUrls = (map["epgUrls"] as List?)
+          ?.map((e) => e.toString())
+          .toList() ?? const <String>[];
+      final time = int.tryParse(map["time"]?.toString() ?? "") ?? 0;
+      return (
+        result: AggregatedParseResult(channels: channels, epgUrls: epgUrls),
+        time: DateTime.fromMillisecondsSinceEpoch(time),
+      );
+    } catch (e) {
+      Log.w("解析 IPTV 聚合缓存失败: $e");
+      return null;
+    }
   }
 
   List<String> getAggregatedGroups(AggregatedParseResult result) {

@@ -453,10 +453,6 @@ class IptvService extends GetxService {
         .where((e) => e.result != null)
         .map((e) => (sourceName: e.sourceName, result: e.result!))
         .toList();
-    final allEpg = <String>{};
-    for (final entry in allSourceResults) {
-      allEpg.addAll(entry.result.epgUrls);
-    }
 
     if (allSourceResults.isEmpty) {
       isLoading.value = false;
@@ -502,10 +498,7 @@ class IptvService extends GetxService {
     // 排序：央视、卫视置顶，央视按数字自然排序，其余按名称
     channels = _sortAggregatedChannels(channels);
 
-    final result = AggregatedParseResult(
-      channels: channels,
-      epgUrls: allEpg.toList(),
-    );
+    final result = AggregatedParseResult(channels: channels);
     aggregatedCache = result;
     _aggregatedCacheTime = DateTime.now();
     await _persistAggregated(result);
@@ -611,7 +604,6 @@ class IptvService extends GetxService {
   String _encodeAggregated(AggregatedParseResult result) {
     return jsonEncode({
       "time": DateTime.now().millisecondsSinceEpoch,
-      "epgUrls": result.epgUrls,
       "channels": result.channels
           .map((ch) => {
                 "name": ch.name,
@@ -668,12 +660,9 @@ class IptvService extends GetxService {
         ));
       }
       if (channels.isEmpty) return null;
-      final epgUrls = (map["epgUrls"] as List?)
-          ?.map((e) => e.toString())
-          .toList() ?? const <String>[];
       final time = int.tryParse(map["time"]?.toString() ?? "") ?? 0;
       return (
-        result: AggregatedParseResult(channels: channels, epgUrls: epgUrls),
+        result: AggregatedParseResult(channels: channels),
         time: DateTime.fromMillisecondsSinceEpoch(time),
       );
     } catch (e) {

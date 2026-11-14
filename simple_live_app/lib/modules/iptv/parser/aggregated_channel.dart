@@ -6,7 +6,7 @@ class IptvLine {
   final String url;
   /// 线路logo
   final String logo;
-  /// 源id/频道id，用于EPG匹配
+  /// 源内频道 id
   final String channelId;
 
   const IptvLine({
@@ -42,10 +42,6 @@ class AggregatedChannel {
 /// 聚合解析结果
 class AggregatedParseResult {
   final List<AggregatedChannel> channels;
-  final List<String> epgUrls;
 
-  const AggregatedParseResult({
-    required this.channels,
-    required this.epgUrls,
-  });
+  const AggregatedParseResult({required this.channels});
 }

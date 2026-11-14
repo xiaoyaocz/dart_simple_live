@@ -18,16 +18,6 @@ http://stream/c1.m3u8
     expect(channel.url, "http://stream/c1.m3u8");
   });
 
-  test('提取头部 url-tvg，支持多个', () {
-    const content = '''
-#EXTM3U url-tvg="http://epg/a.xml" x-tvg-url="http://epg/ignore.xml"
-#EXTINF:-1,频道
-http://stream/a.m3u8
-''';
-    final result = M3uParser.parse(content);
-    expect(result.epgUrls, ["http://epg/a.xml"]);
-  });
-
   test('缺失分组与 tvg-id 时兜底', () {
     const content = '''
 #EXTM3U

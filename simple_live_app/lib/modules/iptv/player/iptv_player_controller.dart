@@ -12,7 +12,6 @@ import 'package:simple_live_app/services/mpv_options_service.dart';
 
 class IptvPlayerController extends GetxController {
   late final List<AggregatedChannel> channels;
-  late final List<String> epgUrls;
   int currentIndex;
   int currentLineIndex = 0;
 
@@ -42,7 +41,6 @@ class IptvPlayerController extends GetxController {
   void onInit() {
     final args = Get.arguments as Map<String, dynamic>;
     channels = args["channels"] as List<AggregatedChannel>;
-    epgUrls = (args["epgUrls"] as List?)?.cast<String>() ?? const [];
     currentIndex = args["index"] as int;
 
     player = Player(configuration: const PlayerConfiguration(title: "Simple Live IPTV"));

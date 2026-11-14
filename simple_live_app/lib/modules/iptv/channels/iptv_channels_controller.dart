@@ -199,7 +199,6 @@ class IptvChannelsController extends BaseController {
       arguments: {
         "channels": channels,
         "index": index,
-        "epgUrls": parseResult.value?.epgUrls ?? const <String>[],
       },
     );
   }

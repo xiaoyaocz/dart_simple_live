@@ -1,12 +1,11 @@
 import 'province_mapper.dart';
 import 'iptv_channel.dart';
 
-/// M3U 解析结果：频道列表与头部声明的 EPG 地址（url-tvg）
+/// M3U 解析结果：频道列表
 class M3uParseResult {
   final List<IptvChannel> channels;
-  final List<String> epgUrls;
 
-  const M3uParseResult({required this.channels, required this.epgUrls});
+  const M3uParseResult({required this.channels});
 }
 
 class M3uParser {
@@ -17,7 +16,6 @@ class M3uParser {
   static M3uParseResult parse(String content, {String? baseUrl}) {
     final lines = content.split(RegExp(r'\r?\n'));
     final channels = <IptvChannel>[];
-    final epgUrls = <String>[];
 
     // 兼容TXT格式直播源，自动识别分组标记
     if (!content.contains("#EXTM3U") && content.contains("#genre#")) {
@@ -51,15 +49,7 @@ class M3uParser {
         final line = raw.trim();
         if (line.isEmpty) continue;
 
-        if (line.startsWith("#EXTM3U")) {
-          for (final match in _attrReg.allMatches(line)) {
-            if (match.group(1) == "url-tvg") {
-              final value = match.group(2)!.trim();
-              if (value.isNotEmpty) epgUrls.add(_resolve(value, baseUrl));
-            }
-          }
-          continue;
-        }
+        if (line.startsWith("#EXTM3U")) continue;
 
         if (line.startsWith("#EXTINF")) {
           final attrs = <String, String>{};
@@ -113,10 +103,10 @@ class M3uParser {
       );
     }).toList();
 
-    return M3uParseResult(channels: processedChannels, epgUrls: epgUrls);
+    return M3uParseResult(channels: processedChannels);
   }
 
-  /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外的首个逗号
+  /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外的最后一个逗号
   /// EXTINF 频道名分隔逗号：属性值（引号内）可能含逗号，取引号外最后一个逗号，兼容-1后多余逗号的异常格式
   static int _findNameSeparator(String line) {
     var inQuotes = false;

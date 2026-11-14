@@ -4,6 +4,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_list_view.dart';
+import 'package:simple_live_app/modules/category/custom_category_dialogs.dart';
 
 class CategoryPage extends GetView<CategoryController> {
   const CategoryPage({Key? key}) : super(key: key);
@@ -38,6 +39,26 @@ class CategoryPage extends GetView<CategoryController> {
           isScrollable: true,
           indicatorSize: TabBarIndicatorSize.label,
         ),
+        actions: [
+          IconButton(
+            tooltip: '添加自定义分区',
+            onPressed: () {
+              CustomCategoryDialogs.showAddOrEditDialog(
+                initialSiteId: controller.currentSiteId,
+              );
+            },
+            icon: const Icon(Icons.add_rounded),
+          ),
+          IconButton(
+            tooltip: '管理自定义分区',
+            onPressed: () {
+              CustomCategoryDialogs.showManageSheet(
+                initialSiteId: controller.currentSiteId,
+              );
+            },
+            icon: const Icon(Icons.bookmarks_outlined),
+          ),
+        ],
       ),
       body: TabBarView(
         controller: controller.tabController,

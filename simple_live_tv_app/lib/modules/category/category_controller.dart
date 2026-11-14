@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:get/get.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/constant.dart';
 import 'package:simple_live_tv_app/app/controller/base_controller.dart';
 import 'package:simple_live_tv_app/app/sites.dart';
+import 'package:simple_live_tv_app/services/local_storage_service.dart';
 
 class CategoryController extends BasePageController<AppLiveCategory> {
   var siteId = Constant.kBiliBili.obs;
@@ -32,9 +35,7 @@ class CategoryController extends BasePageController<AppLiveCategory> {
       if (generation != _siteSwitchGeneration) {
         return;
       }
-      final categories = result
-          .map((e) => AppLiveCategory.fromLiveCategory(e, nextSite))
-          .toList();
+      final categories = _mergeCustomCategories(result, nextSite);
 
       site = nextSite;
       siteId.value = id;
@@ -61,10 +62,68 @@ class CategoryController extends BasePageController<AppLiveCategory> {
   @override
   Future<List<AppLiveCategory>> getData(int page, int pageSize) async {
     var result = await site.liveSite.getCategores();
+    return _mergeCustomCategories(result, site);
+  }
 
-    return result
-        .map((e) => AppLiveCategory.fromLiveCategory(e, site))
-        .toList();
+  List<AppLiveCategory> _mergeCustomCategories(
+    List<LiveCategory> remote,
+    Site targetSite,
+  ) {
+    final customSubs = _readCustomSubCategories(targetSite.id);
+    return [
+      if (customSubs.isNotEmpty)
+        AppLiveCategory(
+          id: '_custom_categories',
+          name: '自定义分区',
+          children: customSubs,
+          site: targetSite,
+        ),
+      ...remote.map((e) => AppLiveCategory.fromLiveCategory(e, targetSite)),
+    ];
+  }
+
+  List<LiveSubCategory> _readCustomSubCategories(String targetSiteId) {
+    if (!Get.isRegistered<LocalStorageService>()) {
+      return const [];
+    }
+    final dynamic raw = LocalStorageService.instance
+        .getValue<dynamic>(LocalStorageService.kCustomCategories, '[]');
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+      if (decoded is! List) {
+        return const [];
+      }
+      final result = <LiveSubCategory>[];
+      for (final entry in decoded) {
+        if (entry is! Map) {
+          continue;
+        }
+        if (entry['siteId']?.toString().trim() != targetSiteId) {
+          continue;
+        }
+        final rawId = entry['id']?.toString().trim() ?? '';
+        final name = entry['name']?.toString().trim() ?? '';
+        if (rawId.isEmpty || name.isEmpty) {
+          continue;
+        }
+        final id = targetSiteId == Constant.kDouyin
+            ? DouyinSite.normalizeCategoryId(rawId)
+            : rawId;
+        final parentId = entry['parentId']?.toString().trim() ?? '';
+        final pic = entry['pic']?.toString().trim();
+        result.add(
+          LiveSubCategory(
+            id: id,
+            name: name,
+            parentId: parentId.isEmpty ? id : parentId,
+            pic: pic == null || pic.isEmpty ? null : pic,
+          ),
+        );
+      }
+      return result;
+    } catch (_) {
+      return const [];
+    }
   }
 }
 

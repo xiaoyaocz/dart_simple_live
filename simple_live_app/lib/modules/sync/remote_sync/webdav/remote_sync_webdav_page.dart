@@ -63,6 +63,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                tooltip: '同步选项',
                                 icon: const Icon(Icons.settings),
                                 onPressed: showSetting,
                               ),
@@ -73,6 +74,14 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                             controller.doWebDAVRecovery();
                           },
                           onLongPress: showSetting,
+                        ),
+                        AppStyle.divider,
+                        ListTile(
+                          title: const Text("同步选项"),
+                          subtitle: const Text("设置从云端恢复到本地的内容（默认含自定义分区）"),
+                          leading: const Icon(Icons.tune_outlined),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: showSetting,
                         ),
                       ],
               ),
@@ -86,10 +95,11 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
   void showSetting() {
     Utils.showBottomSheet(
       title: '同步选项',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           AppStyle.divider,
           Obx(
             () => CheckboxListTile(
@@ -123,6 +133,16 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
           AppStyle.divider,
           Obx(
             () => CheckboxListTile(
+              secondary: const Icon(Icons.category_outlined),
+              title: const Text("同步自定义分区"),
+              value: controller.isSyncCustomCategories.value,
+              controlAffinity: ListTileControlAffinity.trailing,
+              onChanged: (value) => controller.changeIsSyncCustomCategories(),
+            ),
+          ),
+          AppStyle.divider,
+          Obx(
+            () => CheckboxListTile(
               secondary: const Icon(Remix.account_circle_line),
               title: const Text("同步哔哩哔哩账号"),
               value: controller.isSyncBilibiliAccount.value,
@@ -142,6 +162,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
           ),
           AppStyle.divider,
         ],
+      ),
       ),
     );
   }

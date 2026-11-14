@@ -139,6 +139,9 @@ class LocalStorageService extends GetxService {
   static const String kPlayerClockEnable = "PlayerClockEnable";
   static const String kPlayerClockPosition = "PlayerClockPosition";
 
+  /// 自定义分区列表（与移动端备份/局域网同步共享）
+  static const String kCustomCategories = "CustomCategories";
+
   /// 播放器缓冲区大小
   static const String kPlayerBufferSize = "PlayerBufferSize";
   static const String kPlayerForceHttps = "PlayerForceHttps";

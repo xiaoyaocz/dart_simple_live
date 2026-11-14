@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -31,6 +32,15 @@ class CategoryController extends GetxController
     }
 
     super.onInit();
+  }
+
+  String get currentSiteId {
+    final sites = Sites.supportSites;
+    if (sites.isEmpty) {
+      return Constant.kDouyin;
+    }
+    final index = tabController.index.clamp(0, sites.length - 1);
+    return sites[index].id;
   }
 
   void refreshOrScrollTop() {

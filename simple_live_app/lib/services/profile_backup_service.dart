@@ -8,6 +8,7 @@ import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/services/bulk_data_import_service.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
+import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
@@ -42,6 +43,8 @@ class ProfileBackupService extends GetxService {
     LocalStorageService.kDouyuDeviceId,
     LocalStorageService.kMobileTopExtraInset,
     LocalStorageService.kMobileBottomExtraInset,
+    // 自定义分区由 customCategories 字段单独导出，支持按开关与合并策略同步
+    LocalStorageService.kCustomCategories,
   };
 
   /// 只随本机、绝不随任何备份/同步通道迁移的键。
@@ -99,6 +102,7 @@ class ProfileBackupService extends GetxService {
         .getFavorites()
         .map((item) => item.toJson())
         .toList();
+    final customCategories = _exportCustomCategories();
     return {
       "schema": schema,
       "schemaVersion": schemaVersion,
@@ -114,6 +118,7 @@ class ProfileBackupService extends GetxService {
       "histories": histories,
       "iptvPlaylists": iptvPlaylists,
       "iptvFavorites": iptvFavorites,
+      "customCategories": customCategories,
       "summary": {
         "settingCount": settingsPayload.length,
         "keywordShieldCount": (shieldPayload["keywords"] as List).length,
@@ -123,6 +128,7 @@ class ProfileBackupService extends GetxService {
         "historyCount": histories.length,
         "iptvPlaylistCount": iptvPlaylists.length,
         "iptvFavoriteCount": iptvFavorites.length,
+        "customCategoryCount": customCategories.length,
         "accountCount": (_exportAccounts()["items"] as List).length,
       },
     };
@@ -368,6 +374,20 @@ class ProfileBackupService extends GetxService {
     if (options.follows) {
       await _importIptv(payload, summary, overwrite);
     }
+    if (options.customCategories) {
+      final hasExplicit = payload.containsKey("customCategories");
+      final legacyRaw = payload["settings"] is Map
+          ? (payload["settings"] as Map)[LocalStorageService.kCustomCategories]
+          : null;
+      if (hasExplicit || legacyRaw != null) {
+        onProgress?.call(const SyncProgress(stage: "导入自定义分区"));
+        await _importCustomCategories(
+          hasExplicit ? payload["customCategories"] : legacyRaw,
+          summary,
+          overwrite,
+        );
+      }
+    }
 
     if (options.settings || options.shields || options.shieldPresets) {
       AppSettingsController.instance.reloadFromStorage();
@@ -479,6 +499,18 @@ class ProfileBackupService extends GetxService {
     }
     result.sort((a, b) => a["name"].toString().compareTo(b["name"].toString()));
     return result;
+  }
+
+  List<Map<String, dynamic>> _exportCustomCategories() {
+    final list = Get.isRegistered<CustomCategoryService>()
+        ? CustomCategoryService.instance.items.toList()
+        : CustomCategoryService.decodeList(
+            LocalStorageService.instance.getValue(
+              LocalStorageService.kCustomCategories,
+              '[]',
+            ),
+          );
+    return list.map((item) => item.toJson()).toList();
   }
 
   Future<void> _importSettings(
@@ -717,6 +749,20 @@ class ProfileBackupService extends GetxService {
     }
   }
 
+  Future<void> _importCustomCategories(
+    dynamic rawCategories,
+    ProfileImportSummary summary,
+    bool overwrite,
+  ) async {
+    final service = Get.isRegistered<CustomCategoryService>()
+        ? CustomCategoryService.instance
+        : (CustomCategoryService()..onInit());
+    summary.customCategories += await service.applySyncData(
+      rawCategories,
+      overwrite: overwrite,
+    );
+  }
+
   dynamic _readPayloadList(Map<String, dynamic> payload, List<String> keys) {
     for (final key in keys) {
       final value = payload[key];
@@ -792,6 +838,7 @@ class ProfileImportOptions {
   final bool shieldPresets;
   final bool follows;
   final bool histories;
+  final bool customCategories;
 
   const ProfileImportOptions({
     this.settings = true,
@@ -799,6 +846,7 @@ class ProfileImportOptions {
     this.shieldPresets = true,
     this.follows = true,
     this.histories = true,
+    this.customCategories = true,
   });
 }
 
@@ -811,11 +859,12 @@ class ProfileImportSummary {
   int histories = 0;
   int iptvPlaylists = 0;
   int iptvFavorites = 0;
+  int customCategories = 0;
   int skipped = 0;
 
   String get message {
     final base =
-        "设置 $settings 项，屏蔽 $shields 项，预设 $shieldPresets 个，关注 $followUsers 个，标签 $followTags 个，历史 $histories 条，IPTV 源 $iptvPlaylists 个，IPTV 收藏 $iptvFavorites 个";
+        "设置 $settings 项，屏蔽 $shields 项，预设 $shieldPresets 个，关注 $followUsers 个，标签 $followTags 个，历史 $histories 条，IPTV 源 $iptvPlaylists 个，IPTV 收藏 $iptvFavorites 个，自定义分区 $customCategories 个";
     return skipped > 0 ? "$base，跳过异常 $skipped 条" : base;
   }
 }

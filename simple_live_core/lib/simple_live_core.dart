@@ -18,6 +18,7 @@ export 'src/common/douyu_passport.dart';
 export 'src/common/platform_identity.dart';
 export 'src/common/kuaishou_live_link.dart';
 export 'src/common/live_url_parser.dart';
+export 'src/common/category_url_parser.dart';
 export 'src/common/player_error_classifier.dart';
 export 'src/common/player_volume_policy.dart';
 export 'src/common/windows_video_acceleration_policy.dart';

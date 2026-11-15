@@ -36,4 +36,55 @@ void main() {
     expect(legacy.length, Sites.legacySiteIds.length);
     expect(legacy.every(Sites.legacySiteIds.contains), isTrue);
   });
+
+  test("V2 缺失时回退旧键并补全", () {
+    final keys = Constant.allHomePages.keys.toList();
+    final result = AppSettingsController.resolveSortKeys(
+      v2Raw: "",
+      legacyRaw: "user,recommend",
+      keys: keys,
+      legacyKeys: Constant.legacyHomeSortKeys,
+    );
+    expect(result.take(2), ["user", "recommend"]);
+    expect(result.length, keys.length);
+  });
+
+  test("旧键与 V2 投影一致时 V2 优先", () {
+    final keys = Constant.allHomePages.keys.toList();
+    final result = AppSettingsController.resolveSortKeys(
+      v2Raw: "iptv,recommend,follow,category,user",
+      legacyRaw: "recommend,follow,category,user",
+      keys: keys,
+      legacyKeys: Constant.legacyHomeSortKeys,
+    );
+    expect(result.first, "iptv");
+    expect(result.length, keys.length);
+  });
+
+  test("旧键被旧版本改写时旧键优先（最后写入者生效）", () {
+    final keys = Constant.allHomePages.keys.toList();
+    final result = AppSettingsController.resolveSortKeys(
+      // V2 仍是新版本降级前的顺序
+      v2Raw: "iptv,recommend,follow,category,user",
+      // 用户降级后在 1.13.x 里把“我的”拖到了首位
+      legacyRaw: "user,recommend,follow,category",
+      keys: keys,
+      legacyKeys: Constant.legacyHomeSortKeys,
+    );
+    expect(result.take(2), ["user", "recommend"]);
+    expect(result.length, keys.length);
+    expect(result.contains("iptv"), isTrue);
+  });
+
+  test("旧键为空时以 V2 为准", () {
+    final keys = Constant.allHomePages.keys.toList();
+    final result = AppSettingsController.resolveSortKeys(
+      v2Raw: "iptv,recommend,follow,category,user",
+      legacyRaw: "",
+      keys: keys,
+      legacyKeys: Constant.legacyHomeSortKeys,
+    );
+    expect(result.first, "iptv");
+    expect(result.length, keys.length);
+  });
 }

@@ -499,6 +499,7 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kSiteSortV2,
       LocalStorageService.kSiteSort,
       keys,
+      Sites.legacySiteIds,
     );
   }
 
@@ -508,24 +509,69 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kHomeSortV2,
       LocalStorageService.kHomeSort,
       keys,
+      Constant.legacyHomeSortKeys,
     );
   }
 
-  /// 优先读新版完整排序键；没有则回退旧键，并补全当前版本缺失的项
-  List<String> _readSort(String v2Key, String legacyKey, List<String> keys) {
-    final v2 = LocalStorageService.instance
-        .getValue(v2Key, "")
-        .split(",")
-        .where((item) => keys.contains(item))
-        .toList();
-    final source = v2.isNotEmpty
-        ? v2
-        : LocalStorageService.instance
-            .getValue(legacyKey, keys.join(","))
-            .split(",")
-            .where((item) => keys.contains(item))
-            .toList();
-    return normalizeSortKeys(source, keys);
+  /// 从存储解析排序，并补全当前版本缺失的项
+  List<String> _readSort(
+    String v2Key,
+    String legacyKey,
+    List<String> keys,
+    List<String> legacyKeys,
+  ) {
+    return resolveSortKeys(
+      v2Raw: LocalStorageService.instance.getValue(v2Key, ""),
+      legacyRaw: LocalStorageService.instance.getValue(legacyKey, ""),
+      keys: keys,
+      legacyKeys: legacyKeys,
+    );
+  }
+
+  /// 解析排序：V2 缺失时回退旧键；若旧键内容与 V2 的旧键投影不一致，
+  /// 说明降级期间在旧版本里调整过排序，此时旧键优先，实现“最后写入者生效”。
+  /// 结果均按当前版本的完整集合补全。
+  static List<String> resolveSortKeys({
+    required String v2Raw,
+    required String legacyRaw,
+    required List<String> keys,
+    required List<String> legacyKeys,
+  }) {
+    final legacyValue = legacyRaw.split(",").where(keys.contains).toList();
+    final v2Value = v2Raw.split(",").where(keys.contains).toList();
+    if (v2Value.isEmpty) {
+      return normalizeSortKeys(legacyValue, keys);
+    }
+    if (isLegacySortOverridden(
+      v2Value: v2Value,
+      legacyValue: legacyValue,
+      legacyKeys: legacyKeys,
+    )) {
+      return normalizeSortKeys(legacyValue, keys);
+    }
+    return normalizeSortKeys(v2Value, keys);
+  }
+
+  /// 旧键是否被旧版本改写过：新版本写入时旧键恒等于 V2 的旧键投影，
+  /// 两者不一致即说明旧键最后由旧版本写入
+  static bool isLegacySortOverridden({
+    required List<String> v2Value,
+    required List<String> legacyValue,
+    required List<String> legacyKeys,
+  }) {
+    if (legacyValue.isEmpty) {
+      return false;
+    }
+    final projected = projectLegacyKeys(v2Value, legacyKeys);
+    if (legacyValue.length != projected.length) {
+      return true;
+    }
+    for (var i = 0; i < legacyValue.length; i++) {
+      if (legacyValue[i] != projected[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// 过滤未知 key 并按当前版本的完整集合补全
@@ -606,6 +652,7 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kLiveRoomQuickAccessSortV2,
       LocalStorageService.kLiveRoomQuickAccessSort,
       keys,
+      Constant.legacyLiveRoomQuickAccessKeys,
     );
 
     final enabledRaw = LocalStorageService.instance.getValue(

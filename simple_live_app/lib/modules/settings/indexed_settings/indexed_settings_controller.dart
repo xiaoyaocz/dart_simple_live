@@ -4,6 +4,8 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 class IndexedSettingsController extends GetxController {
   RxList<String> siteSort = RxList<String>();
   RxList<String> homeSort = RxList<String>();
+  RxSet<String> homeHidden = <String>{}.obs;
+  RxSet<String> siteHidden = <String>{}.obs;
   RxList<String> liveRoomTabSort = RxList<String>();
   RxList<String> liveRoomQuickAccessSort = RxList<String>();
   RxSet<String> liveRoomQuickAccessEnabled = <String>{}.obs;
@@ -13,6 +15,8 @@ class IndexedSettingsController extends GetxController {
   void onInit() {
     siteSort = AppSettingsController.instance.siteSort;
     homeSort = AppSettingsController.instance.homeSort;
+    homeHidden = AppSettingsController.instance.homeHidden;
+    siteHidden = AppSettingsController.instance.siteHidden;
     liveRoomTabSort = AppSettingsController.instance.liveRoomTabSort;
     liveRoomQuickAccessSort =
         AppSettingsController.instance.liveRoomQuickAccessSort;
@@ -32,6 +36,14 @@ class IndexedSettingsController extends GetxController {
     siteSort.insert(newIndex, item);
     // ignore: invalid_use_of_protected_member
     AppSettingsController.instance.setSiteSort(siteSort.value);
+  }
+
+  void setHomeVisible(String key, bool visible) {
+    AppSettingsController.instance.setHomeVisible(key, visible);
+  }
+
+  void setSiteVisible(String key, bool visible) {
+    AppSettingsController.instance.setSiteVisible(key, visible);
   }
 
   void updateHomeSort(int oldIndex, int newIndex) {

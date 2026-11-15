@@ -52,7 +52,7 @@ class IndexedPage extends GetView<IndexedController> {
                     ),
                     child: IndexedStack(
                       index: controller.index.value,
-                      children: controller.pages,
+                      children: controller.pageWidgets,
                     ),
                   ),
                 ),

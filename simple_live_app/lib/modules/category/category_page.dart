@@ -11,65 +11,69 @@ class CategoryPage extends GetView<CategoryController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 8,
-        title: TabBar(
-          controller: controller.tabController,
-          padding: EdgeInsets.zero,
-          tabAlignment: TabAlignment.center,
-          tabs: Sites.supportSites
-              .map(
-                (e) => Tab(
-                  //text: e.name,
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        e.logo,
-                        width: 24,
-                      ),
-                      AppStyle.hGap8,
-                      Text(e.name),
-                    ],
+    return Obx(() {
+      // 平台显隐调整后重建标签
+      controller.sitesVersion.value;
+      return Scaffold(
+        appBar: AppBar(
+          titleSpacing: 8,
+          title: TabBar(
+            controller: controller.tabController,
+            padding: EdgeInsets.zero,
+            tabAlignment: TabAlignment.center,
+            tabs: Sites.visibleSites
+                .map(
+                  (e) => Tab(
+                    //text: e.name,
+                    child: Row(
+                      children: [
+                        Image.asset(
+                          e.logo,
+                          width: 24,
+                        ),
+                        AppStyle.hGap8,
+                        Text(e.name),
+                      ],
+                    ),
                   ),
+                )
+                .toList(),
+            labelPadding: AppStyle.edgeInsetsH20,
+            isScrollable: true,
+            indicatorSize: TabBarIndicatorSize.label,
+          ),
+          actions: [
+            IconButton(
+              tooltip: '添加自定义分区',
+              onPressed: () {
+                CustomCategoryDialogs.showAddOrEditDialog(
+                  initialSiteId: controller.currentSiteId,
+                );
+              },
+              icon: const Icon(Icons.add_rounded),
+            ),
+            IconButton(
+              tooltip: '管理自定义分区',
+              onPressed: () {
+                CustomCategoryDialogs.showManageSheet(
+                  initialSiteId: controller.currentSiteId,
+                );
+              },
+              icon: const Icon(Icons.bookmarks_outlined),
+            ),
+          ],
+        ),
+        body: TabBarView(
+          controller: controller.tabController,
+          children: Sites.visibleSites
+              .map(
+                (e) => CategoryListView(
+                  e.id,
                 ),
               )
               .toList(),
-          labelPadding: AppStyle.edgeInsetsH20,
-          isScrollable: true,
-          indicatorSize: TabBarIndicatorSize.label,
         ),
-        actions: [
-          IconButton(
-            tooltip: '添加自定义分区',
-            onPressed: () {
-              CustomCategoryDialogs.showAddOrEditDialog(
-                initialSiteId: controller.currentSiteId,
-              );
-            },
-            icon: const Icon(Icons.add_rounded),
-          ),
-          IconButton(
-            tooltip: '管理自定义分区',
-            onPressed: () {
-              CustomCategoryDialogs.showManageSheet(
-                initialSiteId: controller.currentSiteId,
-              );
-            },
-            icon: const Icon(Icons.bookmarks_outlined),
-          ),
-        ],
-      ),
-      body: TabBarView(
-        controller: controller.tabController,
-        children: Sites.supportSites
-            .map(
-              (e) => CategoryListView(
-                e.id,
-              ),
-            )
-            .toList(),
-      ),
-    );
+      );
+    });
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/search/search_list_controller.dart';
 
@@ -14,29 +15,37 @@ class AppSearchController extends GetxController
 
   var searchMode = 0.obs;
 
+  /// 平台显隐变化时自增，触发搜索页重建标签
+  final RxInt sitesVersion = 0.obs;
+  var _knownSites = Sites.visibleSites;
+
   AppSearchController() {
     final initialIndex = _resolveInitialIndex();
     index = initialIndex;
     tabController = TabController(
-      length: Sites.supportSites.length,
+      length: _knownSites.length,
       vsync: this,
       initialIndex: initialIndex,
     );
-    AppSettingsController.instance.setLastSearchSiteId(Sites.supportSites[index].id);
+    if (_knownSites.isNotEmpty) {
+      AppSettingsController.instance.setLastSearchSiteId(_knownSites[index].id);
+    }
+    _bindTabListener();
+  }
+
+  void _bindTabListener() {
     tabController.animation?.addListener(() {
-      var currentIndex = (tabController.animation?.value ?? 0).round();
+      final currentIndex = (tabController.animation?.value ?? 0).round();
       if (index == currentIndex) {
         return;
       }
-
-      index = currentIndex;
-      AppSettingsController.instance.setLastSearchSiteId(Sites.supportSites[index].id);
-      // if (Sites.supportSites[index].id == Constant.kDouyin) {
-      //   return;
-      // }
-
-      var controller =
-          Get.find<SearchListController>(tag: Sites.supportSites[index].id);
+      final sites = Sites.visibleSites;
+      if (sites.isEmpty) {
+        return;
+      }
+      index = currentIndex.clamp(0, sites.length - 1);
+      AppSettingsController.instance.setLastSearchSiteId(sites[index].id);
+      final controller = Get.find<SearchListController>(tag: sites[index].id);
 
       if (controller.list.isEmpty &&
           !controller.pageEmpty.value &&
@@ -46,7 +55,46 @@ class AppSearchController extends GetxController
     });
   }
 
+  /// 平台显示开关变化后重建搜索标签，无需重启
+  void rebuildSites() {
+    final sites = Sites.visibleSites;
+    if (sites.isEmpty) {
+      return;
+    }
+    String? currentId;
+    if (_knownSites.isNotEmpty) {
+      currentId =
+          _knownSites[tabController.index.clamp(0, _knownSites.length - 1)].id;
+    }
+    var initialIndex = currentId == null
+        ? 0
+        : sites.indexWhere((site) => site.id == currentId);
+    if (initialIndex < 0) {
+      initialIndex = 0;
+    }
+    _knownSites = sites;
+    final old = tabController;
+    tabController = TabController(
+      length: sites.length,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
+    index = initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      old.dispose();
+    });
+    _bindTabListener();
+    for (final site in sites) {
+      if (!Get.isRegistered<SearchListController>(tag: site.id)) {
+        Get.put(SearchListController(site), tag: site.id);
+      }
+    }
+    AppSettingsController.instance.setLastSearchSiteId(sites[index].id);
+    sitesVersion.value++;
+  }
+
   StreamSubscription<dynamic>? streamSubscription;
+  StreamSubscription<dynamic>? _siteSettingsSubscription;
 
   TextEditingController searchController = TextEditingController();
 
@@ -60,13 +108,13 @@ class AppSearchController extends GetxController
     }
     siteId ??= AppSettingsController.instance.lastSearchSiteId.value;
     final resolvedIndex =
-        Sites.supportSites.indexWhere((site) => site.id == siteId);
+        Sites.visibleSites.indexWhere((site) => site.id == siteId);
     return resolvedIndex < 0 ? 0 : resolvedIndex;
   }
 
   @override
   void onInit() {
-    for (var site in Sites.supportSites) {
+    for (var site in Sites.visibleSites) {
       // if (site.id == Constant.kDouyin) {
       //   Get.put(DouyinSearchController(site));
       // } else {
@@ -76,6 +124,10 @@ class AppSearchController extends GetxController
       );
       //}
     }
+    _siteSettingsSubscription = EventBus.instance.listen(
+      EventBus.kUpdateCategorySites,
+      (_) => rebuildSites(),
+    );
 
     super.onInit();
   }
@@ -84,7 +136,7 @@ class AppSearchController extends GetxController
     if (searchController.text.isEmpty) {
       return;
     }
-    for (var site in Sites.supportSites) {
+    for (var site in Sites.visibleSites) {
       // if (site.id == Constant.kDouyin) {
       //   var controller = Get.find<DouyinSearchController>();
       //   controller.keyword = searchController.text;
@@ -99,7 +151,7 @@ class AppSearchController extends GetxController
     }
     // if (Sites.supportSites[index].id != Constant.kDouyin) {
     var controller =
-        Get.find<SearchListController>(tag: Sites.supportSites[index].id);
+        Get.find<SearchListController>(tag: Sites.visibleSites[index].id);
     controller.refreshData();
     //}
   }
@@ -107,6 +159,7 @@ class AppSearchController extends GetxController
   @override
   void onClose() {
     streamSubscription?.cancel();
+    _siteSettingsSubscription?.cancel();
     super.onClose();
   }
 }

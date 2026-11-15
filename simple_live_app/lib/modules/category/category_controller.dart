@@ -50,7 +50,9 @@ class CategoryController extends GetxController
   String get currentSiteId {
     final sites = Sites.visibleSites;
     if (sites.isEmpty) {
-      return Constant.kDouyin;
+      // visibleSites 自带兜底，这里防御 supportSites 也异常的场景，按用户排序取首位
+      final support = Sites.supportSites;
+      return support.isEmpty ? Constant.kDouyin : support.first.id;
     }
     final index = tabController.index.clamp(0, sites.length - 1);
     return sites[index].id;

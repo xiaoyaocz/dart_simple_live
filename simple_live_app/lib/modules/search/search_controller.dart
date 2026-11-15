@@ -56,6 +56,13 @@ class AppSearchController extends GetxController
   }
 
   @override
+  void unregisterSiteListController(Site site) {
+    if (Get.isRegistered<SearchListController>(tag: site.id)) {
+      Get.delete<SearchListController>(tag: site.id);
+    }
+  }
+
+  @override
   void onSiteTabsRebuilt(int initialIndex) {
     index = initialIndex;
     _bindTabListener();

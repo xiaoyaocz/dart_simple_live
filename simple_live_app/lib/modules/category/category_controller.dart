@@ -23,6 +23,13 @@ class CategoryController extends GetxController
   }
 
   @override
+  void unregisterSiteListController(Site site) {
+    if (Get.isRegistered<CategoryListController>(tag: site.id)) {
+      Get.delete<CategoryListController>(tag: site.id);
+    }
+  }
+
+  @override
   void onInit() {
     streamSubscription = EventBus.instance.listen(
       EventBus.kBottomNavigationBarClicked,

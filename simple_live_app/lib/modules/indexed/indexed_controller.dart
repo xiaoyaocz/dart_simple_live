@@ -85,6 +85,7 @@ class IndexedController extends GetxController {
 
   /// 主页设置的显隐开关变化后重建底栏，无需重启
   void refreshTabs() {
+    final previousKeys = items.map((item) => item.index).toSet();
     // 记住当前入口，隐藏别的入口后仍停留在原页面
     final currentKey =
         index.value < items.length ? items[index.value].index : null;
@@ -101,6 +102,43 @@ class IndexedController extends GetxController {
     index.value = next.clamp(0, items.length - 1);
     final key = items[index.value].index;
     _pageCache.putIfAbsent(key, () => _createPage(key));
+    // 被隐藏入口的页面在本次重建帧结束后释放，避免 controller 常驻内存
+    final removedKeys =
+        previousKeys.difference(items.map((item) => item.index).toSet());
+    if (removedKeys.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final removed in removedKeys) {
+          _disposePage(removed);
+        }
+      });
+    }
+  }
+
+  /// 释放被隐藏入口的页面及其 controller，重新显示时按需重建
+  void _disposePage(int key) {
+    _pageCache.remove(key);
+    switch (key) {
+      case 0:
+        if (Get.isRegistered<HomeController>()) {
+          Get.delete<HomeController>();
+        }
+        break;
+      case 1:
+        if (Get.isRegistered<FollowUserController>()) {
+          Get.delete<FollowUserController>();
+        }
+        break;
+      case 2:
+        if (Get.isRegistered<CategoryController>()) {
+          Get.delete<CategoryController>();
+        }
+        break;
+      case 4:
+        if (Get.isRegistered<IptvChannelsController>()) {
+          Get.delete<IptvChannelsController>();
+        }
+        break;
+    }
   }
 
   @override

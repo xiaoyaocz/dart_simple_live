@@ -24,6 +24,13 @@ class HomeController extends GetxController
   }
 
   @override
+  void unregisterSiteListController(Site site) {
+    if (Get.isRegistered<HomeListController>(tag: site.id)) {
+      Get.delete<HomeListController>(tag: site.id);
+    }
+  }
+
+  @override
   void onInit() {
     streamSubscription = EventBus.instance.listen(
       EventBus.kBottomNavigationBarClicked,

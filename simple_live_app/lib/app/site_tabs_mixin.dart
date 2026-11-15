@@ -39,6 +39,9 @@ mixin SiteTabsMixin on GetxController implements TickerProvider {
   /// 注册单个平台的列表 controller（宿主实现，需自行判重）
   void registerSiteListController(Site site);
 
+  /// 释放单个平台的列表 controller（宿主实现，需自行判空）
+  void unregisterSiteListController(Site site);
+
   /// 平台显隐/排序变化后重建标签，无需重启
   void rebuildSiteTabs() {
     final sites = Sites.visibleSites;
@@ -60,6 +63,9 @@ mixin SiteTabsMixin on GetxController implements TickerProvider {
     if (initialIndex < 0) {
       initialIndex = 0;
     }
+    final removedSites = _knownSites
+        .where((site) => sites.every((newSite) => newSite.id != site.id))
+        .toList();
     _knownSites = sites;
     final old = tabController;
     tabController = TabController(
@@ -69,6 +75,10 @@ mixin SiteTabsMixin on GetxController implements TickerProvider {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       old.dispose();
+      // 页面树已按新标签重建完毕，此时释放被隐藏平台的列表 controller
+      for (final site in removedSites) {
+        unregisterSiteListController(site);
+      }
     });
     for (final site in sites) {
       registerSiteListController(site);

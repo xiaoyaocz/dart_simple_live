@@ -7,6 +7,12 @@ Simple Live 会继续保持开源和免费使用。感谢赞助维护、提供�
 - 感谢 [xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live) 原作者和上游项目，Simple Live 当前公开仓库基于该项目继续维护。
 - 感谢 [AllLive](https://github.com/xiaoyaocz/AllLive) 提供早期项目基础和思路参考。
 
+## 社区 PR 贡献者
+
+- 感谢 @[821869798](https://github.com/821869798)（unifan）贡献 [PR #148](https://github.com/June6699/dart_simple_live/pull/148) Windows Inno Setup 安装包支持与构建工作流、[PR #175](https://github.com/June6699/dart_simple_live/pull/175) 自定义分区管理与直播间/分区链接一键识别。
+- 感谢 @[zhonglixun](https://github.com/zhonglixun) 贡献 [PR #173](https://github.com/June6699/dart_simple_live/pull/173) 关注页标签面板 Sliver 头部与直播间更多入口修正、[PR #176](https://github.com/June6699/dart_simple_live/pull/176) 主页底栏与平台标签显隐开关及排序降级兼容修复。
+- 感谢 @[C0neF](https://github.com/C0neF) 提交 [PR #38](https://github.com/June6699/dart_simple_live/pull/38) Android 手势调节音量双重衰减修复。
+
 ## 赞助支持
 
 - 感谢若干微信用户赞助支持项目维护。未确认可公开身份前，这里默认匿名致谢。

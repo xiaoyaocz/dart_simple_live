@@ -11,8 +11,8 @@ class EventBus {
   /// 主页底栏入口显隐/排序变化，需要重建底栏
   static const String kUpdateHomeTabs = "UpdateHomeTabs";
 
-  /// 分类页平台显隐变化，需要重建平台标签
-  static const String kUpdateCategorySites = "UpdateCategorySites";
+  /// 平台显隐/排序变化，需要重建首页/分类/搜索的平台标签
+  static const String kUpdateSiteTabs = "UpdateSiteTabs";
   static EventBus? _instance;
 
   static EventBus get instance {

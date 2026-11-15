@@ -125,7 +125,7 @@ class AppSearchController extends GetxController
       //}
     }
     _siteSettingsSubscription = EventBus.instance.listen(
-      EventBus.kUpdateCategorySites,
+      EventBus.kUpdateSiteTabs,
       (_) => rebuildSites(),
     );
 

@@ -1615,7 +1615,7 @@ class AppSettingsController extends GetxController {
     }
     // 导入配置/重置后让底栏与平台标签立即跟随新配置
     EventBus.instance.emit(EventBus.kUpdateHomeTabs, 0);
-    EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
+    EventBus.instance.emit(EventBus.kUpdateSiteTabs, 0);
   }
 
   void importShieldValue(String rawValue) {
@@ -2190,7 +2190,7 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kSiteSort,
       projectLegacyKeys(value, Sites.legacySiteIds).join(","),
     );
-    EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
+    EventBus.instance.emit(EventBus.kUpdateSiteTabs, 0);
     EventBus.instance.emit(Constant.kUpdateFollow, 0);
   }
 
@@ -2258,7 +2258,7 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kSiteHidden,
       siteHidden.join(","),
     );
-    EventBus.instance.emit(EventBus.kUpdateCategorySites, 0);
+    EventBus.instance.emit(EventBus.kUpdateSiteTabs, 0);
   }
 
   RxList<String> liveRoomTabSort = RxList<String>();

@@ -37,7 +37,7 @@ class HomeController extends GetxController
       Get.put(HomeListController(site), tag: site.id);
     }
     _siteSettingsSubscription = EventBus.instance.listen(
-      EventBus.kUpdateCategorySites,
+      EventBus.kUpdateSiteTabs,
       (_) => rebuildSites(),
     );
 

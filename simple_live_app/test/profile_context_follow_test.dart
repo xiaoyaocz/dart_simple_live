@@ -31,8 +31,6 @@ class _DB extends DBService {
 
 class _Room extends LiveRoomController {
   _Room() : super(pSite: Sites.allSites['douyin']!, pRoomId: '123');
-  @override
-  void prepareDanmaku() {}
   int removals = 0;
   bool realRemoval = false;
   @override
@@ -96,19 +94,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('连续请求Enter悬浮输入只开一个窗口，Esc关闭且保留草稿', (tester) async {
+  testWidgets('连续请求Enter只开一个官方网页窗口，Esc可关闭', (tester) async {
     await mount(tester, 390);
-    room.danmakuDraft.text = '未发送草稿';
     final first = room.openDanmakuComposer();
     final second = room.openDanmakuComposer();
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
-    expect(find.text('未发送草稿'), findsOneWidget);
+    expect(find.text('官方弹幕 · ${room.site.name}'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing,
+        reason: 'Use the official webpage editor, not a local sender');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     await Future.wait([first, second]);
     expect(find.byType(Dialog), findsNothing);
-    expect(room.danmakuDraft.text, '未发送草稿');
     expect(db.added, isEmpty);
   });
 

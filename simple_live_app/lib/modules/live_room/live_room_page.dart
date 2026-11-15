@@ -1,6 +1,5 @@
 import 'package:simple_live_app/widgets/live_message_content.dart';
 import 'dart:io';
-import 'package:simple_live_app/modules/live_room/danmaku_composer.dart';
 
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
@@ -587,12 +586,13 @@ class LiveRoomPage extends StatelessWidget {
                       ],
                     ),
                   )),
-                    if (Platform.isWindows) DanmakuComposer(
-                      prepare: controller.prepareDanmaku,
-                      emoticons: () => controller.composerEmoticons,
-                      onEmoticonRoute: controller.trackDanmakuEmoticonRoute,
-                      draft: controller.danmakuDraft,
-                      send: controller.sendDanmaku,
+                    if (Platform.isWindows) Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: OutlinedButton.icon(
+                        onPressed: controller.openDanmakuComposer,
+                        icon: const Icon(Icons.chat_outlined),
+                        label: const Text('官方弹幕（Enter）'),
+                      ),
                     ),
                   ]),
                   if (controller.site.id == Constant.kBiliBili)

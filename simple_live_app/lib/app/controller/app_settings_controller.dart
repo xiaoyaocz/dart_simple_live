@@ -2301,16 +2301,17 @@ class AppSettingsController extends GetxController {
     EventBus.instance.emit(EventBus.kUpdateHomeTabs, 0);
   }
 
-  void setSiteVisible(String key, bool visible) {
+  /// 设置平台可见性；返回 false 表示被“至少保留一个平台”守卫拦截
+  bool setSiteVisible(String key, bool visible) {
     if (!Sites.allSites.containsKey(key)) {
-      return;
+      return false;
     }
     if (visible) {
       siteHidden.remove(key);
     } else {
       // 至少保留一个平台可见，否则分类页无标签可用
       if (siteHidden.length >= Sites.allSites.length - 1) {
-        return;
+        return false;
       }
       siteHidden.add(key);
     }
@@ -2320,6 +2321,7 @@ class AppSettingsController extends GetxController {
       siteHidden.join(","),
     );
     EventBus.instance.emit(EventBus.kUpdateSiteTabs, 0);
+    return true;
   }
 
   RxList<String> liveRoomTabSort = RxList<String>();

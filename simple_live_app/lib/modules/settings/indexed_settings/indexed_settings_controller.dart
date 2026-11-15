@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/utils.dart';
 
 class IndexedSettingsController extends GetxController {
   RxList<String> siteSort = RxList<String>();
@@ -42,8 +43,15 @@ class IndexedSettingsController extends GetxController {
     AppSettingsController.instance.setHomeVisible(key, visible);
   }
 
-  void setSiteVisible(String key, bool visible) {
-    AppSettingsController.instance.setSiteVisible(key, visible);
+  Future<void> setSiteVisible(String key, bool visible) async {
+    final applied = AppSettingsController.instance.setSiteVisible(key, visible);
+    if (!applied) {
+      // “至少保留一个平台”守卫拦截，弹窗说明而不是静默无效
+      await Utils.showMessageDialog(
+        "至少需要保留一个可见平台用于分类页展示，请先恢复其他平台后再隐藏。",
+        title: "无法隐藏",
+      );
+    }
   }
 
   void updateHomeSort(int oldIndex, int newIndex) {

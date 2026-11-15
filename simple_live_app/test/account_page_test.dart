@@ -6,6 +6,7 @@ import 'package:simple_live_app/modules/mine/account/account_page.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
 
 class _FakeBiliBiliAccountService extends BiliBiliAccountService {
@@ -42,6 +43,9 @@ void main() {
     Get.put<DouyuAccountService>(_FakeDouyuAccountService());
     Get.put<DouyinAccountService>(_FakeDouyinAccountService());
     Get.put<KuaishouAccountService>(_FakeKuaishouAccountService());
+    // 账号页构建期读取 IPTV 公开源列表，需注册服务；
+    // 仅构造实例（不调用 init()），避免测试环境打开 Hive box
+    Get.put<IptvService>(IptvService());
     Get.put(AccountController());
   });
 

@@ -87,4 +87,24 @@ void main() {
     expect(result.first, "iptv");
     expect(result.length, keys.length);
   });
+
+  test("平台全部被隐藏时仅恢复排序首位平台", () {
+    final sorted = Sites.allSites.keys.toList();
+    final repaired = AppSettingsController.clampAllHiddenSites(
+      sorted.toSet(),
+      sorted,
+    );
+    expect(repaired.contains(sorted.first), isFalse);
+    expect(repaired.length, sorted.length - 1);
+  });
+
+  test("保留至少一个平台的正常隐藏配置不被改动", () {
+    final sorted = Sites.allSites.keys.toList();
+    final hidden = sorted.toSet()..remove(sorted.first);
+    final repaired = AppSettingsController.clampAllHiddenSites(
+      hidden,
+      sorted,
+    );
+    expect(repaired, hidden);
+  });
 }

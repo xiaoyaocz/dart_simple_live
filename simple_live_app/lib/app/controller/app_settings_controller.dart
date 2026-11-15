@@ -596,6 +596,17 @@ class AppSettingsController extends GetxController {
     return value.where(legacyKeys.contains).toList();
   }
 
+  /// 异常配置兜底：平台全部被隐藏时，仅恢复排序首位平台可见，其余隐藏项保留
+  static Set<String> clampAllHiddenSites(
+    Set<String> hidden,
+    List<String> sortedKeys,
+  ) {
+    if (sortedKeys.isEmpty || hidden.length < sortedKeys.length) {
+      return hidden;
+    }
+    return Set<String>.of(hidden)..remove(sortedKeys.first);
+  }
+
   /// 读取底栏入口与平台的隐藏状态；新增入口默认可见
   void initHiddenEntries() {
     final homeKeys = Constant.allHomePages.keys.toSet();
@@ -622,8 +633,11 @@ class AppSettingsController extends GetxController {
             .where((item) => item.isNotEmpty && siteKeys.contains(item)),
       );
     // 平台全部被隐藏会让分类页无标签可建，按损坏配置回退
-    if (siteHidden.length >= siteKeys.length) {
-      siteHidden.clear();
+    final repaired = clampAllHiddenSites(siteHidden.toSet(), siteSort);
+    if (repaired.length != siteHidden.length) {
+      siteHidden
+        ..clear()
+        ..addAll(repaired);
     }
   }
 

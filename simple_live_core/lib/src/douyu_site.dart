@@ -325,14 +325,27 @@ class DouyuSite implements LiveSite {
     }
 
     // 开播时间与取流加密串互不依赖，并发发出，少等一次往返。
-    final h5RoomRequest = _takeH5Room(roomId);
-    final jsEncRequest = _takeHomeH5Enc(roomId);
+    // A public URL may be a VIP alias. H5, signing and CDN APIs require rid.
+    final realRoomId = roomInfo['room_id']?.toString() ?? roomId;
+    final h5RoomRequest = _takeH5Room(realRoomId);
+    final jsEncRequest = _takeHomeH5Enc(realRoomId);
     // 若 h5 请求先抛错，加密串请求的失败不应变成未捕获异常。
     jsEncRequest.catchError((Object _) => '');
     Map h5RoomInfo = await h5RoomRequest;
     String? showTime = h5RoomInfo["data"]?["show_time"]?.toString();
     var jsEncResult = await jsEncRequest;
-    var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
+    dynamic signing;
+    try {
+      signing = jsonDecode(jsEncResult);
+    } on FormatException {
+      throw CoreError('斗鱼播放签名返回异常，请刷新重试');
+    }
+    final crptext = signing is Map && signing['data'] is Map
+        ? signing['data']['room$realRoomId']
+        : null;
+    if (crptext is! String || crptext.isEmpty) {
+      throw CoreError('斗鱼未返回播放签名，请刷新重试');
+    }
 
     if (showTime != null && showTime.isNotEmpty) {
       try {
@@ -361,11 +374,11 @@ class DouyuSite implements LiveSite {
       userAvatar: roomInfo["owner_avatar"].toString(),
       introduction: roomInfo["show_details"].toString(),
       notice: "",
-      status: roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1,
+      status: status == 1 && !replay,
       danmakuData: roomInfo["room_id"].toString(),
       data: DouyuSign.getSign(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
-      isRecord: roomInfo["videoLoop"] == 1,
+      isRecord: replay,
       showTime: showTime,
       categoryId: roomInfo["cate_id"]?.toString(),
       categoryName: firstCategoryName([
@@ -411,6 +424,43 @@ class DouyuSite implements LiveSite {
   }
 
   Future<Map> _getRoomInfo(String roomId) async {
+    final direct = await _getBetardRoomInfo(roomId);
+    if (direct != null) return direct;
+
+    // /betard/<VIP alias> can return a 200 HTML "room closed" page even
+    // though the anchor is live. Resolve the public alias from official H5
+    // page data, then query the numeric room exactly once (no recursion).
+    final html = await HttpClient.instance.getText(
+      'https://m.douyu.com/${Uri.encodeComponent(roomId)}',
+      header: {'Referer': 'https://m.douyu.com/'},
+    );
+    final match = RegExp(
+      r'''<script\b[^>]*\bid=["']vike_pageContext["'][^>]*>([\s\S]*?)</script>''',
+    ).firstMatch(html);
+    String? realRoomId;
+    if (match != null) {
+      try {
+        final context = jsonDecode(match.group(1)!);
+        final info = context is Map ? context['pageProps'] : null;
+        final room = info is Map ? info['room'] : null;
+        final details = room is Map ? room['roomInfo'] : null;
+        final metadata = details is Map ? details['roomInfo'] : null;
+        if (metadata is Map) realRoomId = metadata['rid']?.toString();
+      } on FormatException {
+        // A changed/error page is not room metadata.
+      }
+    }
+    if (realRoomId == null ||
+        realRoomId == roomId ||
+        !RegExp(r'^[1-9]\d*$').hasMatch(realRoomId)) {
+      throw CoreError('未获取到斗鱼直播间信息，请检查房间号或稍后刷新');
+    }
+    final resolved = await _getBetardRoomInfo(realRoomId);
+    if (resolved == null) throw CoreError('斗鱼直播间信息返回异常，请稍后刷新');
+    return resolved;
+  }
+
+  Future<Map?> _getBetardRoomInfo(String roomId) async {
     var result = await HttpClient.instance.getJson(
       "https://www.douyu.com/betard/$roomId",
       queryParameters: {},
@@ -420,13 +470,16 @@ class DouyuSite implements LiveSite {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
       },
     );
-    Map roomInfo;
     if (result is String) {
-      roomInfo = json.decode(result)["room"];
-    } else {
-      roomInfo = result["room"];
+      try {
+        result = jsonDecode(result);
+      } on FormatException {
+        return null;
+      }
     }
-    return roomInfo;
+    return result is Map && result['room'] is Map
+        ? result['room'] as Map
+        : null;
   }
 
   //生成指定长度的16进制随机字符串

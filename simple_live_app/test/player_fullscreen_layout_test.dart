@@ -11,6 +11,9 @@ class _Room extends LiveRoomController {
   int refreshes = 0;
   int enters = 0;
   int exits = 0;
+  int composers = 0;
+  @override
+  Future<void> openDanmakuComposer() async { composers++; }
   @override
   void refreshRoom() => refreshes++;
   @override
@@ -68,7 +71,8 @@ class _Page extends LiveRoomPage {
           ? const TextField(key: ValueKey('chat-input'))
           : const SizedBox());
   @override
-  Widget buildBottomActions(BuildContext context) => const SizedBox(height: 48);
+  Widget buildBottomActions(BuildContext context) =>
+      const SizedBox(key: ValueKey('bottom-toolbar'), height: 48);
 }
 
 class _ActionPage extends _Page {
@@ -109,6 +113,62 @@ void main() {
     expect(find.text('复制链接'), findsNothing);
     expect(find.text('分享'), findsNothing);
     expect(tester.getRect(find.byType(_Surface)).bottom, 800);
+  });
+  testWidgets('页面和全屏Enter调用悬浮输入，长按与输入框Enter不重复打开', (tester) async {
+    final room = await mount(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    expect(room.composers, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(room.composers, 2);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.pump();
+    await tester.pumpWidget(MaterialApp(home: _Page(GlobalKey<_SurfaceState>(), input: true)));
+    await tester.pump();
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(room.composers, 2);
+  });
+  testWidgets('桌面半屏和窄窗口上下布局均无底部功能栏', (tester) async {
+    await mount(tester);
+    for (final size in [
+      const Size(1000, 1120),
+      const Size(720, 1080),
+      const Size(1280, 800),
+      const Size(1000, 1120),
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pump();
+      expect(find.byKey(const ValueKey('bottom-toolbar')), findsNothing,
+          reason: '窗口 $size 不应重新出现底部功能栏');
+      expect(tester.takeException(), isNull);
+    }
+  });
+  testWidgets('Enter survives focus loss and a child consuming the key', (tester) async {
+    final room = await mount(tester);
+    await tester.pumpWidget(MaterialApp(home: _ActionPage(
+        GlobalKey<_SurfaceState>(), () {})));
+    await tester.pump();
+    await tester.tap(find.text('顶部操作'));
+    await tester.pump();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(room.composers, 1);
+    final node = FocusNode(onKeyEvent: (_, __) => KeyEventResult.handled);
+    addTearDown(node.dispose);
+    FocusScope.of(tester.element(find.text('顶部操作'))).requestFocus(node);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(room.composers, 2);
+    await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(room.composers, 2, reason: 'leaving the room unregisters Enter');
   });
   testWidgets('双击房间顶部空白，取消最大化后恢复1280乘720，单击无效', (tester) async {
     final calls = <MethodCall>[];

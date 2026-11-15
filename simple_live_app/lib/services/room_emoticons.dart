@@ -10,6 +10,27 @@ class RoomEmoticons extends ChangeNotifier {
   final _resolved =
       LinkedHashMap<LiveMessage, List<LiveMessagePart>>.identity();
   final EmoticonCatalog _catalog;
+  final String _platform;
+  final _sendTokens = <String, String>{};
+  final _entries = <String, LiveEmoticon>{};
+  List<LiveEmoticon> get available {
+    final images = <String, LiveEmoticon>{};
+    for (final image in _entries.values) {
+      images.putIfAbsent(image.url, () => image);
+    }
+    return List.unmodifiable(images.values);
+  }
+
+  void _remember(Iterable<LiveEmoticon> images) {
+    for (final image in images) {
+      if (image.text.isNotEmpty && image.text.length <= 200 && LiveEmoticon.normalizeUrl(image.url) != null) {
+        _entries[image.text] = image;
+        if (_platform == 'huya' && image.text.startsWith('/{')) {
+          _sendTokens[image.url] = image.text;
+        }
+      }
+    }
+  }
   final Future<List<LiveEmoticon>> Function(CancelToken) _fetch;
   final DateTime Function() _clock;
   int _attempts = 0;
@@ -25,12 +46,24 @@ class RoomEmoticons extends ChangeNotifier {
       dynamic args,
       Future<List<LiveEmoticon>> Function()? fetch,
       DateTime Function()? clock})
-      : _catalog = EmoticonCatalog(emoticonSeeds(platform)),
+      : _platform = platform,
+        _catalog = EmoticonCatalog(emoticonSeeds(platform)),
         _clock = clock ?? DateTime.now,
         _fetch = ((cancel) => fetch != null
             ? fetch()
             : PlatformEmoticons()
-                .load(platform, roomId, args: args, cancel: cancel));
+                .load(platform, roomId, args: args, cancel: cancel)) {
+    _remember(emoticonSeeds(platform));
+  }
+
+  /// Display aliases are useful in chat/pickers, but Huya's wire format is /{code.
+  /// Convert only known catalog entries; never rewrite unknown text or the draft.
+  String encodeForSend(String text) {
+    if (_platform != 'huya') return text;
+    return _catalog.split(text).map((part) => part.emoticon == null
+        ? part.text
+        : _sendTokens[part.emoticon!.url] ?? part.text).join();
+  }
 
   Future<void> load() {
     if (_disposed || _loaded) return Future.value();
@@ -55,6 +88,7 @@ class RoomEmoticons extends ChangeNotifier {
       final entries = await _fetch(cancel).timeout(const Duration(seconds: 5));
       if (_disposed) return;
       _catalog.addAll(entries);
+      _remember(entries);
       _resolved.clear();
       _loaded = true;
       notifyListeners();

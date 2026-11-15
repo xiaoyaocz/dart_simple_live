@@ -129,6 +129,9 @@ Widget playerControls(
       autofocus: true,
       onKeyEvent: (_, event) => handlePlayerShortcut(
         event,
+        onFollowKey: controller.followByDoubleQ,
+        onComposeDanmaku: controller.openDanmakuComposer,
+        onResetFollowKey: controller.resetFollowShortcut,
         onToggleDanmaku: () => controller.showDanmakuState.toggle(),
         onToggleFullscreen: () {
           if (controller.fullScreenState.value) {
@@ -150,6 +153,46 @@ Widget playerControls(
   });
 }
 
+/// Enter belongs to the visible room, even after a click moves focus outside
+/// the player's Focus subtree. Run before child controls consume it as Activate.
+class DesktopDanmakuShortcut extends StatefulWidget {
+  const DesktopDanmakuShortcut({super.key, required this.onCompose, required this.child});
+  final VoidCallback onCompose;
+  final Widget child;
+
+  @override
+  State<DesktopDanmakuShortcut> createState() => _DesktopDanmakuShortcutState();
+}
+
+class _DesktopDanmakuShortcutState extends State<DesktopDanmakuShortcut> {
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addEarlyKeyEventHandler(_onKey);
+  }
+
+  KeyEventResult _onKey(KeyEvent event) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        event is! KeyDownEvent || _editingTextOrModifiedShortcut() ||
+        HardwareKeyboard.instance.isShiftPressed ||
+        (event.logicalKey != LogicalKeyboardKey.enter &&
+            event.logicalKey != LogicalKeyboardKey.numpadEnter)) {
+      return KeyEventResult.ignored;
+    }
+    widget.onCompose();
+    return KeyEventResult.handled;
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeEarlyKeyEventHandler(_onKey);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 bool _editingTextOrModifiedShortcut() {
   final keyboard = HardwareKeyboard.instance;
   final focusContext = FocusManager.instance.primaryFocus?.context;
@@ -167,9 +210,26 @@ KeyEventResult handlePlayerShortcut(
   required VoidCallback onToggleDanmaku,
   required VoidCallback onToggleFullscreen,
   VoidCallback? onRefresh,
+  VoidCallback? onFollowKey,
+  VoidCallback? onResetFollowKey,
+  VoidCallback? onComposeDanmaku,
 }) {
-  if (event is! KeyDownEvent || _editingTextOrModifiedShortcut()) {
+  if (_editingTextOrModifiedShortcut()) {
+    onResetFollowKey?.call();
     return KeyEventResult.ignored;
+  }
+  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+  if (event.logicalKey == LogicalKeyboardKey.keyQ && onFollowKey != null) {
+    onFollowKey();
+    // 第一击也消费，避免同一个事件冒泡到页面后被当作第二击。
+    return KeyEventResult.handled;
+  }
+  onResetFollowKey?.call();
+  if ((event.logicalKey == LogicalKeyboardKey.enter ||
+      event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
+      !HardwareKeyboard.instance.isShiftPressed && onComposeDanmaku != null) {
+    onComposeDanmaku();
+    return KeyEventResult.handled;
   }
   if (event.logicalKey == LogicalKeyboardKey.keyD) {
     onToggleDanmaku();
@@ -191,6 +251,33 @@ double volumeAfterScroll(double currentVolume, double scrollDeltaY) {
   return (currentVolume + (scrollDeltaY < 0 ? 5 : -5)).clamp(0, 100).toDouble();
 }
 
+/// Outside Video's controls/overlays so wheel input also reaches the actual
+/// video surface and letterbox margins when its controls are hidden.
+Widget playerVolumeScrollArea({
+  required Widget child,
+  required LiveRoomController controller,
+}) {
+  if (Platform.isAndroid || Platform.isIOS) return child;
+  return Listener(
+    behavior: HitTestBehavior.opaque,
+    onPointerSignal: (event) => _onVolumePointerSignal(event, controller, null),
+    child: Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        // Independent of the hidden control bar; only the volume card opens.
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: IgnorePointer(
+            child: SizedBox(key: controller.volumeScrollAnchorKey, width: 240, height: 1),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 void _onVolumePointerSignal(
   PointerSignalEvent event,
   LiveRoomController controller,
@@ -201,7 +288,8 @@ void _onVolumePointerSignal(
     // so a single wheel tick cannot adjust both icon and video-area volume.
     GestureBinding.instance.pointerSignalResolver.register(event, (signal) {
       adjustVolumeOnScroll(signal, controller);
-      if (targetContext != null) controller.showVolumeSlider(targetContext);
+      final anchor = targetContext ?? controller.volumeScrollAnchorKey.currentContext;
+      if (anchor != null) controller.showVolumeSlider(anchor);
     });
   }
 }

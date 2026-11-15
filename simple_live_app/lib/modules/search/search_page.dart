@@ -1,6 +1,8 @@
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:simple_live_app/services/danmaku_web_scripts.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -113,6 +115,10 @@ class SearchPage extends GetView<AppSearchController> {
                         useShouldOverrideUrlLoading: true,
                       ),
                       initialUserScripts: UnmodifiableListView([
+                        if (Platform.isWindows) UserScript(
+                          source: DanmakuWebScripts.transport,
+                          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                        ),
                         UserScript(
                           source: SearchWebNavigation.script,
                           injectionTime:

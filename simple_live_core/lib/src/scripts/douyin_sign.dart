@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:convert';
 import 'package:dart_quickjs/dart_quickjs.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:crypto/crypto.dart';
@@ -10653,17 +10654,22 @@ function getMSSDKSignature(msStub, userAgent) {
       memoryLimit: 4 * 1024 * 1024,
       maxStackSize: 64 * 1024,
     );
-    final msToken = generateMsToken(107);
-    var params = ('$url&msToken=$msToken').split('?')[1];
-    var query = params.contains("?") ? params.split("?")[1] : params;
-    var jsCode = kABogus;
-    flutterJs.eval(jsCode);
-    // 执行getABogus函数
-    var aBogus = flutterJs.eval("getABogus('$query', '$userAgent')");
-    flutterJs.dispose();
-    var newUrl =
-        '$url&msToken=${Uri.encodeComponent(msToken)}&a_bogus=${Uri.encodeComponent(aBogus)}';
-    return newUrl;
+    final uri = Uri.parse(url);
+    final parameters = Map<String, String>.from(uri.queryParameters)
+      ..remove('a_bogus');
+    parameters.putIfAbsent('msToken', () => generateMsToken(107));
+    final unsigned = uri.replace(queryParameters: parameters);
+    try {
+      flutterJs.eval(kABogus);
+      // JSON quoting also handles text/UA containing quotes without JS injection.
+      final aBogus = flutterJs.eval(
+          "getABogus(${jsonEncode(unsigned.query)}, ${jsonEncode(userAgent)})");
+      return unsigned.replace(queryParameters: {
+        ...parameters, 'a_bogus': '$aBogus',
+      }).toString();
+    } finally {
+      flutterJs.dispose();
+    }
   }
 
   static String getSignature(String roomId, String uniqueId) {

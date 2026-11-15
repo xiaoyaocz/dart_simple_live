@@ -6,6 +6,7 @@ export 'src/huya_site.dart';
 export 'src/bilibili_site.dart';
 export 'src/douyu_site.dart';
 export 'src/douyin_site.dart';
+export 'src/scripts/douyin_sign.dart';
 export 'src/common/core_log.dart';
 export 'src/model/live_message.dart';
 export 'src/danmaku/bilibili_danmaku.dart';

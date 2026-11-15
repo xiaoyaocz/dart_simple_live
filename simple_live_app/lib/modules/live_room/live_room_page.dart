@@ -1,8 +1,10 @@
 import 'package:simple_live_app/widgets/live_message_content.dart';
 import 'dart:io';
+import 'package:simple_live_app/modules/live_room/danmaku_composer.dart';
 
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -120,13 +122,16 @@ class LiveRoomPage extends StatelessWidget {
     );
     if (!Platform.isAndroid) {
       if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        return Focus(
+        final focusedPage = Focus(
           autofocus: true,
           // Page focus remains active after using the header/chat. The video
           // controls are not always the primary focus owner after a rebuild.
           onKeyEvent: (_, event) => handlePlayerShortcut(
             event,
             onRefresh: controller.refreshRoom,
+            onComposeDanmaku: controller.openDanmakuComposer,
+            onFollowKey: controller.followByDoubleQ,
+            onResetFollowKey: controller.resetFollowShortcut,
             onToggleDanmaku: () => controller.showDanmakuState.toggle(),
             onToggleFullscreen: () {
               if (controller.fullScreenState.value) {
@@ -138,6 +143,10 @@ class LiveRoomPage extends StatelessWidget {
           ),
           child: page,
         );
+        return Platform.isWindows
+            ? DesktopDanmakuShortcut(
+                onCompose: controller.openDanmakuComposer, child: focusedPage)
+            : focusedPage;
       }
       return page;
     }
@@ -184,16 +193,18 @@ class LiveRoomPage extends StatelessWidget {
   }
 
   Widget buildPhoneUI(BuildContext context) {
-    return Column(
-      children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: buildMediaPlayer(),
-        ),
-        buildUserProfile(context),
-        buildMessageArea(),
-        buildBottomActions(context),
-      ],
+    return SafeArea(
+      top: false,
+      child: Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: buildMediaPlayer(),
+          ),
+          buildUserProfile(context),
+          buildMessageArea(),
+        ],
+      ),
     );
   }
 
@@ -234,7 +245,6 @@ class LiveRoomPage extends StatelessWidget {
         if (phoneLayout) ...[
           buildUserProfile(context),
           buildMessageArea(),
-          buildBottomActions(context),
         ],
       ],
     );
@@ -256,7 +266,7 @@ class LiveRoomPage extends StatelessWidget {
       boxFit = BoxFit.contain;
       aspectRatio = 4 / 3;
     }
-    return Stack(
+    final video = Stack(
       children: [
         Video(
           key: controller.globalPlayerKey,
@@ -286,6 +296,7 @@ class LiveRoomPage extends StatelessWidget {
         ),
       ],
     );
+    return playerVolumeScrollArea(controller: controller, child: video);
   }
 
   Widget buildUserProfile(BuildContext context) {
@@ -314,11 +325,16 @@ class LiveRoomPage extends StatelessWidget {
                 border: Border.all(color: Colors.grey.withAlpha(50)),
                 borderRadius: AppStyle.radius24,
               ),
-              child: NetImage(
-                controller.detail.value?.userAvatar ?? "",
-                width: 48,
-                height: 48,
-                borderRadius: 24,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onSecondaryTapUp: (details) =>
+                    showAvatarFollowMenu(context, details.globalPosition),
+                child: NetImage(
+                  controller.detail.value?.userAvatar ?? "",
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                ),
               ),
             ),
             AppStyle.hGap12,
@@ -375,6 +391,58 @@ class LiveRoomPage extends StatelessWidget {
     );
   }
 
+  Future<void> showAvatarFollowMenu(BuildContext context, Offset position) async {
+    final room = controller;
+    final roomId = room.roomId;
+    final site = room.site;
+    final detail = room.detail.value;
+    if (detail == null || room.isClosed) {
+      return;
+    }
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final wasFollowed = room.followed.value;
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        overlay.globalToLocal(position) & Size.zero,
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'follow',
+          enabled: !wasFollowed,
+          child: wasFollowed
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onDoubleTap: () => Navigator.of(context).pop('unfollow'),
+                  child: const SizedBox(
+                    width: double.infinity,
+                    height: kMinInteractiveDimension,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('已关注'),
+                    ),
+                  ),
+                )
+              : const Text('关注'),
+        ),
+      ],
+    );
+    // 菜单等待期间切房/刷新后，不把旧头像的操作应用到新房间。
+    if (selected == null || room.isClosed || room.roomId != roomId ||
+        room.site != site || !identical(room.detail.value, detail)) {
+      return;
+    }
+    if (selected == 'unfollow' && room.followed.value) {
+      room.removeFollowUser();
+      return;
+    }
+    if (selected != 'follow' || room.followed.value) return;
+    room.followUser();
+    if (room.followed.value) {
+      SmartDialog.showToast('关注成功', displayTime: const Duration(seconds: 2));
+    }
+  }
   Widget buildBottomActions(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -438,6 +506,11 @@ class LiveRoomPage extends StatelessWidget {
     void scrollToLatest() {
       controller.disableAutoScroll.value = false;
       controller.chatScrollToBottom();
+      // The composer changes the viewport. A lazy list may refine its extent
+      // only after the first jump lays out its final messages.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!controller.isClosed) controller.chatScrollToBottom();
+      });
     }
 
     return Expanded(
@@ -474,7 +547,7 @@ class LiveRoomPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  Obx(
+                  Column(children: [Expanded(child: Obx(
                     () => Stack(
                       children: [
                         GestureDetector(
@@ -513,7 +586,15 @@ class LiveRoomPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
+                  )),
+                    if (Platform.isWindows) DanmakuComposer(
+                      prepare: controller.prepareDanmaku,
+                      emoticons: () => controller.composerEmoticons,
+                      onEmoticonRoute: controller.trackDanmakuEmoticonRoute,
+                      draft: controller.danmakuDraft,
+                      send: controller.sendDanmaku,
+                    ),
+                  ]),
                   if (controller.site.id == Constant.kBiliBili)
                     buildSuperChats(),
                   buildFollowList(),
@@ -787,6 +868,19 @@ class LiveRoomPage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Obx(() => ListTile(
+              leading: Icon(controller.followed.value ? Remix.heart_fill : Remix.heart_line),
+              title: Text(controller.followed.value ? '取消关注' : '关注主播'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                if (controller.followed.value) {
+                  controller.removeFollowUser();
+                } else {
+                  controller.followUser();
+                }
+              },
+            )),
             ListTile(
               leading: const Icon(Icons.refresh),
               title: const Text("刷新"),

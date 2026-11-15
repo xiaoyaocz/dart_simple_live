@@ -4,6 +4,28 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_app/services/room_emoticons.dart';
 
 void main() {
+  test('虎牙发送表情使用原生转义码，保留草稿标签和其他平台原文', () async {
+    final room = RoomEmoticons(platform: 'huya', roomId: '1');
+    expect(room.encodeForSend('你好[666] /{66 [未知]'), '你好/{66 /{66 [未知]');
+    expect(room.available.any((e) => e.text == '[666]'), isTrue);
+    room.dispose();
+    final other = RoomEmoticons(platform: 'douyu', roomId: '1');
+    expect(other.encodeForSend('[666]'), '[666]');
+    other.dispose();
+  });
+  test('picker catalog includes the full seeded library and deduplicates aliases', () async {
+    final room = RoomEmoticons(platform: 'douyin', roomId: '1', fetch: () async => []);
+    expect(room.available.length, greaterThan(100));
+    room.dispose();
+    final other = RoomEmoticons(platform: 'test', roomId: '1', fetch: () async => [
+      const LiveEmoticon(text: '[笑]', url: 'https://cdn.example/a'),
+      const LiveEmoticon(text: '/alias', url: 'https://cdn.example/a'),
+      const LiveEmoticon(text: '[坏]', url: 'javascript:bad'),
+    ]);
+    await other.load();
+    expect(other.available.map((e) => e.text), ['[笑]']);
+    other.dispose();
+  });
   test('unknown tokens retry after backoff, bounded to three attempts per room',
       () async {
     var now = DateTime(2026, 11, 5), calls = 0;

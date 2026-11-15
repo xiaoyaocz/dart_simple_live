@@ -9,6 +9,7 @@ class _WebView implements InAppWebViewController {
   final backResult = Completer<bool>();
   final pauseResult = Completer<void>();
   int pauseCalls = 0;
+  int mediaHoldCalls = 0;
   int backCalls = 0;
   int loadCalls = 0;
   @override
@@ -20,6 +21,11 @@ class _WebView implements InAppWebViewController {
   @override
   Future<void> pause() { pauseCalls++; return pauseResult.future; }
   @override
+  Future<dynamic> evaluateJavascript({required String source, ContentWorld? contentWorld}) {
+    mediaHoldCalls++;
+    return pauseResult.future;
+  }
+  @override
   Future<void> loadUrl({required URLRequest urlRequest,
       WebUri? allowingReadAccessTo, Uri? iosAllowingReadAccessTo}) async { loadCalls++; }
   @override
@@ -27,7 +33,7 @@ class _WebView implements InAppWebViewController {
 }
 
 void main() {
-  test('100次暂停期间重复打开并退出，只暂停一次且不进行迟到导航', () async {
+  test('100次静音准备期间重复打开并退出，不挂起网页脚本且不进行迟到导航', () async {
     for (var i = 0; i < 100; i++) {
       final controller = AppSearchController();
       controller.selectSite(Sites.allSites[Constant.kDouyin]!);
@@ -38,7 +44,8 @@ void main() {
       controller.reset();
       web.pauseResult.complete();
       await opening;
-      expect(web.pauseCalls, 1);
+      expect(web.pauseCalls, 0);
+      expect(web.mediaHoldCalls, 1);
       expect(controller.webViewVisible.value, true);
       controller.onClose();
     }

@@ -135,7 +135,10 @@ class _VolumeRoom extends _Room {
   @override
   Player get player => testPlayer;
   @override
-  void showVolumeSlider(BuildContext context) {}
+  void showVolumeSlider(BuildContext context) {
+    if (useVolumePopup) super.showVolumeSlider(context);
+  }
+  bool useVolumePopup = false;
 }
 
 class _ControlsPage extends LiveRoomPage {
@@ -155,6 +158,80 @@ class _ControlsPage extends LiveRoomPage {
 }
 
 void main() {
+  testWidgets('画面滚轮只显示音量卡片，连续滚动更新数值并延后隐藏', (tester) async {
+    final room = _VolumeRoom()..useVolumePopup = true;
+    AppSettingsController.instance.playerVolume.value = 50;
+    await tester.pumpWidget(MaterialApp(
+      navigatorObservers: [FlutterSmartDialog.observer],
+      builder: FlutterSmartDialog.init(),
+      home: Scaffold(body: playerVolumeScrollArea(controller: room,
+        child: Stack(children: [
+          Builder(builder: (context) => playerControls(_VideoState(context), room)),
+          const Positioned.fill(child: ColoredBox(color: Colors.black)),
+        ]))),
+    ));
+    await tester.pump();
+    void scroll() => tester.binding.handlePointerEvent(PointerScrollEvent(
+      position: const Offset(100, 100), scrollDelta: const Offset(0, -120),
+      kind: PointerDeviceKind.mouse));
+    scroll();
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('55%'), findsOneWidget);
+    expect(find.byType(Slider), findsOneWidget);
+    expect(room.showControlsState.value, isFalse);
+    final popup = tester.getRect(find.byType(Slider));
+    expect(popup.center.dx, greaterThan(400));
+    expect(popup.center.dy, greaterThan(300));
+    await tester.pump(const Duration(seconds: 2));
+    scroll();
+    await tester.pump();
+    expect(find.text('60%'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('60%'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.text('60%'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    room.hideControlsTimer?.cancel();
+  });
+  testWidgets('video foreground and black margins receive wheel input even above hidden controls', (tester) async {
+    final room = _VolumeRoom();
+    AppSettingsController.instance.playerVolume.value = 50;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Row(children: [
+      Expanded(child: playerVolumeScrollArea(controller: room, child: Stack(children: [
+        Builder(builder: (context) => playerControls(_VideoState(context), room)),
+        const Positioned.fill(child: ColoredBox(key: ValueKey('video-foreground'), color: Colors.black)),
+      ]))),
+      SizedBox(width: 180, child: ListView(children: List.generate(30, (n) => Text('聊天$n')))),
+    ]))));
+    await tester.pump();
+    final video = tester.getRect(find.byKey(const ValueKey('video-foreground')));
+    for (final point in [video.center, video.topLeft + const Offset(2, 2)]) {
+      tester.binding.handlePointerEvent(PointerScrollEvent(position: point,
+          scrollDelta: const Offset(0, -120), kind: PointerDeviceKind.mouse));
+    }
+    expect(AppSettingsController.instance.playerVolume.value, 60);
+    expect(room.testPlayer.volumes, [55, 60]);
+    tester.binding.handlePointerEvent(PointerScrollEvent(position: video.center,
+        scrollDelta: const Offset(0, 120), kind: PointerDeviceKind.mouse));
+    expect(AppSettingsController.instance.playerVolume.value, 55);
+    tester.binding.handlePointerEvent(PointerScrollEvent(position: tester.getCenter(find.byType(ListView)),
+        scrollDelta: const Offset(0, 120), kind: PointerDeviceKind.mouse));
+    expect(AppSettingsController.instance.playerVolume.value, 55);
+    await tester.pumpWidget(const SizedBox());
+    room.hideControlsTimer?.cancel();
+  });
+  testWidgets('nested video and icon wheel handlers change volume only once', (tester) async {
+    final room = _VolumeRoom();
+    AppSettingsController.instance.playerVolume.value = 50;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: playerVolumeScrollArea(
+      controller: room, child: Builder(
+        builder: (context) => playerControls(_VideoState(context), room))))));
+    tester.binding.handlePointerEvent(PointerScrollEvent(position: const Offset(100, 100),
+        scrollDelta: const Offset(0, -120), kind: PointerDeviceKind.mouse));
+    expect(room.testPlayer.volumes, [55]);
+  });
   testWidgets('真实房间和视频两层Focus共存，DFR每次只触发一次', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1280, 800);

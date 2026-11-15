@@ -308,8 +308,11 @@ namespace flutter_inappwebview_plugin
               }
               auto isForMainFrame = pageFrameId_.empty() || string_equals(pageFrameId_, frameId);
 
-              auto allowRequest = [this, requestId, url, isForMainFrame]()
+              auto allowRequest = [this, requestId, url, isForMainFrame, lifetime = std::weak_ptr<int>(callbackLifetime_)]()
                 {
+                  // Dart may reply after navigation/reload has destroyed this view.
+                  // Check the captured token before touching any member (including webView).
+                  if (lifetime.expired()) return;
                   failedAndLog(webView->CallDevToolsProtocolMethod(L"Fetch.continueRequest",
                     utf8_to_wide("{\"requestId\":\"" + requestId + "\"}").c_str(),
                     Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
@@ -328,8 +331,9 @@ namespace flutter_inappwebview_plugin
                   }
                 };
 
-              auto cancelRequest = [this, requestId]()
+              auto cancelRequest = [this, requestId, lifetime = std::weak_ptr<int>(callbackLifetime_)]()
                 {
+                  if (lifetime.expired()) return;
                   failedAndLog(webView->CallDevToolsProtocolMethod(L"Fetch.failRequest",
                     utf8_to_wide("{\"requestId\":\"" + requestId + "\", \"errorReason\": \"Aborted\"}").c_str(),
                     Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(

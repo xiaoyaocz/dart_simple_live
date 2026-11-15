@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:simple_live_app/services/search_web_session.dart';
+import 'package:simple_live_app/services/danmaku_web_scripts.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -54,18 +54,8 @@ class AppSearchController extends GetxController {
     final revision = webViewRevision.value;
     final directConnection = _directConnection;
     try {
-      final supportDir = await getApplicationSupportDirectory();
-      // WebView2 同一用户目录的运行实例必须使用相同参数，直连使用独立目录。
-      final profileDir = Directory(p.join(supportDir.path,
-          directConnection ? 'search_webview_direct' : 'search_webview'));
-      await profileDir.create(recursive: true);
-      final creation = WebViewEnvironment.create(
-        settings: WebViewEnvironmentSettings(
-          userDataFolder: profileDir.path,
-          additionalBrowserArguments:
-              directConnection ? '--no-proxy-server' : null,
-        ),
-      );
+      final creation = SearchWebSession.create(
+        siteId: selectedSite.value?.id, direct: directConnection);
       try {
         return await creation.timeout(const Duration(seconds: 20));
       } on TimeoutException {
@@ -93,6 +83,10 @@ class AppSearchController extends GetxController {
 
   void selectSite(Site site) {
     if (_closing || isClosed) return;
+    // Reopening search must not replace the profile that holds this site's login.
+    final direct = SearchWebSession.usesDirect(site.id);
+    if (direct != _directConnection) _disposeWebViewEnvironment();
+    _directConnection = direct;
     webViewController = null;
     _navigationUrl = null;
     webViewRevision.value++;
@@ -305,12 +299,16 @@ class AppSearchController extends GetxController {
     final site = selectedSite.value;
     final id = detectedRoomId ?? roomId.value;
     if (site == null || id == null) return;
-    if (site.id == Constant.kDouyin) {
+    if (Platform.isWindows || site.id == Constant.kDouyin) {
       final webView = webViewController;
       final revision = webViewRevision.value;
       _openingRoom = true;
       try {
-        await webView?.pause();
+        if (Platform.isWindows) {
+          await webView?.evaluateJavascript(source: DanmakuWebScripts.holdMedia);
+        } else {
+          await webView?.pause();
+        }
         if (!_isCurrent(webView, revision)) return;
         webViewVisible.value = false;
         await WidgetsBinding.instance.endOfFrame;
@@ -320,7 +318,13 @@ class AppSearchController extends GetxController {
         if (_isCurrent(webView, revision)) {
           webViewVisible.value = true;
           await WidgetsBinding.instance.endOfFrame;
-          if (_isCurrent(webView, revision)) await webView?.resume();
+          if (_isCurrent(webView, revision)) {
+            if (Platform.isWindows) {
+              await webView?.evaluateJavascript(source: DanmakuWebScripts.restoreMedia);
+            } else {
+              await webView?.resume();
+            }
+          }
         }
         _openingRoom = false;
       }

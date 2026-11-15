@@ -12,6 +12,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
+import 'package:simple_live_app/services/search_web_session.dart';
 
 class _Paths extends PathProviderPlatform {
   @override
@@ -41,9 +42,36 @@ void main() {
   }
 
   setUp(() {
+    for (final site in Sites.allSites.values) {
+      SearchWebSession.remember(site.id, false);
+    }
     disposedEnvironments.clear();
     WindowsInAppWebViewPlatform.registerWith();
     PathProviderPlatform.instance = _Paths();
+  });
+  test('搜索重开和弹幕环境使用同一个已登录直连配置', () async {
+    final settings = <Map<dynamic, dynamic>>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      settings.add(Map<dynamic, dynamic>.from(call.arguments['settings']));
+      mockEnvironment(call);
+      return true;
+    });
+    SearchWebSession.remember(Constant.kHuya, true);
+    final controller = AppSearchController();
+    addTearDown(controller.onClose);
+    controller.selectSite(Sites.allSites[Constant.kHuya]!);
+    await controller.webViewEnvironment;
+    final senderEnvironment = await SearchWebSession.create(siteId: Constant.kHuya);
+    addTearDown(senderEnvironment.dispose);
+    expect(settings.first['additionalBrowserArguments'], '--no-proxy-server');
+    expect(settings.last['userDataFolder'], settings.first['userDataFolder']);
+    expect(settings.last['additionalBrowserArguments'], settings.first['additionalBrowserArguments']);
+    // Switching platform must replace the cached environment when its profile differs.
+    controller.selectSite(Sites.allSites[Constant.kDouyu]!);
+    await controller.webViewEnvironment;
+    expect(settings.last['additionalBrowserArguments'], isNull);
+    expect(settings.last['userDataFolder'], isNot(settings.first['userDataFolder']));
   });
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

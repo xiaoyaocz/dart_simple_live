@@ -6,6 +6,21 @@ import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   group('handlePlayerShortcut', () {
+    test('Enter opens composer, key repeat and key up do not', () {
+      var opens = 0;
+      for (final event in [
+        const KeyDownEvent(physicalKey: PhysicalKeyboardKey.enter,
+          logicalKey: LogicalKeyboardKey.enter, timeStamp: Duration.zero),
+        const KeyRepeatEvent(physicalKey: PhysicalKeyboardKey.enter,
+          logicalKey: LogicalKeyboardKey.enter, timeStamp: Duration.zero),
+        const KeyUpEvent(physicalKey: PhysicalKeyboardKey.enter,
+          logicalKey: LogicalKeyboardKey.enter, timeStamp: Duration.zero),
+      ]) {
+        handlePlayerShortcut(event, onToggleDanmaku: () {},
+          onToggleFullscreen: () {}, onComposeDanmaku: () => opens++);
+      }
+      expect(opens, 1);
+    });
     test('D toggles danmaku', () {
       var toggled = false;
 

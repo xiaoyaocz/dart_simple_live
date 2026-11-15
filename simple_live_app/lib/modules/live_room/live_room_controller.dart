@@ -1,4 +1,11 @@
 import 'dart:async';
+import 'package:simple_live_app/services/web_danmaku_sender.dart';
+import 'package:simple_live_app/services/native_danmaku_sender.dart';
+import 'package:simple_live_app/services/douyu_native_sender.dart';
+import 'package:simple_live_app/services/search_danmaku_credentials.dart';
+import 'package:simple_live_app/modules/live_room/danmaku_composer.dart';
+import 'package:simple_live_app/modules/search/search_room_url.dart';
+import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/services/room_emoticons.dart';
 import 'package:simple_live_app/services/playback_diagnostics.dart';
 import 'package:simple_live_app/services/room_startup_cache.dart';
@@ -178,6 +185,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   // 开播时长状态变量
   var liveDuration = "00:00:00".obs;
   Timer? _liveDurationTimer;
+  final volumeScrollAnchorKey = GlobalKey();
   Timer? _volumeSliderTimer;
   bool _volumeSliderOpen = false;
   static const _volumeSliderTag = 'simple-live-volume-slider';
@@ -392,6 +400,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   RoomEmoticons? _emoticons;
+  RoomEmoticons? get composerEmoticons => _emoticons;
   int _pendingEmoticonDanmaku = 0;
   List<LiveMessagePart> messageParts(LiveMessage message) =>
       _emoticons?.resolve(message) ?? message.parts;
@@ -530,6 +539,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   /// 加载直播间信息
   void loadData({bool reusePrefetch = false}) async {
+    resetFollowShortcut();
     if (_roomClosed) return;
     _bufferingTimer?.cancel();
     _bufferingTimer = null;
@@ -609,6 +619,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       // 取流优先发出，历史记录/关注状态和弹幕不占据网络请求的前置链路。
       getPlayQualites(playRequest);
       getSuperChatMessage(request);
+      // Credential/native-connection warmup overlaps viewing, never sends chat.
+      // Keep Huya's already working editor path lazy.
+      if (site.id != Constant.kHuya) prepareDanmaku();
 
       addHistory();
       // 确认房间关注状态
@@ -1081,6 +1094,141 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
 
     DBService.instance.addOrUpdateHistory(history);
+  }
+
+  Timer? _followShortcutTimer;
+  final danmakuDraft = TextEditingController();
+  DanmakuSender? _danmakuSender;
+  SearchDanmakuCredentials? _danmakuCredentials;
+  bool _sendingDanmaku = false;
+  bool _composerOpen = false;
+  Route<void>? _composerRoute;
+  Route<String>? _emoticonRoute;
+  void trackDanmakuEmoticonRoute(Route<String> route) => _emoticonRoute = route;
+  int _danmakuRoomRevision = 0;
+
+  Uri get _danmakuRoomUri => SearchRoomUrl.homeUriFor(site.id)
+      .replace(pathSegments: [roomId]);
+
+  DanmakuSender _createDanmakuSender() {
+    final search = Get.isRegistered<AppSearchController>()
+        ? Get.find<AppSearchController>() : null;
+    final view = search?.webViewController;
+    final revision = search?.webViewRevision.value;
+    if (site.id != Constant.kHuya) {
+      final credentials = SearchDanmakuCredentials(siteId: site.id,
+          resolveView: () {
+            final current = Get.isRegistered<AppSearchController>()
+                ? Get.find<AppSearchController>() : null;
+            final active = current?.webViewController;
+            final version = current?.webViewRevision.value;
+            if (active == null || current!.selectedSite.value?.id != site.id) return null;
+            return (view: active, isCurrent: () => current.isCurrentWebView(active, version!));
+          });
+      _danmakuCredentials = credentials;
+      final args = detail.value?.danmakuData;
+      final nativeRoomId = site.id == Constant.kDouyin && args is DouyinDanmakuArgs
+          ? args.roomId : detail.value?.roomId ?? roomId;
+      if (site.id == Constant.kDouyu) {
+        return DouyuNativeSender(roomId: nativeRoomId, credentials: credentials.read);
+      }
+      return NativeDanmakuSender(siteId: site.id, roomId: nativeRoomId,
+          webRoomId: roomId, credentials: credentials.read);
+    }
+    bool matchesRoom() => search != null &&
+        search.selectedSite.value?.id == site.id &&
+        {roomId, detail.value?.roomId}.contains(search.roomId.value) &&
+        search.isCurrentWebView(view, revision!);
+    // Use the actual page whose account/editor the user just verified, not
+    // merely another WebView that happens to share its cookie directory.
+    return WebDanmakuSender(siteId:site.id, roomUri:_danmakuRoomUri,
+      existingView: view != null && matchesRoom() ? view : null,
+      isExistingViewCurrent: view != null && matchesRoom() ? matchesRoom : null);
+  }
+
+  void prepareDanmaku() {
+    if (!Platform.isWindows || _roomClosed || isClosed || detail.value == null) return;
+    if (![Constant.kHuya, Constant.kDouyu, Constant.kBiliBili, Constant.kDouyin].contains(site.id)) return;
+    (_danmakuSender ??= _createDanmakuSender()).prepare();
+  }
+
+  Future<bool> sendDanmaku() async {
+    if (!Platform.isWindows || _roomClosed || isClosed || _sendingDanmaku ||
+        detail.value == null || danmakuDraft.text.trim().isEmpty) {
+      return false;
+    }
+    final revision = _danmakuRoomRevision;
+    final text = danmakuDraft.text;
+    _sendingDanmaku = true;
+    try {
+      final sender = _danmakuSender ??= _createDanmakuSender();
+      final result = await sender.send(_emoticons?.encodeForSend(text) ?? text);
+      if (_roomClosed || isClosed || revision != _danmakuRoomRevision) return false;
+      SmartDialog.showToast(result.message, displayTime: const Duration(seconds: 3));
+      return result.sent;
+    } finally {
+      if (revision == _danmakuRoomRevision) _sendingDanmaku = false;
+    }
+  }
+
+  Future<void> openDanmakuComposer() async {
+    final context = Get.context;
+    if (!Platform.isWindows || context == null || _composerOpen || _roomClosed || isClosed) return;
+    prepareDanmaku();
+    _composerOpen = true;
+    try {
+      await showDanmakuComposer(context, draft: danmakuDraft,
+          emoticons: () => _emoticons,
+          onEmoticonRoute: trackDanmakuEmoticonRoute,
+          send: sendDanmaku,
+          onRoute: (route) => _composerRoute = route);
+    } finally { _composerOpen = false; _composerRoute = null; }
+  }
+
+  void _resetDanmakuSender() {
+    ++_danmakuRoomRevision;
+    _sendingDanmaku = false;
+    final menu = _emoticonRoute;
+    _emoticonRoute = null;
+    if (menu != null && menu.isActive) menu.navigator?.removeRoute(menu);
+    final route = _composerRoute;
+    if (route != null && route.isActive) route.navigator?.removeRoute(route);
+    final sender = _danmakuSender;
+    _danmakuSender = null;
+    if (sender != null) unawaited(sender.dispose());
+    final credentials = _danmakuCredentials;
+    _danmakuCredentials = null;
+    if (credentials != null) unawaited(credentials.dispose());
+    danmakuDraft.clear();
+  }
+  (Site, String, LiveRoomDetail)? _followShortcutRoom;
+
+  void resetFollowShortcut() {
+    _followShortcutTimer?.cancel();
+    _followShortcutTimer = null;
+    _followShortcutRoom = null;
+  }
+
+  void followByDoubleQ() {
+    final currentDetail = detail.value;
+    if (_roomClosed || isClosed || currentDetail == null || followed.value) {
+      resetFollowShortcut();
+      return;
+    }
+    final currentRoom = (site, roomId, currentDetail);
+    final secondPress = _followShortcutTimer?.isActive == true &&
+        _followShortcutRoom == currentRoom;
+    resetFollowShortcut();
+    if (secondPress) {
+      followUser();
+      if (followed.value) {
+        SmartDialog.showToast('关注成功', displayTime: const Duration(seconds: 2));
+      }
+    } else {
+      _followShortcutRoom = currentRoom;
+      _followShortcutTimer = Timer(
+          const Duration(milliseconds: 400), resetFollowShortcut);
+    }
   }
 
   /// 关注用户
@@ -1569,9 +1717,11 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void resetRoom(Site site, String roomId) async {
+    resetFollowShortcut();
     if (this.site == site && this.roomId == roomId) {
       return;
     }
+    _resetDanmakuSender();
 
     final request = ++_roomRequest;
     _lineWatch.stop();
@@ -1659,6 +1809,9 @@ ${errorStackTrace ?? ''}''');
 
   @override
   void onClose() async {
+    resetFollowShortcut();
+    _resetDanmakuSender();
+    danmakuDraft.dispose();
     _roomClosed = true;
     _lineWatch.stop();
     disposeStream();

@@ -66,7 +66,7 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
-              "平台标签 (首页/分类/搜索共用，长按拖动排序，至少保留一个)",
+              "平台标签 (首页/分类/搜索共用，长按拖动排序，至少保留一个；关注页不受影响)",
               style: Get.textTheme.titleSmall,
             ),
           ),

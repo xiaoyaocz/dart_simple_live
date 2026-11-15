@@ -4,31 +4,24 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
-import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/app/site_tabs_mixin.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/search/search_list_controller.dart';
 
 class AppSearchController extends GetxController
-    with GetSingleTickerProviderStateMixin {
-  late TabController tabController;
+    with GetSingleTickerProviderStateMixin, SiteTabsMixin {
   int index = 0;
 
   var searchMode = 0.obs;
 
-  /// 平台显隐变化时自增，触发搜索页重建标签
-  final RxInt sitesVersion = 0.obs;
-  var _knownSites = Sites.visibleSites;
-
   AppSearchController() {
     final initialIndex = _resolveInitialIndex();
     index = initialIndex;
-    tabController = TabController(
-      length: _knownSites.length,
-      vsync: this,
-      initialIndex: initialIndex,
-    );
-    if (_knownSites.isNotEmpty) {
-      AppSettingsController.instance.setLastSearchSiteId(_knownSites[index].id);
+    initSiteTabs(initialIndex: initialIndex);
+    if (Sites.visibleSites.isNotEmpty) {
+      AppSettingsController.instance.setLastSearchSiteId(
+        Sites.visibleSites[index].id,
+      );
     }
     _bindTabListener();
   }
@@ -55,46 +48,23 @@ class AppSearchController extends GetxController
     });
   }
 
-  /// 平台显示开关变化后重建搜索标签，无需重启
-  void rebuildSites() {
-    final sites = Sites.visibleSites;
-    if (sites.isEmpty) {
-      return;
+  @override
+  void registerSiteListController(Site site) {
+    if (!Get.isRegistered<SearchListController>(tag: site.id)) {
+      Get.put(SearchListController(site), tag: site.id);
     }
-    String? currentId;
-    if (_knownSites.isNotEmpty) {
-      currentId =
-          _knownSites[tabController.index.clamp(0, _knownSites.length - 1)].id;
-    }
-    var initialIndex = currentId == null
-        ? 0
-        : sites.indexWhere((site) => site.id == currentId);
-    if (initialIndex < 0) {
-      initialIndex = 0;
-    }
-    _knownSites = sites;
-    final old = tabController;
-    tabController = TabController(
-      length: sites.length,
-      vsync: this,
-      initialIndex: initialIndex,
-    );
+  }
+
+  @override
+  void onSiteTabsRebuilt(int initialIndex) {
     index = initialIndex;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      old.dispose();
-    });
     _bindTabListener();
-    for (final site in sites) {
-      if (!Get.isRegistered<SearchListController>(tag: site.id)) {
-        Get.put(SearchListController(site), tag: site.id);
-      }
-    }
-    AppSettingsController.instance.setLastSearchSiteId(sites[index].id);
-    sitesVersion.value++;
+    AppSettingsController.instance.setLastSearchSiteId(
+      Sites.visibleSites[initialIndex].id,
+    );
   }
 
   StreamSubscription<dynamic>? streamSubscription;
-  StreamSubscription<dynamic>? _siteSettingsSubscription;
 
   TextEditingController searchController = TextEditingController();
 
@@ -124,10 +94,7 @@ class AppSearchController extends GetxController
       );
       //}
     }
-    _siteSettingsSubscription = EventBus.instance.listen(
-      EventBus.kUpdateSiteTabs,
-      (_) => rebuildSites(),
-    );
+    listenSiteTabsChanged();
 
     super.onInit();
   }
@@ -159,7 +126,6 @@ class AppSearchController extends GetxController
   @override
   void onClose() {
     streamSubscription?.cancel();
-    _siteSettingsSubscription?.cancel();
     super.onClose();
   }
 }

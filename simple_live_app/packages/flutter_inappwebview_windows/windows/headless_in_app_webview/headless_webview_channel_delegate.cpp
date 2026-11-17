@@ -29,7 +29,7 @@ namespace flutter_inappwebview_plugin
         std::map<std::string, std::unique_ptr<HeadlessInAppWebView>>& webViews = webView->plugin->headlessInAppWebViewManager->webViews;
         auto& id = webView->id;
         if (map_contains(webViews, id)) {
-          if (webView->channelDelegate) {
+          if (webView->channelDelegate && webView->plugin->isEngineAvailable()) {
             webView->channelDelegate->UnregisterMethodCallHandler();
             if (webView->webView && webView->webView->channelDelegate) {
               webView->webView->channelDelegate->UnregisterMethodCallHandler();

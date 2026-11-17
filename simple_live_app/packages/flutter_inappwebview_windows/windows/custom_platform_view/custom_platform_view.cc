@@ -147,7 +147,11 @@ namespace flutter_inappwebview_plugin
 
     texture_id_ = texture_registrar->RegisterTexture(flutter_texture_.get());
     texture_bridge_->SetOnFrameAvailable(
-      [this]() { texture_registrar_->MarkTextureFrameAvailable(texture_id_); });
+      [this, alive = alive_]() {
+        if (*alive && view && view->plugin && view->plugin->isEngineAvailable()) {
+          texture_registrar_->MarkTextureFrameAvailable(texture_id_);
+        }
+      });
     // texture_bridge_->SetOnSurfaceSizeChanged([this](Size size) {
     //  view->SetSurfaceSize(size.width, size.height);
     //});
@@ -170,16 +174,20 @@ namespace flutter_inappwebview_plugin
 
     auto handler = std::make_unique<
       flutter::StreamHandlerFunctions<flutter::EncodableValue>>(
-        [this](const flutter::EncodableValue* arguments,
+        [this, alive = alive_](const flutter::EncodableValue* arguments,
           std::unique_ptr<flutter::EventSink<flutter::EncodableValue>>&&
           events)
         {
+          if (!*alive) return nullptr;
           event_sink_ = std::move(events);
           RegisterEventHandlers();
           return nullptr;
         },
-        [this](const flutter::EncodableValue* arguments)
+        [this, alive = alive_](const flutter::EncodableValue* arguments)
         {
+          if (*alive) {
+            event_sink_ = nullptr;
+          }
           return nullptr;
         });
 
@@ -188,6 +196,8 @@ namespace flutter_inappwebview_plugin
 
   void CustomPlatformView::UnregisterMethodCallHandler() const
   {
+    // Registrar destruction runs after the engine has invalidated its messenger.
+    if (!view || !view->plugin || !view->plugin->isEngineAvailable()) return;
     if (event_channel_) event_channel_->SetStreamHandler(nullptr);
     if (method_channel_) {
       method_channel_->SetMethodCallHandler(nullptr);
@@ -200,6 +210,7 @@ namespace flutter_inappwebview_plugin
   CustomPlatformView::~CustomPlatformView()
   {
     debugLog("dealloc CustomPlatformView");
+    *alive_ = false;
     UnregisterMethodCallHandler();
     // 纹理注销可能晚于平台视图析构，先解除捕获当前平台视图的回调。
     if (view) {
@@ -207,13 +218,17 @@ namespace flutter_inappwebview_plugin
       view->onCursorChanged(nullptr);
     }
     event_sink_ = nullptr;
-    texture_bridge_->Stop();
     texture_bridge_->SetOnFrameAvailable(nullptr);
     texture_bridge_->SetOnSurfaceSizeChanged(nullptr);
+    texture_bridge_->Stop();
     // 引擎异步注销纹理；完成前 GPU 回调仍可能访问 bridge 和纹理描述。
     auto bridge = std::shared_ptr<TextureBridge>(std::move(texture_bridge_));
     auto texture = std::shared_ptr<flutter::TextureVariant>(std::move(flutter_texture_));
-    texture_registrar_->UnregisterTexture(texture_id_, [bridge, texture]() {});
+    // During engine teardown the raster thread is already stopped and its
+    // texture registrar is invalid. Release locally on the platform thread.
+    if (view && view->plugin && view->plugin->isEngineAvailable()) {
+      texture_registrar_->UnregisterTexture(texture_id_, [bridge, texture]() {});
+    }
   }
 
   void CustomPlatformView::RegisterEventHandlers()
@@ -222,13 +237,18 @@ namespace flutter_inappwebview_plugin
       return;
     }
 
-    view->onSurfaceSizeChanged([this](size_t width, size_t height)
+    view->onSurfaceSizeChanged([this, alive = alive_](size_t width, size_t height)
       {
-        texture_bridge_->NotifySurfaceSizeChanged();
+        if (*alive && texture_bridge_) {
+          texture_bridge_->NotifySurfaceSizeChanged();
+        }
       });
 
-    view->onCursorChanged([this](const HCURSOR cursor)
+    view->onCursorChanged([this, alive = alive_](const HCURSOR cursor)
       {
+        if (!*alive || !view || !view->plugin || !view->plugin->isEngineAvailable()) {
+          return;
+        }
         const auto& name = GetCursorName(cursor);
         const auto event = flutter::EncodableValue(
           flutter::EncodableMap { {
@@ -314,12 +334,13 @@ namespace flutter_inappwebview_plugin
       auto size = GetPointAndScaleFactorFromArgs(method_call.arguments());
       if (size && view) {
         const auto [width, height, scale_factor] = size.value();
+        if (width > 0 && height > 0 && scale_factor > 0) {
+          view->setSurfaceSize(static_cast<size_t>(width),
+            static_cast<size_t>(height),
+            static_cast<float>(scale_factor));
 
-        view->setSurfaceSize(static_cast<size_t>(width),
-          static_cast<size_t>(height),
-          static_cast<float>(scale_factor));
-
-        texture_bridge_->Start();
+          texture_bridge_->Start();
+        }
         return result->Success();
       }
       return result->Error(kErrorInvalidArgs);

@@ -33,7 +33,8 @@ class SearchWebSession {
     final environment = await WebViewEnvironment.create(
         settings: WebViewEnvironmentSettings(
       userDataFolder: profile.path,
-      additionalBrowserArguments: useDirect ? '--no-proxy-server' : null,
+      // Routing is always direct; useDirect selects only the existing cookie profile.
+      additionalBrowserArguments: '--no-proxy-server',
     ));
     if (direct != null && siteId != null) remember(siteId, direct);
     return environment;

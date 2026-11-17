@@ -9,5 +9,6 @@ void FlutterInappwebviewWindowsPluginCApiRegisterWithRegistrar(
 {
   flutter_inappwebview_plugin::FlutterInappwebviewWindowsPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarManager::GetInstance()
-    ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar));
+    ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar),
+    FlutterDesktopPluginRegistrarGetMessenger(registrar));
 }

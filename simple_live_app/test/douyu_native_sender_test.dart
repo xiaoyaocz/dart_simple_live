@@ -263,6 +263,10 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 30));
       expect(sockets.last.readyState, WebSocket.closed,
           reason: 'An unknown transaction must not leave a stale ACK source');
+      final beforeRepeat=sent.where((m)=>m['type']=='chatmessage').length;
+      expect((await sender.send('timeout')).status,'unknown');
+      expect(sent.where((m)=>m['type']=='chatmessage').length,beforeRepeat,
+          reason:'Uncertain text must not be submitted again');
       expect((await sender.send('accepted')).status, 'sent');
       expect(connections, 3);
       await sender.dispose();

@@ -204,7 +204,7 @@ namespace flutter_inappwebview_plugin
           channelDelegate->onExit();
         }
 
-        if (channelDelegate) {
+        if (channelDelegate && plugin && plugin->isEngineAvailable()) {
           channelDelegate->UnregisterMethodCallHandler();
           if (webView && webView->channelDelegate) {
             webView->channelDelegate->UnregisterMethodCallHandler();

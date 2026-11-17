@@ -72,6 +72,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
+  testWidgets('unknown network status never makes saved follows look deleted', (tester) async {
+    final service=Get.find<FollowService>();
+    final saved=[user('保留一',null,0),user('保留二',null,0)];
+    service.followList.assignAll(saved);service.liveList.clear();service.notLiveList.clear();
+    await show(tester,const Size(1000,800));
+    await tester.tap(find.widgetWithText(FilterButton,'直播中'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('关注记录仍在，直播状态暂未获取'),findsOneWidget);
+    expect(service.followList.length,2);
+    await tester.tap(find.widgetWithText(FilterButton,'全部'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FollowUserItem),findsNWidgets(2));
+  });
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     testWidgets('$platform复用分类与排序，开播补分类后同步更新并保留筛选', (tester) async {
       debugDefaultTargetPlatformOverride = platform;

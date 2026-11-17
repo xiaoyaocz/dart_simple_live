@@ -175,6 +175,9 @@ class LocalStorageService extends GetxService {
   /// WebDAV_最后一次备份时间
   static const String kWebDAVLastRecoverTime = "kWebDAVLastRecoverTime";
 
+  /// 各平台已识别的本人弹幕昵称（siteId -> nickname）
+  static const String kSelfChatNicknames = "SelfChatNicknames";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 
@@ -206,5 +209,28 @@ class LocalStorageService extends GetxService {
   Future removeValue<T>(dynamic key) async {
     Log.d("Remove LocalStorage：$key");
     return await settingsBox.delete(key);
+  }
+
+  String getSelfChatNickname(String siteId) {
+    final raw = getValue<dynamic>(kSelfChatNicknames, const {});
+    if (raw is Map && raw[siteId] is String) {
+      return (raw[siteId] as String).trim();
+    }
+    return '';
+  }
+
+  Future<void> setSelfChatNickname(String siteId, String nickname) async {
+    final clean = nickname.trim();
+    if (siteId.isEmpty || clean.isEmpty) return;
+    final raw = getValue<dynamic>(kSelfChatNicknames, const {});
+    final next = <String, String>{
+      if (raw is Map)
+        for (final entry in raw.entries)
+          if (entry.key is String && entry.value is String)
+            entry.key as String: entry.value as String,
+    };
+    if (next[siteId] == clean) return;
+    next[siteId] = clean;
+    await setValue(kSelfChatNicknames, next);
   }
 }

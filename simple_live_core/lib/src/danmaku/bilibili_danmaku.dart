@@ -198,6 +198,7 @@ class BiliBiliDanmaku implements LiveDanmaku {
             var liveMsg = LiveMessage(
               type: LiveMessageType.chat,
               userName: username,
+                userId: obj['info'][2][0]?.toString(),
               message: message,
               parts: EmoticonParser.bilibili(obj['info'], message),
               color: color == 0

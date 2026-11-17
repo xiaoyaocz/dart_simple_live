@@ -19,13 +19,22 @@ namespace flutter_inappwebview_plugin
   void TextureBridgeGpu::ProcessFrame(
     winrt::com_ptr<ID3D11Texture2D> src_texture)
   {
+    if (!is_running_ || !graphics_context_ || !graphics_context_->d3d_device_context()) {
+      return;
+    }
     D3D11_TEXTURE2D_DESC desc;
     src_texture->GetDesc(&desc);
 
     const auto width = desc.Width;
     const auto height = desc.Height;
+    if (width == 0 || height == 0) {
+      return;
+    }
 
     EnsureSurface(width, height);
+    if (!surface_) {
+      return;
+    }
 
     auto device_context = graphics_context_->d3d_device_context();
 
@@ -51,16 +60,24 @@ namespace flutter_inappwebview_plugin
       dstDesc.Usage = D3D11_USAGE_DEFAULT;
 
       surface_ = nullptr;
+      dxgi_surface_ = nullptr;
+      surface_descriptor_.handle = nullptr;
+      surface_descriptor_.release_context = nullptr;
+      surface_descriptor_.release_callback = nullptr;
+      surface_size_ = { 0, 0 };
       if (!SUCCEEDED(graphics_context_->d3d_device()->CreateTexture2D(
         &dstDesc, nullptr, surface_.put()))) {
         std::cerr << "Creating intermediate texture failed" << std::endl;
         return;
       }
 
-      HANDLE shared_handle;
+      HANDLE shared_handle = nullptr;
       surface_.try_as(dxgi_surface_);
-      assert(dxgi_surface_);
-      dxgi_surface_->GetSharedHandle(&shared_handle);
+      if (!dxgi_surface_ || FAILED(dxgi_surface_->GetSharedHandle(&shared_handle)) || !shared_handle) {
+        surface_ = nullptr;
+        dxgi_surface_ = nullptr;
+        return;
+      }
 
       surface_descriptor_.handle = shared_handle;
       surface_descriptor_.width = surface_descriptor_.visible_width = width;
@@ -68,6 +85,7 @@ namespace flutter_inappwebview_plugin
       surface_descriptor_.release_context = surface_.get();
       surface_descriptor_.release_callback = [](void* release_context)
         {
+          if (!release_context) return;
           auto texture = reinterpret_cast<ID3D11Texture2D*>(release_context);
           texture->Release();
         };
@@ -89,10 +107,12 @@ namespace flutter_inappwebview_plugin
       ProcessFrame(last_frame_);
     }
 
-    if (surface_) {
-      // Gets released in the SurfaceDescriptor's release callback.
-      surface_->AddRef();
+    if (!surface_ || !surface_descriptor_.handle) {
+      return nullptr;
     }
+
+    // Gets released in the SurfaceDescriptor's release callback.
+    surface_->AddRef();
 
     return &surface_descriptor_;
   }
@@ -104,5 +124,10 @@ namespace flutter_inappwebview_plugin
     // For some reason, the destination surface needs to be recreated upon
     // resuming. Force |EnsureSurface| to create a new one by resetting it here.
     surface_ = nullptr;
+    dxgi_surface_ = nullptr;
+    surface_descriptor_.handle = nullptr;
+    surface_descriptor_.release_context = nullptr;
+    surface_descriptor_.release_callback = nullptr;
+    surface_size_ = { 0, 0 };
   }
 }

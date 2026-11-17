@@ -1,4 +1,5 @@
 #include <cstring>
+#include <WebView2EnvironmentOptions.h>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <Shlwapi.h>
@@ -10,6 +11,7 @@
 #include "../types/web_resource_error.h"
 #include "../types/web_resource_request.h"
 #include "../utils/base64.h"
+#include "../utils/com_apartment.h"
 #include "../utils/log.h"
 #include "../utils/map.h"
 #include "../utils/strconv.h"
@@ -62,6 +64,12 @@ namespace flutter_inappwebview_plugin
     wil::com_ptr<ICoreWebView2Controller> webViewController,
     wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController)> completionHandler)
   {
+    // This entry also creates views without an explicit Dart environment.
+    // Establish the apartment on the actual calling thread before any COM API.
+    if (failedAndLog(ensureWebViewComApartment())) {
+      completionHandler(nullptr, nullptr, nullptr);
+      return;
+    }
     auto callback = [parentWindow, willBeSurface, completionHandler, initialSettings](HRESULT result, wil::com_ptr<ICoreWebView2Environment> env) -> HRESULT
       {
         if (failedAndLog(result) || !env) {
@@ -169,8 +177,11 @@ namespace flutter_inappwebview_plugin
       hr = callback(S_OK, webViewEnvironment->getEnvironment());
     }
     else {
+      // Account login/default views retain their original profile but route directly.
+      auto options = Make<CoreWebView2EnvironmentOptions>();
+      options->put_AdditionalBrowserArguments(L"--no-proxy-server");
       hr = CreateCoreWebView2EnvironmentWithOptions(
-        nullptr, nullptr, nullptr,
+        nullptr, nullptr, options.Get(),
         Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(callback).Get());
     }
 
@@ -646,7 +657,9 @@ namespace flutter_inappwebview_plugin
                 {
                   if (lifetime.expired()) return;
                   std::string json = "null";
-                  if (response.has_value() && !response.value()->IsNull()) {
+                  // A successful Dart void/null handler is an engaged optional
+                  // containing nullptr, not necessarily an empty optional.
+                  if (response.has_value() && response.value() && !response.value()->IsNull()) {
                     json = std::get<std::string>(*(response.value()));
                   }
 
@@ -1580,6 +1593,12 @@ namespace flutter_inappwebview_plugin
     }
   }
 
+  bool InAppWebView::requestFocus() const
+  {
+    return webViewController && succeededOrLog(
+      webViewController->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC));
+  }
+
 
   void InAppWebView::getCertificate(const std::function<void(const std::optional<std::unique_ptr<SslCertificate>>)> completionHandler) const
   {
@@ -1887,7 +1906,9 @@ namespace flutter_inappwebview_plugin
   {
     debugLog("dealloc InAppWebView");
     callbackLifetime_.reset();
-    if (channelDelegate) channelDelegate->UnregisterMethodCallHandler();
+    if (channelDelegate && plugin && plugin->isEngineAvailable()) {
+      channelDelegate->UnregisterMethodCallHandler();
+    }
     if (plugin && plugin->inAppWebViewManager) {
       auto& requests = plugin->inAppWebViewManager->windowWebViews;
       for (const auto windowId : pendingWindowIds_) {

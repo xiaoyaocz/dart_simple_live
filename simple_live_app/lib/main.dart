@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:simple_live_app/services/windows_direct_network.dart';
 import 'package:simple_live_app/services/window_appearance_controller.dart';
 import 'package:simple_live_app/widgets/mobile_material_background.dart';
 
@@ -42,6 +43,7 @@ import 'package:path/path.dart' as p;
 import 'package:dynamic_color/dynamic_color.dart';
 
 void main() async {
+  WindowsDirectNetwork.initialize();
   WidgetsFlutterBinding.ensureInitialized();
   await SystemProxyService.instance.initialize();
   await migrateData();

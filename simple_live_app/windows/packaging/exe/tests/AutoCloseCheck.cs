@@ -25,7 +25,7 @@ internal static class AutoCloseCheck {
                 if (File.Exists(Path.Combine(root, "escaped.txt"))) throw new Exception("Invalid payload escaped target");
                 Console.WriteLine("PASS invalid payload rejected without closing the running app");
             }
-            foreach (string mode in new string[] { "graceful", "legacy", "stubborn", "headless" }) {
+            foreach (string mode in new string[] { "pre-update", "graceful", "legacy", "stubborn", "headless" }) {
                 string target = Path.Combine(root, mode + " target");
                 Process app = Start(args[1], target, mode, "first");
                 Process second = mode == "graceful" ? Start(args[1], target, mode, "second") : null;
@@ -34,6 +34,8 @@ internal static class AutoCloseCheck {
                 if (!app.WaitForExit(5000)) throw new Exception(mode + ": target process survived install");
                 if (second != null && !second.WaitForExit(5000)) throw new Exception("Second target instance survived");
                 bool marker = File.Exists(Path.Combine(target, "first.graceful"));
+                if (File.Exists(Path.Combine(target, "first.unsafe-exit")))
+                    throw new Exception("Old Flutter version received its crash-prone teardown message");
                 if ((mode == "graceful" || mode == "legacy") && !marker)
                     throw new Exception(mode + ": normal shutdown was not requested before force termination");
                 if (File.ReadAllText(Path.Combine(target, "simple_live_app.exe")) != "new application payload")

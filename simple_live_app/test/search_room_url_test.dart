@@ -3,6 +3,12 @@ import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/modules/search/search_room_url.dart';
 
 void main() {
+  test('B站官方桌面房间 blanc 路由可识别并保留房间防串检查', () {
+    expect(SearchRoomUrl.roomIdFor('bilibili',
+        Uri.parse('https://live.bilibili.com/blanc/7734200')), '7734200');
+    expect(SearchRoomUrl.roomIdFor('bilibili',
+        Uri.parse('https://live.bilibili.com/blanc/search')), isNull);
+  });
   test('抖音关注页内直播房间地址可识别，不把关注列表当作房间', () {
     expect(
         SearchRoomUrl.roomIdFor(

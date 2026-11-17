@@ -106,7 +106,8 @@ void main() {
     expect(room.status, isFalse);
     expect(room.userName, '主播');
     expect(room.danmakuData, isNull);
-    expect(paths, ['/webcast/room/web/enter/', '/123', '/123']);
+    // A connection error gets one safe read retry before the existing web fallback.
+    expect(paths, ['/webcast/room/web/enter/', '/webcast/room/web/enter/', '/123', '/123']);
   });
 
   test('斗鱼已下播不再读取开播时间或执行播放签名', () async {

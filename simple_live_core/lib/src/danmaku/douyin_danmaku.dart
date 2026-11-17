@@ -167,6 +167,7 @@ class DouyinDanmaku implements LiveDanmaku {
         message: chatMessage.content,
         parts: EmoticonParser.douyin(chatMessage),
         userName: chatMessage.user.nickName,
+          userId: chatMessage.user.idStr.isNotEmpty ? chatMessage.user.idStr : chatMessage.user.id.toString(),
       ),
     );
   }

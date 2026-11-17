@@ -46,6 +46,15 @@ class DanmakuItem<T> {
 
   bool suspend = false;
 
+  /// Identity can arrive after the receive event. Rebuild only changed bullets,
+  /// preserving their position and lifetime, including while playback is paused.
+  void updateSelfSend(bool value) {
+    if (content.type == DanmakuItemType.special || content.selfSend == value) return;
+    content.selfSend = value;
+    dispose(); // Releases both the old raster and its shifted inline-image slots.
+    onImageChanged?.call();
+  }
+
   @pragma("vm:prefer-inline")
   bool needRemove(bool needRemove) {
     if (needRemove) {

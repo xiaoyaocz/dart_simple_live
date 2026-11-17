@@ -8,6 +8,119 @@ import 'package:simple_live_app/services/room_emoticons.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 void main() {
+  testWidgets('keyboard focus prepares once before sending and again on refocus',
+      (tester) async {
+    final draft = TextEditingController();
+    addTearDown(draft.dispose);
+    var prepares = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: DanmakuComposer(
+      draft: draft, autofocus: true, prepare: () => prepares++,
+      send: () async => false,
+    ))));
+    await tester.pumpAndSettle();
+    expect(prepares, 1);
+    await tester.enterText(find.byType(TextField), 'next');
+    await tester.pump();
+    expect(prepares, 1, reason: 'typing does not repeat authentication warmup');
+    FocusManager.instance.primaryFocus!.unfocus();
+    await tester.pump();
+    await tester.showKeyboard(find.byType(TextField));
+    await tester.pump();
+    expect(prepares, 2);
+  });
+
+  testWidgets('click send keeps focus and selects submitted text for next draft',
+      (tester) async {
+    final draft = TextEditingController(text: 'first');
+    addTearDown(draft.dispose);
+    final result = Completer<bool>();
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: DanmakuComposer(
+      draft: draft, send: () => result.future,
+    ))));
+    await tester.tap(find.byTooltip('发送弹幕（Enter）'));
+    await tester.pump();
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.focusNode!.hasFocus, isTrue);
+    expect(draft.selection, const TextSelection(baseOffset: 0, extentOffset: 5));
+    expect(tester.widget<IconButton>(find.byWidgetPredicate(
+        (w) => w is IconButton && w.tooltip == '表情')).onPressed, isNotNull);
+    result.complete(true);
+    await tester.pumpAndSettle();
+    expect(field.focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('retyping identical text while sending is a new draft, not cleared',
+      (tester) async {
+    final draft = TextEditingController(text: 'hello');
+    addTearDown(draft.dispose);
+    final result = Completer<bool>();
+    var calls = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: DanmakuComposer(
+      draft: draft, send: () { calls++; return result.future; },
+    ))));
+    await tester.tap(find.byTooltip('发送弹幕（Enter）'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'next');
+    await tester.enterText(find.byType(TextField), 'hello');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    expect(calls, 1, reason: 'busy Enter never queues or duplicates');
+    result.complete(true);
+    await tester.pumpAndSettle();
+    expect(draft.text, 'hello');
+  });
+
+  testWidgets('late success after disposal never edits the shared draft',
+      (tester) async {
+    final draft = TextEditingController(text: 'old room');
+    addTearDown(draft.dispose);
+    final result = Completer<bool>();
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: DanmakuComposer(
+      draft: draft, send: () => result.future,
+    ))));
+    await tester.tap(find.byTooltip('发送弹幕（Enter）'));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+    result.complete(true);
+    await tester.pump();
+    expect(draft.text, 'old room');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('confirmation does not close next emoji picker in floating editor',
+      (tester) async {
+    final draft = TextEditingController(text: 'first');
+    final result = Completer<bool>();
+    final catalog = RoomEmoticons(platform: 'test', roomId: '1', fetch: () async => [
+      const LiveEmoticon(text: '[微笑]', url: 'https://fixture.example/smile.png'),
+    ]);
+    addTearDown(draft.dispose);
+    addTearDown(catalog.dispose);
+    await catalog.load();
+    late BuildContext context;
+    await tester.pumpWidget(MaterialApp(home: Builder(builder: (c) {
+      context = c;
+      return const Scaffold();
+    })));
+    final opened = showDanmakuComposer(context, draft: draft,
+        send: () => result.future, emoticons: () => catalog);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('发送弹幕（Enter）'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('表情'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byTooltip('[微笑]'), findsOneWidget);
+    result.complete(true);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('[微笑]'), findsOneWidget);
+    await tester.tap(find.byTooltip('[微笑]'));
+    await tester.pumpAndSettle();
+    expect(draft.text, '[微笑]');
+    expect(tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await opened;
+  });
+
   testWidgets('removing the composer also dismisses its image popup',
       (tester) async {
     final draft = TextEditingController();

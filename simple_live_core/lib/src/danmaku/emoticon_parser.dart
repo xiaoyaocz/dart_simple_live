@@ -38,6 +38,7 @@ abstract final class EmoticonParser {
       return LiveMessage(
         type: LiveMessageType.chat,
         userName: user?.nickName ?? '',
+        userId: user == null ? null : (user.idStr.isNotEmpty ? user.idStr : user.id.toString()),
         message: fallback,
         parts: parts,
         color: LiveMessageColor.white,

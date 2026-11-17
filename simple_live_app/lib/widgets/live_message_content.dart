@@ -27,6 +27,7 @@ List<DanmakuSpan> emoticonDanmakuSpans(List<LiveMessagePart> parts) => [
     ];
 
 class LiveMessageContent extends StatelessWidget {
+  final bool isSelf;
   final String userName;
   final List<LiveMessagePart> parts;
   final double fontSize;
@@ -38,13 +39,42 @@ class LiveMessageContent extends StatelessWidget {
       required this.parts,
       required this.fontSize,
       required this.color,
-      this.imageProvider = emoticonImageProvider});
+      this.imageProvider = emoticonImageProvider,
+      this.isSelf = false});
 
   @override
-  Widget build(BuildContext context) => Text.rich(TextSpan(
-        text: '$userName：',
-        style: TextStyle(color: Colors.grey, fontSize: fontSize),
-        children: [
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final selfAccent =
+        dark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
+    return Text.rich(TextSpan(
+      text: isSelf ? null : '$userName：',
+      style: TextStyle(color: Colors.grey, fontSize: fontSize),
+      children: [
+        if (isSelf) ...[
+          WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 5.5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+                    ),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text('我',
+                      style: TextStyle(
+                          fontSize: fontSize * .70,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)))),
+          TextSpan(
+              text: '$userName：',
+              style:
+                  TextStyle(color: selfAccent, fontWeight: FontWeight.w600)),
+        ],
           for (final part in parts)
             if (part.emoticon case final LiveEmoticon image)
               WidgetSpan(
@@ -65,10 +95,64 @@ class LiveMessageContent extends StatelessWidget {
                             _fallback(part.text)),
                   ))
             else
-              TextSpan(text: part.text, style: TextStyle(color: color)),
+              TextSpan(text: part.text, style: TextStyle(color: color,
+                  fontWeight: isSelf ? FontWeight.normal : null)),
         ],
       ));
+  }
 
   Widget _fallback(String text) =>
       Text(text, style: TextStyle(color: color, fontSize: fontSize));
+}
+
+/// A static highlight: no timers, fades, scroll requests or duplicated messages.
+class SelfChatHighlight extends StatelessWidget {
+  const SelfChatHighlight({super.key, required this.child});
+  final Widget child;
+
+  static bool matches(
+    String userName, {
+    String ownNickname = const String.fromEnvironment('SELF_CHAT_NICKNAME'),
+    Iterable<String> extraNicknames = const [],
+  }) {
+    if (userName.isEmpty) return false;
+    if (ownNickname.isNotEmpty && userName == ownNickname) return true;
+    return extraNicknames.any((name) => name.isNotEmpty && name == userName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        key: const ValueKey('self-chat-highlight'),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark
+                ? const [Color(0xFF1B2E45), Color(0xFF252440)]
+                : const [Color(0xFFEAF2FF), Color(0xFFF3ECFF)],
+          ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            width: 1.0,
+            color: dark ? const Color(0x5560A5FA) : const Color(0x4D3B82F6),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: dark ? const Color(0x22000000) : const Color(0x143B82F6),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: child,
+        ),
+      ),
+    );
+  }
 }

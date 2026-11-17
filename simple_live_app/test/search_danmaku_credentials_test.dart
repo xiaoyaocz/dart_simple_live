@@ -51,7 +51,7 @@ void main() {
         (call) async {
       final id = call.arguments['id'] as String;
       profiles[id] =
-          call.arguments['settings']['additionalBrowserArguments'] != null;
+          (call.arguments['settings']['userDataFolder'] as String).endsWith('search_webview_direct');
       final channel =
           MethodChannel('com.pichillilorenzo/flutter_webview_environment_$id');
       channels.add(channel);

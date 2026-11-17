@@ -59,7 +59,11 @@ internal static class RunningAppFixture {
         return 0;
     }
     private static IntPtr HandleMessage(IntPtr window, uint message, IntPtr wparam, IntPtr lparam) {
-        if ((message == 0x8002 && mode == "graceful") || (message == 0x10 && mode == "legacy")) {
+        if (message == 0x8002 && mode == "pre-update") {
+            File.WriteAllText(marker + ".unsafe-exit", "old engine teardown requested");
+            PostQuitMessage(1); return IntPtr.Zero;
+        }
+        if ((message == 0x8004 && mode == "graceful") || (message == 0x10 && mode == "legacy")) {
             File.WriteAllText(marker + ".graceful", "exited normally");
             DestroyWindow(window); PostQuitMessage(0); return IntPtr.Zero;
         }

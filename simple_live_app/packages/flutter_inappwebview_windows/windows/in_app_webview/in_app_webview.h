@@ -176,6 +176,7 @@ namespace flutter_inappwebview_plugin
     void removeDevToolsProtocolEventListener(const std::string& eventName);
     void pause() const;
     void resume() const;
+    bool requestFocus() const;
     void getCertificate(const std::function<void(const std::optional<std::unique_ptr<SslCertificate>>)> completionHandler) const;
 
     std::string pageFrameId() const

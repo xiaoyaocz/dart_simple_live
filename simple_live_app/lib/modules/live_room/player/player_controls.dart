@@ -127,7 +127,8 @@ Widget playerControls(
           );
     return Focus(
       autofocus: true,
-      onKeyEvent: (_, event) => handlePlayerShortcut(
+      onKeyEvent: (_, event) => controller.officialEditorFocused.value
+          ? KeyEventResult.ignored : handlePlayerShortcut(
         event,
         onFollowKey: controller.followByDoubleQ,
         onComposeDanmaku: controller.openDanmakuComposer,
@@ -156,9 +157,10 @@ Widget playerControls(
 /// Enter belongs to the visible room, even after a click moves focus outside
 /// the player's Focus subtree. Run before child controls consume it as Activate.
 class DesktopDanmakuShortcut extends StatefulWidget {
-  const DesktopDanmakuShortcut({super.key, required this.onCompose, required this.child});
+  const DesktopDanmakuShortcut({super.key, required this.onCompose, required this.child, this.isEditing});
   final VoidCallback onCompose;
   final Widget child;
+  final bool Function()? isEditing;
 
   @override
   State<DesktopDanmakuShortcut> createState() => _DesktopDanmakuShortcutState();
@@ -172,7 +174,7 @@ class _DesktopDanmakuShortcutState extends State<DesktopDanmakuShortcut> {
   }
 
   KeyEventResult _onKey(KeyEvent event) {
-    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+    if (!mounted || widget.isEditing?.call() == true || ModalRoute.of(context)?.isCurrent != true ||
         event is! KeyDownEvent || _editingTextOrModifiedShortcut() ||
         HardwareKeyboard.instance.isShiftPressed ||
         (event.logicalKey != LogicalKeyboardKey.enter &&

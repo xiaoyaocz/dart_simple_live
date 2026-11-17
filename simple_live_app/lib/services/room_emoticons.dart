@@ -11,6 +11,7 @@ class RoomEmoticons extends ChangeNotifier {
       LinkedHashMap<LiveMessage, List<LiveMessagePart>>.identity();
   final EmoticonCatalog _catalog;
   final String _platform;
+  String get platform => _platform;
   final _sendTokens = <String, String>{};
   final _entries = <String, LiveEmoticon>{};
   List<LiveEmoticon> get available {

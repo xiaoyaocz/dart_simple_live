@@ -51,15 +51,21 @@ namespace flutter_inappwebview_plugin
       return false;
     }
 
-    ABI::Windows::Graphics::SizeInt32 size;
-    capture_item_->get_Size(&size);
+    ABI::Windows::Graphics::SizeInt32 size{};
+    if (FAILED(capture_item_->get_Size(&size))) {
+      return false;
+    }
+    if (size.Width <= 0) size.Width = 1;
+    if (size.Height <= 0) size.Height = 1;
 
     frame_pool_ = graphics_context_->CreateCaptureFramePool(
       graphics_context_->device(),
       static_cast<ABI::Windows::Graphics::DirectX::DirectXPixelFormat>(
         kPixelFormat),
       kNumBuffers, size);
-    assert(frame_pool_);
+    if (!frame_pool_) {
+      return false;
+    }
 
     frame_pool_->add_FrameArrived(
       Microsoft::WRL::Callback<ABI::Windows::Foundation::ITypedEventHandler<
@@ -99,52 +105,66 @@ namespace flutter_inappwebview_plugin
   {
     if (is_running_) {
       is_running_ = false;
-      frame_pool_->remove_FrameArrived(on_frame_arrived_token_);
-      auto closable =
-        capture_session_.try_as<ABI::Windows::Foundation::IClosable>();
-      assert(closable);
-      closable->Close();
-      capture_session_ = nullptr;
+      if (frame_pool_ && on_frame_arrived_token_.value != 0) {
+        frame_pool_->remove_FrameArrived(on_frame_arrived_token_);
+        on_frame_arrived_token_.value = 0;
+      }
+      if (capture_session_) {
+        auto closable =
+          capture_session_.try_as<ABI::Windows::Foundation::IClosable>();
+        if (closable) {
+          closable->Close();
+        }
+        capture_session_ = nullptr;
+      }
+      frame_pool_ = nullptr;
     }
   }
 
   void TextureBridge::OnFrameArrived()
   {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    if (!is_running_) {
-      return;
-    }
+    FrameAvailableCallback callback;
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      if (!is_running_ || !frame_pool_) {
+        return;
+      }
 
-    bool has_frame = false;
+      bool has_frame = false;
 
-    winrt::com_ptr<ABI::Windows::Graphics::Capture::IDirect3D11CaptureFrame>
-      frame;
-    auto hr = frame_pool_->TryGetNextFrame(frame.put());
-    if (SUCCEEDED(hr) && frame) {
-      winrt::com_ptr<
-        ABI::Windows::Graphics::DirectX::Direct3D11::IDirect3DSurface>
-        frame_surface;
+      winrt::com_ptr<ABI::Windows::Graphics::Capture::IDirect3D11CaptureFrame>
+        frame;
+      auto hr = frame_pool_->TryGetNextFrame(frame.put());
+      if (SUCCEEDED(hr) && frame) {
+        winrt::com_ptr<
+          ABI::Windows::Graphics::DirectX::Direct3D11::IDirect3DSurface>
+          frame_surface;
 
-      if (SUCCEEDED(frame->get_Surface(frame_surface.put()))) {
-        last_frame_ =
-          TryGetDXGIInterfaceFromObject<ID3D11Texture2D>(frame_surface);
-        has_frame = !ShouldDropFrame();
+        if (SUCCEEDED(frame->get_Surface(frame_surface.put()))) {
+          last_frame_ =
+            TryGetDXGIInterfaceFromObject<ID3D11Texture2D>(frame_surface);
+          has_frame = !ShouldDropFrame();
+        }
+      }
+
+      if (needs_update_ && capture_item_) {
+        ABI::Windows::Graphics::SizeInt32 size{};
+        if (SUCCEEDED(capture_item_->get_Size(&size)) && size.Width > 0 && size.Height > 0) {
+          frame_pool_->Recreate(
+            graphics_context_->device(),
+            static_cast<ABI::Windows::Graphics::DirectX::DirectXPixelFormat>(
+              kPixelFormat),
+            kNumBuffers, size);
+        }
+        needs_update_ = false;
+      }
+
+      if (has_frame && frame_available_) {
+        callback = frame_available_;
       }
     }
-
-    if (needs_update_) {
-      ABI::Windows::Graphics::SizeInt32 size;
-      capture_item_->get_Size(&size);
-      frame_pool_->Recreate(
-        graphics_context_->device(),
-        static_cast<ABI::Windows::Graphics::DirectX::DirectXPixelFormat>(
-          kPixelFormat),
-        kNumBuffers, size);
-      needs_update_ = false;
-    }
-
-    if (has_frame && frame_available_) {
-      frame_available_();
+    if (callback) {
+      callback();
     }
   }
 

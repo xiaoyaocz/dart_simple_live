@@ -12,6 +12,7 @@ namespace {
 constexpr UINT kTrayMessage = WM_APP + 1;
 constexpr UINT kExitMessage = WM_APP + 2;
 constexpr UINT kAppearanceMessage = WM_APP + 3;
+constexpr UINT kUpdateExitMessage = WM_APP + 4;
 constexpr UINT_PTR kExitTimer = 1;
 constexpr UINT kShowCommand = 40001;
 constexpr UINT kExitCommand = 40002;
@@ -285,7 +286,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     }
     return 0;
   }
-  if (message == kExitMessage) {
+  if (message == kExitMessage || message == kUpdateExitMessage) {
     RemoveTrayIcon();
     SetTimer(hwnd, kExitTimer, 100, nullptr);
     return 0;

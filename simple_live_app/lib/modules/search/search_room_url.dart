@@ -22,7 +22,7 @@ class SearchRoomUrl {
           if (segments.length == 1) {
             id = segments.first;
           }
-          if (segments.length == 2 && segments.first == 'h5') {
+          if (segments.length == 2 && {'h5', 'blanc'}.contains(segments.first)) {
             id = segments.last;
           }
         } else if (uri.host == 'm.bilibili.com' &&

@@ -101,6 +101,8 @@ class CustomPlatformViewController
   Completer<void> _creatingCompleter = Completer<void>();
   int _textureId = 0;
   bool _isDisposed = false;
+  Size? _surfaceSize;
+  double? _surfaceScale;
 
   Future<void> get ready => _creatingCompleter.future;
 
@@ -226,8 +228,22 @@ class CustomPlatformViewController
       return;
     }
     assert(value.isInitialized);
-    return _methodChannel
-        .invokeMethod('setSize', [size.width, size.height, scaleFactor]);
+    // Pointer-down reports size too. An unchanged report still makes the
+    // native bridge recreate its capture frame pool, flashing the whole bar.
+    if (_surfaceSize == size && _surfaceScale == scaleFactor) return;
+    _surfaceSize = size;
+    _surfaceScale = scaleFactor;
+    try {
+      await _methodChannel
+          .invokeMethod('setSize', [size.width, size.height, scaleFactor]);
+    } catch (_) {
+      // A failed update must remain retryable on the next layout/click.
+      if (_surfaceSize == size && _surfaceScale == scaleFactor) {
+        _surfaceSize = null;
+        _surfaceScale = null;
+      }
+      rethrow;
+    }
   }
 
   /// Sets the surface size to the provided [size].

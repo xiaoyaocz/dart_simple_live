@@ -1,17 +1,9 @@
 class DanmakuSendResult {
-  const DanmakuSendResult(this.status, this.message);
+  const DanmakuSendResult(this.status, this.message, {this.userId, this.userName});
+  final String? userId, userName;
   final String status;
   final String message;
   bool get sent => status == 'sent';
-  factory DanmakuSendResult.fromValue(dynamic value) {
-    if (value is! Map ||
-        value['status'] is! String ||
-        value['message'] is! String) {
-      return const DanmakuSendResult('unknown', '发送结果未确认，请先查看聊天，避免重复发送');
-    }
-    return DanmakuSendResult(
-        value['status'] as String, value['message'] as String);
-  }
 }
 
 abstract interface class DanmakuSender {

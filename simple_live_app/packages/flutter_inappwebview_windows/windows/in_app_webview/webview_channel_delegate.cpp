@@ -262,6 +262,9 @@ namespace flutter_inappwebview_plugin
       webView->resume();
       result->Success(true);
     }
+    else if (string_equals(methodName, "requestFocus")) {
+      result->Success(webView->requestFocus());
+    }
     else if (string_equals(methodName, "getCertificate")) {
       auto result_ = std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(std::move(result));
       webView->getCertificate([result_ = std::move(result_)](const std::optional<std::unique_ptr<SslCertificate>> data)

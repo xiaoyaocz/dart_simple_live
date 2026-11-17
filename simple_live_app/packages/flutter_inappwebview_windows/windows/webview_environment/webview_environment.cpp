@@ -62,6 +62,12 @@ namespace flutter_inappwebview_plugin
       }
     }
 
+    // Enforce the application policy even for callers outside SearchWebSession.
+    // Keep the original userDataFolder so existing cookies/logins are retained.
+    const auto browserArguments = settings && settings->additionalBrowserArguments.has_value()
+      ? settings->additionalBrowserArguments.value() : std::string();
+    options->put_AdditionalBrowserArguments(utf8_to_wide(browserArguments + " --no-proxy-server").c_str());
+
     auto hr = CreateCoreWebView2EnvironmentWithOptions(
       settings && settings->browserExecutableFolder.has_value() ? utf8_to_wide(settings->browserExecutableFolder.value()).c_str() : nullptr,
       settings && settings->userDataFolder.has_value() ? utf8_to_wide(settings->userDataFolder.value()).c_str() : nullptr,

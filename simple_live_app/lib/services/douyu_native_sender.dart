@@ -63,6 +63,7 @@ class DouyuNativeSender implements DanmakuSender {
   DouyuNativeSender(
       {required this.roomId,
       required DanmakuCredentials credentials,
+      this.onIdentity,
       Dio? dio,
       Future<WebSocket> Function(Uri, Map<String, dynamic>)? connect})
       : _credentials = credentials,
@@ -77,6 +78,7 @@ class DouyuNativeSender implements DanmakuSender {
                 WebSocket.connect(uri.toString(), headers: headers));
   final String roomId;
   final DanmakuCredentials _credentials;
+  final void Function(String)? onIdentity;
   final Dio _dio;
   final Future<WebSocket> Function(Uri, Map<String, dynamic>) _connect;
   final _cancel = CancelToken();
@@ -488,12 +490,16 @@ class DouyuNativeSender implements DanmakuSender {
     if (_busy) return const DanmakuSendResult('busy', '上一条弹幕仍在发送');
     if (text.trim().isEmpty)
       return const DanmakuSendResult('rejected', '请输入弹幕');
+    if (_uncertainTexts.contains(_md5(text)) || _uncertainTexts.length >= 100) {
+      return const DanmakuSendResult('unknown', '此弹幕发送结果未确认，请先查看聊天，避免重复发送');
+    }
     _busy = true;
     var submitted = false;
     final watch = Stopwatch()..start();
     try {
       await _ensureReady();
       if (_closed) return const DanmakuSendResult('closed', '直播间已切换');
+      if(_uid!=null) onIdentity?.call(_uid!);
       final ack = Completer<DanmakuSendResult>();
       _ack = ack;
       _pendingText = text;
@@ -519,14 +525,16 @@ class DouyuNativeSender implements DanmakuSender {
               const DanmakuSendResult('unknown', '斗鱼未确认发送，请先查看聊天，避免重复发送'));
       if (result.status == 'unknown') {
         _closeSockets(); // No stale gateway ACK may reach the next transaction.
-        if (_uncertainTexts.length >= 16)
-          _uncertainTexts.remove(_uncertainTexts.first);
         _uncertainTexts.add(_md5(text));
       }
-      return result;
+      return result.sent ? DanmakuSendResult(result.status,result.message,userId:_uid) : result;
     } on _DouyuFailure catch (error) {
       return DanmakuSendResult(error.status, error.message);
     } catch (_) {
+      if (submitted && !_closed) {
+        _uncertainTexts.add(_md5(text));
+        _closeSockets();
+      }
       return DanmakuSendResult(
           _closed
               ? 'closed'

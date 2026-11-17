@@ -1,18 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:win32_registry/win32_registry.dart';
 
-/// 仅为远程同步读取系统代理，不改变直播请求或全局 HTTP 配置。
+/// Windows 同步连接也直连，不读取系统代理。
 class RemoteSyncConnection {
   final String? Function(Uri) proxyResolver;
 
   RemoteSyncConnection({String? Function(Uri)? proxyResolver})
-      : proxyResolver = proxyResolver ?? _windowsProxy;
+      : proxyResolver = proxyResolver ?? ((_) => null);
 
   Future<WebSocket> connect(String url,
       {Duration timeout = const Duration(seconds: 15)}) async {
-    final proxy = proxyResolver(Uri.parse(url));
+    final proxy = Platform.isWindows ? 'DIRECT' : proxyResolver(Uri.parse(url));
     if (proxy != null && proxy != 'DIRECT') {
       final elapsed = Stopwatch()..start();
       try {
@@ -31,7 +30,7 @@ class RemoteSyncConnection {
   Future<WebSocket> _connect(
       String url, String? proxy, Duration timeout) async {
     final client = HttpClient()..connectionTimeout = timeout;
-    // 没有系统代理时保留 Dart 原有的环境代理与 HttpOverrides。
+    // Windows 明确覆盖任何继承的解析器；其他平台保持原有行为。
     if (proxy != null) client.findProxy = (_) => proxy;
     var timedOut = false;
     try {
@@ -47,29 +46,6 @@ class RemoteSyncConnection {
     } finally {
       // 握手成功的 WebSocket 已脱离 HttpClient；失败则关闭待连接套接字。
       client.close(force: true);
-    }
-  }
-
-  static String? _windowsProxy(Uri uri) {
-    if (!Platform.isWindows) return null;
-    if (uri.host == 'localhost' ||
-        InternetAddress.tryParse(uri.host)?.isLoopback == true) {
-      return 'DIRECT';
-    }
-    try {
-      final key = Registry.openPath(RegistryHive.currentUser,
-          path: r'Software\Microsoft\Windows\CurrentVersion\Internet Settings');
-      try {
-        return proxyDirective(uri,
-            enabled: key.getIntValue('ProxyEnable') == 1,
-            server: key.getStringValue('ProxyServer') ?? '',
-            bypass: key.getStringValue('ProxyOverride') ?? '');
-      } finally {
-        key.close();
-      }
-    } catch (_) {
-      // 未配置或无法读取代理时沿用原来的直连方式。
-      return null;
     }
   }
 

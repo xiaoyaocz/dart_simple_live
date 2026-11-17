@@ -133,12 +133,22 @@ namespace flutter_inappwebview_plugin
 
     auto initialSettings = std::make_shared<InAppWebViewSettings>(settingsMap);
 
+    auto alive = alive_;
     InAppWebView::createInAppWebViewEnv(hwnd, true, webViewEnvironment, initialSettings,
       [=](wil::com_ptr<ICoreWebView2Environment> webViewEnv,
         wil::com_ptr<ICoreWebView2Controller> webViewController,
         wil::com_ptr<ICoreWebView2CompositionController> webViewCompositionController)
       {
-        if (plugin && webViewEnv && webViewController && webViewCompositionController) {
+        if (!*alive || !plugin || !plugin->isEngineAvailable()) {
+          if (webViewController) {
+            webViewController->Close();
+          }
+          if (hwnd && IsWindow(hwnd)) {
+            DestroyWindow(hwnd);
+          }
+          return;
+        }
+        if (webViewEnv && webViewController && webViewCompositionController) {
           std::optional<std::vector<std::shared_ptr<UserScript>>> initialUserScripts = initialUserScriptList.has_value() ?
             functional_map(initialUserScriptList.value(), [](const flutter::EncodableValue& map) { return std::make_shared<UserScript>(std::get<flutter::EncodableMap>(map)); }) :
             std::optional<std::vector<std::shared_ptr<UserScript>>>{};
@@ -189,6 +199,9 @@ namespace flutter_inappwebview_plugin
           result_->Success(textureId);
         }
         else {
+          if (hwnd && IsWindow(hwnd)) {
+            DestroyWindow(hwnd);
+          }
           result_->Error("0", "Cannot create the InAppWebView instance!");
         }
       }
@@ -238,6 +251,7 @@ namespace flutter_inappwebview_plugin
   InAppWebViewManager::~InAppWebViewManager()
   {
     debugLog("dealloc InAppWebViewManager");
+    *alive_ = false;
     webViews.clear();
     keepAliveWebViews.clear();
     windowWebViews.clear();

@@ -2703,6 +2703,10 @@ class WindowsInAppWebViewController extends PlatformInAppWebViewController
     await channel?.invokeMethod('resume', args);
   }
 
+  /// Move OS keyboard focus from Flutter to this visible WebView2 controller.
+  Future<bool> requestFocus() async =>
+      await channel?.invokeMethod<bool>('requestFocus', <String, dynamic>{}) ?? false;
+
   @override
   Future<String> getDefaultUserAgent() async {
     Map<String, dynamic> args = <String, dynamic>{};

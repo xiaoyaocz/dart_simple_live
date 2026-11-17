@@ -165,9 +165,6 @@ class _Room extends LiveRoomController {
             pSite: Site(id: 'test', name: '', logo: '', liveSite: source),
             pRoomId: '1');
   final fake = _Player();
-  int senderPreparations = 0;
-  @override
-  void prepareDanmaku() { senderPreparations++; }
   @override
   Player get player => fake;
   @override
@@ -207,7 +204,6 @@ void main() {
     await tester.pump();
     expect(source.details, 1);
     expect(room.fake.opens, 1);
-    expect(room.senderPreparations, 1, reason: 'Prepare on room entry, not on first Send');
     room.refreshRoom();
     await tester.pump();
     expect(source.details, 2);

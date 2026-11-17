@@ -66,6 +66,7 @@ mixin PlayerMixin {
 
   Future<void> _configurePlayer() async {
     var pp = player.platform as NativePlayer;
+    if (Platform.isWindows) await pp.setProperty('http-proxy', '');
     // Keep source timestamps/frame count; physical display Hz is managed separately.
     await pp.setProperty('interpolation', 'no');
     await pp.setProperty('video-sync', 'audio');

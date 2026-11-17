@@ -16,14 +16,15 @@ namespace flutter_inappwebview_plugin
 {
   // static
   void FlutterInappwebviewWindowsPlugin::RegisterWithRegistrar(
-    flutter::PluginRegistrarWindows* registrar)
+    flutter::PluginRegistrarWindows* registrar, FlutterDesktopMessengerRef messenger)
   {
-    auto plugin = std::make_unique<FlutterInappwebviewWindowsPlugin>(registrar);
+    auto plugin = std::make_unique<FlutterInappwebviewWindowsPlugin>(registrar, messenger);
     registrar->AddPlugin(std::move(plugin));
   }
 
-  FlutterInappwebviewWindowsPlugin::FlutterInappwebviewWindowsPlugin(flutter::PluginRegistrarWindows* registrar)
-    : registrar(registrar)
+  FlutterInappwebviewWindowsPlugin::FlutterInappwebviewWindowsPlugin(flutter::PluginRegistrarWindows* registrar,
+    FlutterDesktopMessengerRef messenger)
+    : registrar(registrar), messenger_(FlutterDesktopMessengerAddRef(messenger))
   {
     webViewEnvironmentManager = std::make_unique<WebViewEnvironmentManager>(this);
     inAppWebViewManager = std::make_unique<InAppWebViewManager>(this);
@@ -39,5 +40,6 @@ namespace flutter_inappwebview_plugin
     inAppBrowserManager = nullptr;
     headlessInAppWebViewManager = nullptr;
     cookieManager = nullptr;
+    FlutterDesktopMessengerRelease(messenger_);
   }
 }

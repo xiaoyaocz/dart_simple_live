@@ -5,6 +5,7 @@
 #include <flutter/standard_method_codec.h>
 #include <flutter/texture_registrar.h>
 
+#include <atomic>
 #include <memory>
 
 #include "../in_app_webview/in_app_webview.h"
@@ -43,6 +44,7 @@ namespace flutter_inappwebview_plugin
 
     flutter::TextureRegistrar* texture_registrar_;
     int64_t texture_id_;
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 
     void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue>& method_call,
@@ -52,7 +54,7 @@ namespace flutter_inappwebview_plugin
     template <typename T>
     void EmitEvent(const T& value)
     {
-      if (event_sink_) {
+      if (*alive_ && event_sink_ && view && view->plugin && view->plugin->isEngineAvailable()) {
         event_sink_->Success(value);
       }
     }

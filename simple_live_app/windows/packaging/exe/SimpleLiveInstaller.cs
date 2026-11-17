@@ -103,7 +103,9 @@ internal static class Program {
 // Only the exact executable being replaced is eligible. Never taskkill /IM:
 // portable copies in other directories must continue running.
 internal static class RunningApplicationCloser {
-    private const uint ExitMessage = 0x8002; // FlutterWindow's WM_APP + 2 tray exit.
+    // Older builds crash in WebView teardown on WM_APP+2. They ignore this new
+    // update request and reach the existing terminate-and-wait fallback instead.
+    private const uint ExitMessage = 0x8004; // FlutterWindow's WM_APP + 4 update exit.
     private delegate bool WindowCallback(IntPtr window, IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool EnumWindows(WindowCallback callback, IntPtr parameter);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);

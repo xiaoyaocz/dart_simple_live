@@ -353,7 +353,13 @@ class _FollowUserPageState extends State<FollowUserPage>
           ),
           Offstage(
             offstage: !controller.pageEmpty.value,
-            child: AppEmptyWidget(onRefresh: () => controller.refreshData()),
+            child: controller.filterMode.value.tag != '全部' &&
+                    !FollowService.instance.updating.value &&
+                    FollowService.instance.followList.any((item) => item.liveStatus.value == 0)
+                ? AppErrorWidget(
+                    errorMsg: '关注记录仍在，直播状态暂未获取，请重试或切换“全部”',
+                    onRefresh: () => controller.refreshData())
+                : AppEmptyWidget(onRefresh: () => controller.refreshData()),
           ),
           Offstage(
             offstage: !controller.pageError.value,

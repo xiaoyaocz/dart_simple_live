@@ -1,9 +1,11 @@
 #ifndef FLUTTER_INAPPWEBVIEW_PLUGIN_IN_APP_WEBVIEW_MANAGER_H_
 #define FLUTTER_INAPPWEBVIEW_PLUGIN_IN_APP_WEBVIEW_MANAGER_H_
 
+#include <atomic>
 #include <flutter/method_channel.h>
 #include <flutter/standard_message_codec.h>
 #include <map>
+#include <memory>
 #include <string>
 #include <variant>
 #include <wil/com.h>
@@ -61,6 +63,7 @@ namespace flutter_inappwebview_plugin
     inline static ABI::Windows::UI::Composition::ICompositor* compositor_ = nullptr;
     WNDCLASS windowClass_ = {};
     inline static bool valid_ = false;
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
   };
 }
 #endif //FLUTTER_INAPPWEBVIEW_PLUGIN_IN_APP_WEBVIEW_MANAGER_H_

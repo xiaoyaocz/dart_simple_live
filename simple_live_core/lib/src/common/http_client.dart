@@ -27,6 +27,25 @@ class HttpClient {
     dio.interceptors.add(CustomInterceptor());
   }
 
+  // Replay only safe reads, once, on a connection failure. Never replay a
+  // message POST, server rejection, or a request cancelled during backoff.
+  Future<Response<dynamic>> _read(
+      Future<Response<dynamic>> Function() request, CancelToken? cancel) async {
+    try {
+      return await request();
+    } on DioException catch (error) {
+      if (error.type != DioExceptionType.connectionError ||
+          cancel?.isCancelled == true) {
+        rethrow;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (cancel?.isCancelled == true) {
+        throw cancel!.cancelError!;
+      }
+      return request();
+    }
+  }
+
   /// Get请求，返回String
   /// * [url] 请求链接
   /// * [queryParameters] 请求参数
@@ -40,7 +59,7 @@ class HttpClient {
     try {
       queryParameters ??= {};
       header ??= {};
-      var result = await dio.get(
+      var result = await _read(() => dio.get(
         url,
         queryParameters: queryParameters,
         options: Options(
@@ -48,7 +67,7 @@ class HttpClient {
           headers: header,
         ),
         cancelToken: cancel,
-      );
+      ), cancel);
       return result.data;
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.badResponse) {
@@ -73,7 +92,7 @@ class HttpClient {
     try {
       queryParameters ??= {};
       header ??= {};
-      var result = await dio.get(
+      var result = await _read(() => dio.get(
         url,
         queryParameters: queryParameters,
         options: Options(
@@ -81,7 +100,7 @@ class HttpClient {
           headers: header,
         ),
         cancelToken: cancel,
-      );
+      ), cancel);
       return result.data;
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.badResponse) {
@@ -146,7 +165,7 @@ class HttpClient {
     try {
       queryParameters ??= {};
       header ??= {};
-      var result = await dio.head(
+      var result = await _read(() => dio.head(
         url,
         queryParameters: queryParameters,
         options: Options(
@@ -154,7 +173,7 @@ class HttpClient {
           receiveDataWhenStatusError: true,
         ),
         cancelToken: cancel,
-      );
+      ), cancel);
       return result;
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.badResponse) {

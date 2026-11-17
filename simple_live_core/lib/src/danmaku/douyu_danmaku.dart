@@ -85,6 +85,7 @@ class DouyuDanmaku implements LiveDanmaku {
         var liveMsg = LiveMessage(
           type: LiveMessageType.chat,
           userName: jsonData["nn"].toString(),
+            userId: jsonData['uid']?.toString(),
           message: jsonData["txt"].toString(),
             emoticonKey: (int.tryParse('${jsonData["gag"]}') ?? 0) > 0
                 ? '[gag:${jsonData["gag"]}]' : null,

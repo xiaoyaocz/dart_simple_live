@@ -14,6 +14,7 @@ class DanmakuComposer extends StatefulWidget {
       this.emoticons,
       this.onEmoticonRoute,
       this.autofocus = false,
+      this.focusRequest = 0,
       this.onSent});
   final TextEditingController draft;
   final Future<bool> Function() send;
@@ -21,6 +22,7 @@ class DanmakuComposer extends StatefulWidget {
   final RoomEmoticons? Function()? emoticons;
   final ValueChanged<Route<String>>? onEmoticonRoute;
   final bool autofocus;
+  final int focusRequest;
   final VoidCallback? onSent;
   @override
   State<DanmakuComposer> createState() => _DanmakuComposerState();
@@ -30,8 +32,47 @@ class _DanmakuComposerState extends State<DanmakuComposer> {
   bool busy = false;
   final focus = FocusNode();
   Route<String>? _emoticonRoute;
+  int _draftRevision = 0;
+  late TextEditingValue _lastDraft;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastDraft = widget.draft.value;
+    widget.draft.addListener(_trackDraft);
+    focus.addListener(_prepareOnFocus);
+  }
+
+  void _trackDraft() {
+    final value = widget.draft.value;
+    // Selection moves are not edits; retyping the same text IS a new draft.
+    if (value.text != _lastDraft.text ||
+        value.composing != _lastDraft.composing) {
+      _draftRevision++;
+    }
+    _lastDraft = value;
+  }
+
+  void _prepareOnFocus() {
+    if (focus.hasFocus && !busy) widget.prepare?.call();
+  }
+
+  @override
+  void didUpdateWidget(covariant DanmakuComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.draft, widget.draft)) {
+      oldWidget.draft.removeListener(_trackDraft);
+      _lastDraft = widget.draft.value;
+      _draftRevision++;
+      widget.draft.addListener(_trackDraft);
+    }
+    if (widget.focusRequest > oldWidget.focusRequest) focus.requestFocus();
+  }
+
   @override
   void dispose() {
+    widget.draft.removeListener(_trackDraft);
+    focus.removeListener(_prepareOnFocus);
     final menu = _emoticonRoute;
     // dispose runs while the widget tree is locked. Remove a surviving popup
     // after finalization rather than setState on Navigator during teardown.
@@ -50,13 +91,24 @@ class _DanmakuComposerState extends State<DanmakuComposer> {
         !widget.draft.value.composing.isCollapsed) {
       return;
     }
-    final sent = widget.draft.text;
+    final draft = widget.draft;
+    final revision = _draftRevision;
     setState(() => busy = true);
+    // Keep typing on the Flutter editor, not on the send button or hidden host.
+    // The next keystroke can replace the submitted text without manual clearing.
+    focus.requestFocus();
+    draft.selection =
+        TextSelection(baseOffset: 0, extentOffset: draft.text.length);
     try {
       final success = await widget.send();
-      if (success && widget.draft.text == sent) {
-        widget.draft.clear();
-        if (mounted) widget.onSent?.call();
+      if (!mounted) return;
+      if (success &&
+          identical(widget.draft, draft) &&
+          _draftRevision == revision) {
+        draft.clear();
+        // A picker opened during confirmation is already composing the next
+        // message. Do not tear it down by closing the floating editor.
+        if (_emoticonRoute?.isActive != true) widget.onSent?.call();
       }
     } finally {
       if (mounted) setState(() => busy = false);
@@ -132,7 +184,6 @@ class _DanmakuComposerState extends State<DanmakuComposer> {
                 child: TextField(
               controller: widget.draft, focusNode: focus,
               autofocus: widget.autofocus,
-              onTap: widget.prepare,
               textInputAction: TextInputAction.send,
               // EditableText's default completion clears IME composing before
               // onSubmitted. Preserve it so accepting a Chinese candidate cannot send.
@@ -149,7 +200,7 @@ class _DanmakuComposerState extends State<DanmakuComposer> {
                 builder: (anchorContext) => IconButton(
                     tooltip: '表情',
                     padding: EdgeInsets.zero,
-                    onPressed: busy ? null : () => openEmoticons(anchorContext),
+                    onPressed: () => openEmoticons(anchorContext),
                     icon: const Icon(Icons.sentiment_satisfied_alt, size: 20))),
             IconButton(
               tooltip: '发送弹幕（Enter）',

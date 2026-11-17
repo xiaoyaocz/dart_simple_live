@@ -1,6 +1,6 @@
 import 'package:simple_live_app/widgets/live_message_content.dart';
 import 'dart:io';
-import 'package:simple_live_app/modules/live_room/danmaku_composer.dart';
+import 'package:simple_live_app/modules/live_room/api_danmaku_panel.dart';
 
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
@@ -126,7 +126,8 @@ class LiveRoomPage extends StatelessWidget {
           autofocus: true,
           // Page focus remains active after using the header/chat. The video
           // controls are not always the primary focus owner after a rebuild.
-          onKeyEvent: (_, event) => handlePlayerShortcut(
+          onKeyEvent: (_, event) => controller.officialEditorFocused.value
+              ? KeyEventResult.ignored : handlePlayerShortcut(
             event,
             onRefresh: controller.refreshRoom,
             onComposeDanmaku: controller.openDanmakuComposer,
@@ -145,7 +146,8 @@ class LiveRoomPage extends StatelessWidget {
         );
         return Platform.isWindows
             ? DesktopDanmakuShortcut(
-                onCompose: controller.openDanmakuComposer, child: focusedPage)
+                onCompose: controller.openDanmakuComposer,
+                isEditing: () => controller.officialEditorFocused.value, child: focusedPage)
             : focusedPage;
       }
       return page;
@@ -211,23 +213,23 @@ class LiveRoomPage extends StatelessWidget {
   Widget buildTabletUI(BuildContext context,
       {bool fullScreen = false, bool portrait = false}) {
     final phoneLayout = portrait && !fullScreen;
-    final playerRow = Row(
-      children: [
-        Expanded(child: buildMediaPlayer()),
-        if (!fullScreen && !portrait)
-          SizedBox(
-            width: 300,
-            child: RepaintBoundary(
-              child: Column(
-                children: [
-                  buildUserProfile(context),
-                  buildMessageArea(),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
+    final video = Expanded(child: buildMediaPlayer());
+    final sidebar = phoneLayout ? null : RepaintBoundary(child: Column(children: [
+      buildUserProfile(context), buildMessageArea(),
+    ]));
+    Widget row(bool show, double width) => Row(children: [
+      video,
+      if (show) SizedBox(width: width, child: sidebar),
+    ]);
+    final playerRow = Platform.isWindows ? Obx(() {
+      final requested = controller.officialEditorVisible.value;
+      return LayoutBuilder(builder: (context, constraints) {
+        final available = constraints.maxWidth;
+        const preferredWidth = 300.0;
+        final width = preferredWidth.clamp(0.0, available * 0.85);
+        return row(!phoneLayout && ((!fullScreen && !portrait) || requested), width);
+      });
+    }) : row(!fullScreen && !portrait, 300);
     return Column(
       children: [
         // 保持视频的父子路径不变，切换时仅改变容器约束。
@@ -547,7 +549,7 @@ class LiveRoomPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  Column(children: [Expanded(child: Obx(
+                  buildOfficialChatArea(Obx(
                     () => Stack(
                       children: [
                         GestureDetector(
@@ -587,14 +589,6 @@ class LiveRoomPage extends StatelessWidget {
                       ],
                     ),
                   )),
-                    if (Platform.isWindows) DanmakuComposer(
-                      prepare: controller.prepareDanmaku,
-                      emoticons: () => controller.composerEmoticons,
-                      onEmoticonRoute: controller.trackDanmakuEmoticonRoute,
-                      draft: controller.danmakuDraft,
-                      send: controller.sendDanmaku,
-                    ),
-                  ]),
                   if (controller.site.id == Constant.kBiliBili)
                     buildSuperChats(),
                   buildFollowList(),
@@ -614,9 +608,11 @@ class LiveRoomPage extends StatelessWidget {
       if (message.userName == 'LiveSysMessage') {
         return Text(message.message,style:TextStyle(color:Colors.grey,fontSize:size));
       }
-      final content = LiveMessageContent(userName:message.userName,
+      final isSelf = controller.isSelfMessage(message);
+      final content = LiveMessageContent(userName:message.userName, isSelf:isSelf,
         parts:controller.messageParts(message),fontSize:size,
         color:Get.isDarkMode ? Colors.white : AppColors.black333);
+      if (isSelf) return SelfChatHighlight(child: content);
       if (!AppSettingsController.instance.chatBubbleStyle.value) return content;
       return Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Flexible(child:Container(
@@ -624,6 +620,34 @@ class LiveRoomPage extends StatelessWidget {
             borderRadius:const BorderRadius.only(topRight:Radius.circular(12),
               bottomLeft:Radius.circular(12),bottomRight:Radius.circular(12))),
           padding:AppStyle.edgeInsetsA4.copyWith(left:12,right:12),child:content)),
+      ]);
+    });
+  }
+
+  Widget buildOfficialChatArea(Widget messages) {
+    if (!Platform.isWindows) return messages;
+    return Obx(() {
+      final siteId = controller.rxSite.value.id;
+      final roomId = controller.rxRoomId.value;
+      final detail = controller.detail.value;
+      final focus = controller.officialEditorFocusRequest.value;
+      bool current() => controller.site.id == siteId && controller.roomId == roomId && !controller.isClosed;
+      return Column(children: [
+        Expanded(child: messages),
+        if (detail != null) ApiDanmakuPanel(
+          key: ValueKey('api-editor:$siteId:$roomId:${detail.roomId}'),
+          siteId: siteId, roomId: detail.roomId, focusRequest: focus,
+          resolveLoginView: controller.resolveDanmakuLoginView,
+          isCurrent: current,
+          emoticons: () => controller.roomEmoticons,
+          roomUri: controller.officialEditorRoomUri,
+          confirmationRoomIds: [detail.roomId,
+            if(detail.danmakuData is DouyinDanmakuArgs)
+              (detail.danmakuData as DouyinDanmakuArgs).roomId],
+          searchEnvironment: const {'huya','douyin'}.contains(siteId) ? controller.officialEditorEnvironment : null,
+          onSelfNameDetected: (name) { if(current()) controller.updateOfficialSelfName(name); },
+          onIdentityDetected: (id,name) { if(current()) controller.updateSelfIdentity(id,name); },
+        ),
       ]);
     });
   }

@@ -136,6 +136,7 @@ class HuyaDanmaku implements LiveDanmaku {
                   : LiveMessageColor.numberToColor(color),
               message: content,
               userName: uname,
+              userId: messageNotice.userInfo.uid.toString(),
             ),
           );
         } else if (wSPushMessage.uri == 8006) {

@@ -21,6 +21,8 @@ class LiveMessage {
 
   /// 用户名
   final String userName;
+  /// Platform-scoped account identifier, kept as text to preserve 64-bit IDs.
+  final String? userId;
 
   /// 信息
   final String message;
@@ -38,6 +40,7 @@ class LiveMessage {
   LiveMessage({
     required this.type,
     required this.userName,
+    this.userId,
     required this.message,
     this.data,
     List<LiveMessagePart>? parts,

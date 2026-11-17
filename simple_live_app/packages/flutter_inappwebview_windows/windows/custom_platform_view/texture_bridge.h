@@ -33,11 +33,13 @@ namespace flutter_inappwebview_plugin
 
     void SetOnFrameAvailable(FrameAvailableCallback callback)
     {
+      const std::lock_guard<std::mutex> lock(mutex_);
       frame_available_ = std::move(callback);
     }
 
     void SetOnSurfaceSizeChanged(SurfaceSizeChangedCallback callback)
     {
+      const std::lock_guard<std::mutex> lock(mutex_);
       surface_size_changed_ = std::move(callback);
     }
 

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/services/search_web_session.dart';
-import 'package:simple_live_app/services/danmaku_web_scripts.dart';
+import 'package:simple_live_app/services/search_web_media.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -26,7 +26,8 @@ class AppSearchController extends GetxController {
   Timer? _loadTimer;
   bool _closing = false;
   bool _openingRoom = false;
-  bool _directConnection = false;
+  bool _directConnection = false; // Existing profile selection, not routing.
+  bool _connectionRetried = false;
   Uri? _navigationUrl;
   Uri? _loadingUrl;
   bool _httpErrorForNavigation = false;
@@ -87,6 +88,7 @@ class AppSearchController extends GetxController {
     final direct = SearchWebSession.usesDirect(site.id);
     if (direct != _directConnection) _disposeWebViewEnvironment();
     _directConnection = direct;
+    _connectionRetried = false;
     webViewController = null;
     _navigationUrl = null;
     webViewRevision.value++;
@@ -165,20 +167,20 @@ class AppSearchController extends GetxController {
     _loadTimer?.cancel();
     _loadTimer = Timer(const Duration(seconds: 20), () {
       if (webViewLoading.value) {
-        if (webViewController != null && _retryWithDirectConnection()) return;
+        if (webViewController != null && _retryConnection()) return;
         failLoading('网页加载超时，请检查网络后重新加载');
       }
     });
   }
 
-  bool _retryWithDirectConnection() {
+  bool _retryConnection() {
     // 抖音进入播放器时网页被隐藏；此时重建会使 openRoom 无法恢复旧视图。
-    if (!Platform.isWindows || _directConnection || _closing || isClosed ||
+    if (!Platform.isWindows || _connectionRetried || _closing || isClosed ||
         !webViewVisible.value || selectedSite.value == null) {
       return false;
     }
-    Log.w('搜索网页网络连接失败，尝试直连：$_navigationUrl');
-    _directConnection = true;
+    Log.w('搜索网页网络连接失败，保留原登录数据重试：$_navigationUrl');
+    _connectionRetried = true;
     webViewController = null;
     _disposeWebViewEnvironment();
     webViewRevision.value++;
@@ -212,7 +214,7 @@ class AppSearchController extends GetxController {
       WebResourceErrorType.IO,
       WebResourceErrorType.VALID_PROXY_AUTHENTICATION_REQUIRED,
     }.contains(error.type);
-    if (connectionError && _retryWithDirectConnection()) return;
+    if (connectionError && _retryConnection()) return;
     failLoading('网页加载失败（${error.type}），请检查网络后重新加载');
   }
 
@@ -305,7 +307,7 @@ class AppSearchController extends GetxController {
       _openingRoom = true;
       try {
         if (Platform.isWindows) {
-          await webView?.evaluateJavascript(source: DanmakuWebScripts.holdMedia);
+          await webView?.evaluateJavascript(source: SearchWebMedia.holdMedia);
         } else {
           await webView?.pause();
         }
@@ -320,7 +322,7 @@ class AppSearchController extends GetxController {
           await WidgetsBinding.instance.endOfFrame;
           if (_isCurrent(webView, revision)) {
             if (Platform.isWindows) {
-              await webView?.evaluateJavascript(source: DanmakuWebScripts.restoreMedia);
+              await webView?.evaluateJavascript(source: SearchWebMedia.restoreMedia);
             } else {
               await webView?.resume();
             }

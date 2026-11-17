@@ -48,6 +48,9 @@ class _DanmakuEmoticonPanelState extends State<DanmakuEmoticonPanel> {
         listenable: catalog,
         builder: (context, _) {
           final entries = catalog.available;
+          // Bilibili word emotes are landscape stickers, not square icons.
+          final wide = catalog.platform == 'bilibili' ||
+              entries.any((image) => image.aspectRatio >= 1.8);
           if (entries.isEmpty) {
             return Center(
                 child: catalog.loading
@@ -65,27 +68,31 @@ class _DanmakuEmoticonPanelState extends State<DanmakuEmoticonPanel> {
                       padding: const EdgeInsets.all(8),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount:
-                              (constraints.maxWidth / 56).floor().clamp(4, 8),
-                          mainAxisExtent: 48),
+                              (constraints.maxWidth / (wide ? 112 : 56))
+                                  .floor()
+                                  .clamp(wide ? 2 : 4, wide ? 4 : 8),
+                          mainAxisExtent: wide ? 64 : 48),
                       itemCount: entries.length,
                       itemBuilder: (context, index) {
                         final image = entries[index];
                         return Tooltip(
                             message: image.text,
-                            child: IconButton(
-                              onPressed: () => widget.onSelected(image.text),
-                              icon: Image(
-                                  image: widget.imageProvider(image),
-                                  width: 32,
-                                  height: 32,
-                                  fit: BoxFit.contain,
-                                  semanticLabel: image.text,
-                                  errorBuilder: (_, __, ___) => Text(image.text,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white70))),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () => widget.onSelected(image.text),
+                              child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Image(
+                                      image: widget.imageProvider(image),
+                                      fit: BoxFit.contain,
+                                      semanticLabel: image.text,
+                                      errorBuilder: (_, __, ___) => Text(
+                                          image.text,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.white70)))),
                             ));
                       },
                     ),

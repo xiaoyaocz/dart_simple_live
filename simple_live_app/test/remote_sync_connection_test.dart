@@ -14,7 +14,7 @@ class _DefaultProxy extends HttpOverrides {
 }
 
 void main() {
-  test('未配置 Windows 系统代理时保留 HttpClient 原有的代理解析', () async {
+  test('非 Windows 保留 HttpClient 原有代理解析', () async {
     final proxy = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final peers = <WebSocket>[];
     final subscription = proxy.listen((request) async {
@@ -40,9 +40,9 @@ void main() {
       await subscription.cancel();
       await proxy.close(force: true);
     }
-  });
+  }, skip: Platform.isWindows);
 
-  test('远程 WebSocket 使用代理，不在本机解析不可达的服务器域名', () async {
+  test('非 Windows 注入代理的 WebSocket 行为保持不变', () async {
     final proxy = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final peers = <WebSocket>[];
     final subscription = proxy.listen((request) async {
@@ -67,7 +67,7 @@ void main() {
       await subscription.cancel();
       await proxy.close(force: true);
     }
-  });
+  }, skip: Platform.isWindows);
 
   test('系统代理不可用时回退直连，已有局域网连接继续可用', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

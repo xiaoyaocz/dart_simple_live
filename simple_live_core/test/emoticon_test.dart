@@ -36,6 +36,7 @@ void main() {
       }),
     );
     expect(received, isNotNull);
+    expect(received!.userId, '1');
     expect(
       received!.parts.single.emoticon!.url,
       'https://cdn.example/native.png',
@@ -45,10 +46,11 @@ void main() {
     LiveMessage? received;
     final dm = DouyuDanmaku()..onMessage = (m) => received = m;
     dm.decodeMessage(
-      dm.serializeDouyu('type@=chatmsg/dms@=1/nn@=u/txt@=hello/gag@=197/'),
+      dm.serializeDouyu('type@=chatmsg/dms@=1/uid@=123/nn@=u/txt@=hello/gag@=197/'),
     );
     expect(received, isNotNull);
     expect(received!.message, 'hello');
+    expect(received!.userId, '123');
     expect(received!.emoticonKey, '[gag:197]');
   });
   test('截图中的抖音表情均映射原图，大小写不丢原文', () {
@@ -71,12 +73,13 @@ void main() {
       ..writeField(
         2,
         PbFieldType.OY,
-        (dy.User()..nickName = '主播').writeToBuffer(),
+        (dy.User()..nickName = '主播'..idStr = '9007199254740993').writeToBuffer(),
       )
       ..writeField(4, PbFieldType.OY, text.writeToBuffer())
       ..writeField(5, PbFieldType.OS, '[看]');
     final msg = EmoticonParser.douyinEmoji(writer.toBuffer())!;
     expect(msg.userName, '主播');
+    expect(msg.userId, '9007199254740993');
     expect(msg.parts.single.emoticon!.url, endsWith('emote.gif'));
     expect(msg.message, '[看]');
   });

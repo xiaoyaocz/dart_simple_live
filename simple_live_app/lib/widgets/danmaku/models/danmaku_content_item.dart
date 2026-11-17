@@ -28,7 +28,7 @@ class DanmakuContentItem<T> {
   final DanmakuItemType type;
 
   /// 是否为自己发送
-  final bool selfSend;
+  bool selfSend;
 
   /// 是否为会员弹幕
   final bool isColorful;

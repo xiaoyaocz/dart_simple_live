@@ -70,7 +70,7 @@ void main() {
     // Switching platform must replace the cached environment when its profile differs.
     controller.selectSite(Sites.allSites[Constant.kDouyu]!);
     await controller.webViewEnvironment;
-    expect(settings.last['additionalBrowserArguments'], isNull);
+    expect(settings.last['additionalBrowserArguments'], '--no-proxy-server');
     expect(settings.last['userDataFolder'], isNot(settings.first['userDataFolder']));
   });
   tearDown(() {
@@ -166,7 +166,7 @@ void main() {
     expect(controller.webViewLoading.value, isTrue);
   });
 
-  test('网络恢复实际传递直连参数，且避免复用代理环境的用户目录', () async {
+  test('默认与重试均直连，并保留原登录数据目录', () async {
     final settings = <Map<dynamic, dynamic>>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
@@ -178,7 +178,7 @@ void main() {
     addTearDown(controller.onClose);
     controller.selectSite(Sites.allSites[Constant.kHuya]!);
     final firstEnvironment = await controller.webViewEnvironment;
-    expect(settings.single['additionalBrowserArguments'], isNull);
+    expect(settings.single['additionalBrowserArguments'], '--no-proxy-server');
     controller.handleLoadError(
       WebResourceRequest(
           url: WebUri('https://www.huya.com/'), isForMainFrame: true),
@@ -190,7 +190,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(settings.last['additionalBrowserArguments'], '--no-proxy-server');
     expect(settings.last['userDataFolder'],
-        isNot(settings.first['userDataFolder']));
+        settings.first['userDataFolder']);
     expect(disposedEnvironments, contains(firstEnvironment!.id));
   });
 }

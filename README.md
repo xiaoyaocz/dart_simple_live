@@ -21,6 +21,7 @@
 
 - fork 来源：[原作者仓库 xiaoyaocz/dart_simple_live](https://github.com/xiaoyaocz/dart_simple_live)
 - 当前公开仓库：`June6699/dart_simple_live`
+- 想自己开发功能、提交 PR：[CONTRIBUTING.md](/CONTRIBUTING.md)，从环境搭建到 AI 协作的完整流程都在里面
 
 ## 支持项目
 

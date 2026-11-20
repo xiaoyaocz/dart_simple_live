@@ -86,14 +86,33 @@ Simple Live 的功能已经比较完善，用户量也不小，我不可能把�
 
 ### 2.1 工具清单
 
+先分清哪些是通用必装、哪些只跟目标平台有关，避免装一堆用不上的东西。
+
+**第一类：不管开发什么平台都必须装的（3 个）**
+
 | 工具 | 版本要求 | 用来干什么 |
 |------|----------|------------|
 | Git | 任意较新版本 | 拉代码、提交、推送 |
 | Flutter SDK | **3.41.9 stable（必须这个版本）** | 整个项目的开发框架 |
-| JDK | **17** | Android 构建的 Gradle 要求，版本不对会直接报错 |
-| Android SDK | 随 Android Studio 安装 | 构建 Android / TV，minSdk 24 |
-| IDE | VS Code 或 Android Studio | 写代码、跑调试 |
-| Visual Studio（仅 Windows 桌面构建） | 2022，含 C++ 桌面开发工作负载 | 编译 Windows 原生层 |
+| IDE | VS Code 或 Android Studio，二选一 | 写代码、跑调试 |
+
+**第二类：按目标平台安装，互不相关**：注意如果你想构建应用出来使用的话，就要安装，否则不用。
+
+| 目标平台 | JDK 17 | Android SDK | Visual Studio 2022（C++ 桌面工作负载） | Xcode | 备注 |
+|----------|---------|-------------|------------------------------------------|-------|------|
+| Android 手机 App | 必须 | 必须 | 不需要 | 不需要 | 装 Android Studio 一次带齐 JDK + SDK，最省事 |
+| Android TV | 必须 | 必须 | 不需要 | 不需要 | 同上，只是工程是 `simple_live_tv_app` |
+| Windows 桌面 | 不需要 | 不需要 | 必须 | 不需要 | 可以完全不碰 JDK / Android SDK |
+| TV-Windows | 不需要 | 不需要 | 必须 | 不需要 | 同上 |
+| macOS | 不需要 | 不需要 | 不需要 | 必须 | 只能在 Mac 上构建，一般走 GitHub Actions |
+| iOS | 不需要 | 不需要 | 不需要 | 必须 | 同上，还需完整 Xcode 工具链 |
+| Linux 桌面 | 不需要 | 不需要 | 不需要 | 不需要 | 需 Linux 本机的 clang / cmake / ninja 等系统依赖，一般走 Actions |
+
+几个关键认知：
+
+1. **JDK 不是通用必装项**，只在做 Android / TV 时需要，认准 17；装 Android Studio 会自带，不用单独折腾。
+2. **只做 Windows 桌面的人，JDK 和 Android SDK 一个都不用装**，但必须装 Visual Studio 2022 并勾选"使用 C++ 的桌面开发"（含 CMake、MSBuild），注意它不是 VS Code。
+3. mac / iOS / Linux 普通贡献者不用自己搭环境，仓库的 Actions 手动 workflow 会构建，本地用 Android 或 Windows 验证功能即可。
 
 ### 2.2 安装 Git
 
@@ -112,7 +131,7 @@ git --version
 > [!WARNING]
 > **请安装 Flutter 3.41.9 stable，不要直接下官网首页的最新版。** 我本地和 GitHub Actions 全部固定在 3.41.9，版本不一致可能出现别人那能编译、你这编译不过的情况，PR 也无法对齐。
 >
-> 而且 flutter 版本是限制系统版本最重要的环节之一。
+> 而且 flutter 版本是限制可使用系统版本最重要的因素之一。
 >
 > 唯一的例外：如果你的目标是让功能适配更老的安卓手机、需要验证低版本兼容性，才使用更低版本的 Flutter，并且要在 PR 里说明。
 >
@@ -120,7 +139,7 @@ git --version
 
 安装方式二选一：
 
-**方式 A：手动安装（推荐新手）**
+**方式 A：手动安装（推荐）**
 
 1. 打开 Flutter SDK 归档页：[docs.flutter.dev/release/archive](https://docs.flutter.dev/release/archive)（国内可访问中文镜像 [flutter.cn/docs/release/archive](https://flutter.cn/docs/release/archive)）。
 2. 找到 **3.41.9 stable**，下载对应系统的压缩包。
@@ -236,7 +255,7 @@ export PUB_HOSTED_URL=https://pub.flutter-io.cn
 
 ### 3.1 Fork 仓库
 
-1. 打开官方仓库：[github.com/June6699/dart_simple_live](https://github.com/June6699/dart_simple_live)。
+1. 打开我的仓库：[github.com/June6699/dart_simple_live](https://github.com/June6699/dart_simple_live)。
 2. 点击右上角 **Fork** 按钮，在你自己的 GitHub 账号下创建一份分叉。
 3. 建议**取消勾选** "Copy the master branch only" 之外的选项保持默认即可。
 
@@ -674,6 +693,10 @@ flutter build linux --release
 ### 8.4 不要改版本号
 
 `pubspec.yaml` 顶部的 `version` 和 build 号由维护者发版时统一处理，提功能 PR 时**不要修改版本号**，也不要提交 `pubspec.lock`（仓库明确忽略它）。
+
+### 8.5 注意账号数据同步
+
+如果你对账户里面的数据字段进行了更改，比如你加了某个平台的cookie、弹幕屏蔽的更多设置，必须同步进行账户数据同步，如配置导入导出、局域网同步、webdav同步、远程同步（这个在我的仓库：[June6699/simple-live-sync-site: For SimpleLive Remote Sync](https://github.com/June6699/simple-live-sync-site)，这个一般由我来，因为你们没有部署权限），这些地方必须跟你的修改要能对应的上，不然别人设置了，换个设备同步，他根本不知道这些设置是什么，尽管我做了未知字段不影响同步的兼容。
 
 ---
 

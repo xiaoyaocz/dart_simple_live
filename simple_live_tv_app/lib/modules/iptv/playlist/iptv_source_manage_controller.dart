@@ -6,6 +6,20 @@ import 'package:simple_live_tv_app/services/iptv_service.dart';
 class IptvSourceManageController extends GetxController {
   IptvService get service => IptvService.instance;
 
+  /// 进入IPTV页自动刷新开关（与IptvService设置联动）
+  final autoRefreshOnEnter = true.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    autoRefreshOnEnter.value = IptvService.instance.autoRefreshOnEnter;
+  }
+
+  Future<void> setAutoRefreshOnEnter(bool value) async {
+    autoRefreshOnEnter.value = value;
+    await IptvService.instance.setAutoRefreshOnEnter(value);
+  }
+
   /// 校验自定义源名称与地址：格式、查重；返回错误文案，null 表示通过
   String? validateInput(
     String name,

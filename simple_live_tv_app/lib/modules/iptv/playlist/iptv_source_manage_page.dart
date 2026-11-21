@@ -80,6 +80,21 @@ class IptvSourceManagePage extends StatelessWidget {
             text: "恢复默认源",
             onTap: _restoreDefault,
           ),
+          AppStyle.hGap16,
+          Obx(() => HighlightButton(
+                focusNode: AppFocusNode(),
+                iconData: controller.autoRefreshOnEnter.value
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
+                text: "进页自动刷新",
+                selected: controller.autoRefreshOnEnter.value,
+                onTap: () async {
+                  await controller.setAutoRefreshOnEnter(!controller.autoRefreshOnEnter.value);
+                  SmartDialog.showToast(
+                    controller.autoRefreshOnEnter.value ? "进页自动刷新已开启" : "进页自动刷新已关闭",
+                  );
+                },
+              )),
         ],
       ),
     );
@@ -110,7 +125,7 @@ class IptvSourceManagePage extends StatelessWidget {
             child: HighlightListTile(
               focusNode: AppFocusNode(),
               title: "${source.name}$statusSuffix",
-              subtitle: "${source.author} · ${source.description}\n${source.urls.join("\n")}",
+              subtitle: "${source.author} · ${source.description}\n${controller.service.sourceCategory(source)} · ${controller.service.sourceHealthLabel(source)}\n${source.urls.join("\n")}",
               onTap: () => _toggleEnabled(source, enabled),
             ),
           ),

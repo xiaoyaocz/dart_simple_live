@@ -1,6 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/models/db/iptv_favorite.dart';
 import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_app/modules/iptv/channels/iptv_channels_controller.dart';
 import 'package:simple_live_app/modules/iptv/parser/aggregated_channel.dart';
@@ -26,19 +28,34 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
-          Obx(() {
-            if (controller.showFavorites.value) {
-              return _buildFavoriteTagBar();
-            }
-            if (controller.browseBySource.value) {
-              return _buildSourceSelector();
-            }
-            return _buildGroupSelector();
-          }),
-          Obx(() => controller.refreshing.value
-              ? _buildRefreshProgress()
-              : const SizedBox.shrink()),
+          // 头部区域：加底色与分隔线，滚动内容不会从选择条缝隙里透出来
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildSearchBar(),
+                Obx(() {
+                  if (controller.showFavorites.value) {
+                    return _buildFavoriteTagBar();
+                  }
+                  if (controller.browseBySource.value) {
+                    return _buildSourceSelector();
+                  }
+                  return _buildGroupSelector();
+                }),
+                Obx(() => controller.refreshing.value
+                    ? _buildRefreshProgress()
+                    : const SizedBox.shrink()),
+              ],
+            ),
+          ),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -105,38 +122,51 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
     );
   }
 
-  /// 刷新按钮：源为日更，当日成功刷新后置灰，次日自动恢复
+  /// 刷新按钮：始终可点；当日已刷新过时点击会弹确认，建议制而非强制拦截
   Widget _buildRefreshButton() {
     return Obx(() {
-      final can = controller.canRefreshToday.value;
       final label = IptvService.instance.lastRefreshLabel;
       return IconButton(
-        tooltip: can
-            ? "刷新所有源（公开源为日更，今日刷新后按钮置灰）"
-            : "今日已更新（$label），明日可再刷新",
+        tooltip: label.isEmpty
+            ? "刷新所有源（公开源为日更，建议勿频繁刷新）"
+            : "今日已更新（$label）；再次刷新会弹确认，避免给源站添堵",
         icon: const Icon(Icons.refresh),
-        onPressed: can ? controller.onRefresh : null,
+        onPressed: controller.onRefresh,
       );
     });
   }
 
-  /// 横向可滚动选择条（分组/来源/收藏标签共用样式），选中项自动居中
+  /// 横向可滚动选择条（分组/来源/收藏标签共用样式），选中项自动居中；
+  /// 桌面端无触摸，鼠标滚轮直接横向滚动
   Widget _buildSelectorBar({
     required ScrollController scrollController,
     required Map<String, GlobalKey> itemKeys,
     required List<Widget> items,
   }) {
-    return SizedBox(
-      height: 48,
-      child: ListView.separated(
-        controller: scrollController,
-        scrollDirection: Axis.horizontal,
-        padding: AppStyle.edgeInsetsH12,
-        itemCount: items.length,
-        separatorBuilder: (_, __) => AppStyle.hGap8,
-        itemBuilder: (_, i) => items[i],
+    return Listener(
+      onPointerSignal: (event) => _scrollHorizontally(scrollController, event),
+      child: SizedBox(
+        height: 48,
+        child: ListView.separated(
+          controller: scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: AppStyle.edgeInsetsH12,
+          itemCount: items.length,
+          separatorBuilder: (_, __) => AppStyle.hGap8,
+          itemBuilder: (_, i) => items[i],
+        ),
       ),
     );
+  }
+
+  /// 鼠标滚轮转横向滚动
+  void _scrollHorizontally(ScrollController scrollController, PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final position = scrollController.position;
+    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
+    final target = (scrollController.offset + event.scrollDelta.dy)
+        .clamp(0.0, position.maxScrollExtent);
+    scrollController.jumpTo(target);
   }
 
   Widget _buildGroupSelector() {
@@ -189,7 +219,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
     );
   }
 
-  /// 收藏模式顶栏：标签筛选条 + 标签管理入口
+  /// 收藏模式顶栏：退出按钮 + 标签筛选条 + 标签管理入口
   Widget _buildFavoriteTagBar() {
     return Obx(() {
       final tagItems = <Widget>[
@@ -199,15 +229,25 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
       ];
       return Row(
         children: [
+          IconButton(
+            tooltip: "退出收藏",
+            icon: const Icon(Icons.close),
+            onPressed: controller.toggleFavoritesMode,
+          ),
           Expanded(
-            child: SizedBox(
-              height: 48,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: AppStyle.edgeInsetsH12,
-                itemCount: tagItems.length,
-                separatorBuilder: (_, __) => AppStyle.hGap8,
-                itemBuilder: (_, i) => tagItems[i],
+            child: Listener(
+              onPointerSignal: (event) =>
+                  _scrollHorizontally(controller.favoriteTagScrollController, event),
+              child: SizedBox(
+                height: 48,
+                child: ListView.separated(
+                  controller: controller.favoriteTagScrollController,
+                  scrollDirection: Axis.horizontal,
+                  padding: AppStyle.edgeInsetsH12,
+                  itemCount: tagItems.length,
+                  separatorBuilder: (_, __) => AppStyle.hGap8,
+                  itemBuilder: (_, i) => tagItems[i],
+                ),
               ),
             ),
           ),
@@ -436,10 +476,15 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   /// 收藏项：展示命中线路与来源，支持播放、打标签、取消收藏
   Widget _buildFavoriteItem(AggregatedChannel channel, int index) {
     final fav = controller.isFavoriteChannel(channel);
-    final favItem = controller.favorites.firstWhere(
-      (e) => e.url == channel.defaultLine.url || channel.lines.any((l) => l.url == e.url),
-      orElse: () => controller.favorites.first,
-    );
+    IptvFavorite? favItem;
+    for (final e in controller.favorites) {
+      if (channel.lines.any((l) => l.url == e.url)) {
+        favItem = e;
+        break;
+      }
+    }
+    if (favItem == null) return const SizedBox.shrink();
+    final item = favItem;
     return Card(
       child: ListTile(
         leading: NetImage(channel.logo, width: 60, height: 60, borderRadius: 8, fit: BoxFit.contain),
@@ -454,7 +499,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
             IconButton(
               tooltip: "设置标签",
               icon: const Icon(Icons.style, size: 20),
-              onPressed: () => _showAssignTagsDialog(favItem),
+              onPressed: () => _showAssignTagsDialog(item),
             ),
             IconButton(
               tooltip: fav ? "取消收藏" : "收藏",
@@ -469,7 +514,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   }
 
   /// 收藏打标对话框：勾选标签归属
-  Future<void> _showAssignTagsDialog(dynamic favItem) async {
+  Future<void> _showAssignTagsDialog(IptvFavorite favItem) async {
     final service = IptvService.instance;
     await showDialog(
       context: Get.context!,

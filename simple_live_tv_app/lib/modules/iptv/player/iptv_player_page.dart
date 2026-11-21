@@ -6,6 +6,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
 import 'package:simple_live_tv_app/modules/iptv/player/iptv_player_controller.dart';
+import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 import 'package:simple_live_tv_app/widgets/net_image.dart';
 
@@ -175,6 +176,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
+  /// 线路选择弹窗，标注源名称与探活结果（连通状态 + 延迟）
   void _showLineSelector() {
     showModalBottomSheet(
       context: Get.context!,
@@ -188,7 +190,8 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           return ListTile(
             leading: NetImage(line.logo, width: 48.w, height: 48.w, borderRadius: 8),
             title: Text(line.sourceName, style: AppStyle.textStyleWhite),
-            trailing: selected ? Icon(Icons.check, color: Colors.white, size: 32.w) : null,
+            subtitle: _lineStatusText(line.url),
+            trailing: selected ? Icon(Icons.check, color: Colors.white, size: 32.w) : _lineStatusDot(line.url),
             onTap: () {
               controller.switchLine(index);
               Get.back();
@@ -197,5 +200,32 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
         },
       ),
     );
+  }
+
+  /// 线路探活文案：复用频道页探测缓存，未检测过不展示
+  Text? _lineStatusText(String url) {
+    final info = IptvService.instance.freshLineInfo(url);
+    if (info == null) return null;
+    final text = switch (info.status) {
+      1 => "连通良好 · ${info.latencyMs}ms",
+      2 => "连通较慢 · ${info.latencyMs}ms",
+      3 => "探测失败",
+      _ => null,
+    };
+    if (text == null) return null;
+    return Text(text, style: AppStyle.textStyleWhite.copyWith(fontSize: 22.w));
+  }
+
+  /// 线路连通状态圆点：复用频道页红黄绿探测缓存，未检测过不显示
+  Widget? _lineStatusDot(String url) {
+    final status = IptvService.instance.freshLineStatus(url);
+    final color = switch (status) {
+      1 => Colors.green,
+      2 => Colors.amber,
+      3 => Colors.red,
+      _ => null,
+    };
+    if (color == null) return null;
+    return Icon(Icons.circle, color: color, size: 14.w);
   }
 }

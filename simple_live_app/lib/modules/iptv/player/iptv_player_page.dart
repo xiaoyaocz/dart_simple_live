@@ -173,7 +173,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  /// 线路选择弹窗，展示所有可用线路，标注源名称
+  /// 线路选择弹窗，展示所有可用线路，标注源名称与探活结果
   void _showLineSelector(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -187,6 +187,7 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
           return ListTile(
             leading: NetImage(line.logo, width: 36, height: 36, borderRadius: 8),
             title: Text(line.sourceName),
+            subtitle: _lineStatusText(line.url),
             trailing: selected
                 ? const Icon(Icons.check)
                 : _lineStatusDot(line.url),
@@ -198,6 +199,20 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
         },
       ),
     );
+  }
+
+  /// 线路探活文案：复用频道页探测缓存，未检测过不展示
+  Text? _lineStatusText(String url) {
+    final info = IptvService.instance.freshLineInfo(url);
+    if (info == null) return null;
+    final text = switch (info.status) {
+      1 => "连通良好 · ${info.latencyMs}ms",
+      2 => "连通较慢 · ${info.latencyMs}ms",
+      3 => "探测失败",
+      _ => null,
+    };
+    if (text == null) return null;
+    return Text(text, style: const TextStyle(fontSize: 12));
   }
 
   /// 线路连通状态圆点：复用频道页红黄绿探测缓存，未检测过不显示

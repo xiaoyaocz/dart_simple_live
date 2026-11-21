@@ -95,13 +95,26 @@ class IptvPlayerController extends GetxController {
     showControls();
   }
 
-  /// 频道起播线路：上次手动选择的源在该频道存在时优先使用，否则第一条
+  /// 频道起播线路自动寻优：上次手动选择的源优先；该源线路探测为红时改选
+  /// 探测连通最快的线路，其次连通慢的线路；无探测结果时维持原优先级
   int _initialLineIndex() {
+    final lines = currentChannel.lines;
+    if (lines.isEmpty) return 0;
     final preferred = IptvService.instance.preferredLineSource;
-    if (preferred.isEmpty) return 0;
-    final index = currentChannel.lines
-        .indexWhere((e) => e.sourceName == preferred);
-    return index >= 0 ? index : 0;
+    final preferredIndex = preferred.isEmpty
+        ? -1
+        : lines.indexWhere((e) => e.sourceName == preferred);
+    if (preferredIndex >= 0 &&
+        (IptvService.instance.freshLineStatus(lines[preferredIndex].url) ?? 1) != 3) {
+      return preferredIndex;
+    }
+    final green = lines.indexWhere(
+        (e) => IptvService.instance.freshLineStatus(e.url) == 1);
+    if (green >= 0) return green;
+    final yellow = lines.indexWhere(
+        (e) => IptvService.instance.freshLineStatus(e.url) == 2);
+    if (yellow >= 0) return yellow;
+    return preferredIndex >= 0 ? preferredIndex : 0;
   }
 
   /// 切换当前频道的线路，无缝切换播放地址

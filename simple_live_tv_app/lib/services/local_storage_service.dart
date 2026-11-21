@@ -29,6 +29,7 @@ class LocalStorageService extends GetxService {
   static const String kIptvPreferredLineSource = "IptvPreferredLineSource";
   static const String kIptvRefreshScope = "IptvRefreshScope";
   static const String kIptvSourceHealth = "IptvSourceHealth";
+  static const String kIptvLineKnownStatus = "IptvLineKnownStatus";
   static const String kIptvAutoRefreshOnEnter = "IptvAutoRefreshOnEnter";
 
   /// 多开布局间距

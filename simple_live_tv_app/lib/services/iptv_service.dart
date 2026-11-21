@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:get/get.dart';
@@ -290,6 +291,8 @@ class IptvService extends GetxService {
     _loadPersistedAggregated();
     // 恢复源健康统计（镜像寻优与分级依据）
     _loadSourceHealth();
+    // 恢复线路最近已知状态（排序与红绿灯暖启动）
+    _loadKnownStatus();
   }
 
   // ==================== 源健康统计与分级 ====================
@@ -886,7 +889,7 @@ class IptvService extends GetxService {
   /// 线路排序：探活缓存里连通快的排前面，把最新可用线路放到起播优先位
   List<IptvLine> _sortLinesByProbe(List<IptvLine> lines) {
     int rank(IptvLine line) {
-      final status = freshLineStatus(line.url);
+      final status = lastKnownLineInfo(line.url)?.status;
       return switch (status) { 1 => 0, 2 => 1, _ => 2 };
     }
 
@@ -922,7 +925,7 @@ class IptvService extends GetxService {
     var okCount = 0;
     var probed = 0;
     for (final line in ch.lines) {
-      final status = freshLineStatus(line.url);
+      final status = lastKnownLineInfo(line.url)?.status;
       if (status == 1 || status == 2) okCount++;
       if (status != null) probed++;
     }
@@ -992,29 +995,93 @@ class IptvService extends GetxService {
 
   // ==================== 线路连通状态缓存 ====================
 
-  /// 线路连通状态探测结果缓存：key 为线路 URL，TTL 内重复进入频道页不再重新探测
+  /// 探测新鲜缓存：决定是否需要重新探测；红色失效最快，10 分钟即重验，绿/黄 30 分钟
   final Map<String, ({int status, int latencyMs, DateTime time})> _lineStatusCache =
       <String, ({int status, int latencyMs, DateTime time})>{};
-  /// 状态缓存有效期：红绿灯只是参考信息，10 分钟足够
-  static const Duration _lineStatusTtl = Duration(minutes: 10);
+  /// 最近已知状态：跨会话持久化，重启后排序与红绿灯直接暖启动
+  final Map<String, ({int status, int latencyMs, DateTime time})> _lastKnownStatus =
+      <String, ({int status, int latencyMs, DateTime time})>{};
+  /// 最近已知状态落盘防抖定时器
+  Timer? _knownSaveTimer;
+  /// 最近已知状态容量上限，超出按探测时间淘汰最旧
+  static const int _knownStatusCap = 4000;
 
-  /// 查询未过期的线路状态缓存，未命中返回 null（1绿/2黄/3红）
+  /// 新鲜度 TTL：按状态差异化，失效线路更快重验
+  Duration _freshTtl(int status) =>
+      status == 3 ? const Duration(minutes: 10) : const Duration(minutes: 30);
+
+  /// 查询未过期的探测结果，未命中返回 null（1绿/2黄/3红）
   int? freshLineStatus(String url) => freshLineInfo(url)?.status;
 
-  /// 查询未过期的线路状态缓存详情（含探测延迟），未命中返回 null
+  /// 查询未过期的探测结果详情（含探测延迟），未命中返回 null
   ({int status, int latencyMs, DateTime time})? freshLineInfo(String url) {
     final cached = _lineStatusCache[url];
     if (cached == null) return null;
-    if (DateTime.now().difference(cached.time) >= _lineStatusTtl) {
+    if (DateTime.now().difference(cached.time) >= _freshTtl(cached.status)) {
       _lineStatusCache.remove(url);
       return null;
     }
     return cached;
   }
 
-  /// 写入线路状态缓存，latencyMs 为探测请求耗时
+  /// 查询最近已知状态（不限时效，持久化恢复），供展示与排序暖启动
+  ({int status, int latencyMs, DateTime time})? lastKnownLineInfo(String url) =>
+      _lastKnownStatus[url];
+
+  /// 写入探测结果：新鲜缓存立即更新，最近已知状态防抖落盘
   void cacheLineStatus(String url, int status, {int latencyMs = 0}) {
-    _lineStatusCache[url] = (status: status, latencyMs: latencyMs, time: DateTime.now());
+    final now = DateTime.now();
+    _lineStatusCache[url] = (status: status, latencyMs: latencyMs, time: now);
+    _lastKnownStatus[url] = (status: status, latencyMs: latencyMs, time: now);
+    _knownSaveTimer ??= Timer(const Duration(seconds: 2), _persistKnownStatus);
+  }
+
+  /// 最近已知状态落盘：容量超限按最旧探测时间淘汰
+  Future<void> _persistKnownStatus() async {
+    _knownSaveTimer = null;
+    try {
+      if (_lastKnownStatus.length > _knownStatusCap) {
+        final entries = _lastKnownStatus.entries.toList()
+          ..sort((a, b) => a.value.time.compareTo(b.value.time));
+        for (final e in entries.take(_lastKnownStatus.length - _knownStatusCap)) {
+          _lastKnownStatus.remove(e.key);
+        }
+      }
+      await LocalStorageService.instance.setValue(
+        LocalStorageService.kIptvLineKnownStatus,
+        _lastKnownStatus.map((k, v) => MapEntry(k, {
+              "status": v.status,
+              "latencyMs": v.latencyMs,
+              "time": v.time.millisecondsSinceEpoch,
+            })),
+      );
+    } catch (e) {
+      Log.w("写入线路已知状态失败: $e");
+    }
+  }
+
+  /// 启动时恢复最近已知状态
+  void _loadKnownStatus() {
+    try {
+      final raw = LocalStorageService.instance.getValue<Map<dynamic, dynamic>>(
+        LocalStorageService.kIptvLineKnownStatus,
+        {},
+      );
+      _lastKnownStatus
+        ..clear()
+        ..addEntries(raw.entries.map((e) {
+          final v = Map<dynamic, dynamic>.from(e.value as Map);
+          final time = (v["time"] as num?)?.toInt() ?? 0;
+          return MapEntry(e.key.toString(), (
+            status: (v["status"] as num?)?.toInt() ?? 0,
+            latencyMs: (v["latencyMs"] as num?)?.toInt() ?? 0,
+            time: DateTime.fromMillisecondsSinceEpoch(time),
+          ));
+        }));
+      Log.i("已恢复线路已知状态 ${_lastKnownStatus.length} 条");
+    } catch (e) {
+      Log.w("恢复线路已知状态失败: $e");
+    }
   }
 
   // ==================== 线路偏好记忆 ====================

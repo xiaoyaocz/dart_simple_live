@@ -43,6 +43,7 @@ class IptvChannelsController extends BaseController {
   // 横向分组条/来源条滚动控制器，选中项自动居中
   final ScrollController groupScrollController = ScrollController();
   final ScrollController sourceScrollController = ScrollController();
+  final ScrollController favoriteTagScrollController = ScrollController();
   final Map<String, GlobalKey> groupItemKeys = {};
   final Map<String, GlobalKey> sourceItemKeys = {};
 
@@ -76,6 +77,7 @@ class IptvChannelsController extends BaseController {
   void onClose() {
     groupScrollController.dispose();
     sourceScrollController.dispose();
+    favoriteTagScrollController.dispose();
     tagNewController.dispose();
     searchController.dispose();
     _resortTimer?.cancel();
@@ -204,7 +206,7 @@ class IptvChannelsController extends BaseController {
     final dirty = _dirtyProbeUrls..clear();
     final result = parseResult.value;
     if (result == null) return;
-    var changed = false;
+    var lineChanged = false;
     final resorted = result.channels.map((ch) {
       if (!ch.lines.any((l) => dirty.contains(l.url))) return ch;
       final sorted = ch.lines.toList()
@@ -217,7 +219,7 @@ class IptvChannelsController extends BaseController {
         }
       }
       if (same) return ch;
-      changed = true;
+      lineChanged = true;
       return AggregatedChannel(
         name: ch.name,
         group: ch.group,
@@ -225,8 +227,19 @@ class IptvChannelsController extends BaseController {
         lines: sorted,
       );
     }).toList();
-    if (!changed) return;
-    parseResult.value = AggregatedParseResult(channels: resorted);
+    // 频道级可用性重排：层级 → 可用性 → 编号，可用多的靠前、全失败的沉底
+    final availSorted = IptvService.instance.sortChannelsByAvailability(resorted);
+    var orderSame = !lineChanged && availSorted.length == result.channels.length;
+    if (orderSame) {
+      for (var i = 0; i < availSorted.length; i++) {
+        if (!identical(availSorted[i], result.channels[i])) {
+          orderSame = false;
+          break;
+        }
+      }
+    }
+    if (orderSame) return;
+    parseResult.value = AggregatedParseResult(channels: availSorted);
     applyFilter();
   }
 
@@ -243,13 +256,42 @@ class IptvChannelsController extends BaseController {
     _probeDio = null;
   }
 
-  /// 手动刷新：先选择本次要刷新的源（记忆上次选择），确认后仅拉取选中源，其余沿用上次结果
+  /// 手动刷新：先选择本次要刷新的源（记忆上次选择），确认后仅拉取选中源，其余沿用上次结果。
+  /// 当日已刷新过时弹确认提示（建议制而非强制拦截），坚持则照常刷新
   Future<void> onRefresh() async {
-    if (!canRefreshToday.value) return;
     final scope = await _pickRefreshScope();
     if (scope == null) return;
+    if (!IptvService.instance.canManualRefreshToday) {
+      final confirmed = await _confirmRepeatRefresh();
+      if (!confirmed) return;
+    }
     await IptvService.instance.setRefreshScope(scope);
     await loadData(forceRefresh: true);
+  }
+
+  /// 当日重复刷新确认框
+  Future<bool> _confirmRepeatRefresh() async {
+    final label = IptvService.instance.lastRefreshLabel;
+    final result = await showDialog<bool>(
+      context: Get.context!,
+      builder: (context) => AlertDialog(
+        title: const Text("今日已刷新过"),
+        content: Text(
+          "公开源为日更，今日 $label 已更新过。\n频繁刷新会增加源站压力，确定要再次刷新吗？",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text("取消"),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text("仍要刷新"),
+          ),
+        ],
+      ),
+    );
+    return result == true;
   }
 
   /// 刷新范围选择弹窗：按源分级展示健康摘要，返回选中的源名称集合，null 表示取消
@@ -374,8 +416,12 @@ class IptvChannelsController extends BaseController {
 
   void toggleSearch() {
     searchVisible.value = !searchVisible.value;
-    if (!searchVisible.value && keyword.value.isNotEmpty) {
-      setKeyword("");
+    if (!searchVisible.value) {
+      // 关闭搜索时清空关键字与输入框残留
+      searchController.clear();
+      if (keyword.value.isNotEmpty) {
+        setKeyword("");
+      }
     }
   }
 
@@ -419,18 +465,27 @@ class IptvChannelsController extends BaseController {
     applyFilter();
   }
 
+  /// 收藏匹配按任意线路 URL：探测重排后 defaultLine 会变，不能只比对首条
   bool isFavoriteChannel(AggregatedChannel channel) {
     return favorites.any((e) =>
-        e.name == channel.name && e.url == channel.defaultLine.url);
+        e.name == channel.name && channel.lines.any((l) => l.url == e.url));
   }
 
   void toggleFavorite(AggregatedChannel channel) {
-    final line = channel.defaultLine;
-    IptvService.instance.toggleFavorite(
-      playlistId: "aggregated",
-      channel: channel,
-      line: line,
-    );
+    // 已收藏（任意线路）则全部取消，避免重排后同频道重复收藏多条线路
+    final existing = favorites
+        .where((e) =>
+            e.name == channel.name && channel.lines.any((l) => l.url == e.url))
+        .toList();
+    if (existing.isNotEmpty) {
+      IptvService.instance.removeFavoritesByIds(existing.map((e) => e.id).toList());
+    } else {
+      IptvService.instance.toggleFavorite(
+        playlistId: "aggregated",
+        channel: channel,
+        line: channel.defaultLine,
+      );
+    }
     refreshFavorites();
   }
 

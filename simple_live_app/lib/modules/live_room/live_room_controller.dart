@@ -38,6 +38,7 @@ import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/services/windows_share_service.dart';
 import 'playback_session.dart';
+import 'player/windows_playback_events.dart';
 import 'room_share_dialog.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -194,6 +195,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   static const _volumeSliderTag = 'simple-live-volume-slider';
   int _roomRequest = 0;
   final _playback = PlaybackSession();
+  WindowsPlaybackEvents? _nativePlaybackEvents;
   bool _roomClosed = false;
   bool similarGameRoomsOpen = false;
   Future<bool>? _offlineCheck;
@@ -261,6 +263,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   void _setRoomOffline(LiveRoomDetail room) {
     _lineWatch.stop();
+    _nativePlaybackEvents?.reset();
     final request =
         _playback.advance(); // All old quality/URL/player results are stale.
     detail.value = room;
@@ -537,6 +540,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (_roomClosed) return;
     final request = ++_roomRequest;
     final playRequest = _playback.advance();
+    _nativePlaybackEvents?.reset();
     _stopDanmaku();
     liveDanmaku = site.liveSite.getDanmaku();
     _openWatch
@@ -841,7 +845,20 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         _openingRoute = (site.id, _routeQuality, mediaUrl);
         _lineWatch..reset()..start();
         _markOpen('提交开流');
+        final native = await _prepareNativePlaybackEvents();
+        if (!isCurrent()) return;
+        final revision = _playback.openRevision;
         await player.open(Media(url, httpHeaders: headers));
+        if (native != null && isCurrent()) {
+          try {
+            final entry = int.tryParse(await native.getProperty('playlist/0/id'));
+            if (entry != null && isCurrent()) {
+              _nativePlaybackEvents?.track(revision, entry);
+            }
+          } catch (e) {
+            Log.d('读取播放条目失败：${e.runtimeType}');
+          }
+        }
       } catch (e) {
         if (!isCurrent()) return;
         if (await _confirmRoomOffline(request)) return;
@@ -850,6 +867,25 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         errorMsg.value = "播放失败";
       }
     });
+  }
+
+  Future<NativePlayer?> _prepareNativePlaybackEvents() async {
+    if (!Platform.isWindows) return null;
+    try {
+      final native = player.platform;
+      if (native is! NativePlayer) return null;
+      final handle = await native.handle;
+      if (_roomClosed || handle == 0) return null;
+      _nativePlaybackEvents ??= WindowsPlaybackEvents(handle, (revision, error) {
+        if (revision == _playback.openRevision) {
+          _checkPlaybackFailure(error: 'libmpv ($error)', nativeTerminal: true);
+        }
+      });
+      _nativePlaybackEvents!.reset();
+      return native;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -861,39 +897,44 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   Duration? _douyinRecoveryProgress;
   @override
   void mediaError(String error) {
+    if (_nativePlaybackEvents?.tracking ?? false) return;
     _checkPlaybackFailure(error: error);
   }
 
-  void _checkPlaybackFailure({String? error}) {
+  void _checkPlaybackFailure({String? error, bool nativeTerminal = false}) {
     if (_roomClosed ||
         roomOffline.value ||
         isBackground ||
-        _playback.recovery != null ||
+        (!nativeTerminal && _playback.recovery != null) ||
         playUrls.isEmpty ||
-        (_playback.failureTimer?.isActive ?? false)) {
+        (!nativeTerminal && (_playback.failureTimer?.isActive ?? false))) {
       return;
     }
     final request = _playback.generation;
+    final revision = _playback.openRevision;
     final line = currentLineIndex;
     final position = player.state.position;
     // SDK 的错误流包含可恢复的解码和网络日志，不能每条日志都清空视频重连。
+    _playback.failureTimer?.cancel();
     _playback.failureTimer = Timer(const Duration(seconds: 3), () {
       _playback.failureTimer = null;
-      if (!_isCurrentRequest(request) || currentLineIndex != line || isBackground) {
+      if (!_isCurrentRequest(request) || currentLineIndex != line ||
+          revision != _playback.openRevision || isBackground) {
         return;
       }
       final state = player.state;
       if (state.position > position ||
-          (state.playing && !state.buffering && !state.completed)) {
+          (!nativeTerminal && state.playing && !state.buffering && !state.completed)) {
         return;
       }
       // 结束通知可能属于上一条流，只有当前流也结束时才恢复。
       if (error == null && !state.completed) return;
-      _recoverPlayback(error: error);
+      _recoverPlayback(error: error, nativeTerminal: nativeTerminal);
     });
   }
 
-  Future<void> _recoverPlayback({String? error, bool startup = false}) async {
+  Future<void> _recoverPlayback({String? error, bool startup = false,
+      bool nativeTerminal = false}) async {
     final request = _playback.generation;
     if (_playback.recovery != null || !_isCurrentRequest(request) || playUrls.isEmpty) return;
     final originalLine = currentLineIndex;
@@ -907,7 +948,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       }
       final state = player.state;
       return state.position <= position &&
-          !(state.playing && !state.buffering && !state.completed);
+          (nativeTerminal || !(state.playing && !state.buffering && !state.completed));
     }
     final recovery = _playback.recovery = Object();
     _playback.bufferingTimer?.cancel();
@@ -1862,6 +1903,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     final request = ++_roomRequest;
     _lineWatch.stop();
     _playback.advance();
+    _nativePlaybackEvents?.reset();
     _emoticons?.dispose();
     _emoticons = null;
     // The next identity must never expose the previous canonical send target
@@ -1956,6 +1998,8 @@ ${errorStackTrace ?? ''}''');
     resetFollowShortcut();
     _resetOfficialEditor();
     _roomClosed = true;
+    _nativePlaybackEvents?.dispose();
+    _nativePlaybackEvents = null;
     _lineWatch.stop();
     disposeStream();
     _emoticons?.dispose();

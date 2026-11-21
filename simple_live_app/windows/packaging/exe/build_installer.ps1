@@ -28,9 +28,11 @@ Move-Item -LiteralPath ($versionSource + '.tmp') -Destination $versionSource -Fo
 $payload = $output + '.payload.zip'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::CreateFromDirectory($release, $payload)
+$payloadHash = $output + '.payload.sha256'
+(Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash | Set-Content -Encoding ascii -LiteralPath $payloadHash
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $icon = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../runner/resources/app_icon.ico')).Path
 $manifest = Join-Path $PSScriptRoot 'SimpleLiveInstaller.manifest'
-& $compiler /nologo /target:winexe /platform:x64 /codepage:65001 /optimize+ "/out:$output" "/win32icon:$icon" "/win32manifest:$manifest" "/resource:$icon,SimpleLive.Icon" "/resource:$payload,SimpleLive.Payload" /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /reference:System.Windows.Forms.dll /reference:System.Drawing.dll (Join-Path $PSScriptRoot 'SimpleLiveInstaller.cs') $versionSource
+& $compiler /nologo /target:winexe /platform:x64 /codepage:65001 /optimize+ "/out:$output" "/win32icon:$icon" "/win32manifest:$manifest" "/resource:$icon,SimpleLive.Icon" "/resource:$payload,SimpleLive.Payload" "/resource:$payloadHash,SimpleLive.Payload.SHA256" /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /reference:System.Windows.Forms.dll /reference:System.Drawing.dll (Join-Path $PSScriptRoot 'SimpleLiveInstaller.cs') $versionSource
 if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed: $LASTEXITCODE" }
 Get-FileHash -LiteralPath $output -Algorithm SHA256

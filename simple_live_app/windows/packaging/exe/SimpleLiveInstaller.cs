@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using Microsoft.Win32;
@@ -10,6 +10,8 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -37,42 +39,40 @@ internal static class Program {
         IProgress<string> activity = null) {
         string root = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar);
         if (root.Length < 4) throw new IOException("请选择独立的安装文件夹。");
-        string prefix = root + Path.DirectorySeparatorChar;
         string executable = Path.Combine(root, "simple_live_app.exe");
-        Directory.CreateDirectory(root);
-        using (Stream payload = Assembly.GetExecutingAssembly().GetManifestResourceStream("SimpleLive.Payload")) {
-            if (payload == null) throw new IOException("安装包缺少程序文件。");
-            using (var zip = new ZipArchive(payload, ZipArchiveMode.Read)) {
-                // Validate all paths BEFORE writing any assets.
-                foreach (ZipArchiveEntry entry in zip.Entries) {
-                    string destination = Path.GetFullPath(Path.Combine(root, entry.FullName));
-                    if (!destination.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                        throw new IOException("安装包包含无效路径。");
-                }
-                // Do not interrupt the running app for an invalid/missing payload.
-                RunningApplicationCloser.Close(executable, activity);
-                if (activity != null) activity.Report("正在复制程序文件…");
-                int count = 0;
-                foreach (ZipArchiveEntry entry in zip.Entries) {
-                    string destination = Path.GetFullPath(Path.Combine(root, entry.FullName));
-                    if (string.IsNullOrEmpty(entry.Name)) { Directory.CreateDirectory(destination); continue; }
-                    Directory.CreateDirectory(Path.GetDirectoryName(destination));
-                    string temporary = destination + ".install-" + Guid.NewGuid().ToString("N");
-                    try {
-                        using (Stream input = entry.Open())
-                        using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write)) {
-                            input.CopyTo(output);
-                        }
-                        // Individual asset replacement is atomic. No directory or user-data
-                        // cleanup is performed; unrelated files and previous settings stay.
-                        if (File.Exists(destination)) File.Replace(temporary, destination, null);
-                        else File.Move(temporary, destination);
-                    } finally {
-                        if (File.Exists(temporary)) File.Delete(temporary);
+        string lockName;
+        using (var sha = SHA256.Create()) {
+            lockName = @"Local\SimpleLiveInstall-" + BitConverter.ToString(
+                sha.ComputeHash(Encoding.UTF8.GetBytes(root.ToUpperInvariant())));
+        }
+        using (var installLock = new Mutex(false, lockName)) {
+            try {
+                if (!installLock.WaitOne(0)) throw new IOException("该目录已有安装正在进行。");
+            } catch (AbandonedMutexException) {
+                // The previous owner has exited. This process owns the lock.
+            }
+            try {
+                Directory.CreateDirectory(root);
+                using (Stream payload = Assembly.GetExecutingAssembly().GetManifestResourceStream("SimpleLive.Payload")) {
+                    if (payload == null) throw new IOException("安装包缺少程序文件。");
+                    using (Stream signature = Assembly.GetExecutingAssembly().GetManifestResourceStream("SimpleLive.Payload.SHA256"))
+                    using (var sha = SHA256.Create()) {
+                        if (signature == null) throw new IOException("安装包缺少校验值。");
+                        var expected = new StreamReader(signature).ReadToEnd().Trim();
+                        var actual = BitConverter.ToString(sha.ComputeHash(payload)).Replace("-", "");
+                        if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                            throw new IOException("安装包校验失败。");
+                        payload.Position = 0;
                     }
-                    count++;
-                    if (progress != null) progress.Report(count * 100 / zip.Entries.Count);
+                    using (var zip = new ZipArchive(payload, ZipArchiveMode.Read)) {
+                        InstallPayload(root, zip, delegate {
+                            RunningApplicationCloser.Close(executable, activity);
+                            if (activity != null) activity.Report("正在替换程序文件…");
+                        }, progress);
+                    }
                 }
+            } finally {
+                installLock.ReleaseMutex();
             }
         }
         if (shortcuts) {
@@ -80,6 +80,94 @@ internal static class Program {
             CreateShortcut(Environment.GetFolderPath(Environment.SpecialFolder.Programs), executable, root);
         }
         return executable;
+    }
+
+    internal static void InstallPayload(string root, ZipArchive zip, Action beforeReplace,
+        IProgress<int> progress) {
+        root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+        string prefix = root + Path.DirectorySeparatorChar;
+        string work = Path.Combine(root, ".simplelive-install-" + Guid.NewGuid().ToString("N"));
+        var staged = new List<InstallAsset>();
+        var applied = new List<InstallAsset>();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool preserveBackup = false;
+        Directory.CreateDirectory(work);
+        try {
+            foreach (var entry in zip.Entries) {
+                var destination = Path.GetFullPath(Path.Combine(root, entry.FullName));
+                if (!destination.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("安装包包含无效路径。");
+                if (string.IsNullOrEmpty(entry.Name)) continue;
+                if (!names.Add(destination)) throw new IOException("安装包包含重复文件。");
+                RejectRedirectedPath(root, destination);
+                var asset = new InstallAsset {
+                    Destination = destination,
+                    Temporary = Path.Combine(work, staged.Count + ".new"),
+                    Backup = Path.Combine(work, staged.Count + ".old")
+                };
+                using (var input = entry.Open())
+                using (var output = File.Open(asset.Temporary, FileMode.CreateNew, FileAccess.Write)) {
+                    input.CopyTo(output);
+                    if (output.Length != entry.Length) throw new IOException("安装包文件长度校验失败。");
+                }
+                staged.Add(asset);
+            }
+            if (staged.Count == 0) throw new IOException("安装包没有程序文件。");
+            beforeReplace();
+            try {
+                foreach (var asset in staged) {
+                    Directory.CreateDirectory(Path.GetDirectoryName(asset.Destination));
+                    asset.Existed = File.Exists(asset.Destination);
+                    // Add the asset first: File.Replace can move the old file
+                    // to its backup before reporting some filesystem errors.
+                    applied.Add(asset);
+                    if (asset.Existed) File.Replace(asset.Temporary, asset.Destination, asset.Backup);
+                    else File.Move(asset.Temporary, asset.Destination);
+                    if (progress != null) progress.Report(applied.Count * 100 / staged.Count);
+                }
+            } catch (Exception error) {
+                var failures = new List<Exception>();
+                for (int i = applied.Count - 1; i >= 0; i--) {
+                    var asset = applied[i];
+                    try {
+                        if (File.Exists(asset.Backup)) {
+                            if (File.Exists(asset.Destination)) File.Replace(asset.Backup, asset.Destination, null);
+                            else File.Move(asset.Backup, asset.Destination);
+                        } else if (!asset.Existed && !File.Exists(asset.Temporary)) {
+                            File.Delete(asset.Destination);
+                        }
+                    } catch (Exception failure) { failures.Add(failure); }
+                }
+                if (failures.Count > 0) {
+                    preserveBackup = true;
+                    failures.Insert(0, error);
+                    throw new AggregateException("部分文件无法自动还原。旧文件保存在：" + work, failures);
+                }
+                throw new IOException("安装失败，已还原先前的程序文件。", error);
+            }
+        } finally {
+            if (!preserveBackup) {
+                try { Directory.Delete(work, true); }
+                catch (IOException) {}
+                catch (UnauthorizedAccessException) {}
+            }
+        }
+    }
+
+    private static void RejectRedirectedPath(string root, string path) {
+        for (string current = path; !string.Equals(current, root, StringComparison.OrdinalIgnoreCase);
+            current = Path.GetDirectoryName(current)) {
+            if ((File.Exists(current) || Directory.Exists(current)) &&
+                (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("安装路径包含重定向：" + current);
+        }
+    }
+
+    private sealed class InstallAsset {
+        public string Destination;
+        public string Temporary;
+        public string Backup;
+        public bool Existed;
     }
 
     private static void CreateShortcut(string directory, string target, string workingDirectory) {

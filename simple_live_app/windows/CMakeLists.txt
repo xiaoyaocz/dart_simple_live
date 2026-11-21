@@ -61,6 +61,8 @@ add_subdirectory("runner")
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
+include(media_kit_video.cmake)
+simplelive_patch_media_kit_video()
 
 # This plugin still uses C++/WinRT's experimental coroutine support. VS 2026
 # requires an explicit opt-in until the upstream plugin migrates to C++20.

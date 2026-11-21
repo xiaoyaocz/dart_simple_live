@@ -66,7 +66,7 @@ dependencies:
 
   # 视频播放
   media_kit: ^1.2.2
-  media_kit_video: ^2.0.0
+  media_kit_video: 2.0.1 # Windows ANGLE patch is validated against this version.
   media_kit_libs_video: ^1.0.7
 
   flutter:

@@ -20,15 +20,18 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
             ? TextField(
                 controller: controller.searchController,
                 autofocus: true,
+                style: const TextStyle(color: Colors.black87, fontSize: 16),
                 decoration: InputDecoration(
                   isDense: true,
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
+                  fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   hintText: "搜索频道名或来源名",
+                  hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                 ),
                 onChanged: controller.setKeyword,
               )

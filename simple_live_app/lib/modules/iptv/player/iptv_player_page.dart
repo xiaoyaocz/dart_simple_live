@@ -203,10 +203,11 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
 
   /// 线路探活文案：地址区分同源多线路，附带连通状态与延迟；未检测过只展示地址
   Text _lineStatusText(String url) {
-    final info = IptvService.instance.freshLineInfo(url);
-    final statusText = switch (info?.status) {
-      1 => "连通良好 · ${info!.latencyMs}ms",
-      2 => "连通较慢 · ${info!.latencyMs}ms",
+    final status = controller.displayStatus(url);
+    final ms = IptvService.instance.lastKnownLineInfo(url)?.latencyMs ?? 0;
+    final statusText = switch (status) {
+      1 => "连通良好 · ${ms}ms",
+      2 => "连通较慢 · ${ms}ms",
       3 => "探测失败",
       _ => "",
     };
@@ -219,9 +220,9 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  /// 线路连通状态圆点：复用频道页红黄绿探测缓存，未检测过不显示
+  /// 线路连通状态圆点：本次探测或最近已知状态，未检测过不显示
   Widget? _lineStatusDot(String url) {
-    final status = IptvService.instance.freshLineStatus(url);
+    final status = controller.displayStatus(url);
     final color = switch (status) {
       1 => Colors.green,
       2 => Colors.amber,

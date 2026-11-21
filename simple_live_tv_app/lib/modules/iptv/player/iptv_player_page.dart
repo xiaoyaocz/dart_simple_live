@@ -176,38 +176,79 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  /// 线路选择弹窗，标注源名称与探活结果（连通状态 + 延迟）
+  /// 线路选择弹窗：线路按最新探活实时排序（绿前黄中红后），
+  /// 顶部提供当前频道全部线路的重新测速，结果实时更新并落盘
   void _showLineSelector() {
     showModalBottomSheet(
       context: Get.context!,
-      builder: (context) => ListView.separated(
-        padding: AppStyle.edgeInsetsA32,
-        itemCount: controller.currentChannel.lines.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (_, index) {
-          final line = controller.currentChannel.lines[index];
-          final selected = index == controller.currentLineIndex;
-          return ListTile(
-            leading: NetImage(line.logo, width: 48.w, height: 48.w, borderRadius: 8),
-            title: Text(line.sourceName, style: AppStyle.textStyleWhite),
-            subtitle: _lineStatusText(line.url),
-            trailing: selected ? Icon(Icons.check, color: Colors.white, size: 32.w) : _lineStatusDot(line.url),
-            onTap: () {
-              controller.switchLine(index);
-              Get.back();
-            },
-          );
-        },
-      ),
+      builder: (context) => Obx(() {
+        final lines = controller.currentChannel.lines.toList()
+          ..sort((a, b) =>
+              controller.lineRank(a.url).compareTo(controller.lineRank(b.url)));
+        return SizedBox(
+          height: 640.w,
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(32.w, 24.w, 16.w, 0),
+                child: Row(
+                  children: [
+                    Text(
+                      "线路选择（绿前黄中红后）",
+                      style: AppStyle.titleStyleWhite.copyWith(fontSize: 30.w, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    Obx(() => HighlightButton(
+                          focusNode: AppFocusNode(),
+                          iconData: Icons.speed,
+                          text: controller.probing.value ? "测速中..." : "重新测速",
+                          onTap: controller.probing.value
+                              ? null
+                              : controller.probeCurrentChannelLines,
+                        )),
+                  ],
+                ),
+              ),
+              AppStyle.vGap16,
+              Expanded(
+                child: ListView.separated(
+                  padding: AppStyle.edgeInsetsA32,
+                  itemCount: lines.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, index) {
+                    final line = lines[index];
+                    final selected = line.url == controller.currentLine.url;
+                    return ListTile(
+                      leading: NetImage(line.logo, width: 48.w, height: 48.w, borderRadius: 8),
+                      title: Text(line.sourceName, style: AppStyle.textStyleWhite),
+                      subtitle: _lineStatusText(line.url),
+                      trailing: selected
+                          ? Icon(Icons.check, color: Colors.white, size: 32.w)
+                          : _lineStatusDot(line.url),
+                      onTap: () {
+                        final realIndex = controller.currentChannel.lines
+                            .indexWhere((l) => l.url == line.url);
+                        if (realIndex >= 0) controller.switchLine(realIndex);
+                        Get.back();
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
   /// 线路探活文案：地址区分同源多线路，附带连通状态与延迟；未检测过只展示地址
   Text _lineStatusText(String url) {
-    final info = IptvService.instance.freshLineInfo(url);
-    final statusText = switch (info?.status) {
-      1 => "连通良好 · ${info!.latencyMs}ms",
-      2 => "连通较慢 · ${info!.latencyMs}ms",
+    final status = controller.displayStatus(url);
+    final ms = IptvService.instance.lastKnownLineInfo(url)?.latencyMs ?? 0;
+    final statusText = switch (status) {
+      1 => "连通良好 · ${ms}ms",
+      2 => "连通较慢 · ${ms}ms",
       3 => "探测失败",
       _ => "",
     };
@@ -220,9 +261,9 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  /// 线路连通状态圆点：复用频道页红黄绿探测缓存，未检测过不显示
+  /// 线路连通状态圆点：本次探测或最近已知状态，未检测过不显示
   Widget? _lineStatusDot(String url) {
-    final status = IptvService.instance.freshLineStatus(url);
+    final status = controller.displayStatus(url);
     final color = switch (status) {
       1 => Colors.green,
       2 => Colors.amber,

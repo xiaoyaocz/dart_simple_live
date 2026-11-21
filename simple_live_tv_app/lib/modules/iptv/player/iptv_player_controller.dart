@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -87,6 +88,79 @@ class IptvPlayerController extends GetxController {
     _openedUrl = currentLine.url;
     player.open(Media(currentLine.url), play: true);
     showControls();
+  }
+
+  /// 当前频道线路探测状态（播放页线路列表用）：0=检测中 1绿 2黄 3红
+  final lineStatus = <String, int>{}.obs;
+  /// 当前频道线路探测进行中
+  final probing = false.obs;
+  bool _probeCancelled = false;
+  Dio? _probeDio;
+
+  /// 线路排序权重：优先本次探测结果，其次最近已知状态；绿0 黄1 红或其他2
+  int lineRank(String url) {
+    final s = lineStatus[url] ??
+        IptvService.instance.lastKnownLineInfo(url)?.status ??
+        0;
+    return switch (s) { 1 => 0, 2 => 1, _ => 2 };
+  }
+
+  /// 展示用状态：本次探测结果优先，回退最近已知
+  int? displayStatus(String url) {
+    final s = lineStatus[url];
+    if (s != null && s > 0) return s;
+    return IptvService.instance.lastKnownLineInfo(url)?.status;
+  }
+
+  /// 重新探测当前频道全部线路：忽略缓存强制刷新，结果实时更新并落盘
+  Future<void> probeCurrentChannelLines() async {
+    if (probing.value) return;
+    _probeCancelled = false;
+    probing.value = true;
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
+      headers: {"Range": "bytes=0-1023"},
+    ));
+    _probeDio = dio;
+    final urls = <String>[];
+    final seen = <String>{};
+    for (final l in currentChannel.lines) {
+      if (seen.add(l.url)) {
+        urls.add(l.url);
+        lineStatus[l.url] = 0;
+      }
+    }
+    const concurrency = 10;
+    for (var i = 0; i < urls.length; i += concurrency) {
+      if (_probeCancelled) break;
+      final batch = urls.skip(i).take(concurrency).toList();
+      await Future.wait(batch.map((url) async {
+        final sw = Stopwatch()..start();
+        try {
+          await dio.get(url);
+          final ms = sw.elapsedMilliseconds;
+          _recordProbe(url, ms < 2000 ? 1 : 2, ms);
+        } catch (e) {
+          final ms = sw.elapsedMilliseconds;
+          // 403/401但能连通也算可用，仅网络超时/连接失败标红
+          if (e is DioException && (e.response?.statusCode ?? 0) > 0) {
+            _recordProbe(url, ms < 2000 ? 1 : 2, ms);
+          } else {
+            _recordProbe(url, 3, ms);
+          }
+        }
+      }));
+    }
+    probing.value = false;
+    dio.close();
+    if (_probeDio == dio) _probeDio = null;
+  }
+
+  void _recordProbe(String url, int status, int latencyMs) {
+    if (_probeCancelled) return;
+    lineStatus[url] = status;
+    IptvService.instance.cacheLineStatus(url, status, latencyMs: latencyMs);
   }
 
   /// 频道起播线路自动寻优：上次手动选择的源优先；该源线路探测为红时改选
@@ -205,6 +279,9 @@ class IptvPlayerController extends GetxController {
   void onClose() {
     _hideTimer?.cancel();
     _bufferingTimer?.cancel();
+    _probeCancelled = true;
+    _probeDio?.close();
+    _probeDio = null;
     player.dispose();
     WakelockPlus.disable();
     focusNode.dispose();

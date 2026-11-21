@@ -38,7 +38,7 @@ import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/services/windows_share_service.dart';
 import 'playback_session.dart';
-import 'player/windows_playback_events.dart';
+import 'player/native_playback_events.dart';
 import 'room_share_dialog.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -195,7 +195,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   static const _volumeSliderTag = 'simple-live-volume-slider';
   int _roomRequest = 0;
   final _playback = PlaybackSession();
-  WindowsPlaybackEvents? _nativePlaybackEvents;
+  NativePlaybackEvents? _nativePlaybackEvents;
   bool _roomClosed = false;
   bool similarGameRoomsOpen = false;
   Future<bool>? _offlineCheck;
@@ -870,13 +870,13 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   Future<NativePlayer?> _prepareNativePlaybackEvents() async {
-    if (!Platform.isWindows) return null;
+    if (!Platform.isWindows && !Platform.isAndroid) return null;
     try {
       final native = player.platform;
       if (native is! NativePlayer) return null;
       final handle = await native.handle;
       if (_roomClosed || handle == 0) return null;
-      _nativePlaybackEvents ??= WindowsPlaybackEvents(handle, (revision, error) {
+      _nativePlaybackEvents ??= NativePlaybackEvents(handle, (revision, error) {
         if (revision == _playback.openRevision) {
           _checkPlaybackFailure(error: 'libmpv ($error)', nativeTerminal: true);
         }

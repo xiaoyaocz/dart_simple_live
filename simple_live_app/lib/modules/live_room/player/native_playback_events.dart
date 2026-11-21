@@ -8,8 +8,8 @@ import 'package:media_kit/src/player/native/core/native_library.dart';
 
 /// Reads terminal events from a separate weak client. media_kit keeps its
 /// own event queue, and opening or disposing this client cannot stop playback.
-class WindowsPlaybackEvents {
-  WindowsPlaybackEvents(int playerHandle, this.onFailure)
+class NativePlaybackEvents {
+  NativePlaybackEvents(int playerHandle, this.onFailure)
       : _mpv = MPV(DynamicLibrary.open(NativeLibrary.path)) {
     _client = _mpv.mpv_create_weak_client(
         Pointer<mpv_handle>.fromAddress(playerHandle), nullptr);

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:media_kit/media_kit.dart';
-import 'package:simple_live_app/modules/live_room/player/windows_playback_events.dart';
+import 'package:simple_live_app/modules/live_room/player/native_playback_events.dart';
 
 /// Run with the app package config and the path to the bundled libmpv DLL.
 Future<void> main(List<String> args) async {
@@ -17,7 +17,7 @@ Future<void> main(List<String> args) async {
   final native = player.platform as NativePlayer;
   final received = <int>[];
   final failed = Completer<void>();
-  final events = WindowsPlaybackEvents(await native.handle, (revision, _) {
+  final events = NativePlaybackEvents(await native.handle, (revision, _) {
     received.add(revision);
     if (!failed.isCompleted) failed.complete();
   });

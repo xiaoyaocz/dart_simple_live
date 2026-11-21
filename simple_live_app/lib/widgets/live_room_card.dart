@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -38,6 +39,7 @@ class LiveRoomCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   height: 110,
                   width: double.infinity,
+                  resizeToWidth: defaultTargetPlatform == TargetPlatform.android,
                 ),
               ),
               Positioned(

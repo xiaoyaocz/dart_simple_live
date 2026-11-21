@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:simple_live_core/src/common/http_client.dart' as core;
 import 'package:simple_live_app/services/playback_diagnostics.dart';
@@ -29,13 +30,17 @@ class _Source extends LiveSite {
 
 class _Room extends LiveRoomController {
   final double hz;
+  final bool mobileQuality;
   int? opened;
-  _Room(_Source source, {this.hz = 120})
+  _Room(_Source source, {this.hz = 120, this.mobileQuality = false})
       : super(
             pSite: Site(id: 'huya', name: '', logo: '', liveSite: source),
             pRoomId: '1');
   @override
-  Future<int> getQualityLevel() async => 2;
+  bool get usesCellularQuality => mobileQuality;
+  @override
+  Future<int> getQualityLevel() async =>
+      mobileQuality ? await super.getQualityLevel() : 2;
   @override
   double get nativeDisplayHz => hz;
   @override
@@ -144,6 +149,25 @@ void main() {
       expect(room.opened, hz == 120 ? 1 : 0);
     });
   }
+  test('移动流量下优先采用流量画质设置，即使开启了原生帧率优先', () async {
+    const channel = MethodChannel('dev.fluttercommunity.plus/connectivity');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (_) async => ['mobile']);
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    AppSettingsController.instance.qualityLevelCellular.value = 0;
+    final room = _Room(_Source([
+      LivePlayQuality(quality: '1080P', data: 0, frameRate: 120),
+      LivePlayQuality(quality: '流畅', data: 1, frameRate: 30),
+    ]), mobileQuality: true);
+    addTearDown(room.scrollController.dispose);
+    room.detail.value = LiveRoomDetail(
+        roomId: '1', title: '', cover: '', userName: '', userAvatar: '',
+        online: 0, status: true, url: '');
+    room.getPlayQualites(0);
+    await Future<void>.delayed(Duration.zero);
+    expect(room.opened, 1);
+  });
   testWidgets(
       'HLS-only 120/60 alternatives downgrade on sustained loss; manual choice stops adaptation',
       (tester) async {

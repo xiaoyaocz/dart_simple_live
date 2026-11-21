@@ -2,7 +2,9 @@ package com.xycz.simple_live
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import android.content.res.Configuration
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -15,6 +17,8 @@ import android.view.Display
 
 class MainActivity: FlutterActivity() {
     private var networkChannel: MethodChannel? = null
+    private var pipChannel: EventChannel? = null
+    private var pipEvents: EventChannel.EventSink? = null
     private var refreshChannel: MethodChannel? = null
     private var refreshManager: DisplayManager? = null
     private val displayListener = object : DisplayManager.DisplayListener {
@@ -33,6 +37,17 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        pipChannel = EventChannel(flutterEngine.dartExecutor.binaryMessenger, "simple_live/pip")
+        pipChannel?.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+                pipEvents = events
+                events.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
+            }
+
+            override fun onCancel(arguments: Any?) {
+                pipEvents = null
+            }
+        })
         refreshChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "simple_live/display_refresh")
         refreshChannel?.setMethodCallHandler { call, result ->
             try {
@@ -79,6 +94,9 @@ class MainActivity: FlutterActivity() {
     }
 
     override fun onDestroy() {
+        pipEvents = null
+        pipChannel?.setStreamHandler(null)
+        pipChannel = null
         refreshManager?.unregisterDisplayListener(displayListener)
         refreshChannel?.setMethodCallHandler(null)
         refreshChannel = null
@@ -86,6 +104,11 @@ class MainActivity: FlutterActivity() {
         networkChannel?.setMethodCallHandler(null)
         networkChannel = null
         super.onDestroy()
+    }
+
+    override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(inPip, newConfig)
+        pipEvents?.success(inPip)
     }
 
     @Suppress("DEPRECATION")

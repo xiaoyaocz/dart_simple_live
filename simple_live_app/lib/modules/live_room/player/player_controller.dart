@@ -4,6 +4,7 @@ import 'package:auto_orientation_v2/auto_orientation_v2.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:floating/floating.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -281,7 +282,9 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   bool _playerClosing = false;
 
   final pip = Floating();
-  StreamSubscription<PiPStatus>? _pipSubscription;
+  StreamSubscription<bool>? _pipSubscription;
+  bool _enteringPip = false;
+  bool _insidePip = false;
 
   //final VolumeController volumeController = VolumeController();
 
@@ -305,8 +308,8 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
 
   /// 释放一些系统状态
   Future resetSystem() async {
-    _pipSubscription?.cancel();
-    //pip.dispose();
+    await _pipSubscription?.cancel();
+    _pipSubscription = null;
     await SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
       overlays: SystemUiOverlay.values,
@@ -583,49 +586,66 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
   }
 
-  /// 开启小窗播放前弹幕状态
-  bool danmakuStateBeforePIP = false;
-
-  Future enablePIP() async {
-    if (!Platform.isAndroid) {
+  Future<void> enablePIP() async {
+    if (defaultTargetPlatform != TargetPlatform.android ||
+        _playerClosing ||
+        _enteringPip ||
+        _insidePip) {
       return;
     }
-    if (await pip.isPipAvailable == false) {
-      SmartDialog.showToast("设备不支持小窗播放");
-      return;
-    }
-    danmakuStateBeforePIP = showDanmakuState.value;
-    //关闭并清除弹幕
-    if (AppSettingsController.instance.pipHideDanmu.value &&
-        danmakuStateBeforePIP) {
-      showDanmakuState.value = false;
-    }
-    danmakuController?.clear();
-    //关闭控制器
-    showControlsState.value = false;
-
-    //监听事件
-    var width = player.state.width ?? 0;
-    var height = player.state.height ?? 0;
-    Rational ratio = const Rational.landscape();
-    if (height > width) {
-      ratio = const Rational.vertical();
-    } else {
-      ratio = const Rational.landscape();
-    }
-    await pip.enable(
-      ImmediatePiP(
-        aspectRatio: ratio,
-      ),
-    );
-
-    _pipSubscription ??= pip.pipStatusStream.listen((event) {
-      if (event == PiPStatus.disabled) {
-        danmakuController?.clear();
-        showDanmakuState.value = danmakuStateBeforePIP;
+    _enteringPip = true;
+    try {
+      if (!await pip.isPipAvailable) {
+        if (!_playerClosing) SmartDialog.showToast("设备不支持小窗播放");
+        return;
       }
-      Log.w(event.toString());
-    });
+      if (_playerClosing) return;
+      final beforeDanmaku = showDanmakuState.value;
+      final beforeControls = showControlsState.value;
+      final width = player.state.width ?? 0;
+      final height = player.state.height ?? 0;
+      final ratio = height > width || (width == 0 && isVertical.value)
+          ? const Rational.vertical()
+          : const Rational.landscape();
+      final status = await pip.enable(ImmediatePiP(aspectRatio: ratio));
+      if (_playerClosing) return;
+      if (status != PiPStatus.enabled) {
+        SmartDialog.showToast("无法进入小窗播放");
+        return;
+      }
+      _insidePip = true;
+      if (AppSettingsController.instance.pipHideDanmu.value) {
+        showDanmakuState.value = false;
+      }
+      danmakuController?.clear();
+      showControlsState.value = false;
+
+      void restore() {
+        _insidePip = false;
+        final subscription = _pipSubscription;
+        _pipSubscription = null;
+        unawaited(subscription?.cancel());
+        if (_playerClosing) return;
+        danmakuController?.clear();
+        showDanmakuState.value = beforeDanmaku;
+        showControlsState.value = beforeControls;
+      }
+
+      _pipSubscription = const EventChannel('simple_live/pip')
+          .receiveBroadcastStream()
+          .cast<bool>()
+          .listen((inPip) {
+        if (!inPip) restore();
+      }, onError: (Object error) {
+        Log.logPrint(error);
+        restore();
+      }, onDone: restore);
+    } catch (e) {
+      Log.logPrint(e);
+      if (!_playerClosing) SmartDialog.showToast("无法进入小窗播放");
+    } finally {
+      _enteringPip = false;
+    }
   }
 }
 mixin PlayerGestureControlMixin

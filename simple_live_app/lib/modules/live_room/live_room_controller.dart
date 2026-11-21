@@ -200,6 +200,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   bool similarGameRoomsOpen = false;
   Future<bool>? _offlineCheck;
   Future<int>? _qualityLevelFuture;
+  Future<bool>? _cellularNetworkFuture;
   final _openWatch = Stopwatch();
   final _openMarks = <String, int>{};
   final _lineWatch = Stopwatch();
@@ -551,6 +552,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     _lineWatch.stop();
     // 网络类型判断和播放器初始化都不依赖房间数据，先和下面的请求并行跑，
     // 地址到手时播放器已经就绪，可以直接 open。
+    _cellularNetworkFuture = null;
     _qualityLevelFuture = _readQualityLevel();
     unawaited(initializePlayer().catchError((Object e) {
       Log.d('播放器预热失败：$e');
@@ -683,8 +685,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       qualites.value = playQualites;
       _markOpen('清晰度');
       var qualityLevel = await getQualityLevel();
+      final cellular = usesCellularQuality && await _isCellularNetwork();
       if (!_isCurrentRequest(request)) return;
-      _nativeAutoSelection = AppSettingsController.instance.preferNativeFrameRate.value;
+      _nativeAutoSelection =
+          !cellular && AppSettingsController.instance.preferNativeFrameRate.value;
       if (qualityLevel == 2) {
         //最高
         currentQuality = 0;
@@ -716,20 +720,30 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   Future<int> _readQualityLevel() async {
-    var qualityLevel = AppSettingsController.instance.qualityLevel.value;
-    // 桌面没有移动流量画质策略。WebView/COM 初始化失败时网络插件的
-    // 原生查询可能访问空对象；这里不进入无必要的原生调用，Dart catch 无法捕获它。
-    if (!Platform.isAndroid && !Platform.isIOS) return qualityLevel;
+    final settings = AppSettingsController.instance;
+    return usesCellularQuality && await _isCellularNetwork()
+        ? settings.qualityLevelCellular.value
+        : settings.qualityLevel.value;
+  }
+
+  // 桌面没有移动流量画质策略，不调用原生网络查询。
+  @visibleForTesting
+  bool get usesCellularQuality => Platform.isAndroid || Platform.isIOS;
+
+  Future<bool> _isCellularNetwork() =>
+      _cellularNetworkFuture ??= _readCellularNetwork();
+
+  Future<bool> _readCellularNetwork() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult.first == ConnectivityResult.mobile) {
-        qualityLevel =
-            AppSettingsController.instance.qualityLevelCellular.value;
-      }
+      final transports = await Connectivity().checkConnectivity()
+          .timeout(const Duration(milliseconds: 700));
+      return transports.contains(ConnectivityResult.mobile) &&
+          !transports.contains(ConnectivityResult.wifi) &&
+          !transports.contains(ConnectivityResult.ethernet);
     } catch (e) {
       Log.logPrint(e);
+      return false;
     }
-    return qualityLevel;
   }
 
   void getPlayUrl({int? request}) async {

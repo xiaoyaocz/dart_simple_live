@@ -7,11 +7,13 @@ class NetImage extends StatelessWidget {
   final double? height;
   final BoxFit? fit;
   final double borderRadius;
+  final bool resizeToWidth;
   const NetImage(this.picUrl,
       {this.width,
       this.height,
       this.fit = BoxFit.cover,
       this.borderRadius = 0,
+      this.resizeToWidth = false,
       Key? key})
       : super(key: key);
 
@@ -28,13 +30,30 @@ class NetImage extends StatelessWidget {
     if (pic.startsWith("//")) {
       pic = 'https:$pic';
     }
+    if (resizeToWidth) {
+      return LayoutBuilder(builder: (context, constraints) {
+        final ratio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+        final logicalWidth = width != null && width!.isFinite
+            ? constraints.constrainWidth(width!)
+            : constraints.maxWidth;
+        final cacheWidth = logicalWidth.isFinite && logicalWidth > 0
+            ? (logicalWidth * ratio).ceil().clamp(1, 1024).toInt()
+            : null;
+        return _buildImage(pic, cacheWidth: cacheWidth);
+      });
+    }
+    return _buildImage(pic);
+  }
+
+  Widget _buildImage(String url, {int? cacheWidth}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: ExtendedImage.network(
-        pic,
+        url,
         fit: fit,
         height: height,
         width: width,
+        cacheWidth: cacheWidth,
         shape: BoxShape.rectangle,
         borderRadius: BorderRadius.circular(borderRadius),
         loadStateChanged: (e) {

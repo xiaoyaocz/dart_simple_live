@@ -41,8 +41,11 @@ class IptvService extends GetxService {
   AggregatedParseResult? aggregatedCache;
   /// 聚合缓存生成时间，控制自动过期，同步源更新
   DateTime? _aggregatedCacheTime;
-  /// 缓存自动过期时间：4小时，匹配公开源更新频率
-  static const Duration _cacheMaxAge = Duration(hours: 4);
+  /// 各源最近一次成功拉取的解析结果，「仅刷新部分源」时范围外源沿用此缓存
+  final Map<String, M3uParseResult> _sourceResultCache = <String, M3uParseResult>{};
+  /// 缓存按自然日失效：公开源均为日更，当天有效、次日进入频道页自动重拉
+  static bool isSameLocalDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   final RxBool isLoading = false.obs;
   final RxInt currentSourceIndex = 0.obs;
@@ -59,16 +62,9 @@ class IptvService extends GetxService {
   List<IptvSourceMeta> get sourcePool => [...currentPresetSourcePool, ...customSources];
 
   /// 默认预置公开源池，用户删除后可通过恢复默认还原
+  /// 全部为日更级公开源，地址均经直连实测可达；镜像链按「原始 → ghfast.top → gh-proxy」兜底，
+  /// 致谢与来源详见 THANKS.md 与 IPTV_SOURCES.md
   static const List<IptvSourceMeta> defaultPresetSourcePool = [
-    IptvSourceMeta(
-      name: "DataShare海外源",
-      author: "DataShare-duo",
-      projectUrl: "https://github.com/DataShare-duo/IPTV-Source",
-      description: "海外节点直连，CDN加速，央视频道完整，适配境外网络",
-      urls: [
-        "https://raw.githubusercontent.com/DataShare-duo/IPTV-Source/refs/heads/main/movie_live.txt",
-      ],
-    ),
     IptvSourceMeta(
       name: "suxuang全量源",
       author: "suxuang",
@@ -76,6 +72,7 @@ class IptvService extends GetxService {
       description: "频道数量全，多节点容灾，每日自动更新，央视频道完整",
       urls: [
         "https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
+        "https://ghfast.top/https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
         "https://gh-proxy.com/raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
       ],
     ),
@@ -86,8 +83,91 @@ class IptvService extends GetxService {
       description: "400+频道，省份分组完整，6小时自动更新",
       urls: [
         "https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
+        "https://ghfast.top/https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
         "https://gh-proxy.com/raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.m3u",
         "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "zhi35聚合源",
+      author: "zhi35",
+      projectUrl: "https://github.com/zhi35/iptv",
+      description: "每日3更，央视/卫视/地方/港澳台/直播中国，IPv4+IPv6",
+      urls: [
+        "https://live.zhi35.com/iptv.m3u",
+        "https://raw.githubusercontent.com/zhi35/iptv/master/iptv.m3u",
+        "https://ghfast.top/https://raw.githubusercontent.com/zhi35/iptv/master/iptv.m3u",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/zhi35/iptv/master/iptv.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "fanmingming咪咕源",
+      author: "fanmingming",
+      projectUrl: "https://github.com/fanmingming/live",
+      description: "最知名源，咪咕/央视频CDN，189频道央视体育齐全，每日多更",
+      urls: [
+        "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/itv.m3u",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/itv.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "fanmingmingIPv6源",
+      author: "fanmingming",
+      projectUrl: "https://github.com/fanmingming/live",
+      description: "经典IPv6列表，82频道央视卫视，需终端支持IPv6网络",
+      urls: [
+        "https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "hujingguang实时源",
+      author: "hujingguang",
+      projectUrl: "https://github.com/hujingguang/ChinaIPTV",
+      description: "每小时级更新，405频道央视+省市台，近实时抓取",
+      urls: [
+        "https://raw.githubusercontent.com/hujingguang/ChinaIPTV/main/cnTV1_ALL.m3u8",
+        "https://ghfast.top/https://raw.githubusercontent.com/hujingguang/ChinaIPTV/main/cnTV1_ALL.m3u8",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "hacks.tools日更源",
+      author: "hacks.tools",
+      projectUrl: "https://iptv.hacks.tools/",
+      description: "每日多次更新，卫视/地方/电影/儿童丰富，央视频道较少",
+      urls: [
+        "https://live.hacks.tools/tv/iptv4.m3u",
+        "https://live.hacks.tools/tv/iptv4.txt",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "xisohi全量源",
+      author: "xisohi",
+      projectUrl: "https://github.com/xisohi/CHINA-IPTV",
+      description: "TXT格式1200+条，央视/卫视/地方/教育/台港澳，按省单播库",
+      urls: [
+        "https://raw.githubusercontent.com/xisohi/CHINA-IPTV/main/TV/live.txt",
+        "https://ghfast.top/https://raw.githubusercontent.com/xisohi/CHINA-IPTV/main/TV/live.txt",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "iptv-org国际源",
+      author: "iptv-org",
+      projectUrl: "https://github.com/iptv-org/iptv",
+      description: "全球11000+频道，国际频道为主，每日自动校验",
+      urls: [
+        "https://iptv-org.github.io/iptv/index.m3u",
+        "https://live.hacks.tools/iptv/index.m3u",
+      ],
+    ),
+    IptvSourceMeta(
+      name: "DataShare海外源",
+      author: "DataShare-duo",
+      projectUrl: "https://github.com/DataShare-duo/IPTV-Source",
+      description: "海外节点直连，CDN加速，央视频道完整，适配境外网络",
+      urls: [
+        "https://raw.githubusercontent.com/DataShare-duo/IPTV-Source/refs/heads/main/movie_live.txt",
+        "https://ghfast.top/https://raw.githubusercontent.com/DataShare-duo/IPTV-Source/refs/heads/main/movie_live.txt",
       ],
     ),
     IptvSourceMeta(
@@ -132,6 +212,23 @@ class IptvService extends GetxService {
     _loadPersistedAggregated();
   }
 
+  /// 源配置变更后使聚合缓存失效，下次进入频道页按新源集合重拉
+  void _invalidateAggregatedCache() {
+    _aggregatedCacheTime = null;
+  }
+
+  /// 校验自定义源地址：拉取并解析，返回频道数；不可达或解析为空抛错
+  Future<int> validateCustomSourceUrl(String url) async {
+    final content = await HttpClient.instance
+        .getText(url, header: {})
+        .timeout(const Duration(seconds: 8));
+    final result = M3uParser.parse(content, baseUrl: url);
+    if (result.channels.isEmpty) {
+      throw Exception("解析到 0 个频道，请确认是有效的 M3U/TXT 直播源地址");
+    }
+    return result.channels.length;
+  }
+
   Future<void> addCustomSource({required String name, required String url}) async {
     final meta = IptvSourceMeta(
       name: name,
@@ -141,6 +238,32 @@ class IptvService extends GetxService {
     );
     customSources.add(meta);
     enabledSourceNames.add(name);
+    _invalidateAggregatedCache();
+    await _saveCustomSources();
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvSourceEnabled,
+      enabledSourceNames.toList(),
+    );
+  }
+
+  /// 修改自定义源的名称与地址
+  Future<void> updateCustomSource(IptvSourceMeta oldSource, {required String name, required String url}) async {
+    final index = customSources.indexOf(oldSource);
+    if (index < 0) return;
+    final updated = IptvSourceMeta(
+      name: name,
+      author: "自定义",
+      description: "用户自定义源",
+      urls: [url],
+    );
+    customSources[index] = updated;
+    // 同步更新启用状态中的名称
+    final enabledIndex = enabledSourceNames.indexOf(oldSource.name);
+    if (enabledIndex >= 0) {
+      enabledSourceNames[enabledIndex] = name;
+    }
+    _sourceResultCache.remove(oldSource.name);
+    _invalidateAggregatedCache();
     await _saveCustomSources();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvSourceEnabled,
@@ -160,10 +283,12 @@ class IptvService extends GetxService {
         deletedPresetNames.toList(),
       );
     }
+    _sourceResultCache.remove(source.name);
     enabledSourceNames.remove(source.name);
     if (enabledSourceNames.isEmpty && sourcePool.isNotEmpty) {
       enabledSourceNames.add(sourcePool.first.name);
     }
+    _invalidateAggregatedCache();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvSourceEnabled,
       enabledSourceNames.toList(),
@@ -175,6 +300,8 @@ class IptvService extends GetxService {
     deletedPresetNames.clear();
     customSources.clear();
     enabledSourceNames.assignAll(defaultPresetSourcePool.map((e) => e.name));
+    _sourceResultCache.clear();
+    _invalidateAggregatedCache();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvDeletedSources, [],
     );
@@ -200,6 +327,7 @@ class IptvService extends GetxService {
     } else {
       enabledSourceNames.add(source.name);
     }
+    _invalidateAggregatedCache();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvSourceEnabled,
       enabledSourceNames.toList(),
@@ -258,15 +386,45 @@ class IptvService extends GetxService {
     return null;
   }
 
+  /// 手动刷新范围：选中的源名称集合，空集合表示全部源
+  Set<String> get refreshScope {
+    final saved = LocalStorageService.instance.getValue<List<dynamic>>(
+      LocalStorageService.kIptvRefreshScope,
+      [],
+    );
+    return saved.cast<String>().toSet();
+  }
+
+  /// 保存手动刷新范围
+  Future<void> setRefreshScope(Set<String> scope) async {
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvRefreshScope,
+      scope.toList(),
+    );
+  }
+
   /// 各源并发拉取（源内镜像串行容灾），单源失败自动跳过
-  Future<AggregatedParseResult> refreshAggregated() async {
+  /// [onlySources] 限定本次实际拉取的源，范围外源沿用上次拉取结果，null 或空表示全部
+  Future<AggregatedParseResult> refreshAggregated({Set<String>? onlySources}) async {
     isLoading.value = true;
     final activeSources = enabledSources;
+    final scope = (onlySources == null || onlySources.isEmpty) ? null : onlySources;
     totalSourceCount.value = activeSources.length;
 
     var completed = 0;
     final fetched = await Future.wait(
       activeSources.map((source) async {
+        // 刷新范围外的源不发起请求，从未拉取过的源仍需拉取一次保证有数据
+        if (scope != null && !scope.contains(source.name)) {
+          final cached = _sourceResultCache[source.name];
+          if (cached != null) {
+            completed++;
+            currentSourceIndex.value = completed;
+            loadingMessage.value =
+                "${source.name} 未选中，沿用上次结果（$completed/${activeSources.length}）";
+            return (sourceName: source.name, result: cached);
+          }
+        }
         final result = await _fetchSourceWithMirrors(source);
         completed++;
         currentSourceIndex.value = completed;
@@ -286,6 +444,11 @@ class IptvService extends GetxService {
     if (allSourceResults.isEmpty) {
       isLoading.value = false;
       throw Exception("所有启用源均无法访问");
+    }
+
+    // 成功结果进入源级缓存，供下次部分刷新复用
+    for (final entry in allSourceResults) {
+      _sourceResultCache[entry.sourceName] = entry.result;
     }
 
     final channelMap = <String, List<IptvLine>>{};
@@ -351,13 +514,30 @@ class IptvService extends GetxService {
     return match == null ? null : int.tryParse(match.group(1)!);
   }
 
+  /// 今日是否还可手动刷新：当日已成功刷新过则置灰按钮，次日自动恢复
+  bool get canManualRefreshToday {
+    final t = _aggregatedCacheTime;
+    return t == null || !isSameLocalDay(t, DateTime.now());
+  }
+
+  /// 今日已刷新的时间文案，供刷新按钮提示，未刷新过返回空串
+  String get lastRefreshLabel {
+    final t = _aggregatedCacheTime;
+    if (t == null) return "";
+    final hh = t.hour.toString().padLeft(2, "0");
+    final mm = t.minute.toString().padLeft(2, "0");
+    return "${t.month}/${t.day} $hh:$mm";
+  }
+
+  /// 获取聚合结果，优先当日缓存，支持手动强制刷新；自动刷新失败时回退陈旧缓存
+  /// 自动刷新同样遵循用户设置的刷新范围（refreshScope）
   Future<AggregatedParseResult> getAggregated({bool forceRefresh = false}) async {
     final cacheValid = aggregatedCache != null &&
         _aggregatedCacheTime != null &&
-        DateTime.now().difference(_aggregatedCacheTime!) < _cacheMaxAge;
+        isSameLocalDay(_aggregatedCacheTime!, DateTime.now());
     if (!forceRefresh && cacheValid) return aggregatedCache!;
     try {
-      return await refreshAggregated();
+      return await refreshAggregated(onlySources: refreshScope);
     } catch (e) {
       // 自动刷新全败时回退磁盘陈旧缓存（哪怕已过期），保证有台可看；手动刷新仍如实报错
       if (!forceRefresh && aggregatedCache != null) {
@@ -366,6 +546,33 @@ class IptvService extends GetxService {
       }
       rethrow;
     }
+  }
+
+  // ==================== 线路连通状态缓存 ====================
+
+  /// 线路连通状态探测结果缓存：key 为线路 URL，TTL 内重复进入频道页不再重新探测
+  final Map<String, ({int status, int latencyMs, DateTime time})> _lineStatusCache =
+      <String, ({int status, int latencyMs, DateTime time})>{};
+  /// 状态缓存有效期：红绿灯只是参考信息，10 分钟足够
+  static const Duration _lineStatusTtl = Duration(minutes: 10);
+
+  /// 查询未过期的线路状态缓存，未命中返回 null（1绿/2黄/3红）
+  int? freshLineStatus(String url) => freshLineInfo(url)?.status;
+
+  /// 查询未过期的线路状态缓存详情（含探测延迟），未命中返回 null
+  ({int status, int latencyMs, DateTime time})? freshLineInfo(String url) {
+    final cached = _lineStatusCache[url];
+    if (cached == null) return null;
+    if (DateTime.now().difference(cached.time) >= _lineStatusTtl) {
+      _lineStatusCache.remove(url);
+      return null;
+    }
+    return cached;
+  }
+
+  /// 写入线路状态缓存，latencyMs 为探测请求耗时
+  void cacheLineStatus(String url, int status, {int latencyMs = 0}) {
+    _lineStatusCache[url] = (status: status, latencyMs: latencyMs, time: DateTime.now());
   }
 
   // ==================== 线路偏好记忆 ====================

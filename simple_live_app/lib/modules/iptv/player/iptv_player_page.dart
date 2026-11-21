@@ -201,18 +201,22 @@ class IptvPlayerPage extends GetView<IptvPlayerController> {
     );
   }
 
-  /// 线路探活文案：复用频道页探测缓存，未检测过不展示
-  Text? _lineStatusText(String url) {
+  /// 线路探活文案：地址区分同源多线路，附带连通状态与延迟；未检测过只展示地址
+  Text _lineStatusText(String url) {
     final info = IptvService.instance.freshLineInfo(url);
-    if (info == null) return null;
-    final text = switch (info.status) {
-      1 => "连通良好 · ${info.latencyMs}ms",
-      2 => "连通较慢 · ${info.latencyMs}ms",
+    final statusText = switch (info?.status) {
+      1 => "连通良好 · ${info!.latencyMs}ms",
+      2 => "连通较慢 · ${info!.latencyMs}ms",
       3 => "探测失败",
-      _ => null,
+      _ => "",
     };
-    if (text == null) return null;
-    return Text(text, style: const TextStyle(fontSize: 12));
+    final text = statusText.isEmpty ? url : "$statusText\n$url";
+    return Text(
+      text,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 11),
+    );
   }
 
   /// 线路连通状态圆点：复用频道页红黄绿探测缓存，未检测过不显示

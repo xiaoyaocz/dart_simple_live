@@ -37,6 +37,10 @@ class LiveRoomPage extends StatelessWidget {
 
   LiveRoomController get controller => Get.find<LiveRoomController>(tag: roomTag);
 
+  static bool _useLightChatSurface(BuildContext context) =>
+      Theme.of(context).platform == TargetPlatform.windows &&
+      Theme.of(context).brightness == Brightness.light;
+
   @override
   Widget build(BuildContext context) {
     final page = Obx(
@@ -568,9 +572,9 @@ class LiveRoomPage extends StatelessWidget {
                             ),
                             padding: AppStyle.edgeInsetsA12,
                             itemCount: controller.messages.length,
-                            itemBuilder: (_, i) {
+                            itemBuilder: (context, i) {
                               var item = controller.messages[i];
-                              return buildMessageItem(item);
+                              return buildMessageItem(context, item);
                             },
                           ),
                         ),
@@ -602,30 +606,69 @@ class LiveRoomPage extends StatelessWidget {
     );
   }
 
-  Widget buildMessageItem(LiveMessage message) {
+  Widget buildMessageItem(BuildContext context, LiveMessage message) {
+    final lightChat = _useLightChatSurface(context);
+    const readableStyle = TextStyle(
+      color: Color(0xFF49576A),
+      fontWeight: FontWeight.w500,
+      height: 1.45,
+    );
     return Obx(() {
       final size = AppSettingsController.instance.chatTextSize.value;
       if (message.userName == 'LiveSysMessage') {
-        return Text(message.message,style:TextStyle(color:Colors.grey,fontSize:size));
+        return Text(
+          message.message,
+          style: lightChat
+              ? readableStyle.copyWith(fontSize: size)
+              : TextStyle(color: Colors.grey, fontSize: size),
+        );
       }
       final isSelf = controller.isSelfMessage(message);
-      final content = LiveMessageContent(userName:message.userName, isSelf:isSelf,
-        parts:controller.messageParts(message),fontSize:size,
-        color:Get.isDarkMode ? Colors.white : AppColors.black333);
+      final content = LiveMessageContent(
+        userName: message.userName,
+        isSelf: isSelf,
+        parts: controller.messageParts(message),
+        fontSize: size,
+        color: lightChat
+            ? const Color(0xFF1C2633)
+            : Get.isDarkMode
+                ? Colors.white
+                : AppColors.black333,
+        labelStyle: lightChat ? readableStyle : null,
+      );
       if (isSelf) return SelfChatHighlight(child: content);
       if (!AppSettingsController.instance.chatBubbleStyle.value) return content;
-      return Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Flexible(child:Container(
-          decoration:BoxDecoration(color:Colors.blueGrey.withAlpha(25),
-            borderRadius:const BorderRadius.only(topRight:Radius.circular(12),
-              bottomLeft:Radius.circular(12),bottomRight:Radius.circular(12))),
-          padding:AppStyle.edgeInsetsA4.copyWith(left:12,right:12),child:content)),
-      ]);
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Flexible(
+            child: Container(
+              decoration: BoxDecoration(
+                color: lightChat
+                    ? const Color(0xFFE7EDF4)
+                    : Colors.blueGrey.withAlpha(25),
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              padding: AppStyle.edgeInsetsA4.copyWith(left: 12, right: 12),
+              child: content,
+            ),
+          ),
+        ],
+      );
     });
   }
 
   Widget buildOfficialChatArea(Widget messages) {
-    if (!Platform.isWindows) return messages;
+    final messageList = Builder(
+      builder: (context) => _useLightChatSurface(context)
+          ? ColoredBox(color: const Color(0xFFF5F7FA), child: messages)
+          : messages,
+    );
+    if (!Platform.isWindows) return messageList;
     return Obx(() {
       final siteId = controller.rxSite.value.id;
       final roomId = controller.rxRoomId.value;
@@ -633,7 +676,7 @@ class LiveRoomPage extends StatelessWidget {
       final focus = controller.officialEditorFocusRequest.value;
       bool current() => controller.site.id == siteId && controller.roomId == roomId && !controller.isClosed;
       return Column(children: [
-        Expanded(child: messages),
+        Expanded(child: messageList),
         if (detail != null) ApiDanmakuPanel(
           key: ValueKey('api-editor:$siteId:$roomId:${detail.roomId}'),
           siteId: siteId, roomId: detail.roomId, focusRequest: focus,

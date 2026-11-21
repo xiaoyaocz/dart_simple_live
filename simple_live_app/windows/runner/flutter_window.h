@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "win32_window.h"
+#include "windows_share_bridge.h"
 
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
@@ -39,6 +40,7 @@ class FlutterWindow : public Win32Window {
   HWND tray_window_ = nullptr;
 
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> window_channel_;
+  std::unique_ptr<WindowsShareBridge> windows_share_bridge_;
 
   // The project to run.
   flutter::DartProject project_;

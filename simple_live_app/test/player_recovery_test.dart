@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -127,8 +128,29 @@ class _Bili extends BiliBiliSite {
   }
 }
 
-LiveRoomDetail _liveDetail() => LiveRoomDetail(roomId: '1', title: '', cover: '',
-    userName: '', userAvatar: '', online: 0, status: true, url: '');
+class _Douyin extends DouyinSite {
+  int refreshes = 0;
+  Future<LiveRoomDetail>? pending;
+  @override
+  Future<LiveRoomDetail> getRoomDetail({required String roomId}) =>
+      pending ?? Future.value(_liveDetail());
+
+  @override
+  Future<LiveRoomDetail> refreshRoomDetail({required String roomId}) async {
+    refreshes++;
+    return (await pending) ?? _liveDetail(data: [
+      LivePlayQuality(quality: '高清', sort: 1, data: ['https://fresh/low.flv']),
+      LivePlayQuality(quality: '原画', sort: 2, data: ['https://fresh/live.flv']),
+    ]);
+  }
+
+  @override
+  Future<List<LivePlayQuality>> getPlayQualites({required LiveRoomDetail detail}) async =>
+      detail.data as List<LivePlayQuality>;
+}
+
+LiveRoomDetail _liveDetail({Object? data}) => LiveRoomDetail(roomId: '1', title: '', cover: '',
+    userName: '', userAvatar: '', online: 0, status: true, url: '', data: data);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -137,6 +159,38 @@ void main() {
           const MethodChannel('wakelock_plus'), (_) async => null);
   setUp(() => Get.put<AppSettingsController>(_Settings()));
   tearDown(() => Get.reset());
+  testWidgets('连续切线只执行最后一次排队的开流', (tester) async {
+    final room = _Room();
+    room.playUrls.addAll(['https://first/live.flv', 'https://next/live.flv']);
+    room.currentLineIndex = 0;
+    final gate = room.fake.opening = Completer<void>();
+    final initial = room.setPlayer();
+    await tester.pump();
+    expect(room.fake.opens, 1);
+    room.changePlayLine(1);
+    room.changePlayLine(0);
+    room.changePlayLine(1);
+    final latest = room.setPlayer();
+    gate.complete();
+    await initial;
+    await latest;
+    expect(room.currentLineIndex, 1);
+    expect(room.fake.opens, 2);
+  });
+  testWidgets('后台暂停看门狗，返回时继续处理仍在缓冲的线路', (tester) async {
+    final room = _Room();
+    room.liveStatus.value = true;
+    room.playUrls.addAll(['https://first/live.flv', 'https://next/live.flv']);
+    room.currentLineIndex = 0;
+    room.mediaBuffering(true);
+    room.didChangeAppLifecycleState(AppLifecycleState.paused);
+    await tester.pump(const Duration(seconds: 9));
+    expect(room.fake.opens, 0);
+    room.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 8));
+    expect(room.currentLineIndex, 1);
+    expect(room.fake.opens, 1);
+  });
   testWidgets('首次开流和同线路操作重叠时不在首帧后再次open', (tester) async {
     final room = _Room();
     room.playUrls.add('https://first/live.flv');
@@ -263,6 +317,71 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(room.fake.opens, 1);
     room.mediaBuffering(false);
+  });
+  _Room stalledDouyin(_Douyin source, List<String> urls) {
+    final room = _Room(source: Site(id: 'douyin', name: '', logo: '', liveSite: source));
+    room.detail.value = _liveDetail();
+    room.liveStatus.value = true;
+    room.hasPlayed.value = true;
+    room.qualites.add(LivePlayQuality(quality: '原画', sort: 2, data: urls));
+    room.currentQuality = 0;
+    room.currentLineIndex = 0;
+    room.playUrls.addAll(urls);
+    return room;
+  }
+  testWidgets('抖音短缓冲不切线，持续卡住四秒直接使用同画质备用流', (tester) async {
+    final gate = Completer<LiveRoomDetail>();
+    final source = _Douyin()..pending = gate.future;
+    final room = stalledDouyin(source, ['https://first/live.flv', 'https://next/live.m3u8']);
+    room.mediaBuffering(true);
+    await tester.pump(const Duration(seconds: 3));
+    expect(room.fake.opens, 0);
+    room.mediaBuffering(false);
+    await tester.pump(const Duration(seconds: 5));
+    expect(room.fake.opens, 0);
+    room.mediaBuffering(true);
+    await tester.pump(const Duration(seconds: 4));
+    expect(room.currentLineIndex, 1);
+    expect(room.fake.opens, 1);
+    expect(source.refreshes, 0);
+    room.mediaBuffering(false);
+  });
+  testWidgets('抖音线路用完后刷新房间，重开同一画质的新地址', (tester) async {
+    final source = _Douyin();
+    final room = stalledDouyin(source, ['https://expired/live.flv']);
+    room.mediaError('断流');
+    await tester.pump(const Duration(seconds: 3));
+    expect(source.refreshes, 1);
+    expect(room.playUrls, ['https://fresh/live.flv']);
+    expect(room.qualites[room.currentQuality].quality, '原画');
+    expect(room.fake.opens, 1);
+    room.mediaError('继续断流');
+    await tester.pump(const Duration(seconds: 3));
+    expect(source.refreshes, 1);
+    expect(room.fake.opens, 2);
+    room.fake.state = const PlayerState(playing: true);
+    room.mediaPosition(const Duration(seconds: 1));
+    room.mediaPosition(const Duration(seconds: 11));
+    room.fake.state = const PlayerState(playing: true, buffering: true);
+    room.mediaError('稳定播放后再次断流');
+    await tester.pump(const Duration(seconds: 3));
+    expect(source.refreshes, 2);
+  });
+  testWidgets('抖音刷新地址期间手动重开同一线路，迟到响应不打断播放', (tester) async {
+    final gate = Completer<LiveRoomDetail>();
+    final source = _Douyin()..pending = gate.future;
+    final room = stalledDouyin(source, ['https://first/live.flv']);
+    room.mediaError('断流');
+    await tester.pump(const Duration(seconds: 3));
+    expect(source.refreshes, 1);
+    room.changePlayLine(0);
+    await tester.pump();
+    gate.complete(_liveDetail(data: [
+      LivePlayQuality(quality: '原画', sort: 2, data: ['https://late/live.flv']),
+    ]));
+    await tester.pump();
+    expect(room.playUrls, ['https://first/live.flv']);
+    expect(room.fake.opens, 1);
   });
   test('重试当前线路必须重新打开连接', () async {
     final room = _Room();

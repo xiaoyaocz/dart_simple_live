@@ -32,6 +32,7 @@ class LiveMessageContent extends StatelessWidget {
   final List<LiveMessagePart> parts;
   final double fontSize;
   final Color color;
+  final TextStyle? labelStyle;
   final ImageProvider Function(LiveEmoticon) imageProvider;
   const LiveMessageContent(
       {super.key,
@@ -39,6 +40,7 @@ class LiveMessageContent extends StatelessWidget {
       required this.parts,
       required this.fontSize,
       required this.color,
+      this.labelStyle,
       this.imageProvider = emoticonImageProvider,
       this.isSelf = false});
 
@@ -46,35 +48,23 @@ class LiveMessageContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final selfAccent =
-        dark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
+        dark ? const Color(0xFFA4D1C7) : const Color(0xFF245650);
+    final bodyFontSize = isSelf ? fontSize * 1.2 : fontSize;
+    final bodyStyle = TextStyle(
+      color: color,
+      fontSize: bodyFontSize,
+      fontWeight: isSelf ? FontWeight.w600 : null,
+    );
     return Text.rich(TextSpan(
       text: isSelf ? null : '$userName：',
-      style: TextStyle(color: Colors.grey, fontSize: fontSize),
+      style: (labelStyle ?? const TextStyle(color: Colors.grey))
+          .copyWith(fontSize: fontSize),
       children: [
-        if (isSelf) ...[
-          WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Container(
-                  margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 5.5, vertical: 1.5),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
-                    ),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Text('我',
-                      style: TextStyle(
-                          fontSize: fontSize * .70,
-                          height: 1.15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)))),
+        if (isSelf)
           TextSpan(
-              text: '$userName：',
+              text: '我 · $userName：',
               style:
                   TextStyle(color: selfAccent, fontWeight: FontWeight.w600)),
-        ],
           for (final part in parts)
             if (part.emoticon case final LiveEmoticon image)
               WidgetSpan(
@@ -84,25 +74,24 @@ class LiveMessageContent extends StatelessWidget {
                     image: true,
                     child: Image(
                         image: imageProvider(image),
-                        height: fontSize * 1.3,
-                        width: fontSize * 1.3 * image.aspectRatio,
+                        height: bodyFontSize * 1.3,
+                        width: bodyFontSize * 1.3 * image.aspectRatio,
                         fit: BoxFit.contain,
                         // Keep the original label while loading and after decode/network
                         // errors; failed pictures must not erase the chat body.
                         frameBuilder: (context, child, frame, sync) =>
-                            frame == null ? _fallback(part.text) : child,
+                            frame == null
+                                ? Text(part.text, style: bodyStyle)
+                                : child,
                         errorBuilder: (context, error, stack) =>
-                            _fallback(part.text)),
+                            Text(part.text, style: bodyStyle)),
                   ))
             else
-              TextSpan(text: part.text, style: TextStyle(color: color,
-                  fontWeight: isSelf ? FontWeight.normal : null)),
+              TextSpan(text: part.text, style: bodyStyle),
         ],
       ));
   }
 
-  Widget _fallback(String text) =>
-      Text(text, style: TextStyle(color: color, fontSize: fontSize));
 }
 
 /// A static highlight: no timers, fades, scroll requests or duplicated messages.
@@ -128,28 +117,11 @@ class SelfChatHighlight extends StatelessWidget {
       child: DecoratedBox(
         key: const ValueKey('self-chat-highlight'),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: dark
-                ? const [Color(0xFF1B2E45), Color(0xFF252440)]
-                : const [Color(0xFFEAF2FF), Color(0xFFF3ECFF)],
-          ),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            width: 1.0,
-            color: dark ? const Color(0x5560A5FA) : const Color(0x4D3B82F6),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: dark ? const Color(0x22000000) : const Color(0x143B82F6),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: dark ? const Color(0xFF233832) : const Color(0xFFE2EEEC),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: child,
         ),
       ),

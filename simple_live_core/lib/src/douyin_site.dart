@@ -921,19 +921,22 @@ class DouyinSite implements LiveSite {
         var qualityData = json.decode(streamData)["data"] as Map;
 
         for (var quality in qulityList) {
-          List<String> urls = [];
-
-          var flvUrl = qualityData[quality["sdk_key"]]?["main"]?["flv"]
-              ?.toString();
-
-          if (flvUrl != null && flvUrl.isNotEmpty) {
-            urls.add(flvUrl);
-          }
-          var hlsUrl = qualityData[quality["sdk_key"]]?["main"]?["hls"]
-              ?.toString();
-
-          if (hlsUrl != null && hlsUrl.isNotEmpty) {
-            urls.add(hlsUrl);
+          final stream = qualityData[quality["sdk_key"]];
+          if (stream is! Map) continue;
+          final urls = <String>{};
+          // Try the alternate CDN before switching transports.
+          for (final format in ['flv', 'hls']) {
+            for (final route in ['main', 'backup']) {
+              final endpoint = stream[route];
+              final url = endpoint is Map ? endpoint[format] : null;
+              if (url is! String) continue;
+              final uri = Uri.tryParse(url);
+              if (uri != null &&
+                  uri.host.isNotEmpty &&
+                  (uri.scheme == 'http' || uri.scheme == 'https')) {
+                urls.add(url);
+              }
+            }
           }
 
           var qualityItem = LivePlayQuality(
@@ -941,8 +944,9 @@ class DouyinSite implements LiveSite {
             sort: quality["level"],
             frameRate:
                 metadataFrameRate(quality) ??
-                _streamFrameRate(qualityData[quality["sdk_key"]]?["main"]),
-            data: urls,
+                _streamFrameRate(stream["main"]) ??
+                _streamFrameRate(stream["backup"]),
+            data: urls.toList(),
           );
           if (urls.isNotEmpty) {
             qualities.add(qualityItem);

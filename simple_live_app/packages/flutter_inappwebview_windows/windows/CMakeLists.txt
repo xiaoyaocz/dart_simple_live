@@ -98,6 +98,7 @@ list(APPEND PLUGIN_SOURCES
   "custom_platform_view/custom_platform_view.h"
   "custom_platform_view/texture_bridge.cc"
   "custom_platform_view/texture_bridge.h"
+  "custom_platform_view/capture_event_handler.h"
   "custom_platform_view/graphics_context.cc"
   "custom_platform_view/graphics_context.h"
   "custom_platform_view/util/direct3d11.interop.cc"

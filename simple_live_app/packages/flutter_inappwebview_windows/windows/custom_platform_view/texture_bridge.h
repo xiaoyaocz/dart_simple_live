@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <memory>
 #include <optional>
 
 #include "graphics_context.h"
@@ -57,6 +58,7 @@ namespace flutter_inappwebview_plugin
     SurfaceSizeChangedCallback surface_size_changed_;
     std::atomic<bool> needs_update_ = false;
     winrt::com_ptr<ID3D11Texture2D> last_frame_;
+    bool frame_pending_ = false;
     std::optional<std::chrono::high_resolution_clock::time_point>
       last_frame_timestamp_;
 
@@ -69,6 +71,8 @@ namespace flutter_inappwebview_plugin
 
     EventRegistrationToken on_closed_token_ = {};
     EventRegistrationToken on_frame_arrived_token_ = {};
+    std::shared_ptr<int> callback_lifetime_ = std::make_shared<int>(0);
+    std::shared_ptr<int> frame_callback_lifetime_;
 
     virtual void StopInternal();
     void OnFrameArrived();

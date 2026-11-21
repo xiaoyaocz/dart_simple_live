@@ -43,7 +43,7 @@ class _SlowDouyu extends DouyuSite {
   }
 }
 
-LiveRoomDetail _detail() => LiveRoomDetail(
+LiveRoomDetail _detail({Object data = ''}) => LiveRoomDetail(
       roomId: '1',
       title: '',
       cover: '',
@@ -52,7 +52,7 @@ LiveRoomDetail _detail() => LiveRoomDetail(
       online: 0,
       status: true,
       url: '',
-      data: '',
+      data: data,
     );
 
 HuyaLineModel _line({String anti = 'wsSecret=页面', bool hls = false}) =>
@@ -296,6 +296,49 @@ void main() {
       'https://example.com/线路一.flv',
       'https://example.com/线路二.flv'
     ]);
+  });
+  test('抖音优先同画质备用 FLV，过滤无效和重复线路', () async {
+    final site = DouyinSite();
+    final detail = _detail(data: {
+      'live_core_sdk_data': {
+        'pull_data': {
+          'options': {
+            'qualities': [
+              {'name': '原画', 'level': 2, 'sdk_key': 'origin'},
+              {'name': '高清', 'level': 1, 'sdk_key': 'hd'},
+            ],
+          },
+          'stream_data': jsonEncode({
+            'data': {
+              'origin': {
+                'main': {
+                  'flv': 'https://first/live.flv',
+                  'hls': 'https://first/live.m3u8',
+                },
+                'backup': {
+                  'flv': 'https://spare/live.flv',
+                  'hls': 'https://first/live.m3u8',
+                },
+              },
+              'hd': {
+                'main': {'flv': 'file:///invalid'},
+                'backup': {'hls': 'https://spare/hd.m3u8'},
+              },
+            },
+          }),
+        },
+      },
+    });
+    final qualities = await site.getPlayQualites(detail: detail);
+    expect(qualities.map((q) => q.quality), ['原画', '高清']);
+    expect(
+      (await site.getPlayUrls(detail: detail, quality: qualities.first)).urls,
+      ['https://first/live.flv', 'https://spare/live.flv', 'https://first/live.m3u8'],
+    );
+    expect(
+      (await site.getPlayUrls(detail: detail, quality: qualities.last)).urls,
+      ['https://spare/hd.m3u8'],
+    );
   });
   test('抖音读取地址不会修改画质原数据', () async {
     final original = [

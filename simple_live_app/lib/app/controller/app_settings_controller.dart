@@ -5,11 +5,15 @@ import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/player_output_policy.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AppSettingsController extends GetxController {
+  AppSettingsController({PlayerOutputPolicy? outputPolicy})
+      : outputPolicy = outputPolicy ?? PlayerOutputPolicy(Platform.operatingSystem);
+  final PlayerOutputPolicy outputPolicy;
   static AppSettingsController get instance =>
       Get.find<AppSettingsController>();
 
@@ -35,7 +39,7 @@ class AppSettingsController extends GetxController {
     danmuSpeed.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuSpeed, 10.0);
     danmuEnable.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kDanmuEnable, true);
+        .getValue(LocalStorageService.kDanmuEnable, false);
     danmuStrokeWidth.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
     danmuTopMargin.value = LocalStorageService.instance
@@ -46,7 +50,7 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kDanmuFontWeight, 4);
 
     preferNativeFrameRate.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kPreferNativeFrameRate, true);
+        .getValue(LocalStorageService.kPreferNativeFrameRate, false);
     hardwareDecode.value = LocalStorageService.instance
         .getValue(LocalStorageService.kHardwareDecode, true);
     chatTextSize.value = LocalStorageService.instance
@@ -61,9 +65,9 @@ class AppSettingsController extends GetxController {
     );
 
     qualityLevel.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kQualityLevel, 1);
+        .getValue(LocalStorageService.kQualityLevel, 2);
     qualityLevelCellular.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kQualityLevelCellular, 1);
+        .getValue(LocalStorageService.kQualityLevelCellular, 2);
 
     autoExitEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitEnable, false);
@@ -122,30 +126,20 @@ class AppSettingsController extends GetxController {
     customPlayerOutput.value = LocalStorageService.instance
         .getValue(LocalStorageService.kCustomPlayerOutput, false);
 
-    videoOutputDriver.value = LocalStorageService.instance.getValue(
+    videoOutputDriver.value = outputPolicy.videoSelection(LocalStorageService.instance.getValue(
       LocalStorageService.kVideoOutputDriver,
-      Platform.isAndroid ? "gpu" : "libmpv",
-    );
+      'auto',
+    ));
 
-    audioOutputDriver.value = LocalStorageService.instance.getValue(
+    audioOutputDriver.value = outputPolicy.audioSelection(LocalStorageService.instance.getValue(
       LocalStorageService.kAudioOutputDriver,
-      Platform.isAndroid
-          ? "audiotrack"
-          : Platform.isLinux
-              ? "pulse"
-              : Platform.isWindows
-                  ? "wasapi"
-                  : Platform.isIOS
-                      ? "audiounit"
-                      : Platform.isMacOS
-                          ? "coreaudio"
-                          : "sdl",
-    );
+      'auto',
+    ));
 
-    videoHardwareDecoder.value = LocalStorageService.instance.getValue(
+    videoHardwareDecoder.value = outputPolicy.decoderSelection(LocalStorageService.instance.getValue(
       LocalStorageService.kVideoHardwareDecoder,
-      Platform.isAndroid ? "auto-safe" : "auto",
-    );
+      'auto',
+    ));
 
     autoUpdateFollowEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoUpdateFollowEnable, true);
@@ -246,7 +240,7 @@ class AppSettingsController extends GetxController {
     }
   }
 
-  final preferNativeFrameRate = true.obs;
+  final preferNativeFrameRate = false.obs;
   void setPreferNativeFrameRate(bool value) {
     preferNativeFrameRate.value = value;
     LocalStorageService.instance.setValue(LocalStorageService.kPreferNativeFrameRate, value);
@@ -302,7 +296,7 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuOpacity, e);
   }
 
-  var danmuEnable = true.obs;
+  var danmuEnable = false.obs;
   void setDanmuEnable(bool e) {
     danmuEnable.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuEnable, e);
@@ -322,14 +316,14 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kDanmuFontWeight, e);
   }
 
-  var qualityLevel = 1.obs;
+  var qualityLevel = 2.obs;
   void setQualityLevel(int level) {
     qualityLevel.value = level;
     LocalStorageService.instance
         .setValue(LocalStorageService.kQualityLevel, level);
   }
 
-  var qualityLevelCellular = 1.obs;
+  var qualityLevelCellular = 2.obs;
   void setQualityLevelCellular(int level) {
     qualityLevelCellular.value = level;
     LocalStorageService.instance
@@ -495,25 +489,25 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kCustomPlayerOutput, e);
   }
 
-  var videoOutputDriver = "".obs;
+  var videoOutputDriver = 'auto'.obs;
   void setVideoOutputDriver(String e) {
-    videoOutputDriver.value = e;
+    videoOutputDriver.value = outputPolicy.videoSelection(e);
     LocalStorageService.instance
-        .setValue(LocalStorageService.kVideoOutputDriver, e);
+        .setValue(LocalStorageService.kVideoOutputDriver, videoOutputDriver.value);
   }
 
-  var audioOutputDriver = "".obs;
+  var audioOutputDriver = 'auto'.obs;
   void setAudioOutputDriver(String e) {
-    audioOutputDriver.value = e;
+    audioOutputDriver.value = outputPolicy.audioSelection(e);
     LocalStorageService.instance
-        .setValue(LocalStorageService.kAudioOutputDriver, e);
+        .setValue(LocalStorageService.kAudioOutputDriver, audioOutputDriver.value);
   }
 
-  var videoHardwareDecoder = "".obs;
+  var videoHardwareDecoder = 'auto'.obs;
   void setVideoHardwareDecoder(String e) {
-    videoHardwareDecoder.value = e;
+    videoHardwareDecoder.value = outputPolicy.decoderSelection(e);
     LocalStorageService.instance
-        .setValue(LocalStorageService.kVideoHardwareDecoder, e);
+        .setValue(LocalStorageService.kVideoHardwareDecoder, videoHardwareDecoder.value);
   }
 
   var autoUpdateFollowEnable = false.obs;

@@ -22,6 +22,9 @@ void main() {
   var baseWrites = 0;
   var corruptUpload = false;
   final uploadHeaders = <String?>[];
+  var slowSnapshots = false;
+  var activeSnapshots = 0;
+  var peakSnapshots = 0;
 
   setUp(() async {
     baseline = fixture.zip({
@@ -39,6 +42,9 @@ void main() {
     modified.clear();
     corruptUpload = false;
     uploadHeaders.clear();
+    slowSnapshots = false;
+    activeSnapshots = 0;
+    peakSnapshots = 0;
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((request) async {
       final name = request.uri.pathSegments.where((s) => s.isNotEmpty).last;
@@ -65,6 +71,19 @@ void main() {
                 : xml);
           }
         case 'GET':
+          if (slowSnapshots &&
+              name.startsWith('backup-add-') &&
+              name.endsWith('.zip')) {
+            activeSnapshots++;
+            if (activeSnapshots > peakSnapshots) {
+              peakSnapshots = activeSnapshots;
+            }
+            // Different completion order must not change conflict precedence.
+            final index = int.tryParse(name.substring(30, 31)) ?? 0;
+            await Future<void>.delayed(
+                Duration(milliseconds: 120 + (7 - index) * 5));
+            activeSnapshots--;
+          }
           final bytes = files[name];
           request.response.statusCode = bytes == null ? 404 : 200;
           if (weakEtag) request.response.headers.set('etag', 'W/"weak"');
@@ -92,6 +111,80 @@ void main() {
     client.client.c.close(force: true);
     await server.close(force: true);
   });
+
+  void seedSnapshots() {
+    for (var i = 0; i < 8; i++) {
+      final name =
+          'backup-add-2026110100000000000$i-11111111-1111-4111-8111-111111111111.zip';
+      files[name] = fixture.zip({
+        fixture.follows: fixture.data([fixture.user('huya_2', '顺序$i')])
+      });
+      files['$name.${sha256.convert(files[name]!)}.commit'] = Uint8List(0);
+    }
+  }
+
+  for (final upload in [false, true]) {
+    test('${upload ? "上传合并" : "下载"}有界并行读取增量，保持顺序和校验', () async {
+      seedSnapshots();
+      slowSnapshots = true;
+      final watch = Stopwatch()..start();
+      if (upload) {
+        await client.backup(fixture.zip({
+          fixture.follows: fixture.data([fixture.user('huya_3', '新上传')])
+        }));
+      } else {
+        final result = Uint8List.fromList(await client.recovery());
+        expect(fixture.rows(result, fixture.follows).last['userName'], '顺序0');
+      }
+      watch.stop();
+      // ignore: avoid_print
+      print('WebDAV ${upload ? "upload merge" : "download"}: '
+          '${watch.elapsedMilliseconds} ms, peak=$peakSnapshots, 8 delayed snapshots');
+      expect(peakSnapshots, inInclusiveRange(2, 4));
+      if (upload) {
+        slowSnapshots = false;
+        final result = Uint8List.fromList(await client.recovery());
+        expect(fixture.rows(result, fixture.follows).map((e) => e['id']),
+            ['huya_1', 'huya_2', 'huya_3']);
+        expect(fixture.rows(result, fixture.follows)[1]['userName'], '顺序0');
+      }
+    });
+  }
+
+  test('增量批次损坏时上传失败，不提交新备份', () async {
+    seedSnapshots();
+    slowSnapshots = true;
+    final first = files.keys.firstWhere((key) => key.startsWith('backup-add-'));
+    files[first]![0] ^= 1;
+    await expectLater(
+        client.backup(fixture.zip({
+          fixture.follows: fixture.data([fixture.user('huya_3', '新增')])
+        })),
+        throwsStateError);
+    expect(uploadHeaders, isEmpty);
+    expect(baseWrites, 0);
+    expect(files['backup.zip'], baseline);
+  });
+
+  for (final strong in [false, true]) {
+    test('${strong ? "强" : "无"}ETag相同内容重复上传不再PUT或新增全量增量', () async {
+      strongEtag = strong;
+      final incoming = fixture.zip({
+        fixture.follows: fixture.data([fixture.user('huya_2', '新增')])
+      });
+      await client.backup(incoming);
+      final count = files.length;
+      uploadHeaders.clear();
+      baseWrites = 0;
+      await client.backup(incoming);
+      expect(uploadHeaders, isEmpty);
+      expect(baseWrites, 0);
+      expect(files.length, count);
+      final result = Uint8List.fromList(await client.recovery());
+      expect(fixture.rows(result, fixture.follows).map((e) => e['id']),
+          ['huya_1', 'huya_2']);
+    });
+  }
 
   for (final weak in [false, true]) {
     test('${weak ? "弱" : "无"}ETag也能上传，旧备份不改，另一设备下载得到并集', () async {
@@ -146,7 +239,9 @@ void main() {
     listingStatus = 207;
     uploadStatus = 507;
     await expectLater(
-        client.backup(fixture.zip({fixture.follows: fixture.data([])})),
+        client.backup(fixture.zip({
+          fixture.follows: fixture.data([fixture.user('huya_2', '待上传')])
+        })),
         throwsA(anything));
     expect(files['backup.zip'], orderedEquals(baseline));
     expect(files.length, 1);

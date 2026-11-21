@@ -103,10 +103,27 @@ class _PlayableRoom extends LiveRoomController {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  setUp(() => Get.put<AppSettingsController>(_Settings()));
+  // These scenarios explicitly opt into FPS priority; new installs prefer the
+  // highest platform quality instead, while the opt-in feature remains intact.
+  setUp(() => Get.put<AppSettingsController>(
+      _Settings()..preferNativeFrameRate.value = true));
   tearDown(() => Get.reset());
+  test('highest quality preference without FPS priority keeps 4K on a 120Hz display',
+      () async {
+    AppSettingsController.instance.preferNativeFrameRate.value = false;
+    final room = _Room(_Source([
+      LivePlayQuality(quality: '4K', data: 0, frameRate: 60),
+      LivePlayQuality(quality: '1080P', data: 1, frameRate: 120),
+    ]));
+    room.detail.value = LiveRoomDetail(
+        roomId: '1', title: '', cover: '', userName: '', userAvatar: '',
+        online: 0, status: true, url: '');
+    room.getPlayQualites(0);
+    await Future<void>.delayed(Duration.zero);
+    expect(room.opened, 0);
+  });
   for (final hz in [60.0, 120.0]) {
-    test('actual room default chooses fitting native FPS on ${hz}Hz display',
+    test('explicit FPS priority chooses fitting native FPS on ${hz}Hz display',
         () async {
       final source = _Source([
         LivePlayQuality(quality: '4K', data: 0, frameRate: 60),

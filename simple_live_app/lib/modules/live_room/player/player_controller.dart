@@ -91,7 +91,8 @@ mixin PlayerMixin {
       if (player.platform is NativePlayer) {
         await (player.platform as dynamic).setProperty(
           'ao',
-          AppSettingsController.instance.audioOutputDriver.value,
+          AppSettingsController.instance.outputPolicy.audioOutput(
+              AppSettingsController.instance.audioOutputDriver.value),
         );
       }
     }
@@ -111,21 +112,13 @@ mixin PlayerMixin {
   /// 视频控制器
   late final videoController = VideoController(
     player,
-    configuration: AppSettingsController.instance.customPlayerOutput.value
-        ? VideoControllerConfiguration(
-            vo: AppSettingsController.instance.videoOutputDriver.value,
-            hwdec: AppSettingsController.instance.videoHardwareDecoder.value,
-          )
-        : AppSettingsController.instance.playerCompatMode.value
-            ? const VideoControllerConfiguration(
-                vo: 'mediacodec_embed',
-                hwdec: 'mediacodec',
-              )
-            : VideoControllerConfiguration(
-                enableHardwareAcceleration:
-                    AppSettingsController.instance.hardwareDecode.value,
-                androidAttachSurfaceAfterVideoParameters: false,
-              ),
+    configuration: AppSettingsController.instance.outputPolicy.videoConfiguration(
+      custom: AppSettingsController.instance.customPlayerOutput.value,
+      compatibility: AppSettingsController.instance.playerCompatMode.value,
+      hardwareDecode: AppSettingsController.instance.hardwareDecode.value,
+      videoOutput: AppSettingsController.instance.videoOutputDriver.value,
+      hardwareDecoder: AppSettingsController.instance.videoHardwareDecoder.value,
+    ),
   );
 }
 

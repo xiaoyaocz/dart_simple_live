@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:simple_live_app/services/room_emoticons.dart';
@@ -11,6 +12,7 @@ class DanmakuComposer extends StatefulWidget {
       required this.draft,
       required this.send,
       this.prepare,
+      this.status,
       this.emoticons,
       this.onEmoticonRoute,
       this.autofocus = false,
@@ -19,6 +21,7 @@ class DanmakuComposer extends StatefulWidget {
   final TextEditingController draft;
   final Future<bool> Function() send;
   final VoidCallback? prepare;
+  final ValueListenable<String>? status;
   final RoomEmoticons? Function()? emoticons;
   final ValueChanged<Route<String>>? onEmoticonRoute;
   final bool autofocus;
@@ -172,59 +175,74 @@ class _DanmakuComposerState extends State<DanmakuComposer> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(8),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(children: [
-            Expanded(
-                child: TextField(
-              controller: widget.draft, focusNode: focus,
-              autofocus: widget.autofocus,
-              textInputAction: TextInputAction.send,
-              // EditableText's default completion clears IME composing before
-              // onSubmitted. Preserve it so accepting a Chinese candidate cannot send.
-              onEditingComplete: () {},
-              onSubmitted: (_) => submit(),
-              decoration: const InputDecoration(
-                hintText: '与大家互动一下…',
-                border: InputBorder.none,
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-            )),
-            Builder(
-                builder: (anchorContext) => IconButton(
-                    tooltip: '表情',
-                    padding: EdgeInsets.zero,
-                    onPressed: () => openEmoticons(anchorContext),
-                    icon: const Icon(Icons.sentiment_satisfied_alt, size: 20))),
-            IconButton(
-              tooltip: '发送弹幕（Enter）',
-              onPressed: busy ? null : submit,
-              visualDensity: VisualDensity.compact,
-              icon: busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.arrow_circle_up, size: 24),
-            ),
-          ]),
+  Widget build(BuildContext context) {
+    final editor = Padding(
+      padding: const EdgeInsets.all(8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
         ),
-      );
+        child: Row(children: [
+          Expanded(
+              child: TextField(
+            controller: widget.draft, focusNode: focus,
+            autofocus: widget.autofocus,
+            textInputAction: TextInputAction.send,
+            // EditableText's default completion clears IME composing before
+            // onSubmitted. Preserve it so accepting a Chinese candidate cannot send.
+            onEditingComplete: () {},
+            onSubmitted: (_) => submit(),
+            decoration: const InputDecoration(
+              hintText: '与大家互动一下…',
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+          )),
+          Builder(
+              builder: (anchorContext) => IconButton(
+                  tooltip: '表情',
+                  padding: EdgeInsets.zero,
+                  onPressed: () => openEmoticons(anchorContext),
+                  icon: const Icon(Icons.sentiment_satisfied_alt, size: 20))),
+          IconButton(
+            tooltip: '发送弹幕（Enter）',
+            onPressed: busy ? null : submit,
+            visualDensity: VisualDensity.compact,
+            icon: busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.arrow_circle_up, size: 24),
+          ),
+        ]),
+      ),
+    );
+    final status = widget.status;
+    if (status == null) return editor;
+    // Keep the input compact; status remains available on hover and to screen
+    // readers, without a permanent text row or an empty space below the input.
+    return ValueListenableBuilder<String>(
+        valueListenable: status,
+        child: editor,
+        builder: (_, value, child) => Semantics(
+            liveRegion: true,
+            label: value,
+            child: Tooltip(message: value, child: child!)));
+  }
 }
 
 Future<void> showDanmakuComposer(
   BuildContext context, {
   required TextEditingController draft,
   required Future<bool> Function() send,
+  VoidCallback? prepare,
+  ValueListenable<String>? status,
   RoomEmoticons? Function()? emoticons,
   ValueChanged<Route<String>>? onEmoticonRoute,
-  void Function(Route<void>)? onRoute,
+  void Function(DialogRoute<void>)? onRoute,
 }) async {
   late final DialogRoute<void> route;
   route = DialogRoute<void>(
@@ -243,6 +261,8 @@ Future<void> showDanmakuComposer(
             child: DanmakuComposer(
                 draft: draft,
                 send: send,
+                prepare: prepare,
+                status: status,
                 emoticons: emoticons,
                 onEmoticonRoute: onEmoticonRoute,
                 autofocus: true,

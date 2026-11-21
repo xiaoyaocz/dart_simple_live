@@ -7,12 +7,14 @@ class SettingsMenu<T> extends StatelessWidget {
   final String? subtitle;
   final Map<T, String> valueMap;
   final T value;
+  final bool enabled;
 
   final Function(T)? onChanged;
   const SettingsMenu({
     required this.title,
     required this.value,
     required this.valueMap,
+    this.enabled = true,
     this.subtitle,
     this.onChanged,
     Key? key,
@@ -21,10 +23,13 @@ class SettingsMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      enabled: enabled,
       visualDensity: VisualDensity.compact,
       title: Text(
         title,
-        style: Theme.of(context).textTheme.bodyLarge,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: enabled ? null : Theme.of(context).disabledColor,
+            ),
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppStyle.radius8,
@@ -53,11 +58,12 @@ class SettingsMenu<T> extends StatelessWidget {
           ),
         ],
       ),
-      onTap: () => openMenu(context),
+      onTap: enabled ? () => openMenu(context) : null,
     );
   }
 
   void openMenu(BuildContext context) {
+    if (!enabled) return;
     showModalBottomSheet(
       context: context,
       showDragHandle: true,

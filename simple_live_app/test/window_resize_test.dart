@@ -5,6 +5,8 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
+import 'package:simple_live_app/services/window_appearance_controller.dart';
+import 'package:simple_live_app/widgets/live_message_content.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class _Settings extends AppSettingsController {
@@ -79,6 +81,87 @@ class _Page extends LiveRoomPage {
 void main() {
   setUp(() => Get.put<AppSettingsController>(_Settings()));
   tearDown(() => Get.reset());
+
+  testWidgets('Windows 五种浅色材质下聊天文字对比度稳定', (tester) async {
+    final room = _Room();
+    addTearDown(room.scrollController.dispose);
+    final page = _Page(room);
+    final settings = Get.find<AppSettingsController>();
+    settings.chatTextSize.value = 18;
+    settings.chatBubbleStyle.value = true;
+    final appearance = WindowAppearanceController(isWindows: true);
+    final theme = ThemeData(platform: TargetPlatform.windows);
+    final systemMessage = LiveMessage(
+      type: LiveMessageType.chat,
+      userName: 'LiveSysMessage',
+      message: '弹幕已连接',
+      color: LiveMessageColor.white,
+    );
+    final chatMessage = LiveMessage(
+      type: LiveMessageType.chat,
+      userName: '观众',
+      message: '多行弹幕正文',
+      color: LiveMessageColor.white,
+    );
+    final chatList = Builder(
+      builder: (context) => Column(
+        children: [
+          page.buildMessageItem(context, systemMessage),
+          page.buildMessageItem(context, chatMessage),
+        ],
+      ),
+    );
+    double contrast(Color foreground, Color background) =>
+        (background.computeLuminance() + .05) /
+        (foreground.computeLuminance() + .05);
+
+    for (final material in WindowMaterial.values) {
+      appearance.effective.value = material;
+      await tester.pumpWidget(MaterialApp(
+        theme: appearance.theme(theme),
+        home: ColoredBox(
+          color: appearance.tint(theme),
+          child: page.buildOfficialChatArea(chatList),
+        ),
+      ));
+      final panel = tester.widget<ColoredBox>(
+        find
+            .ancestor(
+                of: find.byWidget(chatList), matching: find.byType(ColoredBox))
+            .first,
+      );
+      final content = find.byType(LiveMessageContent);
+      final bubble = tester.widget<Container>(
+        find.ancestor(of: content, matching: find.byType(Container)).first,
+      );
+      final bubbleColor = (bubble.decoration! as BoxDecoration).color!;
+      final rich = tester.widget<Text>(
+        find.descendant(of: content, matching: find.byType(Text)),
+      );
+      final span = rich.textSpan! as TextSpan;
+      final nickname = span.style!;
+      final body = (span.children!.single as TextSpan).style!;
+      final system = tester.widget<Text>(find.text('弹幕已连接')).style!;
+      expect(panel.color.a, 1);
+      expect(bubbleColor.a, 1);
+      for (final background in [panel.color, bubbleColor]) {
+        expect(
+            contrast(nickname.color!, background), greaterThanOrEqualTo(4.5));
+        expect(contrast(body.color!, background), greaterThanOrEqualTo(4.5));
+      }
+      expect(contrast(system.color!, panel.color), greaterThanOrEqualTo(4.5));
+      expect(nickname.fontSize, 18);
+      expect(nickname.height, greaterThan(1.2));
+    }
+    settings.chatBubbleStyle.value = false;
+    await tester.pump();
+    expect(
+        find.ancestor(
+          of: find.byType(LiveMessageContent),
+          matching: find.byType(Container),
+        ),
+        findsNothing);
+  });
 
   Future<_Page> mount(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;

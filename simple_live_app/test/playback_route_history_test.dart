@@ -55,4 +55,14 @@ void main() {
     expect(history.select('huya', '原画', [urls[0]]), 0);
     expect(history.select('huya', '原画', []), -1);
   });
+  test('持续缓冲降低线路优先级，短抖动忽略，重新起播不抹掉缓冲历史', () {
+    final history = PlaybackRouteHistory();
+    history.success('douyin', '原画', urls[0], const Duration(milliseconds: 500));
+    history.success('douyin', '原画', urls[1], const Duration(milliseconds: 900));
+    history.rebuffer('douyin', '原画', urls[0], const Duration(milliseconds: 800));
+    expect(history.select('douyin', '原画', urls), 0);
+    history.rebuffer('douyin', '原画', urls[0], const Duration(seconds: 2));
+    history.success('douyin', '原画', urls[0], const Duration(milliseconds: 450));
+    expect(history.select('douyin', '原画', urls), 1);
+  });
 }

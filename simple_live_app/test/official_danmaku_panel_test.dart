@@ -383,7 +383,9 @@ void main() {
       expect(platform.views,isEmpty);
       await room.openDanmakuComposer();
       await tester.pumpAndSettle();
-      expect(tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,isTrue);
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(tester.widget<TextField>(find.descendant(of: find.byType(Dialog),
+          matching: find.byType(TextField))).focusNode!.hasFocus,isTrue);
       await tester.pumpWidget(const SizedBox());
       // Keyboard focus now starts read-only sender warmup. This fixture has no
       // native CookieManager reply; drain its bounded credential-read timeout.
@@ -473,9 +475,9 @@ void main() {
     room.officialEditorExpanded.value = false;
     await room.openDanmakuComposer();
     await tester.pumpAndSettle();
-    expect(find.byType(Dialog), findsNothing);
+    expect(find.byType(Dialog), findsOneWidget);
     expect(platform.views.single, same(original));
-    expect(find.text('保留原生草稿'), findsOneWidget);
+    expect(find.text('保留原生草稿'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
@@ -569,7 +571,7 @@ void main() {
       await room.openDanmakuComposer();await tester.pumpAndSettle();
       expect(platform.views.single,same(host));
       expect(tester.getRect(find.byKey(key)),before);
-      final field=tester.widget<TextField>(find.descendant(of:find.byType(DanmakuComposer),matching:find.byType(TextField)));
+      final field=tester.widget<TextField>(find.descendant(of:find.byType(Dialog),matching:find.byType(TextField)));
       expect(field.focusNode!.hasFocus,isTrue);
       final hidden=tester.widget<Opacity>(find.ancestor(of:find.byType(OfficialDanmakuPanel),matching:find.byType(Opacity)).first);
       expect(hidden.opacity,0);

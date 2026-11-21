@@ -16,11 +16,10 @@ namespace flutter_inappwebview_plugin
       kFlutterDesktopPixelFormatNone;  // no format required for DXGI surfaces
   }
 
-  void TextureBridgeGpu::ProcessFrame(
-    winrt::com_ptr<ID3D11Texture2D> src_texture)
+  bool TextureBridgeGpu::ProcessFrame(ID3D11Texture2D* src_texture)
   {
     if (!is_running_ || !graphics_context_ || !graphics_context_->d3d_device_context()) {
-      return;
+      return false;
     }
     D3D11_TEXTURE2D_DESC desc;
     src_texture->GetDesc(&desc);
@@ -28,18 +27,19 @@ namespace flutter_inappwebview_plugin
     const auto width = desc.Width;
     const auto height = desc.Height;
     if (width == 0 || height == 0) {
-      return;
+      return false;
     }
 
     EnsureSurface(width, height);
     if (!surface_) {
-      return;
+      return false;
     }
 
     auto device_context = graphics_context_->d3d_device_context();
 
-    device_context->CopyResource(surface_.get(), src_texture.get());
+    device_context->CopyResource(surface_.get(), src_texture);
     device_context->Flush();
+    return true;
   }
 
   void TextureBridgeGpu::EnsureSurface(uint32_t width, uint32_t height)
@@ -103,8 +103,9 @@ namespace flutter_inappwebview_plugin
       return nullptr;
     }
 
-    if (last_frame_) {
-      ProcessFrame(last_frame_);
+    // Flutter can request the same captured frame again during composition.
+    if (frame_pending_ && ProcessFrame(last_frame_.get())) {
+      frame_pending_ = false;
     }
 
     if (!surface_ || !surface_descriptor_.handle) {

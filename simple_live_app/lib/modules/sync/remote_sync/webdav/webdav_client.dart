@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
@@ -63,6 +64,11 @@ class DAVClient {
       final cloud = await _mergeIncrementals(
           absent ? Archive() : decodeWebDavBackup(response.data!));
       final merged = mergeWebDavBackups(cloud, local);
+      // Compare decoded entries, not ZIP metadata/compression timestamps. Only
+      // skip after every committed contribution has been fetched and verified.
+      // In particular, do not create another full snapshot on no-ETag servers
+      // when this device has nothing new to contribute.
+      if (!absent && _sameBackupContents(cloud, merged)) return true;
       if (!absent &&
           (etag == null || !etag.startsWith('"') || !etag.endsWith('"'))) {
         // Many WebDAV services omit GET ETags or expose only weak validators.
@@ -111,6 +117,19 @@ class DAVClient {
   static final _incrementalReceipt = RegExp(
       r'^(backup-add-\d{20}-[0-9a-f-]{36}\.zip)\.([0-9a-f]{64})\.commit$');
 
+  bool _sameBackupContents(Archive first, Archive second) {
+    if (first.length != second.length) return false;
+    for (final file in first) {
+      final other = second.findFile(file.name);
+      if (other == null ||
+          file.isFile != other.isFile ||
+          !const ListEquality<int>().equals(file.content, other.content)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<Archive> _mergeIncrementals(Archive baseline) async {
     List<File> entries;
     try {
@@ -133,19 +152,26 @@ class DAVClient {
       // non-transitive comparator and different devices see the same order.
       ..sort((a, b) => a.name!.compareTo(b.name!));
     var merged = baseline;
-    // O(total uploaded backup bytes), sequential to bound in-flight memory.
+    // Bound downloads to four ZIPs per batch instead of serial network RTTs.
+    // Future.wait preserves input order, not completion order; conflicts must
+    // still be resolved using the immutable sorted receipt names.
     // Keep contributions: deleting/compacting them without server CAS would
     // reintroduce the same lost-update problem on no-ETag servers.
-    for (final snapshot in snapshots) {
-      final match = _incrementalReceipt.firstMatch(snapshot.name!)!;
-      final path = '$root/${match.group(1)}';
-      final response = await _readFile(path);
-      final expected = match.group(2)!;
-      if (response.statusCode != 200 ||
-          sha256.convert(response.data!).toString() != expected) {
-        throw StateError('云端增量备份发生变化，请重试：${snapshot.name}');
+    const concurrency = 4;
+    for (var start = 0; start < snapshots.length; start += concurrency) {
+      final batch = snapshots.skip(start).take(concurrency);
+      final archives = await Future.wait(batch.map((snapshot) async {
+        final match = _incrementalReceipt.firstMatch(snapshot.name!)!;
+        final response = await _readFile('$root/${match.group(1)}');
+        if (response.statusCode != 200 ||
+            sha256.convert(response.data!).toString() != match.group(2)) {
+          throw StateError('云端增量备份发生变化，请重试：${snapshot.name}');
+        }
+        return decodeWebDavBackup(response.data!);
+      }));
+      for (final archive in archives) {
+        merged = mergeWebDavBackups(merged, archive);
       }
-      merged = mergeWebDavBackups(merged, decodeWebDavBackup(response.data!));
     }
     return merged;
   }

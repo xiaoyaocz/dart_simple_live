@@ -7,6 +7,7 @@
 
 #include "direct_network.h"
 #include "flutter_window.h"
+#include "native_crash_recorder.h"
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -42,6 +43,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
+  // Diagnostic failure must not prevent playback or change exception handling.
+  StartNativeCrashRecorder();
 
   flutter::DartProject project(L"data");
 

@@ -1,4 +1,5 @@
 #include "texture_bridge.h"
+#include "capture_event_handler.h"
 
 #include <windows.foundation.h>
 
@@ -22,10 +23,10 @@ namespace flutter_inappwebview_plugin
     assert(capture_item_);
 
     capture_item_->add_Closed(
-      Microsoft::WRL::Callback<ABI::Windows::Foundation::ITypedEventHandler<
+      MakeCaptureEventHandler<ABI::Windows::Foundation::ITypedEventHandler<
       ABI::Windows::Graphics::Capture::GraphicsCaptureItem*,
       IInspectable*>>(
-        [](ABI::Windows::Graphics::Capture::IGraphicsCaptureItem* item,
+        callback_lifetime_, [](ABI::Windows::Graphics::Capture::IGraphicsCaptureItem* item,
           IInspectable* args) -> HRESULT
         {
           std::cerr << "Capture item was closed." << std::endl;
@@ -37,6 +38,7 @@ namespace flutter_inappwebview_plugin
 
   TextureBridge::~TextureBridge()
   {
+    callback_lifetime_.reset();
     const std::lock_guard<std::mutex> lock(mutex_);
     StopInternal();
     if (capture_item_) {
@@ -67,11 +69,12 @@ namespace flutter_inappwebview_plugin
       return false;
     }
 
-    frame_pool_->add_FrameArrived(
-      Microsoft::WRL::Callback<ABI::Windows::Foundation::ITypedEventHandler<
+    frame_callback_lifetime_ = std::make_shared<int>(0);
+    auto registration_hr = frame_pool_->add_FrameArrived(
+      MakeCaptureEventHandler<ABI::Windows::Foundation::ITypedEventHandler<
       ABI::Windows::Graphics::Capture::Direct3D11CaptureFramePool*,
       IInspectable*>>(
-        [this](ABI::Windows::Graphics::Capture::IDirect3D11CaptureFramePool*
+        frame_callback_lifetime_, [this](ABI::Windows::Graphics::Capture::IDirect3D11CaptureFramePool*
           pool,
           IInspectable* args) -> HRESULT
         {
@@ -81,9 +84,15 @@ namespace flutter_inappwebview_plugin
       .Get(),
           &on_frame_arrived_token_);
 
+    if (FAILED(registration_hr)) {
+      StopInternal();
+      return false;
+    }
+
     if (FAILED(frame_pool_->CreateCaptureSession(capture_item_.get(),
       capture_session_.put()))) {
       std::cerr << "Creating capture session failed." << std::endl;
+      StopInternal();
       return false;
     }
 
@@ -92,6 +101,7 @@ namespace flutter_inappwebview_plugin
       return true;
     }
 
+    StopInternal();
     return false;
   }
 
@@ -103,22 +113,31 @@ namespace flutter_inappwebview_plugin
 
   void TextureBridge::StopInternal()
   {
-    if (is_running_) {
-      is_running_ = false;
-      if (frame_pool_ && on_frame_arrived_token_.value != 0) {
-        frame_pool_->remove_FrameArrived(on_frame_arrived_token_);
-        on_frame_arrived_token_.value = 0;
+    // A failed Start can already own a registered handler, pool or session.
+    // Cleanup must not depend on StartCapture having succeeded.
+    is_running_ = false;
+    frame_callback_lifetime_.reset();
+    if (frame_pool_ && on_frame_arrived_token_.value != 0) {
+      frame_pool_->remove_FrameArrived(on_frame_arrived_token_);
+      on_frame_arrived_token_.value = 0;
+    }
+    if (capture_session_) {
+      auto closable =
+        capture_session_.try_as<ABI::Windows::Foundation::IClosable>();
+      if (closable) {
+        closable->Close();
       }
-      if (capture_session_) {
-        auto closable =
-          capture_session_.try_as<ABI::Windows::Foundation::IClosable>();
-        if (closable) {
-          closable->Close();
-        }
-        capture_session_ = nullptr;
-      }
+      capture_session_ = nullptr;
+    }
+    if (frame_pool_) {
+      auto closable = frame_pool_.try_as<ABI::Windows::Foundation::IClosable>();
+      if (closable) closable->Close();
       frame_pool_ = nullptr;
     }
+    last_frame_ = nullptr;
+    frame_pending_ = false;
+    needs_update_ = false;
+    last_frame_timestamp_.reset();
   }
 
   void TextureBridge::OnFrameArrived()
@@ -141,9 +160,13 @@ namespace flutter_inappwebview_plugin
           frame_surface;
 
         if (SUCCEEDED(frame->get_Surface(frame_surface.put()))) {
-          last_frame_ =
+          auto texture =
             TryGetDXGIInterfaceFromObject<ID3D11Texture2D>(frame_surface);
-          has_frame = !ShouldDropFrame();
+          if (texture && !ShouldDropFrame()) {
+            last_frame_ = std::move(texture);
+            frame_pending_ = true;
+            has_frame = true;
+          }
         }
       }
 

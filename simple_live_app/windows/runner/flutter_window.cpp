@@ -123,6 +123,9 @@ bool FlutterWindow::OnCreate() {
           result->NotImplemented();
         }
       });
+  windows_share_bridge_ = std::make_unique<WindowsShareBridge>();
+  windows_share_bridge_->Attach(flutter_controller_->engine()->messenger(),
+                                GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
   EnsureTrayIcon();
 
@@ -142,6 +145,10 @@ void FlutterWindow::OnDestroy() {
   refresh_channel_.reset();
   appearance_pending_ = false;
   RemoveTrayIcon();
+  if (windows_share_bridge_) {
+    windows_share_bridge_->Detach();
+    windows_share_bridge_.reset();
+  }
   window_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;

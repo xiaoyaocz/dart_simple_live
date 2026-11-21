@@ -48,7 +48,10 @@ class _ApiDanmakuPanelState extends State<ApiDanmakuPanel> {
   late final SearchDanmakuCredentials credentials;
   late final DanmakuSender sender;
   OfficialComposerTransport? _officialTransport;
-  String message = '使用搜索网页的登录态发送';
+  final _message = ValueNotifier('使用搜索网页的登录态发送');
+  String get message => _message.value;
+  set message(String value) => _message.value = value;
+  DialogRoute<void>? _floatingRoute;
   bool sending = false;
   @override
   void initState() {
@@ -86,6 +89,34 @@ class _ApiDanmakuPanelState extends State<ApiDanmakuPanel> {
           _ => throw ArgumentError.value(
               widget.siteId, 'siteId', 'No API adapter'),
         };
+    if (widget.focusRequest > 0) _requestFloatingComposer();
+  }
+
+  @override
+  void didUpdateWidget(covariant ApiDanmakuPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusRequest > oldWidget.focusRequest) _requestFloatingComposer();
+  }
+
+  void _requestFloatingComposer() {
+    // Open after the room/Obx build, and only for the current room route.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.isCurrent?.call() == false ||
+          _floatingRoute != null || ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      unawaited(showDanmakuComposer(context,
+          draft: draft, send: send, prepare: sender.prepare,
+          emoticons: widget.emoticons, status: _message,
+          onRoute: (route) {
+            _floatingRoute = route;
+            // Keep the binding until the closing transition is disposed, not
+            // just until Navigator.pop completes its result future.
+            unawaited(route.completed.then((_) {
+              if (identical(_floatingRoute, route)) _floatingRoute = null;
+            }));
+          }));
+    });
   }
 
   Future<bool> send() async {
@@ -100,8 +131,9 @@ class _ApiDanmakuPanelState extends State<ApiDanmakuPanel> {
       final result = await sender.send(wireText);
       if (!mounted || widget.isCurrent?.call() == false) return false;
       setState(() => message = result.message);
-      if (result.sent && (result.userId != null || result.userName != null))
+      if (result.sent && (result.userId != null || result.userName != null)) {
         widget.onIdentityDetected?.call(result.userId, result.userName);
+      }
       if (result.status == 'login') widget.onIdentityDetected?.call(null, null);
       if (result.sent) widget.onMessageSent?.call(text);
       return result.sent;
@@ -117,7 +149,21 @@ class _ApiDanmakuPanelState extends State<ApiDanmakuPanel> {
   void dispose() {
     unawaited(sender.dispose());
     unawaited(credentials.dispose());
-    draft.dispose();
+    void releaseDraft() {
+      draft.dispose();
+      _message.dispose();
+    }
+    final route = _floatingRoute;
+    if (route == null) {
+      releaseDraft();
+    } else {
+      // The dialog lives on Navigator, outside this panel's widget subtree.
+      // Dismiss it on room change without mutating Navigator during teardown.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (route.isActive) route.navigator?.removeRoute(route);
+      });
+      unawaited(route.completed.then((_) => releaseDraft()));
+    }
     super.dispose();
   }
 
@@ -159,28 +205,12 @@ class _ApiDanmakuPanelState extends State<ApiDanmakuPanel> {
                                   }
                                 },
                               )))))),
-        Column(mainAxisSize: MainAxisSize.min, children: [
           DanmakuComposer(
               draft: draft,
               send: send,
               emoticons: widget.emoticons,
               prepare: sender.prepare,
-              autofocus: widget.focusRequest > 0,
-              focusRequest: widget.focusRequest),
-          SizedBox(
-              height: 24,
-              child: Semantics(
-                  liveRegion: true,
-                  child: Tooltip(
-                      message: message,
-                      child: Text(message,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant))))),
-        ])
+              status: _message,
+          ),
       ]);
 }

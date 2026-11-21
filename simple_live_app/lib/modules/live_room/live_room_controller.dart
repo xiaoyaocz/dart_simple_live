@@ -13,6 +13,7 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -35,6 +36,9 @@ import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
+import 'package:simple_live_app/services/windows_share_service.dart';
+import 'playback_session.dart';
+import 'room_share_dialog.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -96,7 +100,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void playbackSample(PlaybackSnapshot sample) {
     if (!_nativeAutoSelection || !AppSettingsController.instance.preferNativeFrameRate.value ||
         _roomClosed || isBackground ||
-        !hasPlayed.value || _recoveringPlayback || !player.state.playing) {
+        !hasPlayed.value || _playback.recovery != null || !player.state.playing) {
       _nativeDropGuard.reset();
       return;
     }
@@ -189,13 +193,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   bool _volumeSliderOpen = false;
   static const _volumeSliderTag = 'simple-live-volume-slider';
   int _roomRequest = 0;
-  int _playRequest = 0;
-  Future<void> _playerOperation = Future<void>.value();
-  (int, int, String, Map<String, String>?)? _pendingLineOpen;
-  Future<void>? _pendingLineOpenFuture;
-  Timer? _bufferingTimer;
-  Timer? _playbackFailureTimer;
-  bool _recoveringPlayback = false;
+  final _playback = PlaybackSession();
   bool _roomClosed = false;
   bool similarGameRoomsOpen = false;
   Future<bool>? _offlineCheck;
@@ -210,7 +208,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   bool _isCurrentRoomRequest(int request) =>
       !_roomClosed && request == _roomRequest;
   bool _isCurrentRequest(int request) =>
-      !_roomClosed && request == _playRequest;
+      !_roomClosed && request == _playback.generation;
 
   Future<T> _retryPlayRequest<T>(
       Future<T> Function() request, int generation) async {
@@ -264,7 +262,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void _setRoomOffline(LiveRoomDetail room) {
     _lineWatch.stop();
     final request =
-        ++_playRequest; // All old quality/URL/player results are stale.
+        _playback.advance(); // All old quality/URL/player results are stale.
     detail.value = room;
     roomOffline.value = true;
     liveStatus.value = false;
@@ -280,10 +278,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentLineIndex = -1;
     currentQualityInfo.value = '';
     currentLineInfo.value = '';
-    _bufferingTimer?.cancel();
-    _bufferingTimer = null;
-    _playbackFailureTimer?.cancel();
-    _playbackFailureTimer = null;
     _liveDurationTimer?.cancel();
     liveDuration.value = '00:00:00';
     _stopDanmaku();
@@ -291,16 +285,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     SmartDialog.dismiss(status: SmartStatus.loading);
     // Show offline immediately. A previous native open/stop may still be pending;
     // serialize cleanup behind it without holding the UI/loading dialog hostage.
-    _playerOperation = _playerOperation.catchError((Object e) {
-      Log.logPrint(e);
-    }).then((_) async {
+    unawaited(_playback.enqueue(() async {
       if (!_isCurrentRequest(request) || !roomOffline.value) return;
       try {
         await player.stop();
       } catch (e) {
         Log.logPrint(e);
       }
-    });
+    }));
   }
 
   @override
@@ -543,11 +535,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void loadData({bool reusePrefetch = false}) async {
     resetFollowShortcut();
     if (_roomClosed) return;
-    _bufferingTimer?.cancel();
-    _bufferingTimer = null;
-    _playbackFailureTimer?.cancel();
     final request = ++_roomRequest;
-    final playRequest = ++_playRequest;
+    final playRequest = _playback.advance();
     _stopDanmaku();
     liveDanmaku = site.liveSite.getDanmaku();
     _openWatch
@@ -741,7 +730,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   void getPlayUrl({int? request}) async {
     if (roomOffline.value) return;
-    final currentRequest = request ?? ++_playRequest;
+    final currentRequest = request ?? _playback.advance();
     if (!_isCurrentRequest(currentRequest) ||
         currentQuality < 0 ||
         currentQuality >= qualites.length ||
@@ -808,7 +797,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void changePlayLine(int index) {
     if (roomOffline.value) return;
     if (index < 0 || index >= playUrls.length) return;
-    _bufferingTimer?.cancel();
+    _playback.bufferingTimer?.cancel();
     currentLineIndex = index;
     //重置错误次数
     mediaErrorRetryCount = 0;
@@ -824,32 +813,29 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   Future<void> setPlayer() async {
     if (roomOffline.value) return;
     if (currentLineIndex < 0 || currentLineIndex >= playUrls.length) return;
-    _bufferingTimer?.cancel();
-    _bufferingTimer = null;
-    _playbackFailureTimer?.cancel();
+    _playback.cancelWatchdogs();
     currentLineInfo.value = "线路${currentLineIndex + 1}";
     errorMsg.value = "";
-    final request = _playRequest;
+    final request = _playback.generation;
     final lineIndex = currentLineIndex;
     final mediaUrl = playUrls[lineIndex];
     final headers = playHeaders;
     final key = (request, lineIndex, mediaUrl, headers);
-    if (_pendingLineOpen == key && _pendingLineOpenFuture != null) {
-      await _pendingLineOpenFuture;
-      return;
-    }
-    final operation = _playerOperation.then((_) async {
-      if (!_isCurrentRequest(request) || currentLineIndex != lineIndex) return;
+    await _playback.open(key, (isLatest) async {
+      bool isCurrent() =>
+          isLatest() && _isCurrentRequest(request) && currentLineIndex == lineIndex;
+      if (!isCurrent()) return;
       try {
         await initializePlayer();
-        if (!_isCurrentRequest(request) || currentLineIndex != lineIndex) return;
+        if (!isCurrent()) return;
         var url = mediaUrl;
         if (AppSettingsController.instance.playerForceHttps.value) {
           url = url.replaceAll('http://', 'https://');
         }
         await configurePlaybackProxy(url);
-        if (!_isCurrentRequest(request) || currentLineIndex != lineIndex) return;
+        if (!isCurrent()) return;
         hasPlayed.value = false;
+        _douyinRecoveryProgress = null;
         playbackDiagnostics?.reset();
         _nativeDropGuard.reset();
         _openingRoute = (site.id, _routeQuality, mediaUrl);
@@ -857,24 +843,13 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         _markOpen('提交开流');
         await player.open(Media(url, httpHeaders: headers));
       } catch (e) {
-        if (!_isCurrentRequest(request)) return;
+        if (!isCurrent()) return;
         if (await _confirmRoomOffline(request)) return;
-        if (!_isCurrentRequest(request)) return;
+        if (!isCurrent()) return;
         Log.logPrint(e);
         errorMsg.value = "播放失败";
       }
     });
-    _playerOperation = operation;
-    _pendingLineOpen = key;
-    _pendingLineOpenFuture = operation;
-    try {
-      await operation;
-    } finally {
-      if (identical(_pendingLineOpenFuture, operation)) {
-        _pendingLineOpen = null;
-        _pendingLineOpenFuture = null;
-      }
-    }
   }
 
   @override
@@ -883,6 +858,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   int mediaErrorRetryCount = 0;
+  Duration? _douyinRecoveryProgress;
   @override
   void mediaError(String error) {
     _checkPlaybackFailure(error: error);
@@ -892,17 +868,17 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (_roomClosed ||
         roomOffline.value ||
         isBackground ||
-        _recoveringPlayback ||
+        _playback.recovery != null ||
         playUrls.isEmpty ||
-        (_playbackFailureTimer?.isActive ?? false)) {
+        (_playback.failureTimer?.isActive ?? false)) {
       return;
     }
-    final request = _playRequest;
+    final request = _playback.generation;
     final line = currentLineIndex;
     final position = player.state.position;
     // SDK 的错误流包含可恢复的解码和网络日志，不能每条日志都清空视频重连。
-    _playbackFailureTimer = Timer(const Duration(seconds: 3), () {
-      _playbackFailureTimer = null;
+    _playback.failureTimer = Timer(const Duration(seconds: 3), () {
+      _playback.failureTimer = null;
       if (!_isCurrentRequest(request) || currentLineIndex != line || isBackground) {
         return;
       }
@@ -918,22 +894,38 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   Future<void> _recoverPlayback({String? error, bool startup = false}) async {
-    final request = _playRequest;
-    if (_recoveringPlayback || !_isCurrentRequest(request) || playUrls.isEmpty) return;
+    final request = _playback.generation;
+    if (_playback.recovery != null || !_isCurrentRequest(request) || playUrls.isEmpty) return;
     final originalLine = currentLineIndex;
     final position = player.state.position;
+    final openRevision = _playback.openRevision;
     bool stillStalled() {
       if (!_isCurrentRequest(request) || isBackground ||
-          currentLineIndex != originalLine) {
+          currentLineIndex != originalLine ||
+          openRevision != _playback.openRevision) {
         return false;
       }
       final state = player.state;
       return state.position <= position &&
           !(state.playing && !state.buffering && !state.completed);
     }
-    _recoveringPlayback = true;
-    _bufferingTimer?.cancel();
+    final recovery = _playback.recovery = Object();
+    _playback.bufferingTimer?.cancel();
     try {
+      if (site.id == Constant.kDouyin && stillStalled()) {
+        if (currentLineIndex + 1 < playUrls.length) {
+          PlaybackRouteHistory.instance.failure(site.id, _routeQuality, playUrls[originalLine]);
+          currentLineIndex++;
+          await setPlayer();
+          return;
+        }
+        if (mediaErrorRetryCount == 0 &&
+            currentQuality >= 0 && currentQuality < qualites.length &&
+            detail.value != null) {
+          await _recoverDouyinRoutes(stillStalled);
+          return;
+        }
+      }
       if (await _confirmRoomOffline(request)) return;
       // 网络核验期间可能已经自然恢复或被手动切线，不再打断新连接。
       if (!stillStalled()) return;
@@ -993,7 +985,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         SmartDialog.showToast("播放失败:$error");
       }
     } finally {
-      _recoveringPlayback = false;
+      if (identical(_playback.recovery, recovery)) _playback.recovery = null;
       // 核验期间进度恢复但仍处于缓冲时，继续观察，不能丢失看门狗。
       if (_isCurrentRequest(request) && !isBackground &&
           currentLineIndex == originalLine && player.state.buffering &&
@@ -1003,9 +995,69 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _recoverDouyinRoutes(bool Function() stillStalled) async {
+    final source = site.liveSite;
+    final qualityIndex = currentQuality;
+    final quality = qualites[qualityIndex];
+    final args = detail.value?.danmakuData;
+    final id = args is DouyinDanmakuArgs ? args.webRid : roomId;
+    PlaybackRouteHistory.instance.failure(site.id, quality.quality, playUrls[currentLineIndex]);
+    try {
+      final freshRoom = await source.refreshRoomDetail(roomId: id)
+          .timeout(const Duration(seconds: 3));
+      if (!stillStalled()) return;
+      if (!freshRoom.status && !freshRoom.isRecord) {
+        _setRoomOffline(freshRoom);
+        return;
+      }
+      final qualities = await source.getPlayQualites(detail: freshRoom);
+      if (!stillStalled()) return;
+      for (final freshQuality in qualities) {
+        if (freshQuality.sort != quality.sort ||
+            freshQuality.quality != quality.quality) continue;
+        var fresh = await source.getPlayUrls(detail: freshRoom, quality: freshQuality);
+        if (!stillStalled()) return;
+        if (_nativeAutoSelection && AppSettingsController.instance.preferNativeFrameRate.value) {
+          fresh = await preferNativeHls(fresh,
+              displayHz: nativeDisplayHz, maxFrameRate: _nativeFpsCeiling);
+          if (!stillStalled()) return;
+        }
+        final newLine = fresh.urls.indexWhere((url) => !playUrls.contains(url));
+        if (newLine >= 0) {
+          final urls = [...fresh.urls];
+          urls.insert(0, urls.removeAt(newLine));
+          qualites[qualityIndex] = freshQuality;
+          playUrls.value = urls;
+          playHeaders = fresh.headers;
+          _nativeVariants = fresh.nativeVariants;
+          final variant = fresh.selectedNativeVariant;
+          currentQualityInfo.value = variant == null ? freshQuality.quality
+              : 'HLS · ${variant.frameRate.toStringAsFixed(2)}fps（清单标称）';
+          currentLineIndex = 0;
+          mediaErrorRetryCount++;
+          await setPlayer();
+          return;
+        }
+        break;
+      }
+    } catch (e) {
+      Log.d('抖音刷新播放地址失败：${e.runtimeType}');
+    }
+    if (!stillStalled()) return;
+    mediaErrorRetryCount++;
+    await setPlayer();
+  }
+
   @override
   void mediaPosition(Duration position) {
     super.mediaPosition(position);
+    if (site.id == Constant.kDouyin && mediaErrorRetryCount > 0 &&
+        position > Duration.zero && !player.state.buffering) {
+      final start = _douyinRecoveryProgress ??= position;
+      if (position - start >= const Duration(seconds: 10)) {
+        mediaErrorRetryCount = 0;
+      }
+    }
     if (position > Duration.zero && _lineWatch.isRunning && !_roomClosed &&
         !roomOffline.value && !isBackground) {
       _lineWatch.stop();
@@ -1024,19 +1076,30 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   @override
   void mediaBuffering(bool buffering) {
     if (!buffering) {
-      _bufferingTimer?.cancel();
-      _bufferingTimer = null;
+      final watch = _playback.rebufferWatch..stop();
+      final route = _openingRoute;
+      if (route != null && !isBackground) {
+        PlaybackRouteHistory.instance.rebuffer(route.$1, route.$2, route.$3, watch.elapsed);
+      }
+      watch.reset();
+      _playback.bufferingTimer?.cancel();
+      _playback.bufferingTimer = null;
       return;
     }
-    if (_bufferingTimer?.isActive ?? false) return;
-    if (!buffering || _roomClosed || playUrls.isEmpty) return;
-    final request = _playRequest;
+    if (_playback.bufferingTimer?.isActive ?? false) return;
+    if (_roomClosed || isBackground || playUrls.isEmpty) return;
+    if (hasPlayed.value) _playback.rebufferWatch.start();
+    final request = _playback.generation;
     final line = currentLineIndex;
     final position = player.state.position;
     // 多线路起播无进展时提早试备用线；单线路保留15秒宽限。
-    final timeout = Duration(seconds: hasPlayed.value || playUrls.length > 1 ? 8 : 15);
-    _bufferingTimer = Timer(timeout, () {
-      _bufferingTimer = null;
+    final hasBackup = line + 1 < playUrls.length;
+    final timeout = Duration(seconds:
+        site.id == Constant.kDouyin && hasPlayed.value && hasBackup
+            ? 4
+            : hasPlayed.value || playUrls.length > 1 ? 8 : 15);
+    _playback.bufferingTimer = Timer(timeout, () {
+      _playback.bufferingTimer = null;
       if (!_isCurrentRequest(request) || currentLineIndex != line ||
           isBackground || !liveStatus.value ||
           !player.state.buffering) {
@@ -1248,11 +1311,102 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     EventBus.instance.emit(Constant.kUpdateFollow, id);
   }
 
-  void share() {
-    if (detail.value == null) {
+  bool _sharingRoom = false;
+
+  Future<void> share() async {
+    final room = detail.value;
+    if (room == null) return;
+    final url = Uri.tryParse(room.url.trim());
+    if (url == null ||
+        !['http', 'https'].contains(url.scheme) ||
+        url.host.isEmpty) {
+      SmartDialog.showToast("直播间链接无效，暂时无法分享");
       return;
     }
-    SharePlus.instance.share(ShareParams(uri: Uri.parse(detail.value!.url)));
+    if (_sharingRoom) return;
+    _sharingRoom = true;
+    try {
+      final userName = room.userName.trim();
+      final title = room.title.trim().isNotEmpty
+          ? room.title.trim()
+          : userName.isNotEmpty
+              ? '$userName的直播间'
+              : '${site.name}直播间';
+      final shareText = '$title\n$url';
+
+      if (defaultTargetPlatform == TargetPlatform.windows) {
+        await Get.dialog<void>(RoomShareDialog(
+          title: title,
+          url: url.toString(),
+          shareText: shareText,
+          onSystemShare: () => _shareUsingWindowsNative(
+            title: title,
+            description: userName.isNotEmpty
+                ? '${site.name} - $userName'
+                : '${site.name}直播间',
+            url: url,
+            text: shareText,
+          ),
+        ));
+        return;
+      }
+      await _shareUsingSystem(title, shareText);
+    } finally {
+      _sharingRoom = false;
+    }
+  }
+
+  Future<void> _shareUsingWindowsNative({
+    required String title,
+    required String description,
+    required Uri url,
+    required String text,
+  }) async {
+    try {
+      final result = await WindowsShareService.shareRoom(
+        title: title,
+        description: description,
+        url: url,
+        text: text,
+      );
+      Log.i(
+        '[RoomShare] windows native share site=${site.id} '
+        'status=${result.status.name} code=${result.code} '
+        'hr=${result.hresult} dataRequested=${result.dataRequested} '
+        'elevated=${result.elevated} cdpDisabled=${result.cdpDisabled}',
+      );
+      if (result.status == WindowsShareStatus.opened) {
+        // ShowShareUIForWindow only opens the OS share panel; Windows does not
+        // report whether a target app completed delivery to a recipient.
+        return;
+      }
+      if (result.status == WindowsShareStatus.unsupported) {
+        SmartDialog.showToast("当前系统不支持 Windows 原生分享");
+        return;
+      }
+      SmartDialog.showToast("无法打开系统分享面板");
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("无法打开系统分享面板");
+    }
+  }
+
+  Future<void> _shareUsingSystem(
+    String title,
+    String shareText,
+  ) async {
+    try {
+      // Mobile platforms continue to use share_plus system share sheet.
+      await SharePlus.instance.share(ShareParams(
+        title: title,
+        subject: title,
+        text: shareText,
+      ));
+      // Opening a share sheet is not proof that the recipient received it.
+    } catch (e) {
+      Log.logPrint(e);
+      SmartDialog.showToast("无法打开系统分享，请尝试“复制链接”");
+    }
   }
 
   void copyUrl() {
@@ -1707,7 +1861,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     final request = ++_roomRequest;
     _lineWatch.stop();
-    ++_playRequest;
+    _playback.advance();
     _emoticons?.dispose();
     _emoticons = null;
     // The next identity must never expose the previous canonical send target
@@ -1725,7 +1879,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     // loadData creates a new source after the native player has stopped.
 
     // 停止播放
-    await _playerOperation;
+    await _playback.settled;
     if (!_isCurrentRoomRequest(request)) return;
     await player.stop();
     if (!_isCurrentRoomRequest(request)) return;
@@ -1753,11 +1907,16 @@ ${errorStackTrace ?? ''}''');
       //进入后台，关闭弹幕
       danmakuController?.clear();
       isBackground = true;
+      _playback.cancelWatchdogs();
     } else
     //返回前台
     if (state == AppLifecycleState.resumed) {
       Log.d("返回前台");
+      final wasBackground = isBackground;
       isBackground = false;
+      if (wasBackground && playUrls.isNotEmpty && player.state.buffering) {
+        mediaBuffering(true);
+      }
     }
   }
 
@@ -1801,10 +1960,8 @@ ${errorStackTrace ?? ''}''');
     disposeStream();
     _emoticons?.dispose();
     _emoticons = null;
-    _bufferingTimer?.cancel();
-    _playbackFailureTimer?.cancel();
     ++_roomRequest;
-    ++_playRequest;
+    _playback.advance();
     SmartDialog.dismiss(status: SmartStatus.loading);
     _volumeSliderTimer?.cancel();
     if (_volumeSliderOpen) {
@@ -1819,7 +1976,7 @@ ${errorStackTrace ?? ''}''');
     _stopDanmaku();
     danmakuController = null;
     _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
-    await _playerOperation;
+    await _playback.settled;
     super.onClose();
   }
 }

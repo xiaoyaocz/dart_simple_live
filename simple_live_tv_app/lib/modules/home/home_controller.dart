@@ -56,6 +56,6 @@ class HomeController extends BaseController {
   }
 
   void toIptv() {
-    Get.toNamed(RoutePath.kIptvPlaylist);
+    Get.toNamed(RoutePath.kIptvChannels);
   }
 }

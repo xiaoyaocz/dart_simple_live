@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -186,31 +188,56 @@ class AccountPage extends GetView<AccountController> {
   Future<void> _showAddCustomDialog(BuildContext context) async {
     final nameController = TextEditingController();
     final urlController = TextEditingController();
+    // 校验中标记需放在 builder 外，避免 setState 重建时被重置
+    var testing = false;
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("添加自定义源"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: "源名称")),
-            AppStyle.vGap12,
-            TextField(controller: urlController, decoration: const InputDecoration(labelText: "M3U 地址")),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: Get.back, child: const Text("取消")),
-          FilledButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final url = urlController.text.trim();
-              if (name.isEmpty || url.isEmpty) return;
-              await IptvService.instance.addCustomSource(name: name, url: url);
-              Get.back();
-            },
-            child: const Text("添加"),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text("添加自定义源"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: "源名称")),
+                AppStyle.vGap12,
+                TextField(controller: urlController, decoration: const InputDecoration(labelText: "M3U 地址（http/https）")),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: testing ? null : Get.back,
+                child: const Text("取消"),
+              ),
+              FilledButton(
+                onPressed: testing
+                    ? null
+                    : () async {
+                        final name = nameController.text.trim();
+                        final url = urlController.text.trim();
+                        final error = _validateCustomInput(name, url, pool: IptvService.instance.sourcePool);
+                        if (error != null) {
+                          _showSnack(error);
+                          return;
+                        }
+                        setState(() => testing = true);
+                        try {
+                          final count = await IptvService.instance.validateCustomSourceUrl(url);
+                          await IptvService.instance.addCustomSource(name: name, url: url);
+                          Get.back();
+                          _showSnack("已添加「$name」，解析到 $count 个频道");
+                        } catch (e) {
+                          if (context.mounted) setState(() => testing = false);
+                          _showSnack("源校验失败：${_errorText(e)}");
+                        }
+                      },
+                child: testing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text("添加"),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -219,32 +246,95 @@ class AccountPage extends GetView<AccountController> {
   Future<void> _showEditCustomDialog(BuildContext context, source, service) async {
     final nameController = TextEditingController(text: source.name);
     final urlController = TextEditingController(text: source.urls.first);
+    // 校验中标记需放在 builder 外，避免 setState 重建时被重置
+    var testing = false;
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("编辑自定义源"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: "源名称")),
-            AppStyle.vGap12,
-            TextField(controller: urlController, decoration: const InputDecoration(labelText: "M3U 地址")),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: Get.back, child: const Text("取消")),
-          FilledButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final url = urlController.text.trim();
-              if (name.isEmpty || url.isEmpty) return;
-              await service.updateCustomSource(source, name: name, url: url);
-              Get.back();
-            },
-            child: const Text("保存"),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text("编辑自定义源"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: "源名称")),
+                AppStyle.vGap12,
+                TextField(controller: urlController, decoration: const InputDecoration(labelText: "M3U 地址（http/https）")),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: testing ? null : Get.back,
+                child: const Text("取消"),
+              ),
+              FilledButton(
+                onPressed: testing
+                    ? null
+                    : () async {
+                        final name = nameController.text.trim();
+                        final url = urlController.text.trim();
+                        final error = _validateCustomInput(
+                          name,
+                          url,
+                          pool: IptvService.instance.sourcePool,
+                          ignore: source,
+                        );
+                        if (error != null) {
+                          _showSnack(error);
+                          return;
+                        }
+                        setState(() => testing = true);
+                        try {
+                          final count = await IptvService.instance.validateCustomSourceUrl(url);
+                          await service.updateCustomSource(source, name: name, url: url);
+                          Get.back();
+                          _showSnack("已保存「$name」，解析到 $count 个频道");
+                        } catch (e) {
+                          if (context.mounted) setState(() => testing = false);
+                          _showSnack("源校验失败：${_errorText(e)}");
+                        }
+                      },
+                child: testing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text("保存"),
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  /// 校验自定义源名称与地址：格式、查重；返回错误文案，null 表示通过
+  String? _validateCustomInput(
+    String name,
+    String url, {
+    required List<IptvSourceMeta> pool,
+    IptvSourceMeta? ignore,
+  }) {
+    if (name.isEmpty || url.isEmpty) return "请填写源名称与 M3U 地址";
+    final uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != "http" && uri.scheme != "https")) {
+      return "地址需以 http:// 或 https:// 开头";
+    }
+    if (pool.any((e) => e.name == name && e != ignore)) {
+      return "源名称「$name」已存在";
+    }
+    for (final e in pool) {
+      if (e == ignore) continue;
+      if (e.urls.contains(url)) return "该地址已存在于「${e.name}」";
+    }
+    return null;
+  }
+
+  /// 压缩错误文案为可读提示
+  String _errorText(Object e) {
+    if (e is TimeoutException) return "连接超时（8秒），请检查地址或稍后再试";
+    final text = e.toString().trim();
+    return text.isEmpty ? "未知错误" : text;
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(Get.context!).showSnackBar(SnackBar(content: Text(message)));
   }
 }

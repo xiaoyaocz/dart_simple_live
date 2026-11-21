@@ -318,6 +318,17 @@ class SettingsPage extends GetView<SettingsController> {
           },
         ),
         AppStyle.vGap24,
+        HighlightListTile(
+          focusNode: AppFocusNode(),
+          title: "IPTV直播源管理",
+          subtitle: "添加自定义 M3U 源，管理预置源启停，源变更后自动重新聚合",
+          leading: const Icon(Icons.live_tv),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Get.toNamed(RoutePath.kIptvSourceManage);
+          },
+        ),
+        AppStyle.vGap24,
         Obx(
           () => SettingsItemWidget(
             foucsNode: AppFocusNode(),

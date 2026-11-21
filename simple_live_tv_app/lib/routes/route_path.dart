@@ -46,8 +46,8 @@ class RoutePath {
   /// 分类详情
   static const kCategoryDetail = "/category/detail";
 
-  /// IPTV 订阅源管理
-  static const kIptvPlaylist = "/iptv/playlist";
+  /// IPTV 直播源管理
+  static const kIptvSourceManage = "/iptv/source_manage";
 
   /// IPTV 频道浏览
   static const kIptvChannels = "/iptv/channels";

@@ -2,11 +2,14 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:uuid/uuid.dart';
 
 import '../app/log.dart';
 import '../models/db/iptv_favorite.dart';
+import '../models/db/iptv_tag.dart';
 import '../models/db/iptv_playlist.dart';
 import '../modules/iptv/parser/aggregated_channel.dart';
+import '../modules/iptv/parser/iptv_channel.dart';
 import '../modules/iptv/parser/m3u_parser.dart';
 import '../requests/http_client.dart';
 import 'local_storage_service.dart';
@@ -28,40 +31,109 @@ class IptvSourceMeta {
   });
 }
 
+/// 源拉取健康统计：驱动镜像寻优与「优秀/可用」分级，不做差评——
+/// 持续拉不到的源由用户直接删除，而不是打标签
+class IptvSourceHealth {
+  int successCount;
+  int failCount;
+  int consecutiveFailures;
+  int lastLatencyMs;
+  DateTime? lastSuccessTime;
+  String lastSuccessUrl;
+  Map<String, int> mirrorFailures;
+
+  IptvSourceHealth({
+    this.successCount = 0,
+    this.failCount = 0,
+    this.consecutiveFailures = 0,
+    this.lastLatencyMs = 0,
+    this.lastSuccessTime,
+    this.lastSuccessUrl = "",
+    Map<String, int>? mirrorFailures,
+  }) : mirrorFailures = mirrorFailures ?? <String, int>{};
+
+  factory IptvSourceHealth.fromJson(Map<dynamic, dynamic> json) {
+    final mirrors = json["mirrorFailures"];
+    return IptvSourceHealth(
+      successCount: (json["successCount"] as num?)?.toInt() ?? 0,
+      failCount: (json["failCount"] as num?)?.toInt() ?? 0,
+      consecutiveFailures: (json["consecutiveFailures"] as num?)?.toInt() ?? 0,
+      lastLatencyMs: (json["lastLatencyMs"] as num?)?.toInt() ?? 0,
+      lastSuccessTime: json["lastSuccessTime"] == null
+          ? null
+          : DateTime.tryParse(json["lastSuccessTime"].toString()),
+      lastSuccessUrl: json["lastSuccessUrl"]?.toString() ?? "",
+      mirrorFailures: mirrors is Map
+          ? mirrors.map((k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0))
+          : <String, int>{},
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "successCount": successCount,
+        "failCount": failCount,
+        "consecutiveFailures": consecutiveFailures,
+        "lastLatencyMs": lastLatencyMs,
+        "lastSuccessTime": lastSuccessTime?.toIso8601String(),
+        "lastSuccessUrl": lastSuccessUrl,
+        "mirrorFailures": mirrorFailures,
+      };
+}
+
 class IptvService extends GetxService {
   static IptvService get instance => Get.find<IptvService>();
 
   static const String playlistBoxName = "IptvPlaylist";
   static const String favoriteBoxName = "IptvFavorite";
+  static const String tagBoxName = "IptvTag";
   static const String defaultPlaylistName = "全国IPTV直播源";
 
   late Box<IptvPlaylist> playlistBox;
   late Box<IptvFavorite> favoriteBox;
+  late Box<IptvTag> tagBox;
 
+  final Uuid _uuid = const Uuid();
+
+  /// 订阅源解析结果的内存缓存，避免重复拉取
+  final Map<String, M3uParseResult> _cache = <String, M3uParseResult>{};
+  /// 各源最近一次成功拉取的解析结果，「仅刷新部分源」时范围外源沿用此缓存
+  final Map<String, M3uParseResult> _sourceResultCache = <String, M3uParseResult>{};
+  /// 源拉取健康统计，驱动镜像寻优与分级，持久化
+  final Map<String, IptvSourceHealth> _sourceHealth = <String, IptvSourceHealth>{};
+  /// 跨源聚合结果缓存
   AggregatedParseResult? aggregatedCache;
   /// 聚合缓存生成时间，控制自动过期，同步源更新
   DateTime? _aggregatedCacheTime;
-  /// 各源最近一次成功拉取的解析结果，「仅刷新部分源」时范围外源沿用此缓存
-  final Map<String, M3uParseResult> _sourceResultCache = <String, M3uParseResult>{};
   /// 缓存按自然日失效：公开源均为日更，当天有效、次日进入频道页自动重拉
   static bool isSameLocalDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
+  /// 加载状态可观察变量，供页面显示进度
   final RxBool isLoading = false.obs;
   final RxInt currentSourceIndex = 0.obs;
   final RxInt totalSourceCount = 0.obs;
   final RxString loadingMessage = "正在加载直播源...".obs;
 
+  // ==================== 预置源启用状态管理 ====================
+  /// 用户启用的源名称列表，默认全部启用，持久化存储
   final RxList<String> enabledSourceNames = <String>[].obs;
+  /// 用户自定义源列表，持久化存储
   final RxList<IptvSourceMeta> customSources = <IptvSourceMeta>[].obs;
+  /// 用户已删除的预置源名称列表，持久化存储
   final RxList<String> deletedPresetNames = <String>[].obs;
 
+  /// 当前实际展示的预置源，过滤已删除的默认源
   List<IptvSourceMeta> get currentPresetSourcePool => defaultPresetSourcePool
-      .where((e) => !deletedPresetNames.contains(e.name)).toList();
+      .where((e) => !deletedPresetNames.contains(e.name))
+      .toList();
 
-  List<IptvSourceMeta> get sourcePool => [...currentPresetSourcePool, ...customSources];
+  /// 所有可用源：当前未删除的预置源 + 自定义源，自定义源排在最后
+  List<IptvSourceMeta> get sourcePool => [
+    ...currentPresetSourcePool,
+    ...customSources,
+  ];
 
-  /// 默认预置公开源池，用户删除后可通过恢复默认还原
+  /// 默认预置公开源池，不可直接修改，用户删除后可通过恢复默认还原，按优先级排序
   /// 全部为日更级公开源，地址均经直连实测可达；镜像链按「原始 → ghfast.top → gh-proxy」兜底，
   /// 致谢与来源详见 THANKS.md 与 IPTV_SOURCES.md
   static const List<IptvSourceMeta> defaultPresetSourcePool = [
@@ -175,29 +247,35 @@ class IptvService extends GetxService {
       author: "peterhchina",
       projectUrl: "https://peterhchina.github.io/iptv/",
       description: "vbskycn镜像，备用源，每日自动更新",
-      urls: ["https://peterhchina.github.io/iptv/IPTV-V4.m3u"],
+      urls: [
+        "https://peterhchina.github.io/iptv/IPTV-V4.m3u",
+      ],
     ),
   ];
 
   Future<void> init() async {
     playlistBox = await Hive.openBox<IptvPlaylist>(playlistBoxName);
     favoriteBox = await Hive.openBox<IptvFavorite>(favoriteBoxName);
-    // 加载删除的预置源
+    tagBox = await Hive.openBox<IptvTag>(tagBoxName);
+    // 加载用户删除的预置源
     final savedDeleted = LocalStorageService.instance.getValue<List<dynamic>>(
-      LocalStorageService.kIptvDeletedSources, [],
+      LocalStorageService.kIptvDeletedSources,
+      [],
     );
     deletedPresetNames.assignAll(savedDeleted.cast<String>());
-    // 加载启用状态，过滤无效源
+    // 加载源启用状态，默认全部当前预置源启用
     final defaultEnabled = currentPresetSourcePool.map((e) => e.name).toList();
     final savedEnabled = LocalStorageService.instance.getValue<List<dynamic>>(
-      LocalStorageService.kIptvSourceEnabled, defaultEnabled,
+      LocalStorageService.kIptvSourceEnabled,
+      defaultEnabled,
     );
     enabledSourceNames.assignAll(savedEnabled.cast<String>().where((name) =>
       currentPresetSourcePool.any((e) => e.name == name) || customSources.any((e) => e.name == name)
     ).toList());
-    // 加载自定义源
+    // 加载保存的自定义源
     final savedCustom = LocalStorageService.instance.getValue<List<dynamic>>(
-      LocalStorageService.kIptvCustomSources, [],
+      LocalStorageService.kIptvCustomSources,
+      [],
     );
     customSources.assignAll(savedCustom.map((e) {
       final map = Map<String, dynamic>.from(e as Map);
@@ -210,6 +288,108 @@ class IptvService extends GetxService {
     }));
     // 启动时从磁盘恢复上次聚合结果（可能已过期，用于秒开与拉取全败兜底）
     _loadPersistedAggregated();
+    // 恢复源健康统计（镜像寻优与分级依据）
+    _loadSourceHealth();
+  }
+
+  // ==================== 源健康统计与分级 ====================
+
+  /// 从磁盘恢复源健康统计
+  void _loadSourceHealth() {
+    try {
+      final raw = LocalStorageService.instance.getValue<Map<dynamic, dynamic>>(
+        LocalStorageService.kIptvSourceHealth,
+        {},
+      );
+      _sourceHealth
+        ..clear()
+        ..addEntries(raw.entries.map((e) => MapEntry(
+              e.key.toString(),
+              IptvSourceHealth.fromJson(Map<dynamic, dynamic>.from(e.value as Map)),
+            )));
+    } catch (e) {
+      Log.w("恢复源健康统计失败: $e");
+    }
+  }
+
+  /// 持久化源健康统计
+  Future<void> _persistSourceHealth() async {
+    try {
+      await LocalStorageService.instance.setValue(
+        LocalStorageService.kIptvSourceHealth,
+        _sourceHealth.map((k, v) => MapEntry(k, v.toJson())),
+      );
+    } catch (e) {
+      Log.w("写入源健康统计失败: $e");
+    }
+  }
+
+  IptvSourceHealth _healthOf(String name) =>
+      _sourceHealth.putIfAbsent(name, () => IptvSourceHealth());
+
+  /// 记录一次源拉取结果：镜像寻优与分级的原始数据
+  Future<void> _recordSourceFetch(
+    IptvSourceMeta source, {
+    required bool success,
+    String? url,
+    int latencyMs = 0,
+  }) async {
+    final h = _healthOf(source.name);
+    if (success) {
+      h.successCount++;
+      h.consecutiveFailures = 0;
+      h.lastLatencyMs = latencyMs;
+      h.lastSuccessTime = DateTime.now();
+      h.lastSuccessUrl = url ?? "";
+      if (url != null) h.mirrorFailures[url] = 0;
+    } else {
+      h.failCount++;
+      h.consecutiveFailures++;
+      if (url != null) {
+        h.mirrorFailures[url] = (h.mirrorFailures[url] ?? 0) + 1;
+      }
+    }
+    await _persistSourceHealth();
+  }
+
+  /// 源分级：国际源按性质标注，其余按健康统计分「优秀/可用」，不打差评
+  String sourceCategory(IptvSourceMeta source) {
+    if (source.name.contains("iptv-org")) return "国际";
+    final h = _sourceHealth[source.name];
+    if (h != null &&
+        h.successCount >= 1 &&
+        h.consecutiveFailures == 0 &&
+        h.lastLatencyMs > 0 &&
+        h.lastLatencyMs <= 3000) {
+      return "优秀";
+    }
+    return "可用";
+  }
+
+  /// 源当前健康摘要，供管理页与选源弹窗展示（中性措辞）
+  String sourceHealthLabel(IptvSourceMeta source) {
+    final h = _sourceHealth[source.name];
+    if (h == null || h.lastSuccessTime == null) return "尚未拉取";
+    if (h.consecutiveFailures > 0) return "最近${h.consecutiveFailures}次未拉取到";
+    return "连通${h.lastLatencyMs}ms";
+  }
+
+  // ==================== 进页自动刷新开关 ====================
+
+  /// 进入 IPTV 页是否自动检查更新，默认开；关闭后进页只读缓存
+  /// 存储服务未注册时（如单测环境）返回默认值
+  bool get autoRefreshOnEnter => Get.isRegistered<LocalStorageService>()
+      ? LocalStorageService.instance.getValue(
+          LocalStorageService.kIptvAutoRefreshOnEnter,
+          true,
+        )
+      : true;
+
+  Future<void> setAutoRefreshOnEnter(bool value) async {
+    await LocalStorageService.instance.setValue(
+      LocalStorageService.kIptvAutoRefreshOnEnter,
+      value,
+    );
   }
 
   /// 源配置变更后使聚合缓存失效，下次进入频道页按新源集合重拉
@@ -229,6 +409,7 @@ class IptvService extends GetxService {
     return result.channels.length;
   }
 
+  /// 添加自定义源，支持用户自定义名称
   Future<void> addCustomSource({required String name, required String url}) async {
     final meta = IptvSourceMeta(
       name: name,
@@ -285,6 +466,7 @@ class IptvService extends GetxService {
     }
     _sourceResultCache.remove(source.name);
     enabledSourceNames.remove(source.name);
+    // 若删除后没有启用源，自动启用第一个剩余源
     if (enabledSourceNames.isEmpty && sourcePool.isNotEmpty) {
       enabledSourceNames.add(sourcePool.first.name);
     }
@@ -295,7 +477,7 @@ class IptvService extends GetxService {
     );
   }
 
-  /// 恢复默认源，清空自定义与删除状态
+  /// 恢复默认预置源，清空自定义源与删除状态，重置启用状态为全部默认源启用
   Future<void> restoreDefaultSources() async {
     deletedPresetNames.clear();
     customSources.clear();
@@ -303,7 +485,8 @@ class IptvService extends GetxService {
     _sourceResultCache.clear();
     _invalidateAggregatedCache();
     await LocalStorageService.instance.setValue(
-      LocalStorageService.kIptvDeletedSources, [],
+      LocalStorageService.kIptvDeletedSources,
+      [],
     );
     await _saveCustomSources();
     await LocalStorageService.instance.setValue(
@@ -312,16 +495,22 @@ class IptvService extends GetxService {
     );
   }
 
+  /// 持久化自定义源列表
   Future<void> _saveCustomSources() async {
-    final data = customSources.map((e) => {"name": e.name, "urls": e.urls}).toList();
+    final data = customSources.map((e) => {
+      "name": e.name,
+      "urls": e.urls,
+    }).toList();
     await LocalStorageService.instance.setValue(
       LocalStorageService.kIptvCustomSources,
       data,
     );
   }
 
+  /// 切换源启用/禁用状态，自动持久化
   Future<void> toggleSourceEnabled(IptvSourceMeta source) async {
     if (enabledSourceNames.contains(source.name)) {
+      // 至少保留一个启用源，避免全部禁用无法加载
       if (enabledSourceNames.length == 1) return;
       enabledSourceNames.remove(source.name);
     } else {
@@ -334,15 +523,164 @@ class IptvService extends GetxService {
     );
   }
 
+  /// 获取用户当前启用的源，按源池顺序排序
   List<IptvSourceMeta> get enabledSources => sourcePool
       .where((e) => enabledSourceNames.contains(e.name))
       .toList();
+
+  /// 首次启动自动注册默认直播源，使用第一个启用的源
+  Future<void> ensureDefaultPlaylist() async {
+    final storage = LocalStorageService.instance;
+    if (storage.getValue(LocalStorageService.kIptvDefaultInited, false)) {
+      return;
+    }
+    try {
+      final selected = enabledSources.first;
+      await addPlaylist(
+        name: defaultPlaylistName,
+        url: selected.urls.first,
+        type: IptvPlaylist.typeRemote,
+      );
+      await storage.setValue(LocalStorageService.kIptvDefaultInited, true);
+    } catch (e) {
+      Log.w("IPTV 源初始化失败: $e");
+    }
+  }
+
+  // ============ 订阅源 ============
+
+  List<IptvPlaylist> getPlaylists() {
+    return playlistBox.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  Future<IptvPlaylist> addPlaylist({
+    required String name,
+    required String url,
+    required int type,
+  }) async {
+    final playlist = IptvPlaylist(
+      id: _uuid.v4(),
+      name: name,
+      url: url,
+      type: type,
+      updateTime: DateTime.now(),
+    );
+    await playlistBox.put(playlist.id, playlist);
+    return playlist;
+  }
+
+  Future<void> deletePlaylist(String id) async {
+    _cache.remove(id);
+    await playlistBox.delete(id);
+  }
+
+  /// 拉取并解析订阅源，依次尝试所有源与镜像，全失败才抛出错误
+  /// 完整保留作者原始频道、公告、赞助提示，不做任何过滤
+  // ==================== 多源刷新与容灾 ====================
+  /// 遍历所有启用的源与镜像地址，5秒超时自动切换，全部失败才抛出错误
+  Future<M3uParseResult> refresh(IptvPlaylist playlist) async {
+    isLoading.value = true;
+    Object? lastError;
+    final activeSources = enabledSources;
+    // 统计总地址数用于进度显示
+    var totalUrls = activeSources.fold<int>(0, (p, e) => p + e.urls.length);
+    totalSourceCount.value = totalUrls;
+    var urlIndex = 0;
+
+    for (var sourceIndex = 0; sourceIndex < activeSources.length; sourceIndex++) {
+      final source = activeSources[sourceIndex];
+      for (var mirrorIndex = 0; mirrorIndex < source.urls.length; mirrorIndex++) {
+        urlIndex++;
+        currentSourceIndex.value = urlIndex;
+        final url = source.urls[mirrorIndex];
+        loadingMessage.value = "正在尝试源 $urlIndex/$totalUrls...";
+        try {
+          final content = await HttpClient.instance.getText(
+            url,
+            header: {},
+          ).timeout(const Duration(seconds: 5));
+          final result = M3uParser.parse(content, baseUrl: url);
+          _cache[playlist.id] = result;
+          playlist.updateTime = DateTime.now();
+          playlist.url = url;
+          await playlistBox.put(playlist.id, playlist);
+          isLoading.value = false;
+          return result;
+        } catch (e) {
+          lastError = e;
+          Log.w("直播源地址 $url 访问失败，尝试下一个地址");
+        }
+      }
+    }
+    isLoading.value = false;
+    throw lastError ?? Exception("所有直播源地址均无法访问");
+  }
+
+  /// 优先用缓存，未缓存时拉取
+  Future<M3uParseResult> getOrLoad(IptvPlaylist playlist) async {
+    final cached = _cache[playlist.id];
+    return cached ?? await refresh(playlist);
+  }
+
+  /// 仅查询内存缓存，不发起网络请求
+  M3uParseResult? cachedParse(String playlistId) => _cache[playlistId];
+
+  // ============ 频道与分组 ============
+
+  List<String> getGroups(M3uParseResult result) {
+    return result.channels.map((channel) => channel.group).toSet().toList();
+  }
+
+  List<IptvChannel> channelsOfGroup(M3uParseResult result, String group) {
+    return result.channels
+        .where((channel) => group.isEmpty || channel.group == group)
+        .toList();
+  }
+
+  // ==================== 收藏标签 ====================
+
+  /// 全部收藏标签，按名称排序
+  List<IptvTag> getTags() {
+    final tags = tagBox.values.toList()
+      ..sort((a, b) => a.tag.compareTo(b.tag));
+    return tags;
+  }
+
+  /// 新建收藏标签
+  Future<IptvTag> createTag(String name) async {
+    final tag = IptvTag(id: _uuid.v4(), tag: name, favoriteIds: []);
+    await tagBox.put(tag.id, tag);
+    return tag;
+  }
+
+  /// 重命名收藏标签
+  Future<void> renameTag(IptvTag tag, String name) async {
+    await tagBox.put(tag.id, tag.copyWith(tag: name));
+  }
+
+  /// 删除收藏标签（成员关系随标签消失，收藏本身不受影响）
+  Future<void> deleteTag(IptvTag tag) async {
+    await tagBox.delete(tag.id);
+  }
+
+  /// 收藏加入/移出标签
+  Future<void> toggleFavoriteInTag(String favoriteId, IptvTag tag) async {
+    final ids = [...tag.favoriteIds];
+    if (ids.contains(favoriteId)) {
+      ids.remove(favoriteId);
+    } else {
+      ids.add(favoriteId);
+    }
+    await tagBox.put(tag.id, tag.copyWith(favoriteIds: ids));
+  }
 
   // ==================== 收藏功能 ====================
   List<IptvFavorite> getFavorites() => favoriteBox.values.toList();
   bool isFavorite(String id) => favoriteBox.containsKey(id);
   static String favoriteId(String playlistId, String url) => "${playlistId}_$url";
 
+  /// 聚合频道收藏/取消
   Future<void> toggleFavorite({
     required String playlistId,
     required AggregatedChannel channel,
@@ -369,17 +707,37 @@ class IptvService extends GetxService {
   }
 
   // ==================== 跨源聚合逻辑 ====================
-  String _normalizeName(String name) =>
-      name.replaceAll(RegExp(r'[\s\-_]+'), "").toLowerCase();
 
-  /// 拉取单个源，依次尝试所有镜像，成功即返回；全部失败返回 null
+  /// 标准化频道名称，用于跨源同名匹配：去除空格、横杠、转小写
+  String _normalizeName(String name) {
+    return name.replaceAll(RegExp(r'[\s\-_]+'), "").toLowerCase();
+  }
+
+  /// 拉取单个源：镜像按健康统计自动寻优（上次成功的排最前、失败多的靠后），
+  /// 成功即返回；全部失败返回 null。每次结果都记入健康统计
   Future<M3uParseResult?> _fetchSourceWithMirrors(IptvSourceMeta source) async {
-    for (final url in source.urls) {
+    final h = _healthOf(source.name);
+    // 镜像寻优：上次成功的地址优先，其后按失败次数升序稳定排序
+    final ordered = source.urls.toList()
+      ..sort((a, b) {
+        if (a == h.lastSuccessUrl && b != h.lastSuccessUrl) return -1;
+        if (b == h.lastSuccessUrl && a != h.lastSuccessUrl) return 1;
+        final fa = h.mirrorFailures[a] ?? 0;
+        final fb = h.mirrorFailures[b] ?? 0;
+        if (fa != fb) return fa.compareTo(fb);
+        return source.urls.indexOf(a).compareTo(source.urls.indexOf(b));
+      });
+    for (final url in ordered) {
+      final sw = Stopwatch()..start();
       try {
-        final content = await HttpClient.instance.getText(url, header: {})
+        final content = await HttpClient.instance
+            .getText(url, header: {})
             .timeout(const Duration(seconds: 5));
+        sw.stop();
+        await _recordSourceFetch(source, success: true, url: url, latencyMs: sw.elapsedMilliseconds);
         return M3uParser.parse(content, baseUrl: url);
       } catch (e) {
+        await _recordSourceFetch(source, success: false, url: url);
         Log.w("源 ${source.name} 地址 $url 拉取失败，尝试下一个镜像");
       }
     }
@@ -403,9 +761,14 @@ class IptvService extends GetxService {
     );
   }
 
-  /// 各源并发拉取（源内镜像串行容灾），单源失败自动跳过
+  /// 拉取所有启用源并聚合频道，各源并发拉取（源内镜像串行容灾），单源失败自动跳过
   /// [onlySources] 限定本次实际拉取的源，范围外源沿用上次拉取结果，null 或空表示全部
-  Future<AggregatedParseResult> refreshAggregated({Set<String>? onlySources}) async {
+  /// 各源并发拉取并聚合；[onSourceResult] 在每个源完成时回调（含沿用缓存的源），
+  /// 页面借此做增量渲染，不让慢源拖住整个列表
+  Future<AggregatedParseResult> refreshAggregated({
+    Set<String>? onlySources,
+    void Function(String sourceName, M3uParseResult? result)? onSourceResult,
+  }) async {
     isLoading.value = true;
     final activeSources = enabledSources;
     final scope = (onlySources == null || onlySources.isEmpty) ? null : onlySources;
@@ -422,6 +785,7 @@ class IptvService extends GetxService {
             currentSourceIndex.value = completed;
             loadingMessage.value =
                 "${source.name} 未选中，沿用上次结果（$completed/${activeSources.length}）";
+            onSourceResult?.call(source.name, cached);
             return (sourceName: source.name, result: cached);
           }
         }
@@ -432,6 +796,7 @@ class IptvService extends GetxService {
             result == null
             ? "${source.name} 拉取失败，已跳过（$completed/${activeSources.length}）"
             : "已拉取 ${source.name}（$completed/${activeSources.length}）...";
+        onSourceResult?.call(source.name, result);
         return (sourceName: source.name, result: result);
       }),
     );
@@ -451,6 +816,26 @@ class IptvService extends GetxService {
       _sourceResultCache[entry.sourceName] = entry.result;
     }
 
+    final result = _buildAggregated(allSourceResults);
+    aggregatedCache = result;
+    _aggregatedCacheTime = DateTime.now();
+    await _persistAggregated(result);
+    isLoading.value = false;
+    return result;
+  }
+
+  /// 用已完成的部分源结果实时重建聚合，页面增量渲染用
+  AggregatedParseResult buildPartialAggregation(Map<String, M3uParseResult> completed) {
+    final entries = completed.entries
+        .map((e) => (sourceName: e.key, result: e.value))
+        .toList();
+    return _buildAggregated(entries);
+  }
+
+  /// 聚合核心：按标准化名称合并跨源频道、URL 去重、置顶排序，并做探活绿灯线路前置
+  AggregatedParseResult _buildAggregated(
+    List<({String sourceName, M3uParseResult result})> allSourceResults,
+  ) {
     final channelMap = <String, List<IptvLine>>{};
     final channelBaseInfo = <String, ({String name, String group, String logo})>{};
 
@@ -477,23 +862,33 @@ class IptvService extends GetxService {
 
     var channels = channelMap.entries.map((entry) {
       final base = channelBaseInfo[entry.key]!;
+      final lines = _sortLinesByProbe(entry.value);
       return AggregatedChannel(
         name: base.name,
         group: base.group,
         logo: base.logo,
-        lines: entry.value,
+        lines: lines,
       );
     }).toList();
 
+    // 排序：央视、卫视置顶，央视按数字自然排序，其余按名称
     channels = _sortAggregatedChannels(channels);
-    final result = AggregatedParseResult(channels: channels);
-    aggregatedCache = result;
-    _aggregatedCacheTime = DateTime.now();
-    await _persistAggregated(result);
-    isLoading.value = false;
-    return result;
+    return AggregatedParseResult(channels: channels);
   }
 
+  /// 线路排序：探活缓存里连通快的排前面，把最新可用线路放到起播优先位
+  List<IptvLine> _sortLinesByProbe(List<IptvLine> lines) {
+    int rank(IptvLine line) {
+      final status = freshLineStatus(line.url);
+      return switch (status) { 1 => 0, 2 => 1, _ => 2 };
+    }
+
+    if (lines.length <= 1) return lines;
+    final sorted = lines.toList()..sort((a, b) => rank(a).compareTo(rank(b)));
+    return sorted;
+  }
+
+  /// 聚合频道排序：央视、卫视置顶，央视数字自然排序
   List<AggregatedChannel> _sortAggregatedChannels(List<AggregatedChannel> list) {
     list.sort((a, b) {
       final aGroup = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
@@ -509,6 +904,7 @@ class IptvService extends GetxService {
     return list;
   }
 
+  /// 提取CCTV数字
   int? _extractCctvNumber(String name) {
     final match = RegExp(r'CCTV-?(\d+)').firstMatch(name);
     return match == null ? null : int.tryParse(match.group(1)!);
@@ -531,13 +927,19 @@ class IptvService extends GetxService {
 
   /// 获取聚合结果，优先当日缓存，支持手动强制刷新；自动刷新失败时回退陈旧缓存
   /// 自动刷新同样遵循用户设置的刷新范围（refreshScope）
-  Future<AggregatedParseResult> getAggregated({bool forceRefresh = false}) async {
+  Future<AggregatedParseResult> getAggregated({
+    bool forceRefresh = false,
+    void Function(String sourceName, M3uParseResult? result)? onSourceResult,
+  }) async {
     final cacheValid = aggregatedCache != null &&
         _aggregatedCacheTime != null &&
         isSameLocalDay(_aggregatedCacheTime!, DateTime.now());
     if (!forceRefresh && cacheValid) return aggregatedCache!;
     try {
-      return await refreshAggregated(onlySources: refreshScope);
+      return await refreshAggregated(
+        onlySources: refreshScope,
+        onSourceResult: onSourceResult,
+      );
     } catch (e) {
       // 自动刷新全败时回退磁盘陈旧缓存（哪怕已过期），保证有台可看；手动刷新仍如实报错
       if (!forceRefresh && aggregatedCache != null) {
@@ -546,6 +948,14 @@ class IptvService extends GetxService {
       }
       rethrow;
     }
+  }
+
+  /// 进入频道页取数：「进页自动刷新」关闭且已有缓存时只读缓存，否则按需刷新
+  Future<AggregatedParseResult> loadForEntry({
+    void Function(String sourceName, M3uParseResult? result)? onSourceResult,
+  }) async {
+    if (!autoRefreshOnEnter && aggregatedCache != null) return aggregatedCache!;
+    return getAggregated(onSourceResult: onSourceResult);
   }
 
   // ==================== 线路连通状态缓存 ====================
@@ -620,10 +1030,14 @@ class IptvService extends GetxService {
     }
   }
 
-  String _encodeAggregated(AggregatedParseResult result) {
+  String _encodeAggregated(AggregatedParseResult result) =>
+      encodeAggregatedChannels(result.channels);
+
+  /// 聚合频道列表的 JSON 编码核心，落盘与单测共用
+  static String encodeAggregatedChannels(List<AggregatedChannel> channels) {
     return jsonEncode({
       "time": DateTime.now().millisecondsSinceEpoch,
-      "channels": result.channels
+      "channels": channels
           .map((ch) => {
                 "name": ch.name,
                 "group": ch.group,
@@ -690,6 +1104,7 @@ class IptvService extends GetxService {
     }
   }
 
+  /// 获取聚合分组列表
   List<String> getAggregatedGroups(AggregatedParseResult result) {
     final groups = result.channels.map((e) => e.group).toSet().toList();
     // 央视/卫视置顶，其余按名称；比较器必须自洽（同组互比返回 0）

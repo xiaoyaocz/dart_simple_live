@@ -24,13 +24,14 @@ class IptvFavoriteAdapter extends TypeAdapter<IptvFavorite> {
       logo: fields[4] as String,
       group: fields[5] as String,
       url: fields[6] as String,
+      sourceName: fields[7] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, IptvFavorite obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class IptvFavoriteAdapter extends TypeAdapter<IptvFavorite> {
       ..writeByte(5)
       ..write(obj.group)
       ..writeByte(6)
-      ..write(obj.url);
+      ..write(obj.url)
+      ..writeByte(7)
+      ..write(obj.sourceName);
   }
 
   @override

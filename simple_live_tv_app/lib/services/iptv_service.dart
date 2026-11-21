@@ -680,6 +680,13 @@ class IptvService extends GetxService {
   bool isFavorite(String id) => favoriteBox.containsKey(id);
   static String favoriteId(String playlistId, String url) => "${playlistId}_$url";
 
+  /// 批量按 id 删除收藏（线路重排后收藏匹配用）
+  Future<void> removeFavoritesByIds(List<String> ids) async {
+    for (final id in ids) {
+      await favoriteBox.delete(id);
+    }
+  }
+
   /// 聚合频道收藏/取消
   Future<void> toggleFavorite({
     required String playlistId,
@@ -888,20 +895,45 @@ class IptvService extends GetxService {
     return sorted;
   }
 
-  /// 聚合频道排序：央视、卫视置顶，央视数字自然排序
+  /// 聚合频道排序：多级比较器——频道层级（央视/卫视/其他）→ 可用性
+  /// （可用>未探测>全失败，可用数降序）→ CCTV编号 → 名称。
+  /// 排序键先快照再比较，避免探测结果中途变化导致比较器不自洽
   List<AggregatedChannel> _sortAggregatedChannels(List<AggregatedChannel> list) {
+    final keys = {
+      for (final ch in list) ch: _availabilitySortKey(ch),
+    };
     list.sort((a, b) {
-      final aGroup = a.group == "央视频道" ? 0 : (a.group == "卫视频道" ? 1 : 2);
-      final bGroup = b.group == "央视频道" ? 0 : (b.group == "卫视频道" ? 1 : 2);
-      if (aGroup != bGroup) return aGroup.compareTo(bGroup);
-      if (aGroup == 0) {
-        final aNum = _extractCctvNumber(a.name);
-        final bNum = _extractCctvNumber(b.name);
-        if (aNum != null && bNum != null) return aNum.compareTo(bNum);
-      }
+      final ka = keys[a]!;
+      final kb = keys[b]!;
+      if (ka.groupRank != kb.groupRank) return ka.groupRank.compareTo(kb.groupRank);
+      if (ka.availRank != kb.availRank) return ka.availRank.compareTo(kb.availRank);
+      if (ka.okCount != kb.okCount) return kb.okCount.compareTo(ka.okCount);
+      if (ka.cctvNumber != kb.cctvNumber) return ka.cctvNumber.compareTo(kb.cctvNumber);
       return a.name.compareTo(b.name);
     });
     return list;
+  }
+
+  /// 频道可用性排序键：层级 + 可用档位（0=有可用,1=未探测,2=全失败）+ 可用数 + 编号
+  ({int groupRank, int availRank, int okCount, int cctvNumber}) _availabilitySortKey(
+    AggregatedChannel ch,
+  ) {
+    final groupRank = ch.group == "央视频道" ? 0 : (ch.group == "卫视频道" ? 1 : 2);
+    var okCount = 0;
+    var probed = 0;
+    for (final line in ch.lines) {
+      final status = freshLineStatus(line.url);
+      if (status == 1 || status == 2) okCount++;
+      if (status != null) probed++;
+    }
+    final availRank = okCount > 0 ? 0 : (probed > 0 ? 2 : 1);
+    final cctvNumber = _extractCctvNumber(ch.name) ?? 9999;
+    return (groupRank: groupRank, availRank: availRank, okCount: okCount, cctvNumber: cctvNumber);
+  }
+
+  /// 按可用性对频道列表重排（探测动态重排用），与聚合排序同一套键
+  List<AggregatedChannel> sortChannelsByAvailability(List<AggregatedChannel> list) {
+    return _sortAggregatedChannels(list.toList());
   }
 
   /// 提取CCTV数字

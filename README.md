@@ -158,11 +158,19 @@ TV 下载建议：
 ### 源列表与作者信息
 | 源名称 | 作者 | 项目地址 | 开源协议 | 说明 |
 | --- | --- | --- | --- | --- |
-| DataShare海外源 | DataShare-duo | [DataShare-duo/IPTV-Source](https://github.com/DataShare-duo/IPTV-Source) | 项目开源 | 海外节点直连，CDN加速，适配境外网络，央视频道完整 |
 | suxuang全量源 | suxuang | [suxuang/myIPTV](https://github.com/suxuang/myIPTV) | 项目开源 | 全量多节点源，频道覆盖全面，每日自动更新 |
 | vbskycn 全量源 | vbskycn | [vbskycn/iptv](https://github.com/vbskycn/iptv) | 项目开源 | 427 个频道，覆盖完整央视、卫视与地方省份台，每 6 小时自动更新 |
+| zhi35聚合源 | zhi35 | [zhi35/iptv](https://github.com/zhi35/iptv) | 项目开源 | 每日 3 更，含港澳台与直播中国慢直播，IPv4+IPv6 |
+| fanmingming咪咕源 | fanmingming | [fanmingming/live](https://github.com/fanmingming/live) | GPL-3.0 | 最知名公开源，咪咕/央视频 CDN 189 频道，每日多更 |
+| fanmingmingIPv6源 | fanmingming | [fanmingming/live](https://github.com/fanmingming/live) | GPL-3.0 | 经典 IPv6 列表，需终端支持 IPv6 网络 |
+| hujingguang实时源 | hujingguang | [hujingguang/ChinaIPTV](https://github.com/hujingguang/ChinaIPTV) | 项目开源 | 405 频道央视+省市台，小时级近实时更新 |
+| hacks.tools日更源 | hacks.tools | [iptv.hacks.tools](https://iptv.hacks.tools/) | 项目开源 | 每日多次更新，卫视/地方/电影/儿童丰富 |
+| xisohi全量源 | xisohi | [xisohi/CHINA-IPTV](https://github.com/xisohi/CHINA-IPTV) | 项目开源 | TXT 格式 1200+ 条，含教育台与台港澳 |
+| iptv-org国际源 | iptv-org | [iptv-org/iptv](https://github.com/iptv-org/iptv) | Unlicense | 全球 11000+ 频道，国际频道为主 |
+| DataShare海外源 | DataShare-duo | [DataShare-duo/IPTV-Source](https://github.com/DataShare-duo/IPTV-Source) | 项目开源 | 海外节点直连，CDN加速，适配境外网络，央视频道完整 |
 | peterh 镜像源 | peterhchina | [peterhchina.github.io/iptv/](https://peterhchina.github.io/iptv/) | 项目开源 | 全量源同步镜像，每日自动更新 |
-| 原范明明、HerbertHe、YanG源 | - | - | - | 公开地址已失效或连通性不达标，不再内置，感谢此前公益维护 |
+
+全部源地址的详细实测数据（频道数、协议分布、镜像链、专项列表）见仓库根目录 `IPTV_SOURCES.md`。刷新时可选仅更新部分源，不喜欢的源可停用或删除。
 
 ### 作者重要提示
 根据 vbskycn 源官方说明：

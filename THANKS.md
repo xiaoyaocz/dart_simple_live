@@ -30,11 +30,18 @@ Simple Live 会继续保持开源和免费使用。感谢赞助维护、提供�
 
 ## IPTV 公开直播源作者
 特别感谢所有公开维护 IPTV 直播源的作者，本项目所有直播源均完整保留作者原始内容、公告频道与赞助提示，不做任何过滤删除：
-- 感谢 [DataShare-duo](https://github.com/DataShare-duo/IPTV-Source) 提供海外节点直播源，适配境外网络，CDN加速，央视频道完整。
 - 感谢 [suxuang](https://github.com/suxuang/myIPTV) 提供全量多节点直播源，频道覆盖全面，每日自动更新。
 - 感谢 [vbskycn](https://github.com/vbskycn/iptv) 提供全量 IPv4 直播源，每 6 小时自动更新，覆盖完整央视、卫视与地方省份频道。
+- 感谢 [zhi35](https://github.com/zhi35/iptv) 提供每日 3 更的聚合直播源与 [live.zhi35.com](https://live.zhi35.com/) 加速地址，覆盖央视、卫视、地方、港澳台与直播中国。
+- 感谢 [fanmingming](https://github.com/fanmingming/live)（GPL-3.0）维护社区最知名的公开直播源，本项目内置其咪咕/央视频 CDN 列表与经典 IPv6 列表，台标与 EPG 体系亦受益于该项目。
+- 感谢 [hujingguang](https://github.com/hujingguang/ChinaIPTV) 提供小时级近实时更新的央视与省市台直播源。
+- 感谢 [hacks.tools](https://iptv.hacks.tools/) 提供每日多次更新的直播源聚合与分类下载服务。
+- 感谢 [xisohi](https://github.com/xisohi/CHINA-IPTV) 提供含教育台与台港澳的 TXT 全量直播源及分省单播库。
+- 感谢 [iptv-org](https://github.com/iptv-org/iptv)（Unlicense）提供全球 11000+ 频道的国际直播源索引。
+- 感谢 [DataShare-duo](https://github.com/DataShare-duo/IPTV-Source) 提供海外节点直播源，适配境外网络，CDN加速，央视频道完整。
 - 感谢 [peterhchina](https://peterhchina.github.io/iptv/) 提供直播源同步镜像，每日自动同步更新。
-- 原 fanmingming、HerbertHe、YanG-1989 源已确认公开地址失效或频道连通性不达标，本版本不再内置，感谢作者此前的公益维护。
+- 感谢 [YanG-1989](https://github.com/YanG-1989/m3u) 维护体育/游戏方向聚合源，[Guovin](https://github.com/Guovin/iptv-api) 维护开源自建聚合工具。
+- 感谢 GitHub 加速镜像 [ghfast.top](https://ghfast.top/) 与 [gh-proxy.com](https://gh-proxy.com/) 在原始地址不可达时提供的兜底链路。
 
 ## 资源参考
 

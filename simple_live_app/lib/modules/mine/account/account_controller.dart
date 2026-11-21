@@ -14,6 +14,7 @@ import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
+import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -24,13 +25,22 @@ class AccountController extends GetxController {
   final douyinCookieCountdownTick = 0.obs;
   Timer? _douyinCookieCountdownTimer;
 
+  /// 进入IPTV页自动刷新开关（与IptvService设置联动）
+  final iptvAutoRefreshOnEnter = true.obs;
+
   @override
   void onInit() {
     super.onInit();
+    iptvAutoRefreshOnEnter.value = IptvService.instance.autoRefreshOnEnter;
     _douyinCookieCountdownTimer = Timer.periodic(
       const Duration(minutes: 1),
       (_) => douyinCookieCountdownTick.value++,
     );
+  }
+
+  Future<void> setIptvAutoRefreshOnEnter(bool value) async {
+    iptvAutoRefreshOnEnter.value = value;
+    await IptvService.instance.setAutoRefreshOnEnter(value);
   }
 
   @override

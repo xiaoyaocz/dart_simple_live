@@ -88,6 +88,13 @@ class AccountPage extends GetView<AccountController> {
                       ],
                     ),
                   ),
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    title: const Text("进入IPTV页自动刷新"),
+                    subtitle: const Text("关闭后进页只读缓存，更新靠手动刷新", style: TextStyle(fontSize: 12)),
+                    value: controller.iptvAutoRefreshOnEnter.value,
+                    onChanged: controller.setIptvAutoRefreshOnEnter,
+                  ),
                   ...service.sourcePool.map((source) {
                     final enabled = service.enabledSourceNames.contains(source.name);
                     return _buildSourceCard(context, source, enabled, service);
@@ -124,6 +131,7 @@ class AccountPage extends GetView<AccountController> {
                     children: [
                       Text(source.name, style: const TextStyle(fontWeight: FontWeight.w500)),
                       Text("${source.author} · ${source.description}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text("${service.sourceCategory(source)} · ${service.sourceHealthLabel(source)}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                 ),

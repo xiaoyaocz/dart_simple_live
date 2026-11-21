@@ -24,7 +24,11 @@ class M3uParser {
         final line = raw.trim();
         if (line.isEmpty) continue;
         if (line.endsWith("#genre#")) {
-          currentGroup = line.replaceAll("#genre#", "").trim();
+          // 分组头为「分组名,#genre#」，去掉标记后需清掉残留的尾逗号
+          currentGroup = line
+              .replaceAll("#genre#", "")
+              .replaceAll(RegExp(r'[，,]+\s*$'), "")
+              .trim();
           continue;
         }
         final commaIndex = line.indexOf(",");

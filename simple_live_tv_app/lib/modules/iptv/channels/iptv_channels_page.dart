@@ -457,19 +457,6 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   /// 频道行：标题行 + 各源探活胶囊（同源多线路带序号）
   Widget _buildChannelRow(AggregatedChannel channel, int index) {
     final fav = controller.isFavoriteChannel(channel);
-    final labelCounts = <String, int>{};
-    for (final l in channel.lines) {
-      labelCounts[l.sourceName] = (labelCounts[l.sourceName] ?? 0) + 1;
-    }
-    final seen = <String, int>{};
-    String chipLabel(String sourceName) {
-      if ((labelCounts[sourceName] ?? 0) <= 1) return sourceName;
-      final n = (seen[sourceName] ?? 0) + 1;
-      seen[sourceName] = n;
-      return "$sourceName ·$n";
-    }
-
-    final labels = {for (final l in channel.lines) l.url: chipLabel(l.sourceName)};
     return Padding(
       padding: EdgeInsets.only(bottom: 12.w),
       child: Column(
@@ -498,17 +485,39 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
           AppStyle.vGap8,
           Padding(
             padding: EdgeInsets.only(left: 24.w),
-            child: Obx(() => Wrap(
-                  spacing: 12.w,
-                  runSpacing: 8.w,
-                  children: channel.lines
-                      .map((line) => _buildLineChip(line, labels[line.url] ?? line.sourceName))
-                      .toList(),
-                )),
+            // 渲染时按最新探活实时排序线路：绿前黄中红后
+            child: Obx(() {
+              final sortedLines = channel.lines.toList()
+                ..sort((a, b) =>
+                    controller.lineRank(a.url).compareTo(controller.lineRank(b.url)));
+              return Wrap(
+                spacing: 12.w,
+                runSpacing: 8.w,
+                children: sortedLines
+                    .map((line) => _buildLineChip(line, _chipLabel(sortedLines, line)))
+                    .toList(),
+              );
+            }),
           ),
         ],
       ),
     );
+  }
+
+  /// 同源多条容灾线路时给胶囊附加序号；序号按当前显示顺序分配
+  String _chipLabel(List<IptvLine> lines, IptvLine line) {
+    final counts = <String, int>{};
+    for (final l in lines) {
+      counts[l.sourceName] = (counts[l.sourceName] ?? 0) + 1;
+    }
+    if ((counts[line.sourceName] ?? 0) <= 1) return line.sourceName;
+    var n = 0;
+    for (final l in lines) {
+      if (l.sourceName != line.sourceName) continue;
+      n++;
+      if (identical(l, line)) break;
+    }
+    return "${line.sourceName} ·$n";
   }
 
   /// 收藏行：来源信息 + 打标签 + 取消收藏

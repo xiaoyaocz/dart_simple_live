@@ -15,7 +15,24 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("IPTV直播"),
+        // 搜索态直接替换标题为输入框，不再占据头部一整行灰底
+        title: Obx(() => controller.searchVisible.value
+            ? TextField(
+                controller: controller.searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  hintText: "搜索频道名或来源名",
+                ),
+                onChanged: controller.setKeyword,
+              )
+            : const Text("IPTV直播")),
         actions: [
           _buildSearchToggle(),
           _buildRefreshButton(),
@@ -40,7 +57,6 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
             ),
             child: Column(
               children: [
-                _buildSearchBar(),
                 Obx(() {
                   if (controller.showFavorites.value) {
                     return _buildFavoriteTagBar();
@@ -69,30 +85,6 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
           icon: Icon(controller.searchVisible.value ? Icons.search_off : Icons.search),
           onPressed: controller.toggleSearch,
         ));
-  }
-
-  /// 搜索框：本地匹配频道名或来源名
-  Widget _buildSearchBar() {
-    return Obx(() {
-      if (!controller.searchVisible.value) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-        child: TextField(
-          autofocus: true,
-          decoration: InputDecoration(
-            isDense: true,
-            prefixIcon: const Icon(Icons.search, size: 20),
-            hintText: "搜索频道名或来源名",
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              onPressed: controller.toggleSearch,
-            ),
-            border: const OutlineInputBorder(),
-          ),
-          onChanged: controller.setKeyword,
-        ),
-      );
-    });
   }
 
   /// 刷新进度：列表保留，顶部细进度条 + 每源状态行
@@ -422,20 +414,6 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   /// 频道项：副标题展示分组、线路数、可用数与各源探活胶囊
   Widget _buildChannelItem(AggregatedChannel channel, int index) {
     final fav = controller.isFavoriteChannel(channel);
-    // 同源多条容灾线路时给胶囊附加序号，避免看起来重复
-    final labelCounts = <String, int>{};
-    for (final l in channel.lines) {
-      labelCounts[l.sourceName] = (labelCounts[l.sourceName] ?? 0) + 1;
-    }
-    final seen = <String, int>{};
-    String chipLabel(String sourceName) {
-      if ((labelCounts[sourceName] ?? 0) <= 1) return sourceName;
-      final n = (seen[sourceName] ?? 0) + 1;
-      seen[sourceName] = n;
-      return "$sourceName ·$n";
-    }
-
-    final labels = {for (final l in channel.lines) l.url: chipLabel(l.sourceName)};
     return Card(
       child: ListTile(
         leading: NetImage(channel.logo, width: 60, height: 60, borderRadius: 8, fit: BoxFit.contain),
@@ -457,11 +435,19 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
               return Text(summary, style: const TextStyle(fontSize: 12));
             }),
             AppStyle.vGap4,
-            Obx(() => Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: channel.lines.map((line) => _buildLineChip(line, labels[line.url] ?? line.sourceName)).toList(),
-            )),
+            // 渲染时按最新探活实时排序线路：绿前黄中红后，不依赖列表重建链路
+            Obx(() {
+              final sortedLines = channel.lines.toList()
+                ..sort((a, b) =>
+                    controller.lineRank(a.url).compareTo(controller.lineRank(b.url)));
+              return Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: sortedLines
+                    .map((line) => _buildLineChip(line, _chipLabel(sortedLines, line)))
+                    .toList(),
+              );
+            }),
           ],
         ),
         trailing: IconButton(
@@ -471,6 +457,22 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
         onTap: () => controller.openPlayer(channel, index),
       ),
     );
+  }
+
+  /// 同源多条容灾线路时给胶囊附加序号，避免看起来重复；序号按当前显示顺序分配
+  String _chipLabel(List<IptvLine> lines, IptvLine line) {
+    final counts = <String, int>{};
+    for (final l in lines) {
+      counts[l.sourceName] = (counts[l.sourceName] ?? 0) + 1;
+    }
+    if ((counts[line.sourceName] ?? 0) <= 1) return line.sourceName;
+    var n = 0;
+    for (final l in lines) {
+      if (l.sourceName != line.sourceName) continue;
+      n++;
+      if (identical(l, line)) break;
+    }
+    return "${line.sourceName} ·$n";
   }
 
   /// 收藏项：展示命中线路与来源，支持播放、打标签、取消收藏

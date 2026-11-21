@@ -151,11 +151,13 @@ class IptvChannelsController extends BaseController {
     for (final line in channels.expand((e) => e.lines)) {
       // 镜像源重复 URL 只探测一次
       if (!seen.add(line.url)) continue;
-      final cached = service.freshLineStatus(line.url);
-      if (cached != null) {
-        lineStatus[line.url] = cached;
+      final fresh = service.freshLineStatus(line.url);
+      if (fresh != null) {
+        lineStatus[line.url] = fresh;
       } else {
-        lineStatus[line.url] = 0;
+        // 新鲜缓存未命中：先展示最近已知状态（暖启动），仍排入重探队列
+        final known = service.lastKnownLineInfo(line.url);
+        lineStatus[line.url] = known?.status ?? 0;
         pending.add(line.url);
       }
     }
@@ -167,7 +169,16 @@ class IptvChannelsController extends BaseController {
       headers: {"Range": "bytes=0-1023"},
     ));
     _probeDio = dio;
-    const concurrency = 5;
+    const concurrency = 10;
+    // 超出单轮探测上限的线路不发起请求；已有最近已知状态的保持展示，仅未知线路标灰色
+    if (pending.length > maxProbeCount) {
+      for (var i = maxProbeCount; i < pending.length; i++) {
+        if ((lineStatus[pending[i]] ?? 0) == 0) {
+          lineStatus[pending[i]] = 4;
+        }
+      }
+      pending.removeRange(maxProbeCount, pending.length);
+    }
     for (var i = 0; i < pending.length; i += concurrency) {
       if (_probeCancelled) return;
       final batch = pending.skip(i).take(concurrency).toList();
@@ -244,7 +255,10 @@ class IptvChannelsController extends BaseController {
     applyFilter();
   }
 
-  int _probeRank(String url) => switch (lineStatus[url] ?? 0) {
+  int _probeRank(String url) => lineRank(url);
+
+  /// 线路排序权重：绿0 黄1 红或其他2，供页面渲染时实时排序
+  int lineRank(String url) => switch (lineStatus[url] ?? 0) {
         1 => 0,
         2 => 1,
         _ => 2,

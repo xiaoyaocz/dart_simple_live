@@ -25,6 +25,9 @@ class IptvChannelsController extends BaseController {
   /// 标签管理弹窗的新标签输入框
   final tagNewController = TextEditingController();
 
+  /// 搜索框文本控制器（TV端输入框需要）
+  final searchController = TextEditingController();
+
   /// 浏览维度：false=按分组筛选，true=按来源筛选；两个维度互斥
   final browseBySource = false.obs;
   /// 来源列表（去重，按聚合时的源池顺序）
@@ -74,6 +77,7 @@ class IptvChannelsController extends BaseController {
     groupScrollController.dispose();
     sourceScrollController.dispose();
     tagNewController.dispose();
+    searchController.dispose();
     _resortTimer?.cancel();
     _cancelLineStatusCheck();
     super.onClose();

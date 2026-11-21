@@ -4,9 +4,12 @@ import 'package:get/get.dart';
 import 'package:simple_live_tv_app/services/iptv_service.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
+import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/modules/iptv/channels/iptv_channels_controller.dart';
 import 'package:simple_live_tv_app/modules/iptv/parser/aggregated_channel.dart';
+import 'package:simple_live_tv_app/models/db/iptv_tag.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
+import 'package:simple_live_tv_app/widgets/app_text_field.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_list_tile.dart';
 import 'package:simple_live_tv_app/widgets/net_image.dart';
@@ -23,11 +26,27 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
           AppStyle.vGap32,
           _buildHeader(),
           AppStyle.vGap16,
-          _buildViewToggle(),
+          Obx(() => controller.searchVisible.value
+              ? _buildSearchBar()
+              : const SizedBox.shrink()),
+          Obx(() {
+            if (controller.showFavorites.value) {
+              return _buildFavoriteTagBar();
+            }
+            return _buildViewToggle();
+          }),
           AppStyle.vGap16,
-          Obx(() => controller.browseBySource.value
-              ? _buildSourceSelector()
+          Obx(() => controller.showFavorites.value || controller.browseBySource.value
+              ? const SizedBox.shrink()
               : _buildGroupSelector()),
+          Obx(() => controller.showFavorites.value
+              ? const SizedBox.shrink()
+              : (controller.browseBySource.value
+                  ? _buildSourceSelector()
+                  : const SizedBox.shrink())),
+          Obx(() => controller.refreshing.value
+              ? _buildRefreshProgress()
+              : const SizedBox.shrink()),
           AppStyle.vGap16,
           Expanded(child: Obx(_buildBody)),
         ],
@@ -49,6 +68,13 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
         AppStyle.hGap32,
         Text("IPTV直播", style: AppStyle.titleStyleWhite.copyWith(fontSize: 36.w, fontWeight: FontWeight.bold)),
         const Spacer(),
+        HighlightButton(
+          focusNode: AppFocusNode(),
+          iconData: controller.searchVisible.value ? Icons.search_off : Icons.search,
+          text: "搜索",
+          onTap: controller.toggleSearch,
+        ),
+        AppStyle.hGap16,
         _buildRefreshButton(),
         AppStyle.hGap16,
         HighlightButton(
@@ -59,6 +85,33 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
         ),
         AppStyle.hGap48,
       ],
+    );
+  }
+
+  /// 搜索框：本地匹配频道名或来源名
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: AppStyle.edgeInsetsH48,
+      child: Row(
+        children: [
+          Expanded(
+            child: AppTextField(
+              controller: controller.searchController,
+              hintText: "搜索频道名或来源名",
+              onSubmitted: controller.setKeyword,
+            ),
+          ),
+          AppStyle.hGap16,
+          HighlightButton(
+            focusNode: AppFocusNode(),
+            text: "清空",
+            onTap: () {
+              controller.searchController.clear();
+              controller.setKeyword("");
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -94,6 +147,30 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
     });
   }
 
+  /// 刷新进度：列表保留，细进度条 + 每源状态行
+  Widget _buildRefreshProgress() {
+    final service = IptvService.instance;
+    return Padding(
+      padding: AppStyle.edgeInsetsH48,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Obx(() => LinearProgressIndicator(
+                value: service.totalSourceCount.value == 0
+                    ? null
+                    : service.currentSourceIndex.value / service.totalSourceCount.value,
+                minHeight: 4.w,
+              )),
+          AppStyle.vGap8,
+          Obx(() => Text(
+                service.loadingMessage.value,
+                style: AppStyle.textStyleWhite.copyWith(fontSize: 20.w, color: Colors.white54),
+              )),
+        ],
+      ),
+    );
+  }
+
   /// 浏览维度切换：按分组 / 按来源
   Widget _buildViewToggle() {
     return Padding(
@@ -104,7 +181,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
                 focusNode: AppFocusNode(),
                 iconData: Icons.category_outlined,
                 text: "按分组",
-                selected: !controller.browseBySource.value,
+                selected: !controller.browseBySource.value && !controller.showFavorites.value,
                 onTap: () => controller.switchBrowseMode(false),
               )),
           AppStyle.hGap16,
@@ -112,7 +189,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
                 focusNode: AppFocusNode(),
                 iconData: Icons.travel_explore,
                 text: "按来源",
-                selected: controller.browseBySource.value,
+                selected: controller.browseBySource.value && !controller.showFavorites.value,
                 onTap: () => controller.switchBrowseMode(true),
               )),
         ],
@@ -174,6 +251,147 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
         ));
   }
 
+  /// 收藏模式顶栏：标签筛选条 + 标签管理入口
+  Widget _buildFavoriteTagBar() {
+    return Obx(() {
+      final tagItems = <Widget>[
+        _buildTagChip(IptvChannelsController.allTagId, "全部"),
+        _buildTagChip(IptvChannelsController.ungroupedTagId, "未分组"),
+        ...controller.tags.map((t) => _buildTagChip(t.id, t.tag)),
+      ];
+      return Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 64.w,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: AppStyle.edgeInsetsH48,
+                itemCount: tagItems.length,
+                separatorBuilder: (_, __) => AppStyle.hGap16,
+                itemBuilder: (_, i) => tagItems[i],
+              ),
+            ),
+          ),
+          HighlightButton(
+            focusNode: AppFocusNode(),
+            iconData: Icons.style,
+            text: "标签管理",
+            onTap: _showTagManager,
+          ),
+          AppStyle.hGap48,
+        ],
+      );
+    });
+  }
+
+  Widget _buildTagChip(String tagId, String name) {
+    final selected = controller.selectedTagId.value == tagId;
+    return HighlightButton(
+      focusNode: AppFocusNode(),
+      text: name,
+      selected: selected,
+      onTap: () => controller.selectTag(tagId),
+    );
+  }
+
+  /// 标签管理：新增、重命名、删除（对齐关注页的独立管理入口）
+  Future<void> _showTagManager() async {
+    await Utils.showSystemRightDialog(
+      width: 700.w,
+      child: Padding(
+        padding: AppStyle.edgeInsetsA32,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "标签管理",
+              style: AppStyle.titleStyleWhite.copyWith(fontSize: 32.w, fontWeight: FontWeight.bold),
+            ),
+            AppStyle.vGap24,
+            Row(
+              children: [
+                Expanded(
+                  child: AppTextField(
+                    controller: controller.tagNewController,
+                    hintText: "新标签名称",
+                  ),
+                ),
+                AppStyle.hGap16,
+                HighlightButton(
+                  focusNode: AppFocusNode(),
+                  iconData: Icons.add_circle_outline,
+                  text: "添加",
+                  onTap: () async {
+                    final name = controller.tagNewController.text.trim();
+                    if (name.isEmpty) return;
+                    await IptvService.instance.createTag(name);
+                    controller.tagNewController.clear();
+                    controller.refreshTags();
+                  },
+                ),
+              ],
+            ),
+            AppStyle.vGap24,
+            Flexible(
+              child: Obx(() => ListView(
+                    shrinkWrap: true,
+                    children: controller.tags
+                        .map((t) => Padding(
+                              padding: EdgeInsets.only(bottom: 12.w),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "${t.tag}（包含${t.favoriteIds.length}个收藏）",
+                                      style: AppStyle.textStyleWhite.copyWith(fontSize: 26.w),
+                                    ),
+                                  ),
+                                  HighlightButton(
+                                    focusNode: AppFocusNode(),
+                                    iconData: Icons.edit_outlined,
+                                    text: "重命名",
+                                    onTap: () => _renameTag(t),
+                                  ),
+                                  AppStyle.hGap12,
+                                  HighlightButton(
+                                    focusNode: AppFocusNode(),
+                                    iconData: Icons.delete_outline,
+                                    text: "删除",
+                                    onTap: () async {
+                                      await IptvService.instance.deleteTag(t);
+                                      if (controller.selectedTagId.value == t.id) {
+                                        controller.selectTag(IptvChannelsController.allTagId);
+                                      }
+                                      controller.refreshTags();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                  )),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 重命名标签
+  Future<void> _renameTag(IptvTag tag) async {
+    final name = await Utils.showEditTextDialog(
+      tag.tag,
+      title: "重命名标签",
+      validate: (text) => text.trim().isNotEmpty,
+    );
+    if (name != null && name.trim().isNotEmpty) {
+      await IptvService.instance.renameTag(tag, name.trim());
+      controller.refreshTags();
+    }
+  }
+
   Widget _buildBody() {
     if (controller.pageLoadding.value) {
       final service = IptvService.instance;
@@ -197,17 +415,39 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
         ),
       );
     }
-    if (controller.channels.isEmpty) return Center(child: Text("暂无频道", style: AppStyle.textStyleWhite));
+    if (controller.channels.isEmpty) {
+      return Center(
+        child: Text(
+          controller.showFavorites.value ? "暂无收藏频道" : "暂无频道",
+          style: AppStyle.textStyleWhite,
+        ),
+      );
+    }
     return ListView.builder(
       padding: AppStyle.edgeInsetsH48,
       itemCount: controller.channels.length,
-      itemBuilder: (_, index) => _buildChannelRow(controller.channels[index], index),
+      itemBuilder: (_, index) => controller.showFavorites.value
+          ? _buildFavoriteRow(controller.channels[index], index)
+          : _buildChannelRow(controller.channels[index], index),
     );
   }
 
-  /// 频道行：标题行 + 各源探活胶囊
+  /// 频道行：标题行 + 各源探活胶囊（同源多线路带序号）
   Widget _buildChannelRow(AggregatedChannel channel, int index) {
     final fav = controller.isFavoriteChannel(channel);
+    final labelCounts = <String, int>{};
+    for (final l in channel.lines) {
+      labelCounts[l.sourceName] = (labelCounts[l.sourceName] ?? 0) + 1;
+    }
+    final seen = <String, int>{};
+    String chipLabel(String sourceName) {
+      if ((labelCounts[sourceName] ?? 0) <= 1) return sourceName;
+      final n = (seen[sourceName] ?? 0) + 1;
+      seen[sourceName] = n;
+      return "$sourceName ·$n";
+    }
+
+    final labels = {for (final l in channel.lines) l.url: chipLabel(l.sourceName)};
     return Padding(
       padding: EdgeInsets.only(bottom: 12.w),
       child: Column(
@@ -239,11 +479,93 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
             child: Obx(() => Wrap(
                   spacing: 12.w,
                   runSpacing: 8.w,
-                  children: channel.lines.map((line) => _buildLineChip(line)).toList(),
+                  children: channel.lines
+                      .map((line) => _buildLineChip(line, labels[line.url] ?? line.sourceName))
+                      .toList(),
                 )),
           ),
         ],
       ),
+    );
+  }
+
+  /// 收藏行：来源信息 + 打标签 + 取消收藏
+  Widget _buildFavoriteRow(AggregatedChannel channel, int index) {
+    final favItem = controller.favorites.firstWhere(
+      (e) => e.url == channel.defaultLine.url || channel.lines.any((l) => l.url == e.url),
+      orElse: () => controller.favorites.first,
+    );
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.w),
+      child: Row(
+        children: [
+          Expanded(
+            child: HighlightListTile(
+              focusNode: AppFocusNode(),
+              leading: NetImage(channel.logo, width: 48.w, height: 48.w, borderRadius: 8),
+              title: channel.name,
+              subtitle: "${channel.group} · 来源：${channel.sourceNames.join("、")}",
+              onTap: () => controller.openPlayer(channel, index),
+            ),
+          ),
+          AppStyle.hGap12,
+          HighlightButton(
+            focusNode: AppFocusNode(),
+            iconData: Icons.style,
+            text: "标签",
+            onTap: () => _showAssignTagsDialog(favItem),
+          ),
+          AppStyle.hGap12,
+          HighlightButton(
+            focusNode: AppFocusNode(),
+            iconData: Icons.star,
+            text: "取消收藏",
+            onTap: () => controller.toggleFavorite(channel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 收藏打标对话框：勾选标签归属
+  Future<void> _showAssignTagsDialog(dynamic favItem) async {
+    final service = IptvService.instance;
+    await Utils.showSystemRightDialog(
+      width: 700.w,
+      child: Obx(() {
+        final tags = controller.tags;
+        return Padding(
+          padding: AppStyle.edgeInsetsA32,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "「${favItem.name}」的标签",
+                style: AppStyle.titleStyleWhite.copyWith(fontSize: 32.w, fontWeight: FontWeight.bold),
+              ),
+              AppStyle.vGap24,
+              if (tags.isEmpty)
+                Text("还没有标签，先到「标签管理」里新建", style: AppStyle.textStyleWhite.copyWith(fontSize: 24.w)),
+              ...tags.map((t) => Padding(
+                    padding: EdgeInsets.only(bottom: 12.w),
+                    child: HighlightButton(
+                      focusNode: AppFocusNode(),
+                      iconData: t.favoriteIds.contains(favItem.id)
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      text: t.tag,
+                      selected: t.favoriteIds.contains(favItem.id),
+                      onTap: () async {
+                        await service.toggleFavoriteInTag(favItem.id, t);
+                        controller.refreshTags();
+                      },
+                    ),
+                  )),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -261,7 +583,7 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
   }
 
   /// 线路探活胶囊：状态色淡底 + 圆点 + 源名称，检测中显示微型进度
-  Widget _buildLineChip(IptvLine line) {
+  Widget _buildLineChip(IptvLine line, String label) {
     final status = controller.lineStatus[line.url] ?? 0;
     final (dotColor, textColor) = switch (status) {
       1 => (Colors.green, Colors.greenAccent),
@@ -269,31 +591,34 @@ class IptvChannelsPage extends GetView<IptvChannelsController> {
       3 => (Colors.red, Colors.redAccent),
       _ => (Colors.grey, Colors.white38),
     };
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.w),
-      decoration: BoxDecoration(
-        color: dotColor.withAlpha(status == 0 ? 20 : 32),
-        borderRadius: BorderRadius.circular(24.w),
-        border: Border.all(color: dotColor.withAlpha(status == 0 ? 60 : 110)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (status == 0)
-            SizedBox(
-              width: 12.w,
-              height: 12.w,
-              child: CircularProgressIndicator(strokeWidth: 1.6, color: dotColor),
-            )
-          else
-            Container(
-              width: 10.w,
-              height: 10.w,
-              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-            ),
-          AppStyle.hGap8,
-          Text(line.sourceName, style: TextStyle(fontSize: 20.w, color: textColor)),
-        ],
+    return Tooltip(
+      message: line.url,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.w),
+        decoration: BoxDecoration(
+          color: dotColor.withAlpha(status == 0 ? 20 : 32),
+          borderRadius: BorderRadius.circular(24.w),
+          border: Border.all(color: dotColor.withAlpha(status == 0 ? 60 : 110)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (status == 0)
+              SizedBox(
+                width: 12.w,
+                height: 12.w,
+                child: CircularProgressIndicator(strokeWidth: 1.6, color: dotColor),
+              )
+            else
+              Container(
+                width: 10.w,
+                height: 10.w,
+                decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+            AppStyle.hGap8,
+            Text(label, style: TextStyle(fontSize: 20.w, color: textColor)),
+          ],
+        ),
       ),
     );
   }

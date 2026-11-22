@@ -179,6 +179,7 @@ class BiliBiliSite implements LiveSite {
     var result = await _fetchPlayInfo(detail.roomId, qn: quality.data);
     return _parsePlayUrls(
       result["data"]["playurl_info"]["playurl"]["stream"],
+      quality: int.tryParse('${quality.data}'),
     );
   }
 
@@ -218,8 +219,9 @@ class BiliBiliSite implements LiveSite {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188",
   };
 
-  LivePlayUrl _parsePlayUrls(List streamList) {
-    List<String> urls = [];
+  LivePlayUrl _parsePlayUrls(List streamList, {required int? quality}) {
+    var urls = <String>[];
+    final matchingUrls = <String>[];
     for (var streamItem in streamList) {
       var formatList = streamItem["format"];
       for (var formatItem in formatList) {
@@ -232,15 +234,19 @@ class BiliBiliSite implements LiveSite {
         for (var codecItem in codecList) {
           var urlList = codecItem["url_info"];
           var baseUrl = codecItem["base_url"].toString();
+          final matchesQuality = quality != null &&
+              int.tryParse('${codecItem["current_qn"]}') == quality;
           for (var urlItem in urlList) {
-            urls.add("${urlItem["host"]}$baseUrl${urlItem["extra"]}");
+            final url = "${urlItem["host"]}$baseUrl${urlItem["extra"]}";
+            urls.add(url);
+            if (matchesQuality) matchingUrls.add(url);
           }
         }
       }
     }
     // 对链接进行排序，包含mcdn的在后
     // 保留接口给出的线路顺序，并将 mcdn 放在备用位置。
-    urls = urls.toSet().toList();
+    urls = (matchingUrls.isEmpty ? urls : matchingUrls).toSet().toList();
     urls = [
       ...urls.where((url) => !url.contains("mcdn")),
       ...urls.where((url) => url.contains("mcdn")),
@@ -255,7 +261,7 @@ class BiliBiliSite implements LiveSite {
         streams[0]["format"][0]["codec"][0]["current_qn"].toString(),
       );
       if (qn == null) return;
-      final playUrl = _parsePlayUrls(streams);
+      final playUrl = _parsePlayUrls(streams, quality: qn);
       if (playUrl.urls.isEmpty) return;
       if (_cachedPlayUrls.length >= 8) {
         _cachedPlayUrls.remove(_cachedPlayUrls.keys.first);

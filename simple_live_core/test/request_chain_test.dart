@@ -146,6 +146,36 @@ void main() {
     await Future.wait([first, second]);
     expect(calls, 1);
   });
+  test('Bili lines keep the requested quality when another codec returns a lower one', () async {
+    final info = playInfo('low');
+    final codecs = info['data']['playurl_info']['playurl']['stream'][0]
+        ['format'][0]['codec'] as List;
+    codecs.first['accept_qn'] = [10000, 80];
+    codecs.add({
+      'codec_name': 'hevc',
+      'current_qn': 10000,
+      'accept_qn': [10000, 80],
+      'base_url': '/original.flv',
+      'url_info': [
+        {'host': 'https://primary.test', 'extra': ''},
+        {'host': 'https://backup.test', 'extra': ''},
+      ],
+    });
+    core.HttpClient.instance.dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (request, handler) =>
+          handler.resolve(Response(requestOptions: request, data: info)),
+    ));
+    final site = _Bili();
+    final detail = room();
+    final qualities = await site.getPlayQualites(detail: detail);
+    final original = await site.getPlayUrls(detail: detail, quality: qualities.first);
+    final low = await site.getPlayUrls(detail: detail, quality: qualities.last);
+    expect(original.urls, [
+      'https://primary.test/original.flv',
+      'https://backup.test/original.flv',
+    ]);
+    expect(low.urls, ['https://cdn.test/live.flv?token=low']);
+  });
   test(
     'Bili playback handoff is consumed once so recovery gets a fresh URL',
     () async {

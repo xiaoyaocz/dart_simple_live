@@ -12,6 +12,9 @@ class PlaybackSession {
   Object? recovery;
   Timer? bufferingTimer;
   Timer? failureTimer;
+  Timer? shortBufferingTimer;
+  Duration? rebufferBurstStart;
+  int rebufferBurstCount = 0;
   final rebufferWatch = Stopwatch();
 
   Future<void> get settled => _settled;
@@ -30,6 +33,10 @@ class PlaybackSession {
     bufferingTimer = null;
     failureTimer?.cancel();
     failureTimer = null;
+    shortBufferingTimer?.cancel();
+    shortBufferingTimer = null;
+    rebufferBurstStart = null;
+    rebufferBurstCount = 0;
     rebufferWatch
       ..stop()
       ..reset();

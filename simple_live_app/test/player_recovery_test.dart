@@ -582,6 +582,48 @@ void main() {
     expect(room.fake.opens, 1);
     expect(room.currentLineIndex, 1);
   });
+  testWidgets('B站原画真彩反复短卡时切到现有备用线路并保留画质', (tester) async {
+    final site = _Bili();
+    final room = _Room(
+      source: Site(id: 'bilibili', name: '', logo: '', liveSite: site),
+    );
+    room.detail.value = _liveDetail();
+    room.liveStatus.value = true;
+    room.qualites.add(LivePlayQuality(quality: '原画真彩', data: 10000));
+    room.currentQuality = 0;
+    room.currentQualityInfo.value = '原画真彩';
+    room.currentLineIndex = 0;
+    room.playUrls.addAll(['https://first/live.flv', 'https://next/live.flv']);
+    await room.setPlayer();
+    room.hasPlayed.value = true;
+
+    for (var i = 0; i < 3; i++) {
+      room.mediaBuffering(true);
+      await tester.pump(const Duration(milliseconds: 200));
+      room.mediaBuffering(false);
+    }
+    expect(room.currentLineIndex, 0);
+
+    for (var i = 1; i <= 3; i++) {
+      final position = Duration(seconds: i * 3);
+      room.fake.state =
+          PlayerState(playing: true, buffering: true, position: position);
+      room.mediaBuffering(true);
+      await tester.pump(const Duration(seconds: 1));
+      if (i < 3) {
+        expect(room.currentLineIndex, 0);
+        room.fake.state = PlayerState(playing: true, position: position);
+        room.mediaBuffering(false);
+      }
+    }
+    final line = room.currentLineIndex;
+    room.mediaBuffering(false);
+    expect(line, 1);
+    expect(room.currentQualityInfo.value, '原画真彩');
+    expect(room.fake.opens, 2);
+    expect(site.calls, 0);
+  });
+
   testWidgets('B站断流时刷新过期播放地址', (tester) async {
     final site = _Bili();
     final room = _Room(

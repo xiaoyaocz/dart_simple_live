@@ -1139,16 +1139,41 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       watch.reset();
       _playback.bufferingTimer?.cancel();
       _playback.bufferingTimer = null;
+      _playback.shortBufferingTimer?.cancel();
+      _playback.shortBufferingTimer = null;
       return;
     }
     if (_playback.bufferingTimer?.isActive ?? false) return;
     if (_roomClosed || isBackground || playUrls.isEmpty) return;
-    if (hasPlayed.value) _playback.rebufferWatch.start();
+    final newRebuffer = hasPlayed.value && !_playback.rebufferWatch.isRunning;
+    if (newRebuffer) _playback.rebufferWatch.start();
     final request = _playback.generation;
     final line = currentLineIndex;
     final position = player.state.position;
     // 多线路起播无进展时提早试备用线；单线路保留15秒宽限。
     final hasBackup = line + 1 < playUrls.length;
+    if (site.id == Constant.kBiliBili && newRebuffer && hasBackup) {
+      final revision = _playback.openRevision;
+      _playback.shortBufferingTimer = Timer(const Duration(seconds: 1), () {
+        _playback.shortBufferingTimer = null;
+        if (!_isCurrentRequest(request) || revision != _playback.openRevision ||
+            currentLineIndex != line || isBackground || !liveStatus.value ||
+            _playback.recovery != null || !player.state.buffering) {
+          return;
+        }
+        final start = _playback.rebufferBurstStart;
+        if (start == null || position < start ||
+            position - start > const Duration(seconds: 20)) {
+          _playback.rebufferBurstStart = position;
+          _playback.rebufferBurstCount = 0;
+        }
+        // 一次长缓冲仍由原看门狗处理。反复短卡则提前换同画质备用线。
+        if (++_playback.rebufferBurstCount >= 3) {
+          PlaybackRouteHistory.instance.failure(site.id, _routeQuality, playUrls[line]);
+          changePlayLine(line + 1);
+        }
+      });
+    }
     final timeout = Duration(seconds:
         site.id == Constant.kDouyin && hasPlayed.value && hasBackup
             ? 4

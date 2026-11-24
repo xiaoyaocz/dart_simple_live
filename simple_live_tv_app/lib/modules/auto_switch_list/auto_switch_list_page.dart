@@ -8,6 +8,7 @@ import 'package:simple_live_tv_app/app/sites.dart';
 import 'package:simple_live_tv_app/app/utils.dart';
 import 'package:simple_live_tv_app/models/auto_switch_item.dart';
 import 'package:simple_live_tv_app/modules/auto_switch_list/auto_switch_list_controller.dart';
+import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/follow_user_service.dart';
 import 'package:simple_live_tv_app/widgets/app_scaffold.dart';
 import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
@@ -16,7 +17,8 @@ import 'package:simple_live_tv_app/widgets/button/highlight_button.dart';
 class AutoSwitchListPage extends StatelessWidget {
   const AutoSwitchListPage({super.key});
 
-  AutoSwitchListController get controller => Get.find<AutoSwitchListController>();
+  AutoSwitchListController get controller =>
+      Get.find<AutoSwitchListController>();
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +68,13 @@ class AutoSwitchListPage extends StatelessWidget {
               AppStyle.hGap24,
               HighlightButton(
                 focusNode: AppFocusNode(),
+                iconData: Icons.history,
+                text: "从观看记录导入",
+                onTap: _showHistoryImport,
+              ),
+              AppStyle.hGap24,
+              HighlightButton(
+                focusNode: AppFocusNode(),
                 iconData: Icons.label_outline,
                 text: "按标签导入",
                 onTap: _showTagImport,
@@ -88,7 +97,7 @@ class AutoSwitchListPage extends StatelessWidget {
                   return Padding(
                     padding: AppStyle.edgeInsetsA48,
                     child: Text(
-                      "列表为空：可通过“添加关注”多选加入，或用“按标签导入”一键导入整个标签",
+                      "列表为空：可从关注、观看记录或标签导入直播间",
                       style: AppStyle.subTextStyleWhite,
                     ),
                   );
@@ -208,6 +217,118 @@ class AutoSwitchListPage extends StatelessWidget {
                                 .toList();
                             final added = controller.importFollows(follows);
                             SmartDialog.showToast("已添加 $added 个关注到轮播列表");
+                            Get.back();
+                          },
+                  ),
+                  AppStyle.hGap12,
+                  HighlightButton(
+                    focusNode: AppFocusNode(),
+                    iconData: Icons.close,
+                    text: "取消",
+                    onTap: () => Get.back(),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// 按最近观看顺序多选导入观看记录。
+  Future<void> _showHistoryImport() async {
+    final candidates = DBService.instance
+        .getHistores()
+        .where(
+          (item) =>
+              item.siteId.isNotEmpty &&
+              item.roomId.isNotEmpty &&
+              !controller.service.contains(item.siteId, item.roomId),
+        )
+        .toList();
+    final allHistoryCount = DBService.instance.getHistores().length;
+    if (candidates.isEmpty) {
+      SmartDialog.showToast(
+        allHistoryCount == 0 ? "暂无观看记录" : "观看记录中的直播间已全部在列表中",
+      );
+      return;
+    }
+
+    final selected = <String>{};
+    await Utils.showSystemRightDialog(
+      width: 760.w,
+      child: StatefulBuilder(
+        builder: (context, setState) {
+          final allSelected = selected.length == candidates.length;
+          return ListView(
+            padding: AppStyle.edgeInsetsA24,
+            children: [
+              Text("从观看记录导入", style: AppStyle.titleStyleWhite),
+              AppStyle.vGap16,
+              Text(
+                "按最近观看顺序排列；已在轮播列表中的记录已隐藏。",
+                style: AppStyle.subTextStyleWhite,
+              ),
+              AppStyle.vGap16,
+              HighlightButton(
+                focusNode: AppFocusNode(),
+                iconData: allSelected ? Icons.deselect : Icons.select_all,
+                text: allSelected ? "取消全选" : "全选（${candidates.length}）",
+                onTap: () {
+                  setState(() {
+                    if (allSelected) {
+                      selected.clear();
+                    } else {
+                      selected.addAll(candidates.map((item) => item.id));
+                    }
+                  });
+                },
+              ),
+              AppStyle.vGap16,
+              ...candidates.map(
+                (item) {
+                  final siteName =
+                      Sites.allSites[item.siteId]?.name ?? item.siteId;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 12.w),
+                    child: HighlightButton(
+                      focusNode: AppFocusNode(),
+                      iconData: selected.contains(item.id)
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      text: "${item.userName}（$siteName）",
+                      selected: selected.contains(item.id),
+                      onTap: () {
+                        setState(() {
+                          if (!selected.remove(item.id)) {
+                            selected.add(item.id);
+                          }
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
+              AppStyle.vGap24,
+              Row(
+                children: [
+                  HighlightButton(
+                    focusNode: AppFocusNode(),
+                    iconData: Icons.playlist_add,
+                    text: "导入(${selected.length})",
+                    onTap: selected.isEmpty
+                        ? null
+                        : () {
+                            final chosen = candidates
+                                .where((item) => selected.contains(item.id))
+                                .toList();
+                            final added = controller.importHistories(chosen);
+                            final duplicateCount = chosen.length - added;
+                            final message = duplicateCount == 0
+                                ? "已导入 $added 个直播间"
+                                : "已导入 $added 个，跳过 $duplicateCount 个重复记录";
+                            SmartDialog.showToast(message);
                             Get.back();
                           },
                   ),

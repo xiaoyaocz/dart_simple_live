@@ -7,6 +7,7 @@ import 'package:simple_live_tv_app/app/sites.dart';
 import 'package:simple_live_tv_app/models/auto_switch_item.dart';
 import 'package:simple_live_tv_app/models/db/follow_user.dart';
 import 'package:simple_live_tv_app/models/db/follow_user_tag.dart';
+import 'package:simple_live_tv_app/models/db/history.dart';
 import 'package:simple_live_tv_app/services/db_service.dart';
 import 'package:simple_live_tv_app/services/local_storage_service.dart';
 
@@ -169,6 +170,21 @@ class AutoSwitchListService extends GetxService {
       }
     }
     return importFollows(follows);
+  }
+
+  /// 批量导入观看记录，保持传入的最近观看优先顺序。
+  int importHistories(List<History> histories) {
+    return addItems(
+      histories
+          .map(
+            (history) => AutoSwitchListItem(
+              siteId: history.siteId,
+              roomId: history.roomId,
+              userName: history.userName,
+            ),
+          )
+          .toList(),
+    );
   }
 
   /// 整体重建成员开播状态缓存。

@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -11,7 +14,12 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:path/path.dart' as p;
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/mpv_options_service.dart';
+import 'package:simple_live_app/services/profile_backup_service.dart';
+import 'package:simple_live_app/widgets/sync_progress_dialog.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class OtherSettingsController extends BaseController {
   RxList<LogFileModel> logFiles = <LogFileModel>[].obs;
@@ -97,7 +105,7 @@ class OtherSettingsController extends BaseController {
         loadLogFiles();
       });
     } else {
-      Log.disposeWriter();
+      unawaited(Log.disposeWriter());
     }
   }
 
@@ -140,32 +148,37 @@ class OtherSettingsController extends BaseController {
   }
 
   void saveLogFile(LogFileModel item) async {
-    var filePath = await FilePicker.platform.saveFile(
-      allowedExtensions: ['log'],
-      type: FileType.custom,
-      fileName: item.name,
-      bytes: Uint8List(0),
-    );
-    if (filePath != null) {
-      var file = File(item.path);
-      await file.copy(filePath);
+    try {
+      await Log.flushWriter();
+      final source = File(item.path);
+      if (!await source.exists()) {
+        SmartDialog.showToast("日志文件不存在");
+        return;
+      }
+      final inlineSave = Platform.isAndroid || Platform.isIOS || kIsWeb;
+      final bytes = inlineSave ? await source.readAsBytes() : null;
+      final filePath = await FilePicker.platform.saveFile(
+        allowedExtensions: ['log'],
+        type: FileType.custom,
+        fileName: item.name,
+        bytes: bytes,
+      );
+      if (filePath == null) {
+        return;
+      }
+      if (!inlineSave) {
+        await source.copy(filePath);
+      }
       SmartDialog.showToast("保存成功");
+    } catch (e) {
+      SmartDialog.showToast("保存失败：$e");
     }
   }
 
   void exportConfig() async {
     try {
-      // 组装数据
-      var data = {
-        "type": "simple_live",
-        "platform": Platform.operatingSystem,
-        "version": 1,
-        "time": DateTime.now().millisecondsSinceEpoch,
-        "config": LocalStorageService.instance.settingsBox.toMap(),
-        "shield": LocalStorageService.instance.shieldBox.toMap(),
-      };
-
-      var bytes = Uint8List.fromList(utf8.encode(jsonEncode(data)));
+      var data = ProfileBackupService.instance.exportProfileJson();
+      var bytes = Uint8List.fromList(utf8.encode(data));
 
       // FilePicker 直接写入
       var inlineSave = Platform.isAndroid || Platform.isIOS || kIsWeb;
@@ -173,7 +186,7 @@ class OtherSettingsController extends BaseController {
       var path = await FilePicker.platform.saveFile(
         allowedExtensions: ['json'],
         type: FileType.custom,
-        fileName: "simple_live_config.json",
+        fileName: "simple_live_profile.json",
         bytes: inlineSave ? bytes : null,
       );
 
@@ -204,23 +217,28 @@ class OtherSettingsController extends BaseController {
         return;
       }
       var filePath = file.files.single.path!;
-      var data = jsonDecode(await File(filePath).readAsString());
-      if (data["type"] != "simple_live") {
-        SmartDialog.showToast("不支持的配置文件");
+      var content = await File(filePath).readAsString();
+      var data = jsonDecode(content);
+      if (ProfileBackupService.instance.isSupportedProfileMap(data)) {
+        var overwrite = await Utils.showAlertDialog(
+          "是否覆盖本地数据？选择“不覆盖”会合并导入，保留本机已有数据。",
+          title: "导入配置包",
+          confirm: "覆盖",
+          cancel: "不覆盖",
+        );
+        SyncProgressDialog.show(const SyncProgress(stage: "正在导入配置包"));
+        final summary = await ProfileBackupService.instance.importProfileJson(
+          content,
+          overwrite: overwrite,
+          onProgress: SyncProgressDialog.update,
+        );
+        SyncProgressDialog.dismiss();
+        SmartDialog.showToast("导入成功：${summary.message}");
         return;
       }
-      // 检查platform
-      if (data["platform"] != Platform.operatingSystem &&
-          !await Utils.showAlertDialog("导入配置文件平台不匹配,是否继续导入?", title: "平台不匹配")) {
-        return;
-      }
-      LocalStorageService.instance.settingsBox.clear();
-      LocalStorageService.instance.shieldBox.clear();
-      LocalStorageService.instance.settingsBox.putAll(data["config"]);
-      LocalStorageService.instance.shieldBox
-          .putAll(data["shield"].cast<String, String>());
-      SmartDialog.showToast("导入成功,重启生效");
+      SmartDialog.showToast("不支持的配置文件");
     } catch (e) {
+      SyncProgressDialog.dismiss();
       Log.logPrint(e);
       SmartDialog.showToast("导入失败:$e");
     }
@@ -231,9 +249,68 @@ class OtherSettingsController extends BaseController {
       if (value) {
         LocalStorageService.instance.settingsBox.clear();
         LocalStorageService.instance.shieldBox.clear();
+        AppSettingsController.instance.reloadFromStorage();
+        LiveSubtitleService.instance.stop();
         SmartDialog.showToast("重置成功,重启生效");
       }
     });
+  }
+
+  Future<void> editMpvAdvancedOptions() async {
+    final textController = TextEditingController(
+      text: AppSettingsController.instance.mpvAdvancedOptions.value,
+    );
+    final value = await Get.dialog<String>(
+      AlertDialog(
+        title: const Text("高级 mpv options"),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: textController,
+            minLines: 8,
+            maxLines: 14,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: "每行一个，例如 scale=spline36",
+            ),
+            autofocus: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: const Text("取消"),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: textController.text),
+            child: const Text("确定"),
+          ),
+        ],
+      ),
+    );
+    textController.dispose();
+    if (value == null) {
+      return;
+    }
+    AppSettingsController.instance.setMpvAdvancedOptions(value);
+    SmartDialog.showToast("已保存，重开直播间后生效");
+    update();
+  }
+
+  Future<void> importMpvConf() async {
+    final path = await MpvOptionsService.importMpvConf();
+    if (path == null) {
+      return;
+    }
+    AppSettingsController.instance.setImportedMpvConfPath(path);
+    SmartDialog.showToast("已导入 mpv.conf，重开直播间后生效");
+    update();
+  }
+
+  void clearImportedMpvConf() {
+    AppSettingsController.instance.setImportedMpvConfPath("");
+    SmartDialog.showToast("已清除导入配置");
+    update();
   }
 }
 

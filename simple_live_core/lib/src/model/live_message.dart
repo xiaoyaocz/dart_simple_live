@@ -25,17 +25,33 @@ class LiveMessage {
   final String message;
 
   /// 数据
-  /// 单Type=Online时，Data为人气值(long)
+  /// 单Type=Online时，Data为在线人数（抖音为当前在线，其余平台为各自在线口径）
   final dynamic data;
+
+  /// Type=Online 时的累计观看人数（目前仅抖音弹幕提供；其余平台为 null）
+  final int? totalViews;
 
   /// 弹幕颜色
   final LiveMessageColor color;
+
+  /// 弹幕内表情图片地址
+  final List<String>? imageUrls;
+
+  /// 富文本消息片段。
+  ///
+  /// 按平台返回的顺序保存文字和图片，方便聊天区和悬浮弹幕
+  /// 把表情插回原始位置。旧渲染端可继续只读 [message] 和 [imageUrls]。
+  final List<LiveMessageSpan>? spans;
+
   LiveMessage({
     required this.type,
     required this.userName,
     required this.message,
     this.data,
+    this.totalViews,
     required this.color,
+    this.imageUrls,
+    this.spans,
   });
 
   @override
@@ -46,8 +62,23 @@ class LiveMessage {
       "message": message,
       "data": data.toString(),
       "color": color.toString(),
+      "imageUrls": imageUrls,
+      "spans": spans?.map((e) => e.toJson()).toList(),
     });
   }
+}
+
+class LiveMessageSpan {
+  final String? text;
+  final String? imageUrl;
+
+  const LiveMessageSpan.text(this.text) : imageUrl = null;
+  const LiveMessageSpan.image(this.imageUrl) : text = null;
+
+  bool get isImage => imageUrl != null && imageUrl!.trim().isNotEmpty;
+  bool get isText => text != null && text!.isNotEmpty;
+
+  Map<String, dynamic> toJson() => {"text": text, "imageUrl": imageUrl};
 }
 
 class LiveMessageColor {
@@ -86,6 +117,7 @@ class LiveMessageColor {
 }
 
 class LiveSuperChatMessage {
+  final String? id;
   final String userName;
   final String face;
   final String message;
@@ -95,6 +127,7 @@ class LiveSuperChatMessage {
   final String backgroundColor;
   final String backgroundBottomColor;
   LiveSuperChatMessage({
+    this.id,
     required this.backgroundBottomColor,
     required this.backgroundColor,
     required this.endTime,
@@ -108,6 +141,7 @@ class LiveSuperChatMessage {
   @override
   String toString() {
     return json.encode({
+      "id": id,
       "userName": userName,
       "face": face,
       "message": message,

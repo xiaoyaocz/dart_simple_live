@@ -1,7 +1,7 @@
 {
-    "version": "1.3.5",
-    "version_num": 10305,
-    "version_desc": "- 修复虎牙播放中断 #723 @SlotSun\n- 修复哔哩哔哩加载失败",
-    "prerelease":true,
-    "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
+    "version": "1.7.9",
+    "version_num": 10709,
+    "version_desc": "- TV 主页启动时按设置立即刷新关注状态，不再等待周期任务或进入我的关注页面。\n- 分离定时刷新与进入关注页刷新开关，避免重复请求并保留独立控制。\n- Android TV 与 TV-Windows 支持快手账号 Cookie 管理和配置同步。\n- 优化斗鱼弹幕端口切换和断线恢复，提升受限网络下的稳定性。",
+    "prerelease": false,
+    "download_url": "https://github.com/June6699/dart_simple_live/releases/tag/tv_v1.7.9"
 }

@@ -108,7 +108,7 @@ class LocalSyncPage extends GetView<LocalSyncController> {
           ),
           AppStyle.vGap12,
           const Text(
-            "如果无法扫描到设备，请手动输入地址",
+            "局域网同步需要两台设备在同一 Wi-Fi/局域网；跨网络请使用远程房间同步或 WebDAV。",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey,

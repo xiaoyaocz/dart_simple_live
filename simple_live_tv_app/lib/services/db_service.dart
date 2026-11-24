@@ -2,16 +2,82 @@ import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:simple_live_tv_app/models/db/follow_user.dart';
 
+import 'package:simple_live_tv_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_tv_app/models/db/history.dart';
+import 'package:uuid/uuid.dart';
+import 'package:collection/collection.dart';
 
 class DBService extends GetxService {
   static DBService get instance => Get.find<DBService>();
   late Box<History> historyBox;
   late Box<FollowUser> followBox;
+  late Box<FollowUserTag> tagBox;
+  final Uuid uuid = const Uuid();
+
+  /// 标签名长度上限，与手机端保持一致
+  static const int followTagMaxLength = 8;
 
   Future init() async {
     historyBox = await Hive.openBox("TVHostiry");
     followBox = await Hive.openBox("TVFollowUser");
+    tagBox = await Hive.openBox("TVFollowUserTag");
+  }
+
+  // follow_user_tag 相关逻辑
+  bool getFollowTagExist(String id) {
+    return tagBox.containsKey(id);
+  }
+
+  // 删除标签
+  Future deleteFollowTag(String id) async {
+    await tagBox.delete(id);
+  }
+
+  FollowUserTag? getFollowTag(String tag) {
+    return tagBox.values.firstWhereOrNull((item) => item.tag == tag);
+  }
+
+  // 判断标签名称是否重复
+  bool getFollowTagExistByTag(String tag) {
+    return tagBox.values.any((item) => item.tag == tag);
+  }
+
+  // 获取标签列表
+  List<FollowUserTag> getFollowTagList() {
+    return tagBox.values.toList();
+  }
+
+  // 修改标签
+  Future updateFollowTag(FollowUserTag followTag) async {
+    await tagBox.put(followTag.id, followTag);
+  }
+
+  // 添加标签
+  // 限制标签唯一且长度不超过8个字符，非法输入返回 null
+  Future<FollowUserTag?> addFollowTag(String tag) async {
+    final String name = tag.trim();
+    if (name.isEmpty) {
+      return null;
+    }
+    if (getFollowTagExistByTag(name)) {
+      return getFollowTag(name);
+    }
+    if (name.length > followTagMaxLength) {
+      return null;
+    }
+    final String uniqueId = uuid.v4();
+    final followUserTag = FollowUserTag(id: uniqueId, tag: name, userId: []);
+    await tagBox.put(uniqueId, followUserTag);
+    return followUserTag;
+  }
+
+  // 调整标签顺序
+  Future updateFollowTagOrder(List<FollowUserTag> userTagList) async {
+    final Map<int, FollowUserTag> updatedMap = {
+      for (int i = 0; i < userTagList.length; i++) i: userTagList[i]
+    };
+    await tagBox.clear();
+    await tagBox.putAll(updatedMap);
   }
 
   bool getFollowExist(String id) {
@@ -24,6 +90,12 @@ class DBService extends GetxService {
 
   Future addFollow(FollowUser follow) async {
     await followBox.put(follow.id, follow);
+  }
+
+  Future addFollows(Iterable<FollowUser> follows) async {
+    await followBox.putAll({
+      for (final follow in follows) follow.id: follow,
+    });
   }
 
   Future deleteFollow(String id) async {

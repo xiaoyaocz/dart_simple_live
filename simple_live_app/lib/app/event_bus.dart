@@ -7,6 +7,12 @@ class EventBus {
   /// 点击了底部导航
   static const String kBottomNavigationBarClicked =
       "BottomNavigationBarClicked";
+
+  /// 主页底栏入口显隐/排序变化，需要重建底栏
+  static const String kUpdateHomeTabs = "UpdateHomeTabs";
+
+  /// 平台显隐/排序变化，需要重建首页/分类/搜索的平台标签
+  static const String kUpdateSiteTabs = "UpdateSiteTabs";
   static EventBus? _instance;
 
   static EventBus get instance {

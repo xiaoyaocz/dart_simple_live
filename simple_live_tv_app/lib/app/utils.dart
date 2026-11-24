@@ -6,6 +6,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_tv_app/app/app_style.dart';
+import 'package:simple_live_tv_app/widgets/app_text_field.dart';
+
+typedef TextValidate = bool Function(String text);
 
 class Utils {
   static late PackageInfo packageInfo;
@@ -120,10 +123,76 @@ class Utils {
     return result ?? false;
   }
 
+  /// 文本编辑的弹窗
+  static Future<String?> showEditTextDialog(
+    String content, {
+    String title = '',
+    String? hintText,
+    String confirm = '',
+    String cancel = '',
+    TextValidate? validate,
+  }) async {
+    final textEditingController = TextEditingController(text: content);
+    var result = await Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: AppStyle.radius16,
+        ),
+        titlePadding: AppStyle.edgeInsetsA24.copyWith(left: 48.w, right: 48.w),
+        contentPadding:
+            AppStyle.edgeInsetsA24.copyWith(left: 48.w, right: 48.w),
+        insetPadding: AppStyle.edgeInsetsA16,
+        actionsPadding: AppStyle.edgeInsetsA16,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Get.theme.cardColor,
+        title: Text(
+          title,
+          style: AppStyle.titleStyleWhite,
+        ),
+        content: Padding(
+          padding: AppStyle.edgeInsetsV12,
+          child: SizedBox(
+            width: 560.w,
+            child: AppTextField(
+              controller: textEditingController,
+              autofocus: true,
+              style: AppStyle.textStyleWhite,
+              hintText: hintText ?? title,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: Text(
+              cancel.isEmpty ? "取消" : cancel,
+              style: AppStyle.textStyleWhite,
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              if (validate != null && !validate(textEditingController.text)) {
+                return;
+              }
+              Get.back(result: textEditingController.text);
+            },
+            child: Text(
+              confirm.isEmpty ? "确定" : confirm,
+              style: AppStyle.textStyleWhite,
+            ),
+          ),
+        ],
+      ),
+    );
+    return result;
+  }
+
   static Future<T?> showOptionDialog<T>(
     List<T> contents,
     T value, {
     String title = '',
+    Widget Function(T value)? titleBuilder,
+    Widget Function(T value)? subtitleBuilder,
   }) async {
     var result = await Get.dialog(
       AlertDialog(
@@ -134,7 +203,11 @@ class Utils {
           child: Column(
             children: contents
                 .map(
-                  (e) => RadioListTile<T>(title: Text(e.toString()), value: e),
+                  (e) => RadioListTile<T>(
+                    title: titleBuilder?.call(e) ?? Text(e.toString()),
+                    subtitle: subtitleBuilder?.call(e),
+                    value: e,
+                  ),
                 )
                 .toList(),
           ),
@@ -239,13 +312,17 @@ class Utils {
     SmartDialog.dismiss(status: SmartStatus.allCustom);
   }
 
+  /// 将 "x.y.z" 形式的版本号解析为可比较的整数（"1.8.2" -> 10802）。
+  /// 预发布/构建后缀（"-local.1"、"+10802"）不参与比较——本地构建不应
+  /// 比同版本号的正式版"更新"；非数字段按 0 处理，不抛异常。
   static int parseVersion(String version) {
-    var sp = version.split('.');
+    final core = version.trim().split(RegExp(r'[+-]')).first;
     var num = "";
-    for (var item in sp) {
-      num = num + item.padLeft(2, '0');
+    for (var item in core.split('.')) {
+      final digits = RegExp(r'^(\d+)').firstMatch(item)?.group(1) ?? "0";
+      num = num + digits.padLeft(2, '0');
     }
-    return int.parse(num);
+    return int.tryParse(num) ?? 0;
   }
 
   static String onlineToString(int num) {

@@ -1,6 +1,9 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
+
+#include <cstring>
+
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
@@ -10,9 +13,178 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  FlMethodChannel* shortcut_channel;
+  gboolean shortcut_capture_enabled;
+  // Hardware keycodes whose key-press was consumed, so the matching release
+  // is consumed too and Flutter never sees an unpaired event.
+  gboolean swallowed_keycodes[256];
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+static const gchar* shortcut_key_for_event(GdkEventKey* event) {
+  switch (event->hardware_keycode) {
+    case 41:
+      return "keyF";
+    case 40:
+      return "keyD";
+    case 58:
+      return "keyM";
+    case 27:
+      return "keyR";
+    case 54:
+      return "keyC";
+    case 24:
+      return "keyQ";
+    case 26:
+      return "keyE";
+    case 28:
+      return "keyT";
+    case 42:
+      return "keyG";
+    case 56:
+      return "keyB";
+    case 57:
+      return "keyN";
+    case 111:
+      return "arrowUp";
+    case 116:
+      return "arrowDown";
+    case 65:
+      return "keySpace";
+    default:
+      break;
+  }
+
+  switch (event->keyval) {
+    case GDK_KEY_f:
+    case GDK_KEY_F:
+      return "keyF";
+    case GDK_KEY_d:
+    case GDK_KEY_D:
+      return "keyD";
+    case GDK_KEY_m:
+    case GDK_KEY_M:
+      return "keyM";
+    case GDK_KEY_r:
+    case GDK_KEY_R:
+      return "keyR";
+    case GDK_KEY_c:
+    case GDK_KEY_C:
+      return "keyC";
+    case GDK_KEY_q:
+    case GDK_KEY_Q:
+      return "keyQ";
+    case GDK_KEY_e:
+    case GDK_KEY_E:
+      return "keyE";
+    case GDK_KEY_t:
+    case GDK_KEY_T:
+      return "keyT";
+    case GDK_KEY_g:
+    case GDK_KEY_G:
+      return "keyG";
+    case GDK_KEY_b:
+    case GDK_KEY_B:
+      return "keyB";
+    case GDK_KEY_n:
+    case GDK_KEY_N:
+      return "keyN";
+    case GDK_KEY_Up:
+      return "arrowUp";
+    case GDK_KEY_Down:
+      return "arrowDown";
+    case GDK_KEY_space:
+      return "keySpace";
+    default:
+      return nullptr;
+  }
+}
+
+static gboolean shortcut_key_press_cb(GtkWidget* widget,
+                                      GdkEventKey* event,
+                                      gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  // This handler runs before FlView's own key handling (and its input method
+  // filter), so consuming a shortcut here keeps a CJK input method from
+  // turning it into composition text.
+  if (!self->shortcut_capture_enabled || self->shortcut_channel == nullptr) {
+    return FALSE;
+  }
+  // Leave Ctrl/Alt/Super combinations to the application and desktop.
+  if (event->state &
+      (GDK_CONTROL_MASK | GDK_MOD1_MASK | GDK_SUPER_MASK | GDK_META_MASK)) {
+    return FALSE;
+  }
+  const gchar* key = shortcut_key_for_event(event);
+  if (key == nullptr) {
+    return FALSE;
+  }
+  const guint16 keycode = event->hardware_keycode;
+  const gboolean tracked = keycode < G_N_ELEMENTS(self->swallowed_keycodes);
+  // A press for a key that is still held is auto-repeat: fire once per
+  // physical press, matching Flutter's KeyDownEvent.
+  const gboolean repeat = tracked && self->swallowed_keycodes[keycode];
+  if (!repeat) {
+    g_autoptr(FlValue) arguments = fl_value_new_map();
+    fl_value_set_string_take(arguments, "key", fl_value_new_string(key));
+    fl_method_channel_invoke_method(self->shortcut_channel, "shortcutKeyDown",
+                                    arguments, nullptr, nullptr, nullptr);
+  }
+  if (tracked) {
+    self->swallowed_keycodes[keycode] = TRUE;
+  }
+  return TRUE;
+}
+
+static gboolean shortcut_key_release_cb(GtkWidget* widget,
+                                        GdkEventKey* event,
+                                        gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  const guint16 keycode = event->hardware_keycode;
+  if (keycode >= G_N_ELEMENTS(self->swallowed_keycodes) ||
+      !self->swallowed_keycodes[keycode]) {
+    return FALSE;
+  }
+  // Consume the release only if its press was consumed.
+  self->swallowed_keycodes[keycode] = FALSE;
+  return TRUE;
+}
+
+static gboolean shortcut_focus_out_cb(GtkWidget* widget,
+                                      GdkEvent* event,
+                                      gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  // Releases that happen while unfocused never arrive here.
+  memset(self->swallowed_keycodes, 0, sizeof(self->swallowed_keycodes));
+  return FALSE;
+}
+
+static void shortcut_method_call_cb(FlMethodChannel* channel,
+                                    FlMethodCall* method_call,
+                                    gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  const gchar* method = fl_method_call_get_name(method_call);
+  if (strcmp(method, "setShortcutCaptureEnabled") == 0) {
+    FlValue* arguments = fl_method_call_get_args(method_call);
+    FlValue* enabled = nullptr;
+    if (arguments != nullptr &&
+        fl_value_get_type(arguments) == FL_VALUE_TYPE_MAP) {
+      enabled = fl_value_lookup_string(arguments, "enabled");
+    }
+    if (enabled != nullptr && fl_value_get_type(enabled) == FL_VALUE_TYPE_BOOL) {
+      self->shortcut_capture_enabled = fl_value_get_bool(enabled);
+    }
+    g_autoptr(FlMethodResponse) response =
+        FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+    fl_method_call_respond(method_call, response, nullptr);
+    return;
+  }
+
+  g_autoptr(FlMethodResponse) response =
+      FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  fl_method_call_respond(method_call, response, nullptr);
+}
 
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
@@ -59,6 +231,19 @@ static void my_application_activate(GApplication* application) {
       project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
+  self->shortcut_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+      "simple_live/desktop_shortcuts",
+      FL_METHOD_CODEC(fl_standard_method_codec_new()));
+  fl_method_channel_set_method_call_handler(
+      self->shortcut_channel, shortcut_method_call_cb, self, nullptr);
+  g_signal_connect(view, "key-press-event", G_CALLBACK(shortcut_key_press_cb),
+                   self);
+  g_signal_connect(view, "key-release-event",
+                   G_CALLBACK(shortcut_key_release_cb), self);
+  g_signal_connect(view, "focus-out-event", G_CALLBACK(shortcut_focus_out_cb),
+                   self);
+
   GdkRGBA background_color;
   // Background defaults to black, override it here if necessary, e.g. #00000000
   // for transparent.
@@ -74,6 +259,9 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  fl_method_channel_invoke_method(self->shortcut_channel,
+                                  "shortcutCaptureStateRequested", nullptr,
+                                  nullptr, nullptr, nullptr);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
@@ -120,6 +308,7 @@ static void my_application_shutdown(GApplication* application) {
 // Implements GObject::dispose.
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
+  g_clear_object(&self->shortcut_channel);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
@@ -133,13 +322,17 @@ static void my_application_class_init(MyApplicationClass* klass) {
   G_OBJECT_CLASS(klass)->dispose = my_application_dispose;
 }
 
-static void my_application_init(MyApplication* self) {}
+static void my_application_init(MyApplication* self) {
+  self->shortcut_channel = nullptr;
+  self->shortcut_capture_enabled = FALSE;
+  memset(self->swallowed_keycodes, 0, sizeof(self->swallowed_keycodes));
+}
 
 MyApplication* my_application_new() {
   // Set the program name to the application ID, which helps various systems
   // like GTK and desktop environments map this running application to its
   // corresponding .desktop file. This ensures better integration by allowing
-  // the application to be recognized beyond its binary name.
+  // the application to be recognized beyond the binary name.
   g_set_prgname(APPLICATION_ID);
 
   return MY_APPLICATION(g_object_new(my_application_get_type(),

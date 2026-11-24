@@ -10649,46 +10649,102 @@ function getMSSDKSignature(msStub, userAgent) {
 
   static const String defaultUserAgent = DouyinSite.kDefaultUserAgent;
   static String getAbogusUrl(String url, String userAgent) {
-    JsRuntime flutterJs = JsRuntime(
-      memoryLimit: 4 * 1024 * 1024,
-      maxStackSize: 64 * 1024,
-    );
-    final msToken = generateMsToken(107);
-    var params = ('$url&msToken=$msToken').split('?')[1];
-    var query = params.contains("?") ? params.split("?")[1] : params;
-    var jsCode = kABogus;
-    flutterJs.eval(jsCode);
-    // 执行getABogus函数
-    var aBogus = flutterJs.eval("getABogus('$query', '$userAgent')");
-    flutterJs.dispose();
-    var newUrl =
-        '$url&msToken=${Uri.encodeComponent(msToken)}&a_bogus=${Uri.encodeComponent(aBogus)}';
-    return newUrl;
+    return getAbogusUrlWithMsToken(url, userAgent);
+  }
+
+  static String getAbogusUrlWithMsToken(
+    String url,
+    String userAgent, {
+    String? msToken,
+  }) {
+    try {
+      JsRuntime flutterJs = JsRuntime(
+        memoryLimit: 4 * 1024 * 1024,
+        maxStackSize: 64 * 1024,
+      );
+      final uri = Uri.parse(url);
+      final queryParameters = Map<String, String>.from(uri.queryParameters);
+      final effectiveMsToken = msToken?.trim().isNotEmpty == true
+          ? msToken!.trim()
+          : generateMsToken(107);
+      queryParameters["msToken"] = effectiveMsToken;
+      queryParameters.remove("a_bogus");
+      final unsignedUrl = uri
+          .replace(queryParameters: queryParameters)
+          .toString();
+      final query = unsignedUrl.split('?').length > 1
+          ? unsignedUrl.split('?').sublist(1).join('?')
+          : '';
+      var jsCode = kABogus;
+      flutterJs.eval(jsCode);
+      // 执行getABogus函数
+      var aBogus = flutterJs.eval("getABogus('$query', '$userAgent')");
+      flutterJs.dispose();
+      final signedUri = Uri.parse(unsignedUrl).replace(
+        queryParameters: {...queryParameters, "a_bogus": aBogus.toString()},
+      );
+      var newUrl = signedUri.toString();
+      return newUrl;
+    } catch (e, stackTrace) {
+      // Linux 平台可能缺少 libquickjs.so，返回未签名的 URL
+      CoreLog.e("QuickJS 初始化失败，可能缺少动态库: $e", stackTrace);
+      final uri = Uri.parse(url);
+      final queryParameters = Map<String, String>.from(uri.queryParameters);
+      final effectiveMsToken = msToken?.trim().isNotEmpty == true
+          ? msToken!.trim()
+          : generateMsToken(107);
+      queryParameters["msToken"] = effectiveMsToken;
+      queryParameters.remove("a_bogus");
+      final unsignedUrl = uri
+          .replace(queryParameters: queryParameters)
+          .toString();
+      CoreLog.w("返回未签名的 URL（部分功能可能受限）");
+      return unsignedUrl;
+    }
   }
 
   static String getSignature(String roomId, String uniqueId) {
-    JsRuntime flutterJs = JsRuntime(
-      memoryLimit: 4 * 1024 * 1024,
-      maxStackSize: 128 * 1024,
-    );
+    return getSignatureForParams(getDefaultSignatureParams(roomId, uniqueId));
+  }
 
-    flutterJs.eval(kWebMsSDK);
-    var msStub = getMsStub(roomId, uniqueId);
-    var signature = flutterJs.eval(
-      "getMSSDKSignature('$msStub','$defaultUserAgent')",
-    );
-    // 如果signature中包含-或=，重新生成
-    while (signature.contains('-') || signature.contains('=')) {
-      signature = flutterJs.eval(
+  static String getSignatureForParams(Map<String, dynamic> params) {
+    try {
+      JsRuntime flutterJs = JsRuntime(
+        memoryLimit: 4 * 1024 * 1024,
+        maxStackSize: 128 * 1024,
+      );
+
+      flutterJs.eval(kWebMsSDK);
+      var msStub = getMsStubFromParams(params);
+      var signature = flutterJs.eval(
         "getMSSDKSignature('$msStub','$defaultUserAgent')",
       );
+      // 如果signature中包含-或=，重新生成
+      while (signature.contains('-') || signature.contains('=')) {
+        signature = flutterJs.eval(
+          "getMSSDKSignature('$msStub','$defaultUserAgent')",
+        );
+      }
+      flutterJs.dispose();
+      return signature;
+    } catch (e, stackTrace) {
+      // Linux 平台可能缺少 libquickjs.so
+      CoreLog.e("QuickJS 初始化失败，无法生成签名: $e", stackTrace);
+      CoreLog.w("Linux 用户请确保已安装 libquickjs.so 动态库");
+      // 返回 msStub 作为降级方案
+      return getMsStubFromParams(params);
     }
-    flutterJs.dispose();
-    return signature;
   }
 
   static String getMsStub(String roomId, String uniqueId) {
-    final params = {
+    return getMsStubFromParams(getDefaultSignatureParams(roomId, uniqueId));
+  }
+
+  static Map<String, dynamic> getDefaultSignatureParams(
+    String roomId,
+    String uniqueId,
+  ) {
+    return {
       "live_id": "1",
       "aid": "6383",
       "version_code": 180800,
@@ -10703,6 +10759,9 @@ function getMSSDKSignature(msStub, userAgent) {
       "ac": "",
       "identity": "audience",
     };
+  }
+
+  static String getMsStubFromParams(Map<String, dynamic> params) {
     final sigParams = params.entries
         .map((e) => "${e.key}=${e.value}")
         .join(',');

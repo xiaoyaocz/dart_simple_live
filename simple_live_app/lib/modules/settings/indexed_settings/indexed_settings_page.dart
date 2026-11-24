@@ -16,12 +16,12 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
         title: const Text("主页设置"),
       ),
       body: ListView(
-        padding: AppStyle.edgeInsetsA12,
+        padding: AppStyle.pagePadding(),
         children: [
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
             child: Text(
-              "主页排序 (长按拖动排序，重启后生效)",
+              "主页底栏 (长按拖动排序，开关控制是否显示，立即生效)",
               style: Get.textTheme.titleSmall,
             ),
           ),
@@ -31,15 +31,32 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 onReorder: controller.updateHomeSort,
-                children: controller.homeSort.map(
+                children: controller.homeSort
+                    .where((key) => Constant.allHomePages.containsKey(key))
+                    .map(
                   (key) {
                     var e = Constant.allHomePages[key]!;
+                    final locked = key == Constant.kHomeMine;
                     return ListTile(
                       key: ValueKey(e.title),
                       title: Text(e.title),
+                      subtitle: locked ? const Text("始终显示") : null,
                       visualDensity: VisualDensity.compact,
                       leading: Icon(e.iconData),
-                      trailing: const Icon(Icons.drag_handle),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Switch(
+                            value:
+                                locked || !controller.homeHidden.contains(key),
+                            onChanged: locked
+                                ? null
+                                : (value) =>
+                                    controller.setHomeVisible(key, value),
+                          ),
+                          const Icon(Icons.drag_handle),
+                        ],
+                      ),
                     );
                   },
                 ).toList(),
@@ -49,7 +66,7 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
-              "平台排序 (长按拖动排序，重启后生效)",
+              "平台标签 (首页/分类/搜索共用，长按拖动排序，至少保留一个；关注页不受影响)",
               style: Get.textTheme.titleSmall,
             ),
           ),
@@ -59,7 +76,9 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 onReorder: controller.updateSiteSort,
-                children: controller.siteSort.map(
+                children: controller.siteSort
+                    .where((key) => Sites.allSites.containsKey(key))
+                    .map(
                   (key) {
                     var e = Sites.allSites[key]!;
                     return ListTile(
@@ -71,7 +90,17 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
                         width: 24,
                         height: 24,
                       ),
-                      trailing: const Icon(Icons.drag_handle),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Switch(
+                            value: !controller.siteHidden.contains(key),
+                            onChanged: (value) =>
+                                controller.setSiteVisible(key, value),
+                          ),
+                          const Icon(Icons.drag_handle),
+                        ],
+                      ),
                     );
                   },
                 ).toList(),

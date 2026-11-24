@@ -1,23 +1,34 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/app/site_tabs_mixin.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/home/home_list_controller.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 
 class HomeController extends GetxController
-    with GetSingleTickerProviderStateMixin {
-  late TabController tabController;
+    with GetSingleTickerProviderStateMixin, SiteTabsMixin {
   HomeController() {
-    tabController =
-        TabController(length: Sites.supportSites.length, vsync: this);
+    initSiteTabs();
   }
 
   StreamSubscription<dynamic>? streamSubscription;
+
+  @override
+  void registerSiteListController(Site site) {
+    if (!Get.isRegistered<HomeListController>(tag: site.id)) {
+      Get.put(HomeListController(site), tag: site.id);
+    }
+  }
+
+  @override
+  void unregisterSiteListController(Site site) {
+    if (Get.isRegistered<HomeListController>(tag: site.id)) {
+      Get.delete<HomeListController>(tag: site.id);
+    }
+  }
 
   @override
   void onInit() {
@@ -29,10 +40,10 @@ class HomeController extends GetxController
         }
       },
     );
-    for (var site in Sites.supportSites) {
+    for (var site in Sites.visibleSites) {
       Get.put(HomeListController(site), tag: site.id);
     }
-
+    listenSiteTabsChanged();
     super.onInit();
   }
 
@@ -40,12 +51,17 @@ class HomeController extends GetxController
     var tabIndex = tabController.index;
     BasePageController controller;
     controller =
-        Get.find<HomeListController>(tag: Sites.supportSites[tabIndex].id);
+        Get.find<HomeListController>(tag: Sites.visibleSites[tabIndex].id);
     controller.scrollToTopOrRefresh();
   }
 
   void toSearch() {
-    Get.toNamed(RoutePath.kSearch);
+    Get.toNamed(
+      RoutePath.kSearch,
+      arguments: {
+        "siteId": Sites.visibleSites[tabController.index].id,
+      },
+    );
   }
 
   @override

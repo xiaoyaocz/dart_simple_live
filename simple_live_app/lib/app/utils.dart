@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -182,6 +183,14 @@ class Utils {
     SmartDialog.dismiss(status: SmartStatus.allCustom);
   }
 
+  static Future<void> switchRightDialog(
+    FutureOr<void> Function() openNext,
+  ) async {
+    await SmartDialog.dismiss(status: SmartStatus.allCustom);
+    await Future.delayed(const Duration(milliseconds: 220));
+    await openNext();
+  }
+
   static Future showBottomSheet({
     required String title,
     required Widget child,
@@ -198,25 +207,46 @@ class Utils {
           topRight: Radius.circular(12),
         ),
       ),
-      builder: (_) => Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.only(
-              left: 12,
-            ),
-            title: Text(title),
-            trailing: IconButton(
-              onPressed: Get.back,
-              icon: const Icon(Remix.close_line),
-            ),
+      builder: (_) => SafeArea(
+        top: false,
+        bottom: false,
+        child: Padding(
+          padding: AppStyle.bottomSheetPadding(),
+          child: Column(
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.only(
+                  left: 12,
+                ),
+                title: Text(title),
+                trailing: IconButton(
+                  onPressed: Get.back,
+                  icon: const Icon(Remix.close_line),
+                ),
+              ),
+              Expanded(
+                child: child,
+              ),
+            ],
           ),
-          Expanded(
-            child: child,
-          ),
-        ],
+        ),
       ),
     );
     return result;
+  }
+
+  static Widget bottomSheetSafeArea({
+    required Widget child,
+    double bottom = 12,
+  }) {
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Padding(
+        padding: AppStyle.bottomSheetPadding(bottom: bottom),
+        child: child,
+      ),
+    );
   }
 
   /// 文本编辑的弹窗
@@ -280,6 +310,8 @@ class Utils {
     List<T> contents,
     T value, {
     String title = '',
+    Widget Function(T value)? titleBuilder,
+    Widget Function(T value)? subtitleBuilder,
   }) async {
     var result = await Get.dialog(
       RadioGroup(
@@ -292,7 +324,8 @@ class Utils {
           children: contents
               .map(
                 (e) => RadioListTile<T>(
-                  title: Text(e.toString()),
+                  title: titleBuilder?.call(e) ?? Text(e.toString()),
+                  subtitle: subtitleBuilder?.call(e),
                   value: e,
                 ),
               )
@@ -371,13 +404,17 @@ class Utils {
     return result;
   }
 
+  /// 将 "x.y.z" 形式的版本号解析为可比较的整数（"1.13.2" -> 11302）。
+  /// 预发布/构建后缀（"-local.1"、"+11302"）不参与比较——本地构建不应
+  /// 比同版本号的正式版"更新"；非数字段按 0 处理，不抛异常。
   static int parseVersion(String version) {
-    var sp = version.split('.');
+    final core = version.trim().split(RegExp(r'[+-]')).first;
     var num = "";
-    for (var item in sp) {
-      num = num + item.padLeft(2, '0');
+    for (var item in core.split('.')) {
+      final digits = RegExp(r'^(\d+)').firstMatch(item)?.group(1) ?? "0";
+      num = num + digits.padLeft(2, '0');
     }
-    return int.parse(num);
+    return int.tryParse(num) ?? 0;
   }
 
   static String onlineToString(int num) {

@@ -1,0 +1,138 @@
+name: app-build-windows-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_windows:
+        description: "Build Windows on GitHub Actions"
+        type: boolean
+        default: false
+      ref:
+        description: "Git ref to build, for example master or v1.12.0"
+        required: false
+        default: "master"
+      upload_release:
+        description: "Upload build outputs to the matching GitHub Release when ref is a tag"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-windows:
+    if: ${{ inputs.build_windows == true }}
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.9"
+          cache: true
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install flutter_distributor
+        run: dart pub global activate flutter_distributor
+
+      - name: Build Windows
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform windows --targets zip --skip-clean
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
+      - name: Build Inno Setup Installer
+        shell: pwsh
+        run: |
+          $version = (Get-Content simple_live_app/pubspec.yaml | Select-String '^version:\s*(\S+)').Matches.Groups[1].Value.Split('+')[0]
+          $cleanVer = $version.TrimStart('v')
+          Write-Host "Building Inno Setup installer for version $cleanVer..."
+
+          $releaseDir = Resolve-Path "simple_live_app/build/windows/x64/runner/Release" -ErrorAction SilentlyContinue
+          if (-not $releaseDir) {
+            $releaseDir = Resolve-Path "simple_live_app/build/windows/runner/Release" -ErrorAction SilentlyContinue
+          }
+          if (-not $releaseDir) {
+            throw "Could not find Flutter Windows Release build directory!"
+          }
+          Write-Host "Found Release build dir: $releaseDir"
+
+          $distDir = Resolve-Path "simple_live_app/build/dist/*" | Select-Object -First 1 -ExpandProperty Path
+          if (-not $distDir) {
+            $distDir = "simple_live_app/build/dist/$version"
+            New-Item -ItemType Directory -Path $distDir -Force | Out-Null
+          }
+          Write-Host "Found dist dir: $distDir"
+
+          $issPath = "simple_live_app/windows/packaging/inno_setup/SimpleLive_Setup.iss"
+          $outputName = "SimpleLive-Windows-v${cleanVer}-Setup"
+
+          $isccCmd = (Get-Command iscc.exe -ErrorAction SilentlyContinue)?.Source
+          if (-not $isccCmd) {
+            $candidates = @(
+              "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+              "C:\Program Files\Inno Setup 6\ISCC.exe",
+              "C:\ProgramData\chocolatey\bin\iscc.exe"
+            )
+            foreach ($c in $candidates) {
+              if (Test-Path $c) { $isccCmd = $c; break }
+            }
+          }
+          if (-not $isccCmd) {
+            throw "ISCC.exe not found! Please check Inno Setup installation."
+          }
+          Write-Host "Using ISCC compiler: $isccCmd"
+
+          & $isccCmd "/DMyAppVersion=$cleanVer" "/DSourceDir=$releaseDir" "/DOutputDir=$distDir" "/DOutputFilename=$outputName" $issPath
+
+          Get-ChildItem -Path $distDir
+
+      - name: Resolve ref info
+        id: ref_info
+        shell: bash
+        run: |
+          ref_name="${{ inputs.ref }}"
+          if [[ "$ref_name" == refs/tags/* ]]; then
+            ref_name="${ref_name#refs/tags/}"
+          fi
+          is_tag="false"
+          if [[ "$ref_name" == v* ]]; then
+            is_tag="true"
+          fi
+          echo "ref_name=$ref_name" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Windows to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            simple_live_app/build/dist/*/*.zip
+            simple_live_app/build/dist/*/*.exe
+
+      - name: Upload Release
+        if: ${{ inputs.upload_release && steps.ref_info.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.ref_info.outputs.ref_name }}
+          name: ${{ steps.ref_info.outputs.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(steps.ref_info.outputs.ref_name, 'beta') || contains(steps.ref_info.outputs.ref_name, 'alpha') || contains(steps.ref_info.outputs.ref_name, 'pre') || contains(steps.ref_info.outputs.ref_name, 'next') || contains(steps.ref_info.outputs.ref_name, 'local') }}
+          token: ${{ github.token }}
+          files: |
+            simple_live_app/build/dist/*/*.zip
+            simple_live_app/build/dist/*/*.exe
+
+      - run: echo "Windows job status is ${{ job.status }}."

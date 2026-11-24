@@ -1,0 +1,97 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter test test/connection_policy_test.dart test/kuaishou_danmaku_test.dart test/douyin_site_test.dart --reporter compact
+
+## exception
+
+PathExistsException: PathExistsException: Cannot copy file to 'C:\softwares\dart_simple_live\simple_live_core\build\native_assets\windows\dart_quickjs.dll', path = 'C:\softwares\dart_simple_live\simple_live_core\.dart_tool\hooks_runner\shared\dart_quickjs\build\265333a679\dart_quickjs.dll' (OS Error: 当文件已存在时，无法创建该文件。, errno = 183)
+
+```
+#0      _checkForErrorResponse (dart:io/common.dart:58:9)
+#1      _File.copy.<anonymous closure> (dart:io/file_impl.dart:406:7)
+#2      _rootRunUnary (dart:async/zone_root.dart:48:47)
+#3      _CustomZone.runUnary (dart:async/zone.dart:733:19)
+<asynchronous suspension>
+#4      ForwardingFile.copy (package:file/src/forwarding/forwarding_file.dart:29:51)
+<asynchronous suspension>
+#5      ForwardingFile.copy (package:file/src/forwarding/forwarding_file.dart:29:51)
+<asynchronous suspension>
+#6      _copyNativeCodeAssetsToBundleOnWindowsLinux (package:flutter_tools/src/isolated/native_assets/native_assets.dart:649:5)
+<asynchronous suspension>
+#7      _copyNativeCodeAssetsForOS (package:flutter_tools/src/isolated/native_assets/native_assets.dart:463:7)
+<asynchronous suspension>
+#8      installCodeAssets (package:flutter_tools/src/isolated/native_assets/native_assets.dart:119:3)
+<asynchronous suspension>
+#9      testCompilerBuildNativeAssets (package:flutter_tools/src/isolated/native_assets/test/native_assets.dart:79:3)
+<asynchronous suspension>
+#10     TestCommand.runCommand (package:flutter_tools/src/commands/test.dart:484:11)
+<asynchronous suspension>
+#11     FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1590:27)
+<asynchronous suspension>
+#12     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#13     CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+<asynchronous suspension>
+#14     FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:496:9)
+<asynchronous suspension>
+#15     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#16     FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:431:5)
+<asynchronous suspension>
+#17     FlutterCommandRunner.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:307:33)
+<asynchronous suspension>
+#18     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+<asynchronous suspension>
+#19     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#20     main (package:flutter_tools/executable.dart:103:3)
+<asynchronous suspension>
+```
+
+## flutter doctor
+
+```
+[✓] Flutter (Channel stable, 3.41.9, on Microsoft Windows [版本 10.0.26200.8973], locale zh-CN) [462ms]
+    • Flutter version 3.41.9 on channel stable at C:\softwares\flutter
+    • Upstream repository https://github.com/flutter/flutter.git
+    • Framework revision 00b0c91f06 (3 months ago), 2026-04-29 10:03:19 -0700
+    • Engine revision 42d3d75a56
+    • Dart version 3.11.5
+    • DevTools version 2.54.2
+    • Pub download mirror https://pub.flutter-io.cn
+    • Flutter download mirror https://storage.flutter-io.cn
+    • Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop, enable-windows-desktop, enable-android, enable-ios, cli-animations, enable-native-assets, omit-legacy-version-file, enable-lldb-debugging, enable-uiscene-migration
+
+[✓] Windows Version (11 专业工作站版 64-bit, 25H2, 2009) [3.2s]
+
+[✓] Android toolchain - develop for Android devices (Android SDK version 36.1.0) [5.0s]
+    • Android SDK at C:\softwares\Android_Sdk
+    • Emulator version 36.6.11.0 (build_id 15507667) (CL:N/A)
+    • Platform android-36, build-tools 36.1.0
+    • Java binary at: C:\softwares\jdk-17\bin\java
+      This JDK is specified in your Flutter configuration.
+      To change the current JDK, run: `flutter config --jdk-dir="path/to/jdk"`.
+    • Java version OpenJDK Runtime Environment Temurin-17.0.18+8 (build 17.0.18+8)
+    • All Android licenses accepted.
+
+[✓] Chrome - develop for the web [109ms]
+    • Chrome at C:\Program Files\Google\Chrome\Application\chrome.exe
+
+[✓] Visual Studio - develop Windows apps (Visual Studio Community 2026 18.2.1) [107ms]
+    • Visual Studio at C:\softwares\Visual Studio Workspace
+    • Visual Studio Community 2026 version 18.2.11415.280
+    • Windows 10 SDK version 10.0.26100.0
+
+[✓] Connected device (3 available) [3.9s]
+    • Windows (desktop) • windows • windows-x64    • Microsoft Windows [版本 10.0.26200.8973]
+    • Chrome (web)      • chrome  • web-javascript • Google Chrome 151.0.7922.72
+    • Edge (web)        • edge    • web-javascript • Microsoft Edge 151.0.4129.59
+
+[✓] Network resources [3.1s]
+    • All expected network resources are available.
+
+• No issues found!
+```

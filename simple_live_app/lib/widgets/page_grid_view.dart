@@ -19,6 +19,10 @@ class PageGridView extends StatelessWidget {
   final double crossAxisSpacing, mainAxisSpacing;
   final int crossAxisCount;
   final bool showPCRefreshButton;
+  final double? childAspectRatio;
+  final double? mainAxisExtent;
+  final bool useFixedGrid;
+  final Widget? header;
   const PageGridView({
     required this.itemBuilder,
     required this.pageController,
@@ -29,6 +33,10 @@ class PageGridView extends StatelessWidget {
     this.crossAxisSpacing = 0.0,
     this.mainAxisSpacing = 0.0,
     this.showPCRefreshButton = true,
+    this.childAspectRatio,
+    this.mainAxisExtent,
+    this.useFixedGrid = false,
+    this.header,
     required this.crossAxisCount,
     Key? key,
   }) : super(key: key);
@@ -50,14 +58,64 @@ class PageGridView extends StatelessWidget {
             firstRefresh: firstRefresh,
             onLoad: pageController.loadData,
             onRefresh: pageController.refreshData,
-            child: MasonryGridView.count(
-              padding: padding,
-              itemCount: pageController.list.length,
-              itemBuilder: itemBuilder,
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: crossAxisSpacing,
-              mainAxisSpacing: mainAxisSpacing,
-            ),
+            child: header != null
+                ? CustomScrollView(
+                    controller: pageController.scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(child: header),
+                      SliverPadding(
+                        padding: padding ?? EdgeInsets.zero,
+                        sliver: useFixedGrid
+                            ? SliverGrid(
+                                delegate: SliverChildBuilderDelegate(
+                                  itemBuilder,
+                                  childCount: pageController.list.length,
+                                ),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: crossAxisSpacing,
+                                  mainAxisSpacing: mainAxisSpacing,
+                                  childAspectRatio:
+                                      childAspectRatio ?? 3.4,
+                                  mainAxisExtent: mainAxisExtent,
+                                ),
+                              )
+                            : SliverMasonryGrid.count(
+                                crossAxisCount: crossAxisCount,
+                                mainAxisSpacing: mainAxisSpacing,
+                                crossAxisSpacing: crossAxisSpacing,
+                                itemBuilder: itemBuilder,
+                                childCount: pageController.list.length,
+                              ),
+                      ),
+                    ],
+                  )
+                : useFixedGrid
+                ? GridView.builder(
+                    padding: padding,
+                    controller: pageController.scrollController,
+                    primary: false,
+                    itemCount: pageController.list.length,
+                    itemBuilder: itemBuilder,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: crossAxisSpacing,
+                      mainAxisSpacing: mainAxisSpacing,
+                      childAspectRatio: childAspectRatio ?? 3.4,
+                      mainAxisExtent: mainAxisExtent,
+                    ),
+                  )
+                : MasonryGridView.count(
+                    padding: padding,
+                    controller: pageController.scrollController,
+                    primary: false,
+                    itemCount: pageController.list.length,
+                    itemBuilder: itemBuilder,
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: crossAxisSpacing,
+                    mainAxisSpacing: mainAxisSpacing,
+                  ),
           ),
           Positioned(
             bottom: 0,

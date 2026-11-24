@@ -5,10 +5,7 @@ class CoreError extends Error {
   /// 错误信息
   final String message;
 
-  CoreError(
-    this.message, {
-    this.statusCode = 0,
-  });
+  CoreError(this.message, {this.statusCode = 0});
   @override
   String toString() {
     if (statusCode != 0) {
@@ -28,6 +25,10 @@ class CoreError extends Error {
         return "无权限访问资源(403)";
       case 404:
         return "服务器找不到请求的资源(404)";
+      case 444:
+        return "抖音访问过于频繁或触发风控限制(444)，请稍后再试，避免连续刷新或重复进入直播间";
+      case 429:
+        return "请求过于频繁(429)，请稍后重试";
       case 500:
         return "服务器出现错误(500)";
       case 502:

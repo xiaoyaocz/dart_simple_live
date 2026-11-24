@@ -20,18 +20,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          //双击返回键退出
-          if (controller.doubleClickExit) {
-            controller.doubleClickTimer?.cancel();
-            Get.back();
-            return;
-          }
-          controller.doubleClickExit = true;
-          SmartDialog.showToast("再按一次退出播放器");
-          controller.doubleClickTimer = Timer(const Duration(seconds: 2), () {
-            controller.doubleClickExit = false;
-            controller.doubleClickTimer!.cancel();
-          });
+          requestExitPlayer();
         }
       },
       child: KeyboardListener(
@@ -54,17 +43,47 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     }
     Log.logPrint(key);
 
-    // if (key.logicalKey == LogicalKeyboardKey.escape ||
-    //     key.logicalKey == LogicalKeyboardKey.backspace ||
-    //     key.logicalKey == LogicalKeyboardKey.goBack) {
-    //   // Get.back();
-    //   return;
-    // }
-    // 点击OK、Enter、Select键时显示/隐藏控制器
+    if (key.logicalKey == LogicalKeyboardKey.escape ||
+        key.logicalKey == LogicalKeyboardKey.backspace ||
+        key.logicalKey == LogicalKeyboardKey.goBack ||
+        key.logicalKey == LogicalKeyboardKey.browserBack) {
+      requestExitPlayer();
+      return;
+    }
+    // 遥控器媒体键：播放/暂停
+    if (key.logicalKey == LogicalKeyboardKey.mediaPlayPause) {
+      controller.togglePlayPause();
+      return;
+    }
+    if (key.logicalKey == LogicalKeyboardKey.mediaPlay) {
+      if (controller.userPaused.value) {
+        controller.togglePlayPause();
+      }
+      return;
+    }
+    if (key.logicalKey == LogicalKeyboardKey.mediaPause) {
+      if (!controller.userPaused.value) {
+        controller.togglePlayPause();
+      }
+      return;
+    }
+    // 遥控器音量键：调节播放器音量 0-300（部分电视盒子会在系统层拦截
+    // 该键，此时可用设置面板中的"音量"项调节）
+    if (key.logicalKey == LogicalKeyboardKey.audioVolumeUp) {
+      controller.adjustVolume(5);
+      return;
+    }
+    if (key.logicalKey == LogicalKeyboardKey.audioVolumeDown) {
+      controller.adjustVolume(-5);
+      return;
+    }
+    // 点击OK、Enter、Select键：按"OK键行为"设置触发暂停/继续或显示/隐藏控制栏
     if (key.logicalKey == LogicalKeyboardKey.select ||
         key.logicalKey == LogicalKeyboardKey.enter ||
         key.logicalKey == LogicalKeyboardKey.space) {
-      if (!controller.showControlsState.value) {
+      if (AppSettingsController.instance.okKeyTriggersPlayPause) {
+        controller.togglePlayPause();
+      } else if (!controller.showControlsState.value) {
         controller.showControls();
       } else {
         controller.hideControls();
@@ -72,9 +91,12 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       return;
     }
 
+    if (controller.handleKeyboardShortcut(key.logicalKey)) {
+      return;
+    }
+
     // 点击Menu打开/关闭设置
-    if (key.logicalKey == LogicalKeyboardKey.keyM ||
-        key.logicalKey == LogicalKeyboardKey.contextMenu ||
+    if (key.logicalKey == LogicalKeyboardKey.contextMenu ||
         key.logicalKey == LogicalKeyboardKey.arrowRight) {
       showPlayerSettings(controller);
       return;
@@ -110,6 +132,26 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     }
   }
 
+  void requestExitPlayer() {
+    // 双击返回键退出：第一次只提示，第二次才退出。
+    if (controller.doubleClickExit) {
+      controller.doubleClickTimer?.cancel();
+      controller.doubleClickTimer = null;
+      controller.doubleClickExit = false;
+      SmartDialog.dismiss();
+      Get.back();
+      return;
+    }
+    controller.doubleClickExit = true;
+    SmartDialog.dismiss();
+    SmartDialog.showToast("再按一次退出播放器");
+    controller.doubleClickTimer?.cancel();
+    controller.doubleClickTimer = Timer(const Duration(seconds: 2), () {
+      controller.doubleClickExit = false;
+      controller.doubleClickTimer = null;
+    });
+  }
+
   Widget buildMediaPlayer() {
     var boxFit = BoxFit.contain;
     double? aspectRatio;
@@ -141,10 +183,48 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           aspectRatio: aspectRatio,
           fit: boxFit,
         ),
+        // 暂停状态提示
         Obx(
           () => Visibility(
-            visible:
-                !controller.liveStatus.value && !controller.pageLoadding.value,
+            visible: controller.userPaused.value &&
+                !controller.pageLoadding.value &&
+                controller.playbackLoadError.value.isEmpty,
+            child: Center(
+              child: Container(
+                padding: AppStyle.edgeInsetsA24,
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.pause_circle_outline,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                    AppStyle.vGap12,
+                    Obx(
+                      () => Text(
+                        AppSettingsController.instance.okKeyTriggersPlayPause
+                            ? "已暂停 · 按OK键或播放键继续"
+                            : "已暂停 · 按播放键继续",
+                        style: AppStyle.textStyleWhite,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Obx(
+          () => Visibility(
+            visible: !controller.liveStatus.value &&
+                !controller.pageLoadding.value &&
+                // 进房失败（房间被封禁等）时由下方错误页接管，不再叠加“未开播”
+                controller.playbackLoadError.value.isEmpty,
             child: Center(
               child: Text(
                 "未开播",
@@ -153,7 +233,55 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           ),
         ),
+        if (controller.playbackLoadError.value.isNotEmpty)
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 520),
+              padding: AppStyle.edgeInsetsA24,
+              color: Colors.black87,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    controller.playbackLoadError.value,
+                    textAlign: TextAlign.center,
+                    style: AppStyle.textStyleWhite,
+                  ),
+                  AppStyle.vGap16,
+                  ElevatedButton.icon(
+                    autofocus: true,
+                    onPressed: controller.refreshRoom,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("重试"),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Obx(
+          () => Visibility(
+            visible: controller.autoExitEnable.value,
+            child: Positioned(
+              right: 24,
+              top: 24,
+              child: Text(
+                "${parseDuration(controller.countdown.value)}后自动关闭",
+                style: AppStyle.textStyleWhite,
+              ),
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  String parseDuration(int duration) {
+    int hours = duration ~/ 3600;
+    int minutes = duration % 3600 ~/ 60;
+    int seconds = duration % 60;
+
+    return "${hours.toString().padLeft(2, '0')}:"
+        "${minutes.toString().padLeft(2, '0')}:"
+        "${seconds.toString().padLeft(2, '0')}";
   }
 }

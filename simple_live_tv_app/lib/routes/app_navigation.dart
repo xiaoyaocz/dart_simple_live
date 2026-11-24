@@ -11,6 +11,13 @@ import 'package:simple_live_tv_app/services/bilibili_account_service.dart';
 /// * 需要参数的页面都应使用此类
 /// * 如不需要参数，可以使用Get.toNamed
 class AppNavigator {
+  static int _categoryDetailRouteId = 0;
+
+  static String _nextCategoryDetailTag() {
+    _categoryDetailRouteId += 1;
+    return "category-detail-$_categoryDetailRouteId";
+  }
+
   /// 跳转至直播间
   static void toLiveRoomDetail(
       {required Site site, required String roomId}) async {
@@ -37,6 +44,14 @@ class AppNavigator {
   /// 跳转至分类详情
   static void toCategoryDetail(
       {required Site site, required LiveSubCategoryExt category}) {
-    Get.toNamed(RoutePath.kCategoryDetail, arguments: [site, category]);
+    Get.toNamed(
+      RoutePath.kCategoryDetail,
+      preventDuplicates: false,
+      arguments: {
+        "site": site,
+        "category": category,
+        "controllerTag": _nextCategoryDetailTag(),
+      },
+    );
   }
 }

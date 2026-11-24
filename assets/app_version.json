@@ -1,7 +1,7 @@
 {
-  "version": "1.11.1",
-  "version_num": 11101,
-  "version_desc": "- 版本更新",
+  "version": "1.12.8",
+  "version_num": 11208,
+  "version_desc": "- 修复 Android、iOS 全屏锁定控制后无法重新显示解锁按钮的问题。\n- 修复快手直播状态刷新时，临时缺少播放地址或返回异常会误判下播的问题。\n- 修复 Windows、macOS、Linux 桌面端音量滑条点击后立即消失、反复闪烁的问题。\n- 新增桌面端直播间音量增减快捷键，默认使用上、下方向键，每次调整 5%。\n- 将同步服务选择和连接方式设置移到数据同步页面；代理改为留空直连、数字端口走本地代理。\n- 修复 Windows 窗口贴边重启后的约 8 像素位置偏移问题。\n- 修复部分 Android 设备播放一段时间后画面冻结的问题，并提高定时关闭在后台切换时的可靠性。\n- 修复 Android 手机退出全屏后方向未回到竖屏的问题。\n- 修复部分 Android 系统自由窗中横向直播点全屏仍保持竖屏的问题。",
   "prerelease": false,
-  "download_url": "https://github.com/xiaoyaocz/dart_simple_live/releases"
+  "download_url": "https://github.com/June6699/dart_simple_live/releases/tag/v1.12.8"
 }

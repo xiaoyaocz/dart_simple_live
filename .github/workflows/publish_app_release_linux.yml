@@ -1,0 +1,94 @@
+name: app-build-linux-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_linux:
+        description: "Build Linux on GitHub Actions"
+        type: boolean
+        default: false
+      ref:
+        description: "Git ref to build, for example master or v1.12.0"
+        required: false
+        default: "master"
+      upload_release:
+        description: "Upload build outputs to the matching GitHub Release when ref is a tag"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-linux:
+    if: ${{ inputs.build_linux == true }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.9"
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libmpv-dev mpv
+
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter pub get
+
+      - name: Install flutter_distributor
+        run: dart pub global activate flutter_distributor
+
+      - name: Build Linux
+        run: |
+          cd simple_live_app
+          flutter_distributor package --platform linux --targets deb,zip --skip-clean
+
+      - name: Resolve ref info
+        id: ref_info
+        shell: bash
+        run: |
+          ref_name="${{ inputs.ref }}"
+          if [[ "$ref_name" == refs/tags/* ]]; then
+            ref_name="${ref_name#refs/tags/}"
+          fi
+          is_tag="false"
+          if [[ "$ref_name" == v* ]]; then
+            is_tag="true"
+          fi
+          echo "ref_name=$ref_name" >> "$GITHUB_OUTPUT"
+          echo "is_tag=$is_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Linux to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            simple_live_app/build/dist/*/*.deb
+            simple_live_app/build/dist/*/*.zip
+
+      - name: Upload Release
+        if: ${{ inputs.upload_release && steps.ref_info.outputs.is_tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.ref_info.outputs.ref_name }}
+          name: ${{ steps.ref_info.outputs.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(steps.ref_info.outputs.ref_name, 'beta') || contains(steps.ref_info.outputs.ref_name, 'alpha') || contains(steps.ref_info.outputs.ref_name, 'pre') || contains(steps.ref_info.outputs.ref_name, 'next') || contains(steps.ref_info.outputs.ref_name, 'local') }}
+          token: ${{ github.token }}
+          files: |
+            simple_live_app/build/dist/*/*.deb
+            simple_live_app/build/dist/*/*.zip
+
+      - run: echo "Linux job status is ${{ job.status }}."

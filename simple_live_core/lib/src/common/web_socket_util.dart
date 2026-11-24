@@ -1,12 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:web_socket_channel/io.dart';
 
-enum SocketStatus {
-  connected,
-  failed,
-  closed,
-}
+enum SocketStatus { connected, failed, closed }
 
 class WebScoketUtils {
   SocketStatus status = SocketStatus.closed;
@@ -16,6 +13,9 @@ class WebScoketUtils {
 
   /// 备用链接
   final String? backupUrl;
+
+  /// 备用链接列表
+  final List<String> backupUrls;
 
   /// 心跳时间
   final int heartBeatTime;
@@ -37,6 +37,19 @@ class WebScoketUtils {
 
   /// 请求头
   Map<String, dynamic>? headers;
+
+  /// 单个候选地址的连接超时时间。
+  final Duration connectTimeout;
+
+  /// 是否随机化候选地址顺序。
+  final bool shuffleUrls;
+
+  /// 每轮最多尝试的候选地址数量，null 表示全部尝试。
+  final int? maxConnectAttempts;
+
+  /// 连接断开后的重连间隔。
+  final Duration reconnectDelay;
+
   WebScoketUtils({
     required this.url,
     required this.heartBeatTime,
@@ -47,6 +60,11 @@ class WebScoketUtils {
     this.onHeartBeat,
     this.headers,
     this.backupUrl,
+    this.backupUrls = const [],
+    this.connectTimeout = const Duration(seconds: 10),
+    this.shuffleUrls = false,
+    this.maxConnectAttempts,
+    this.reconnectDelay = const Duration(seconds: 5),
   });
   IOWebSocketChannel? webSocket;
   Timer? heartBeatTimer;
@@ -60,33 +78,89 @@ class WebScoketUtils {
 
   StreamSubscription<dynamic>? streamSubscription;
 
-  void connect({bool retry = false}) async {
-    close();
-    try {
-      var wsurl = url;
-      if (backupUrl != null && backupUrl!.isNotEmpty && retry) {
-        wsurl = backupUrl!;
-      }
-      webSocket = IOWebSocketChannel.connect(
-        wsurl,
-        connectTimeout: Duration(seconds: 10),
-        headers: headers,
-      );
+  bool _manualClosed = true;
+  bool _connecting = false;
 
-      await webSocket?.ready;
-      ready();
-    } catch (e) {
-      if (!retry) {
-        connect(retry: true);
-        return;
+  List<String> get _connectUrls {
+    final urls = <String>[url];
+    if (backupUrl != null && backupUrl!.isNotEmpty) {
+      urls.add(backupUrl!);
+    }
+    urls.addAll(backupUrls.where((url) => url.isNotEmpty));
+    return urls.toSet().toList();
+  }
+
+  /// Exposes the de-duplicated candidate order for diagnostics and tests.
+  List<String> get connectUrls => List.unmodifiable(_connectUrls);
+
+  void connect({bool retry = false}) async {
+    if (_connecting) {
+      return;
+    }
+    _manualClosed = false;
+    reconnectTimer?.cancel();
+    reconnectTimer = null;
+    _connecting = true;
+    streamSubscription?.cancel();
+    streamSubscription = null;
+    heartBeatTimer?.cancel();
+    heartBeatTimer = null;
+    try {
+      await webSocket?.sink.close();
+    } catch (_) {}
+    webSocket = null;
+    final urls = _connectUrls.toList();
+    if (shuffleUrls) {
+      urls.shuffle(Random());
+    }
+    final candidates = retry && urls.length > 1 ? urls.skip(1).toList() : urls;
+    final limitedUrls = maxConnectAttempts == null
+        ? candidates
+        : candidates.take(maxConnectAttempts!).toList();
+    Object? lastError;
+    StackTrace? lastStackTrace;
+    try {
+      for (final wsurl in limitedUrls) {
+        if (_manualClosed) {
+          return;
+        }
+        try {
+          webSocket = IOWebSocketChannel.connect(
+            wsurl,
+            connectTimeout: connectTimeout,
+            headers: headers,
+          );
+
+          await webSocket?.ready;
+          if (_manualClosed) {
+            webSocket?.sink.close();
+            webSocket = null;
+            return;
+          }
+          ready();
+          return;
+        } catch (e, s) {
+          lastError = e;
+          lastStackTrace = s;
+          try {
+            await webSocket?.sink.close();
+          } catch (_) {}
+          webSocket = null;
+        }
       }
-      onError(e, e);
+      if (!_manualClosed) {
+        onError(lastError ?? "WebSocket connection failed", lastStackTrace);
+      }
+    } finally {
+      _connecting = false;
     }
   }
 
   /// 连接完成
   void ready() {
     status = SocketStatus.connected;
+
+    heartBeatTimer?.cancel();
 
     streamSubscription = webSocket?.stream.listen(
       (data) => receiveMessage(data),
@@ -99,12 +173,11 @@ class WebScoketUtils {
   }
 
   void initHeartBeat() {
-    heartBeatTimer = Timer.periodic(
-      Duration(milliseconds: heartBeatTime),
-      (timer) {
-        onHeartBeat?.call();
-      },
-    );
+    heartBeatTimer = Timer.periodic(Duration(milliseconds: heartBeatTime), (
+      timer,
+    ) {
+      onHeartBeat?.call();
+    });
   }
 
   void receiveMessage(dynamic data) {
@@ -133,6 +206,7 @@ class WebScoketUtils {
   }
 
   void close() {
+    _manualClosed = true;
     status = SocketStatus.closed;
 
     streamSubscription?.cancel();
@@ -147,10 +221,14 @@ class WebScoketUtils {
   }
 
   void reconnect() {
+    if (_manualClosed || reconnectTimer != null) {
+      return;
+    }
     status = SocketStatus.closed;
     if (reconnectTime < maxReconnectTime) {
       reconnectTime++;
-      reconnectTimer ??= Timer.periodic(Duration(seconds: 5), (timer) {
+      reconnectTimer = Timer(reconnectDelay, () {
+        reconnectTimer = null;
         connect();
       });
     } else {

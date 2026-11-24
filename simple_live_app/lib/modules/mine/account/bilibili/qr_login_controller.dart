@@ -85,7 +85,6 @@ class BiliBiliQRLoginController extends GetxController {
         });
         if (cookies.isNotEmpty) {
           var cookieStr = cookies.join(";");
-          Log.i(cookieStr);
           BiliBiliAccountService.instance.setCookie(cookieStr);
           await BiliBiliAccountService.instance.loadUserInfo();
           Get.back();

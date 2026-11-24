@@ -1,35 +1,43 @@
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_tv_app/app/constant.dart';
 import 'package:simple_live_tv_app/app/app_focus_node.dart';
 
 class Sites {
   static final Map<String, Site> allSites = {
-    "bilibili": Site(
-      id: "bilibili",
+    Constant.kBiliBili: Site(
+      id: Constant.kBiliBili,
       logo: "assets/images/bilibili_2.png",
       name: "哔哩哔哩",
       liveSite: BiliBiliSite(),
       index: 0,
     ),
-    "douyu": Site(
-      id: "douyu",
+    Constant.kDouyu: Site(
+      id: Constant.kDouyu,
       logo: "assets/images/douyu.png",
       name: "斗鱼直播",
       liveSite: DouyuSite(),
       index: 1,
     ),
-    "huya": Site(
-      id: "huya",
+    Constant.kHuya: Site(
+      id: Constant.kHuya,
       logo: "assets/images/huya.png",
       name: "虎牙直播",
       liveSite: HuyaSite(),
       index: 2,
     ),
-    "douyin": Site(
-      id: "douyin",
+    Constant.kDouyin: Site(
+      id: Constant.kDouyin,
       logo: "assets/images/douyin.png",
       name: "抖音直播",
       liveSite: DouyinSite(),
       index: 3,
+    ),
+    Constant.kKuaishou: Site(
+      id: Constant.kKuaishou,
+      logo: "assets/images/kuaishou.png",
+      name: "快手直播",
+      liveSite: KuaishouSite(),
+      index: 4,
     ),
   };
 

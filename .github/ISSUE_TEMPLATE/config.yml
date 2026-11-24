@@ -1,1 +1,5 @@
 blank_issues_enabled: false
+contact_links:
+  - name: 非 BUG 请先去 Discussions
+    url: https://github.com/June6699/dart_simple_live/discussions
+    about: 功能建议、体验优化、平台适配、安装使用问题、配置经验和一般提问都不要发 Issue。Enhance 请发 Ideas，并由其他用户给主楼 Upvote/👍 表示支持。

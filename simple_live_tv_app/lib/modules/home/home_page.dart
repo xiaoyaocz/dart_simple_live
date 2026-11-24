@@ -17,8 +17,32 @@ import 'package:simple_live_tv_app/widgets/button/home_big_button.dart';
 import 'package:simple_live_tv_app/widgets/net_image.dart';
 import 'package:simple_live_tv_app/widgets/status/app_empty_widget.dart';
 
-class HomePage extends GetView<HomeController> {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final HomeController controller = Get.find<HomeController>();
+
+  /// 按关注 id 复用焦点节点：网格重排时焦点跟着卡片走，
+  /// 不会因为重建换节点而回弹到顶部按钮。
+  final Map<String, AppFocusNode> _cardFocusNodes = <String, AppFocusNode>{};
+
+  @override
+  void dispose() {
+    for (final node in _cardFocusNodes.values) {
+      node.dispose();
+    }
+    _cardFocusNodes.clear();
+    super.dispose();
+  }
+
+  AppFocusNode _focusNodeFor(String key) {
+    return _cardFocusNodes.putIfAbsent(key, AppFocusNode.new);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +99,6 @@ class HomePage extends GetView<HomeController> {
                       AppStyle.hGap48,
                       Expanded(
                         child: HomeBigButton(
-                          autofocus: true,
                           focusNode: AppFocusNode(),
                           text: "直播类目",
                           iconData: Remix.apps_line,
@@ -85,7 +108,6 @@ class HomePage extends GetView<HomeController> {
                       AppStyle.hGap48,
                       Expanded(
                         child: HomeBigButton(
-                          autofocus: true,
                           focusNode: AppFocusNode(),
                           text: "搜索直播",
                           iconData: Remix.search_2_line,
@@ -117,6 +139,15 @@ class HomePage extends GetView<HomeController> {
                           text: "数据同步",
                           iconData: Icons.devices,
                           onTap: controller.toSync,
+                        ),
+                      ),
+                      AppStyle.hGap48,
+                      Expanded(
+                        child: HomeBigButton(
+                          focusNode: AppFocusNode(),
+                          text: "IPTV",
+                          iconData: Icons.live_tv,
+                          onTap: controller.toIptv,
                         ),
                       ),
                     ],
@@ -171,6 +202,13 @@ class HomePage extends GetView<HomeController> {
                       AppStyle.hGap16,
                       HighlightButton(
                         focusNode: AppFocusNode(),
+                        iconData: Icons.favorite_border,
+                        text: "我的关注",
+                        onTap: controller.toFollow,
+                      ),
+                      AppStyle.hGap32,
+                      HighlightButton(
+                        focusNode: AppFocusNode(),
                         iconData: Icons.settings,
                         text: "管理",
                         onTap: showManageDialog,
@@ -189,31 +227,39 @@ class HomePage extends GetView<HomeController> {
                 ),
                 AppStyle.vGap32,
                 Obx(
-                  () => MasonryGridView.count(
-                    padding: AppStyle.edgeInsetsH48,
-                    itemCount: FollowUserService.instance.list.length,
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 48.w,
-                    mainAxisSpacing: 48.w,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (_, i) {
-                      var item = FollowUserService.instance.list[i];
-                      return Obx(
-                        () => AnchorCard(
-                          face: item.face,
-                          name: item.userName,
-                          siteId: item.siteId,
-                          liveStatus: item.liveStatus.value,
-                          roomId: item.roomId,
-                        ),
-                      );
-                    },
-                  ),
+                  () {
+                    // 订阅发布修订号；同一帧内固化快照，避免构建期列表被替换
+                    FollowUserService.instance.dataRevision.value;
+                    final items = FollowUserService.instance.homeList
+                        .toList(growable: false);
+                    return MasonryGridView.count(
+                      padding: AppStyle.edgeInsetsH48,
+                      itemCount: items.length,
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 48.w,
+                      mainAxisSpacing: 48.w,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemBuilder: (_, i) {
+                        final item = items[i];
+                        return Obx(
+                          () => AnchorCard(
+                            key: ValueKey(item.id),
+                            face: item.face,
+                            name: item.userName,
+                            siteId: item.siteId,
+                            liveStatus: item.liveStatus.value,
+                            roomId: item.roomId,
+                            focusNode: _focusNodeFor(item.id),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
                 Obx(
                   () => Visibility(
-                    visible: FollowUserService.instance.list.isEmpty,
+                    visible: FollowUserService.instance.allList.isEmpty,
                     child: Column(
                       children: [
                         AppStyle.vGap24,
@@ -287,11 +333,11 @@ class HomePage extends GetView<HomeController> {
               children: [
                 Obx(
                   () => ListView.separated(
-                    itemCount: FollowUserService.instance.list.length,
+                    itemCount: FollowUserService.instance.allList.length,
                     separatorBuilder: (_, __) => AppStyle.vGap24,
                     padding: AppStyle.edgeInsetsA40,
                     itemBuilder: (_, i) {
-                      var item = FollowUserService.instance.list[i];
+                      var item = FollowUserService.instance.allList[i];
                       var foucsNode = AppFocusNode();
                       return HighlightListTile(
                         autofocus: i == 0,
@@ -322,7 +368,7 @@ class HomePage extends GetView<HomeController> {
                 ),
                 Obx(
                   () => Visibility(
-                    visible: FollowUserService.instance.list.isEmpty,
+                    visible: FollowUserService.instance.allList.isEmpty,
                     child: const AppEmptyWidget(
                       text: "关注列表为空，快去关注一些主播吧",
                     ),

@@ -108,7 +108,7 @@ void main() {
         p0['stream-lavf-o'],
         'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=2',
       );
-      expect(p0['cache-secs'], '20');
+      expect(p0['cache-secs'], Platform.isWindows ? '30' : '20');
       expect(p0['cache-pause-wait'], Platform.isWindows ? '0.5' : '2');
 
       // 模式 1：抗抖稳流

@@ -211,6 +211,15 @@ class LocalStorageService extends GetxService {
   /// 持久化 CDN 线路质量历史（仅存 origin，不含签名）
   static const String kPlaybackRouteHistory = "PlaybackRouteHistory";
 
+  /// Windows AI 超分着色器开关（FSRCNNX）
+  static const String kWindowsSuperResolution = "WindowsSuperResolution";
+
+  /// Windows 动态画面平滑（补帧）开关
+  static const String kWindowsInterpolation = "WindowsInterpolation";
+
+  /// Windows WASAPI 音频独占开关
+  static const String kWindowsAudioExclusive = "WindowsAudioExclusive";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

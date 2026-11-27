@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -7,11 +9,20 @@ class _Settings extends AppSettingsController {
   @override
   // ignore: must_call_super
   void onInit() {}
+
+  @override
+  void setWindowsSuperResolution(bool e) => windowsSuperResolution.value = e;
+
+  @override
+  void setWindowsInterpolation(bool e) => windowsInterpolation.value = e;
+
+  @override
+  void setWindowsAudioExclusive(bool e) => windowsAudioExclusive.value = e;
 }
 
 void main() {
   testWidgets('直播间设置只显示观看偏好，性能策略没有开关', (tester) async {
-    Get.put<AppSettingsController>(_Settings());
+    final settings = Get.put<AppSettingsController>(_Settings());
     try {
       await tester.pumpWidget(const GetMaterialApp(home: PlaySettingsPage()));
       expect(find.text('画面尺寸'), findsOneWidget);
@@ -30,6 +41,30 @@ void main() {
         '数据网络清晰度',
       ]) {
         expect(find.text(title), findsNothing);
+      }
+
+      if (Platform.isWindows) {
+        final superRes = find.text('AI 超分增强（FSRCNNX）');
+        await tester.scrollUntilVisible(superRes, 120);
+        expect(superRes, findsOneWidget);
+        expect(find.text('动态画面平滑（补帧）'), findsOneWidget);
+        expect(find.text('WASAPI 音频独占'), findsOneWidget);
+
+        await tester.tap(superRes);
+        await tester.pump();
+        expect(settings.windowsSuperResolution.value, isFalse);
+
+        final interp = find.text('动态画面平滑（补帧）');
+        await tester.scrollUntilVisible(interp, 120);
+        await tester.tap(interp);
+        await tester.pump();
+        expect(settings.windowsInterpolation.value, isTrue);
+
+        final exclusive = find.text('WASAPI 音频独占');
+        await tester.scrollUntilVisible(exclusive, 120);
+        await tester.tap(exclusive);
+        await tester.pump();
+        expect(settings.windowsAudioExclusive.value, isTrue);
       }
     } finally {
       Get.reset();

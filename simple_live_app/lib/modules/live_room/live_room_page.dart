@@ -272,9 +272,7 @@ class LiveRoomPage extends StatelessWidget {
       boxFit = BoxFit.contain;
       aspectRatio = 4 / 3;
     }
-    final video = Stack(
-      children: [
-        Video(
+    Widget buildVideoWidget() => Video(
           key: controller.globalPlayerKey,
           controller: controller.videoController,
           pauseUponEnteringBackgroundMode:
@@ -286,9 +284,24 @@ class LiveRoomPage extends StatelessWidget {
           },
           aspectRatio: aspectRatio,
           fit: boxFit,
+          filterQuality:
+              Platform.isWindows ? FilterQuality.medium : FilterQuality.low,
           // 自己实现
           wakelock: false,
-        ),
+        );
+    final video = Stack(
+      children: [
+        Platform.isWindows
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  controller.updateWindowsVideoViewport(
+                    constraints.biggest,
+                    MediaQuery.devicePixelRatioOf(context),
+                  );
+                  return buildVideoWidget();
+                },
+              )
+            : buildVideoWidget(),
         Obx(
           () => Visibility(
             visible: controller.audioOnlyMode.value &&

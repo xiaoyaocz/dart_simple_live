@@ -8,13 +8,17 @@ $overlay = (Resolve-Path (Join-Path $build 'simplelive_media_kit_video')).Path
 $angle = (Resolve-Path (Join-Path $build 'ANGLE')).Path
 $libmpv = (Resolve-Path (Join-Path $build 'simplelive_libmpv/extracted')).Path
 $release = (Resolve-Path (Join-Path $build 'runner/Release')).Path
+$shader = Join-Path $release 'data/flutter_assets/assets/shaders/FSRCNNX_x2_8-0-4-1.glsl'
+if (-not (Test-Path -LiteralPath $shader)) {
+  throw "Missing bundled FSRCNNX shader asset: $shader"
+}
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
 $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 $vcvars = Join-Path $installation 'VC/Auxiliary/Build/vcvars64.bat'
 $work = Join-Path $env:TEMP ('simplelive-video-texture-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
 $command = Join-Path $work 'test.cmd'
-$argLine = if ($LiveUrl) { "`"$LiveUrl`"" } else { '' }
+$argLine = if ($LiveUrl) { "`"$LiveUrl`" `"$shader`"" } else { '' }
 @"
 @echo off
 call "$vcvars" >nul

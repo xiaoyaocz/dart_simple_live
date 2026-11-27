@@ -136,6 +136,13 @@ class AppSettingsController extends GetxController {
     webDavAutoSync.value = LocalStorageService.instance
         .getValue(LocalStorageService.kWebDAVAutoSync, false);
 
+    windowsSuperResolution.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWindowsSuperResolution, true);
+    windowsInterpolation.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWindowsInterpolation, false);
+    windowsAudioExclusive.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWindowsAudioExclusive, false);
+
     initSiteSort();
     initHomeSort();
 
@@ -321,7 +328,31 @@ class AppSettingsController extends GetxController {
 
   final playerCompatMode = false.obs;
 
-  final playerBufferSize = (Platform.isWindows ? 128 : 64).obs;
+  final playerBufferSize = (Platform.isWindows ? 256 : 64).obs;
+
+  /// Windows AI 超分着色器开关（FSRCNNX）
+  var windowsSuperResolution = true.obs;
+  void setWindowsSuperResolution(bool e) {
+    windowsSuperResolution.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kWindowsSuperResolution, e);
+  }
+
+  /// Windows 动态画面平滑（补帧）开关
+  var windowsInterpolation = false.obs;
+  void setWindowsInterpolation(bool e) {
+    windowsInterpolation.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kWindowsInterpolation, e);
+  }
+
+  /// Windows WASAPI 音频独占开关
+  var windowsAudioExclusive = false.obs;
+  void setWindowsAudioExclusive(bool e) {
+    windowsAudioExclusive.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kWindowsAudioExclusive, e);
+  }
 
   /// 缓冲策略：0=均衡（默认），1=抗抖稳流，2=低延迟
   final playerBufferMode = 0.obs;

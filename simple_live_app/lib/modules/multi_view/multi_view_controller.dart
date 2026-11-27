@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
@@ -11,6 +12,7 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
+import 'package:simple_live_app/modules/live_room/player/windows_video_quality.dart';
 import 'package:simple_live_app/modules/multi_view/multi_view_slot.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/services/follow_service.dart';
@@ -68,6 +70,9 @@ class MultiViewTileRuntime {
     await _configurePlayer(createdPlayer);
   }
 
+  @visibleForTesting
+  Future<void> configurePlayerForTest(Player target) => _configurePlayer(target);
+
   Future<void> _configurePlayer(Player target) async {
     if (configured) return;
     configured = true;
@@ -76,14 +81,15 @@ class MultiViewTileRuntime {
       if (platform is NativePlayer) {
         if (Platform.isWindows) {
           await platform.setProperty('http-proxy', '');
-          await platform.setProperty('audio-buffer', '0.5');
+          await WindowsVideoQuality.applyBaseProperties(platform);
         }
         await platform.setProperty('interpolation', 'no');
         await platform.setProperty('video-sync', 'audio');
         await platform.setProperty('audio-pitch-correction', 'yes');
         await platform.setProperty('cache-on-disk', 'no');
-        await platform.setProperty('cache-secs', '15');
-        await platform.setProperty('demuxer-max-back-bytes', '2097152');
+        await platform.setProperty('cache-secs', Platform.isWindows ? '20' : '15');
+        await platform.setProperty(
+            'demuxer-max-back-bytes', Platform.isWindows ? '8388608' : '2097152');
         await platform.setProperty('cache-pause', 'yes');
         await platform.setProperty('cache-pause-wait', '0.5');
         await platform.setProperty('network-timeout', '10');

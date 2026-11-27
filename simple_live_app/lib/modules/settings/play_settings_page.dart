@@ -154,6 +154,48 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ],
             ),
           ),
+          if (Platform.isWindows) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "画质与音频增强",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+            SettingsCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "AI 超分增强（FSRCNNX）",
+                      subtitle: "1080p 放大到 2K/4K 时锐化细节；独显推荐，低配或想省电可关闭",
+                      value: controller.windowsSuperResolution.value,
+                      onChanged: controller.setWindowsSuperResolution,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "动态画面平滑（补帧）",
+                      subtitle: "mpv 时间域帧平滑（非 AI 光流）；高刷屏可按需开启，可能轻微增加延迟",
+                      value: controller.windowsInterpolation.value,
+                      onChanged: controller.setWindowsInterpolation,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "WASAPI 音频独占",
+                      subtitle: "绕过系统混音直出声卡；开启后播放直播时其他软件将静音，重进直播间生效",
+                      value: controller.windowsAudioExclusive.value,
+                      onChanged: controller.setWindowsAudioExclusive,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

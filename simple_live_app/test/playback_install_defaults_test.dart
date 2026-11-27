@@ -26,6 +26,9 @@ void main() {
     expect(settings.qualityLevel.value, 2);
     expect(settings.qualityLevelCellular.value, 2);
     expect(settings.preferNativeFrameRate.value, isFalse);
+    expect(settings.windowsSuperResolution.value, isTrue);
+    expect(settings.windowsInterpolation.value, isFalse);
+    expect(settings.windowsAudioExclusive.value, isFalse);
   });
 
   test('升级保留弹幕偏好，播放按源码中的自动策略执行', () async {
@@ -52,13 +55,23 @@ void main() {
     expect(settings.preferNativeFrameRate.value, isFalse);
     expect(settings.hardwareDecode.value, isTrue);
     expect(settings.playerCompatMode.value, isFalse);
-    expect(settings.playerBufferSize.value, Platform.isWindows ? 128 : 64);
+    expect(settings.playerBufferSize.value, Platform.isWindows ? 256 : 64);
     expect(settings.playerBufferMode.value, 0);
     expect(settings.liveCatchupEnable.value, isTrue);
     expect(settings.streamRouteProbeEnable.value, isTrue);
     expect(settings.backgroundAudioOnly.value, isTrue);
     expect(settings.playerForceHttps.value, isFalse);
     expect(storage.settingsBox.get(LocalStorageService.kQualityLevel), 0);
+
+    settings.setWindowsSuperResolution(false);
+    settings.setWindowsInterpolation(true);
+    settings.setWindowsAudioExclusive(true);
+    expect(storage.getValue(LocalStorageService.kWindowsSuperResolution, true),
+        isFalse);
+    expect(storage.getValue(LocalStorageService.kWindowsInterpolation, false),
+        isTrue);
+    expect(storage.getValue(LocalStorageService.kWindowsAudioExclusive, false),
+        isTrue);
   });
 
   test('手机加载电脑导入配置继续使用自动驱动，不改写原存储', () async {

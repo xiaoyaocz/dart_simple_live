@@ -100,8 +100,28 @@ int main(int argc, char** argv) {
     if (mpv_set_property_string(mpv, "vo", "libmpv") != 0) return 15;
     if (mpv_set_property_string(mpv, "hwdec", "auto") != 0) return 16;
     if (mpv_set_property_string(mpv, "gpu-hwdec-interop", "d3d11-egl") != 0) return 17;
+    if (mpv_set_property_string(mpv, "scale", "ewa_lanczossharp") != 0) return 25;
+    if (mpv_set_property_string(mpv, "cscale", "spline36") != 0) return 26;
+    if (mpv_set_property_string(mpv, "dscale", "mitchell") != 0) return 27;
+    if (mpv_set_property_string(mpv, "deband", "yes") != 0) return 28;
+    if (mpv_set_property_string(mpv, "deband-iterations", "1") != 0) return 29;
+    if (mpv_set_property_string(mpv, "deband-threshold", "35") != 0) return 30;
+    if (mpv_set_property_string(mpv, "deband-range", "16") != 0) return 31;
+    if (mpv_set_property_string(mpv, "deband-grain", "12") != 0) return 32;
+    if (argc >= 3 && argv[2][0] != '\0') {
+      if (mpv_set_property_string(mpv, "glsl-shaders", argv[2]) != 0) return 33;
+    }
     if (mpv_set_property_string(mpv, "audio-buffer", "0.5") != 0) return 18;
     mpv_set_property_string(mpv, "ao", "null");
+
+    bool saw_d3d11_egl = false;
+    bool saw_dxva2_egl_error = false;
+    bool saw_shader_error = false;
+    bool saw_fsrcnnx = false;
+
+    if (argc >= 2 && iter == 1) {
+      surface.SetSize(2560, 1440);
+    }
 
     surface.MakeCurrent(true);
     mpv_opengl_init_params gl_init{ GetEglProc, nullptr };
@@ -114,8 +134,6 @@ int main(int argc, char** argv) {
     if (mpv_render_context_create(&rctx, mpv, params) != 0 || !rctx) return 19;
     surface.MakeCurrent(false);
 
-    bool saw_d3d11_egl = false;
-    bool saw_dxva2_egl_error = false;
     if (argc >= 2 && iter == 1) {
       const char* cmd[] = { "loadfile", argv[1], nullptr };
       mpv_command(mpv, cmd);
@@ -125,9 +143,19 @@ int main(int argc, char** argv) {
         mpv_event* ev = mpv_wait_event(mpv, 0.05);
         if (ev->event_id == MPV_EVENT_LOG_MESSAGE) {
           auto* msg = static_cast<mpv_event_log_message*>(ev->data);
+          std::string level(msg->level ? msg->level : "");
           std::string text(msg->text ? msg->text : "");
           if (text.find("d3d11-egl") != std::string::npos) saw_d3d11_egl = true;
           if (text.find("dxva2-egl") != std::string::npos) return 20;
+          if (text.find("FSRCNNX") != std::string::npos ||
+              text.find("feature map") != std::string::npos ||
+              text.find("user shader") != std::string::npos) {
+            saw_fsrcnnx = true;
+          }
+          if ((level == "error" || level == "fatal") &&
+              text.find("shader") != std::string::npos) {
+            saw_shader_error = true;
+          }
         }
         if (mpv_render_context_update(rctx) & MPV_RENDER_UPDATE_FRAME) {
           surface.Draw([&] {
@@ -143,10 +171,13 @@ int main(int argc, char** argv) {
         }
       }
       if (frames < 1) return 21;
+      if (saw_shader_error) return 34;
+      if (argc >= 3 && argv[2][0] != '\0' && !saw_fsrcnnx) return 35;
       char* cur_hw = mpv_get_property_string(mpv, "hwdec-current");
       std::string hw = cur_hw ? cur_hw : "";
       if (cur_hw) mpv_free(cur_hw);
-      std::cout << "LIVE hwdec-current=" << hw << "\n";
+      std::cout << "LIVE hwdec-current=" << hw << " out=" << surface.width() << "x"
+                << surface.height() << " fsrcnnx=" << (saw_fsrcnnx ? 1 : 0) << "\n";
       if (hw != "d3d11va") return 22;
     }
 
@@ -155,12 +186,17 @@ int main(int argc, char** argv) {
       if (ev->event_id == MPV_EVENT_NONE) break;
       if (ev->event_id == MPV_EVENT_LOG_MESSAGE) {
         auto* msg = static_cast<mpv_event_log_message*>(ev->data);
+        std::string level(msg->level ? msg->level : "");
         std::string text(msg->text ? msg->text : "");
         if (text.find("d3d11-egl") != std::string::npos) saw_d3d11_egl = true;
         if (text.find("dxva2-egl") != std::string::npos) saw_dxva2_egl_error = true;
+        if ((level == "error" || level == "fatal") &&
+            text.find("shader") != std::string::npos) {
+          saw_shader_error = true;
+        }
       }
     }
-    if (!saw_d3d11_egl || saw_dxva2_egl_error) return 23;
+    if (!saw_d3d11_egl || saw_dxva2_egl_error || saw_shader_error) return 23;
 
     // Proper teardown order: free render_context with EGL current before ANGLESurfaceManager.
     surface.MakeCurrent(true);

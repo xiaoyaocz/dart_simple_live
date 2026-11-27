@@ -535,8 +535,10 @@ class DouyuSite implements LiveSite {
 
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
-    var roomInfo = await _getRoomInfo(roomId);
-    return roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1;
+    final room = await _getRoomInfo(roomId);
+    final status = int.tryParse('${room["show_status"]}');
+    if (status == null) throw StateError('斗鱼房间未返回直播状态');
+    return status == 1 && room['videoLoop']?.toString() != '1';
   }
 
   int parseHotNum(String hn) {

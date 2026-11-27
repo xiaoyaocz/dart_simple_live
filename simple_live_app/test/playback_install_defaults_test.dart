@@ -5,7 +5,6 @@ import 'package:hive/hive.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/player_output_policy.dart';
-import 'package:simple_live_app/modules/settings/other/other_settings_controller.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -29,20 +28,40 @@ void main() {
     expect(settings.preferNativeFrameRate.value, isFalse);
   });
 
-  test('升级保留用户保存过的弹幕和画质偏好', () async {
+  test('升级保留弹幕偏好，播放按源码中的自动策略执行', () async {
     final storage = LocalStorageService.instance;
     await storage.setValue(LocalStorageService.kDanmuEnable, true);
     await storage.setValue(LocalStorageService.kQualityLevel, 0);
     await storage.setValue(LocalStorageService.kQualityLevelCellular, 1);
     await storage.setValue(LocalStorageService.kPreferNativeFrameRate, true);
+    await storage.settingsBox.putAll({
+      LocalStorageService.kHardwareDecode: false,
+      LocalStorageService.kPlayerCompatMode: true,
+      LocalStorageService.kPlayerBufferSize: 16,
+      LocalStorageService.kPlayerBufferMode: 2,
+      LocalStorageService.kLiveCatchupEnable: false,
+      LocalStorageService.kAutoDowngradeQuality: true,
+      LocalStorageService.kStreamRouteProbeEnable: false,
+      LocalStorageService.kBackgroundAudioOnly: false,
+      LocalStorageService.kPlayerForceHttps: true,
+    });
     final settings = Get.put(AppSettingsController());
     expect(settings.danmuEnable.value, isTrue);
-    expect(settings.qualityLevel.value, 0);
-    expect(settings.qualityLevelCellular.value, 1);
-    expect(settings.preferNativeFrameRate.value, isTrue);
+    expect(settings.qualityLevel.value, 2);
+    expect(settings.qualityLevelCellular.value, 2);
+    expect(settings.preferNativeFrameRate.value, isFalse);
+    expect(settings.hardwareDecode.value, isTrue);
+    expect(settings.playerCompatMode.value, isFalse);
+    expect(settings.playerBufferSize.value, Platform.isWindows ? 128 : 64);
+    expect(settings.playerBufferMode.value, 0);
+    expect(settings.liveCatchupEnable.value, isTrue);
+    expect(settings.streamRouteProbeEnable.value, isTrue);
+    expect(settings.backgroundAudioOnly.value, isTrue);
+    expect(settings.playerForceHttps.value, isFalse);
+    expect(storage.settingsBox.get(LocalStorageService.kQualityLevel), 0);
   });
 
-  test('手机加载电脑导入配置自动回退，菜单不包含电脑驱动，不改写原存储', () async {
+  test('手机加载电脑导入配置继续使用自动驱动，不改写原存储', () async {
     final storage = LocalStorageService.instance;
     await storage.settingsBox.putAll({
       LocalStorageService.kCustomPlayerOutput: true,
@@ -53,40 +72,28 @@ void main() {
     });
     final settings = Get.put(AppSettingsController(
         outputPolicy: const PlayerOutputPolicy('android')));
-    expect(settings.customPlayerOutput.value, isTrue);
+    expect(settings.customPlayerOutput.value, isFalse);
     expect(settings.videoOutputDriver.value, 'auto');
     expect(settings.audioOutputDriver.value, 'auto');
     expect(settings.videoHardwareDecoder.value, 'auto');
-    final menus = OtherSettingsController();
-    expect(menus.videoOutputDrivers.containsKey('libmpv'), isFalse);
-    expect(menus.audioOutputDrivers.containsKey('wasapi'), isFalse);
-    expect(menus.hardwareDecoder.containsKey('d3d11va'), isFalse);
     expect(storage.settingsBox.get(LocalStorageService.kVideoOutputDriver),
         'libmpv');
     expect(storage.settingsBox.get('unrelated-preference'), 'retain');
   });
 
-  test('电脑合法手动配置保留，非法新选择保存为自动', () async {
+  test('电脑也忽略旧版手动驱动配置', () async {
     final storage = LocalStorageService.instance;
     await storage.settingsBox.putAll({
+      LocalStorageService.kCustomPlayerOutput: true,
       LocalStorageService.kVideoOutputDriver: 'libmpv',
       LocalStorageService.kAudioOutputDriver: 'wasapi',
       LocalStorageService.kVideoHardwareDecoder: 'd3d11va',
     });
     final settings = Get.put(AppSettingsController(
         outputPolicy: const PlayerOutputPolicy('windows')));
-    expect(settings.videoOutputDriver.value, 'libmpv');
-    expect(settings.audioOutputDriver.value, 'wasapi');
-    expect(settings.videoHardwareDecoder.value, 'd3d11va');
-    settings.setVideoOutputDriver('mediacodec_embed');
-    settings.setAudioOutputDriver('audiotrack');
-    settings.setVideoHardwareDecoder('mediacodec');
-    await storage.settingsBox.flush();
-    expect(storage.settingsBox.get(LocalStorageService.kVideoOutputDriver),
-        'auto');
-    expect(storage.settingsBox.get(LocalStorageService.kAudioOutputDriver),
-        'auto');
-    expect(storage.settingsBox.get(LocalStorageService.kVideoHardwareDecoder),
-        'auto');
+    expect(settings.customPlayerOutput.value, isFalse);
+    expect(settings.videoOutputDriver.value, 'auto');
+    expect(settings.audioOutputDriver.value, 'auto');
+    expect(settings.videoHardwareDecoder.value, 'auto');
   });
 }

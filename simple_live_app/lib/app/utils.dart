@@ -22,6 +22,11 @@ class Utils {
   static DateFormat dateFormatWithYear = DateFormat("yyyy-MM-dd HH:mm");
   static DateFormat timeFormat = DateFormat("HH:mm:ss");
 
+  static String playbackQualityLabel(String requested, String? actual) =>
+      actual == null || actual.isEmpty || actual == requested
+          ? requested
+          : '$requested（实播$actual）';
+
   /// 处理时间
   static String parseTime(DateTime? dt) {
     if (dt == null) {

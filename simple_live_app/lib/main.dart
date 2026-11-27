@@ -25,6 +25,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/modules/multi_view/multi_view_controller.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
 import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -32,9 +33,12 @@ import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/live_notification_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/playback_route_history.dart';
 import 'package:simple_live_app/services/sync_service.dart';
 import 'package:simple_live_app/services/system_proxy_service.dart';
+import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
@@ -135,6 +139,12 @@ Future initServices() async {
   //本地存储
   Log.d("Init LocalStorage Service");
   await Get.put(LocalStorageService()).init();
+  PlaybackRouteHistory.instance.attachPersistence(
+    read: () => LocalStorageService.instance
+        .getValue(LocalStorageService.kPlaybackRouteHistory, ''),
+    write: (json) => LocalStorageService.instance
+        .setValue(LocalStorageService.kPlaybackRouteHistory, json),
+  );
   await Get.put(DBService()).init();
   //初始化设置控制器
   Get.put(AppSettingsController());
@@ -145,6 +155,10 @@ Future initServices() async {
   Get.put(DouyinAccountService());
 
   Get.put(SyncService());
+
+  await Get.put(LiveNotificationService()).initialize();
+
+  Get.put(WebDavAutoSyncService()).scheduleStartupSync();
 
   Get.put(FollowService());
 
@@ -203,6 +217,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return true;
       }
     }
+    if (Get.currentRoute == RoutePath.kMultiView &&
+        Get.isRegistered<MultiViewController>()) {
+      final controller = Get.find<MultiViewController>();
+      if (controller.fullScreen.value) {
+        await controller.exitFullScreen();
+        return true;
+      }
+    }
     await windowManager.setFullScreen(false);
     return true;
   }
@@ -219,6 +241,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
         if (call.method == 'onAppearanceInvalidated') {
           await Get.find<WindowAppearanceController>().apply(force: true);
+        }
+        if (call.method == 'onNotificationClick') {
+          final args = call.arguments;
+          if (args is Map && Get.isRegistered<LiveNotificationService>()) {
+            await LiveNotificationService.instance.handleNotificationClick(
+              args['siteId']?.toString() ?? '',
+              args['roomId']?.toString() ?? '',
+            );
+          }
         }
       });
     }

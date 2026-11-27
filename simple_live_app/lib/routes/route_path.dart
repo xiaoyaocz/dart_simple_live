@@ -78,6 +78,9 @@ class RoutePath {
   /// 远程同步-WebDAVConfig
   static const kRemoteSyncWebDavConfig = "/remote_sync/webDAVConfig";
 
+  /// 多画面同屏（桌面端）
+  static const kMultiView = "/multi_view";
+
   /// 测试页面
   static const kTest = "/test";
 }

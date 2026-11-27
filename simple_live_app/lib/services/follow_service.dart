@@ -17,6 +17,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/services/live_notification_service.dart';
 import 'package:simple_live_app/services/room_startup_cache.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
@@ -62,7 +63,7 @@ class FollowService extends GetxService with WidgetsBindingObserver {
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
     subscription = EventBus.instance.listen(Constant.kUpdateFollow, (p0) {
-      loadData(updateStatus: false);
+      loadData(updateStatus: updating.value || p0 == 0);
     });
     initTimer();
     super.onInit();
@@ -165,6 +166,7 @@ class FollowService extends GetxService with WidgetsBindingObserver {
             minutes:
                 AppSettingsController.instance.autoUpdateFollowDuration.value),
         (timer) {
+          if (_closed || updating.value) return;
           Log.logPrint("Update Follow Timer");
           loadData();
         },
@@ -228,38 +230,53 @@ class FollowService extends GetxService with WidgetsBindingObserver {
     return result;
   }
 
+  static const _statusTimeout = Duration(seconds: 8);
+  static const _detailsTimeout = Duration(seconds: 5);
+
   Future<void> startUpdateStatus() async {
     final revision = ++_refreshRevision;
     updatedCount = 0;
-    final items = interleaveByPlatform(followList);
-    updating.value = items.isNotEmpty;
-    if (_closed || items.isEmpty) return;
+    final statuses = Queue<FollowUser>.from(interleaveByPlatform(followList));
+    updating.value = statuses.isNotEmpty;
+    if (_closed || statuses.isEmpty) return;
+    final concurrency = getOptimalConcurrency().clamp(1, statuses.length);
+    final details = Queue<Future<void> Function()>();
 
-    final concurrency = getOptimalConcurrency().clamp(1, items.length);
-    Log.logPrint("开始更新关注状态，并发数: $concurrency，总数: ${items.length}");
-    final taskQueue = Queue<FollowUser>.from(items);
-    Future<void> worker() async {
-      while (!_closed && revision == _refreshRevision && taskQueue.isNotEmpty) {
-        final item = taskQueue.removeFirst();
-        await _updateLiveStatus(item, revision, requireListed: true);
+    Future<void> statusWorker() async {
+      while (!_closed && revision == _refreshRevision && statuses.isNotEmpty) {
+        final task = await _readLiveStatus(statuses.removeFirst(), revision,
+            requireListed: true);
+        if (task != null) details.add(task);
         if (_closed || revision != _refreshRevision) return;
         updatedCount++;
-        if (updatedCount == items.length) filterData();
       }
     }
 
-    await Future.wait(List.generate(concurrency, (_) => worker()));
-    if (!_closed && revision == _refreshRevision) {
-      updating.value = false;
-      Log.logPrint("关注状态更新完成");
+    Future<void> detailWorker() async {
+      while (details.isNotEmpty) {
+        await details.removeFirst()();
+      }
+    }
+
+    await Future.wait(List.generate(concurrency, (_) => statusWorker()));
+    if (!_closed && revision == _refreshRevision) updating.value = false;
+    // Keep catalog, authentication and playback requests out of the status queue.
+    await Future.wait(List.generate(concurrency, (_) => detailWorker()));
+    if (!_closed &&
+        revision == _refreshRevision &&
+        Get.isRegistered<LiveNotificationService>()) {
+      unawaited(LiveNotificationService.instance
+          .handleFollowRefreshCompleted(followList.toList()));
     }
   }
 
-  Future<void> updateLiveStatus(FollowUser item) =>
-      _updateLiveStatus(item, _refreshRevision);
+  Future<void> updateLiveStatus(FollowUser item) async {
+    final task = await _readLiveStatus(item, _refreshRevision);
+    if (task != null) await task();
+  }
 
-  Future<void> _updateLiveStatus(FollowUser item, int revision,
-      {bool requireListed = false}) async {
+  Future<Future<void> Function()?> _readLiveStatus(
+      FollowUser item, int revision, {bool requireListed = false}) async {
     final request = Object();
     _statusRequests[item] = request;
     final database = DBService.instance;
@@ -275,56 +292,88 @@ class FollowService extends GetxService with WidgetsBindingObserver {
         identical(database.followBox.get(item.id), storedItem) &&
         (!requireListed || followList.any((entry) => identical(entry, item)));
 
+    void finish() {
+      if (identical(_statusRequests[item], request)) _statusRequests.remove(item);
+    }
+
+    var enrich = false;
     try {
       final site = Sites.allSites[item.siteId]!;
-      final douyinDetail = site.liveSite is DouyinSite
-            ? await RoomStartupCache.instance.refresh(site.liveSite, item.roomId)
+      final source = site.liveSite;
+      final douyinDetail = source is DouyinSite
+          ? await RoomStartupCache.instance.refresh(source, item.roomId)
+              .timeout(_statusTimeout)
           : null;
       final isLiving = douyinDetail?.status ??
-          await site.liveSite.getLiveStatus(roomId: item.roomId);
-      if (!isCurrent()) return;
+          await source.getLiveStatus(roomId: item.roomId).timeout(_statusTimeout);
+      if (!isCurrent()) return null;
 
-      String? liveStartTime;
-      int? heat;
-      String? categoryName;
-      if (isLiving) {
-        final detail = douyinDetail ??
-              await RoomStartupCache.instance.refresh(site.liveSite, item.roomId);
-        liveStartTime = detail.showTime;
-        heat = detail.online > 0 ? detail.online : null;
-        categoryName = (site.liveSite is DouyinSite
-                ? await (site.liveSite as DouyinSite)
-                    .getFollowCategoryName(detail)
-                : detail.categoryName)
-            ?.trim();
+      final nextStatus = isLiving ? 2 : 1;
+      if (!isLiving) {
+        item.liveStartTime = null;
+        item.heat = null;
       }
-      // All network-derived values stay local until every await has finished.
-      if (!isCurrent()) return;
-      final categoryChanged = categoryName != null &&
-          categoryName.isNotEmpty &&
-          categoryName != item.categoryName;
-      item.liveStartTime = liveStartTime;
-      item.heat = heat;
-      if (categoryChanged) {
-        item.categoryName = categoryName;
-        if (identical(storedItem, item)) {
-          await DBService.instance.addFollow(item);
+      if (item.liveStatus.value != nextStatus) {
+        item.liveStatus.value = nextStatus;
+        filterData();
+      }
+      if (!isLiving) return null;
+
+      enrich = true;
+      return () async {
+        try {
+          if (!isCurrent()) return;
+          final detail = douyinDetail ??
+              await RoomStartupCache.instance.refresh(source, item.roomId)
+                  .timeout(_detailsTimeout);
+          if (!isCurrent()) return;
+          final category = (source is DouyinSite
+                  ? await source.getFollowCategoryName(detail).timeout(
+                        _detailsTimeout,
+                        onTimeout: () => detail.leafCategoryName ??
+                            detail.webParentCategoryName,
+                      )
+                  : detail.categoryName)
+              ?.trim();
+          if (!isCurrent()) return;
+          final previousHeat = item.heat;
+          item.liveStartTime = detail.showTime;
+          item.heat = detail.online > 0 ? detail.online : null;
+          final categoryChanged = category != null &&
+              category.isNotEmpty &&
+              category != item.categoryName;
+          if (categoryChanged) {
+            item.categoryName = category;
+            if (identical(storedItem, item)) {
+              await database.addFollowSilently(item);
+            }
+          }
+          if (!isCurrent()) return;
+          if (site.id == Constant.kHuya &&
+              RegExp(r'^[1-9][0-9]*$').hasMatch(detail.roomId) &&
+              item.id != '${item.siteId}_${detail.roomId}' &&
+              await database.mergeFollowRoom(item, detail.roomId,
+                  isCurrent: isCurrent)) {
+            if (_closed || revision != _refreshRevision) return;
+            followList.assignAll(database.getFollowList());
+            getAllTagList();
+            filterData();
+          } else if (isCurrent() &&
+              (categoryChanged || previousHeat != item.heat)) {
+            filterData();
+          }
+        } catch (error) {
+          Log.logPrint(error);
+        } finally {
+          finish();
         }
-      }
-      if (!isCurrent()) return;
-      item.liveStatus.value = isLiving ? 2 : 1;
-      filterData();
-    } catch (e) {
-      Log.logPrint(e);
-      if (!isCurrent()) return;
-      item.liveStatus.value = 0;
-      item.liveStartTime = null;
-      item.heat = null;
-      filterData();
+      };
+    } catch (error) {
+      // A transient failure is not evidence that a previously live room ended.
+      Log.logPrint(error);
+      return null;
     } finally {
-      if (identical(_statusRequests[item], request)) {
-        _statusRequests.remove(item);
-      }
+      if (!enrich) finish();
     }
   }
 

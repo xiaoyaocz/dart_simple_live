@@ -39,7 +39,10 @@ mixin PlayerMixin {
   late final player = Player(
     configuration: PlayerConfiguration(
       title: "Simple Live Player",
-      bufferSize: 64 * 1024 * 1024,
+      bufferSize: AppSettingsController.instance.playerBufferSize.value
+              .clamp(16, 256) *
+          1024 *
+          1024,
       logLevel: AppSettingsController.instance.logEnable.value
           ? MPVLogLevel.info
           : MPVLogLevel.error,
@@ -65,24 +68,57 @@ mixin PlayerMixin {
     }
   }
 
+  String playbackBufferWait({bool adaptive = false}) =>
+      switch (AppSettingsController.instance.playerBufferMode.value) {
+        1 => '2.5',
+        2 => Platform.isWindows ? '0.3' : '0.8',
+        _ when adaptive => Platform.isWindows ? '1.5' : '3',
+        _ => Platform.isWindows ? '0.5' : '2',
+      };
+
   Future<void> _configurePlayer() async {
     var pp = player.platform as NativePlayer;
     if (Platform.isWindows) await pp.setProperty('http-proxy', '');
     // Keep source timestamps/frame count; physical display Hz is managed separately.
     await pp.setProperty('interpolation', 'no');
     await pp.setProperty('video-sync', 'audio');
+    await pp.setProperty('audio-pitch-correction', 'yes');
+    await pp.setProperty('audio-resample-cutoff', '0.96');
+    if (Platform.isWindows) {
+      // 桌面大屏高画质 GPU 缩放与 HDR 色调映射，提升 1080P→2K/4K 清晰度与色彩准确度。
+      await pp.setProperty('scale', 'spline36');
+      await pp.setProperty('cscale', 'spline36');
+      await pp.setProperty('dscale', 'mitchell');
+      await pp.setProperty('correct-downscaling', 'yes');
+      await pp.setProperty('linear-downscaling', 'yes');
+      await pp.setProperty('sigmoid-upscaling', 'yes');
+      await pp.setProperty('dither-depth', 'auto');
+      await pp.setProperty('tone-mapping', 'bt.2446a');
+      await pp.setProperty('hdr-compute-peak', 'yes');
+    }
     // 直播使用有上限的内存缓存。cache-secs 是预读上限，不是起播等待时间。
+    final bufferMode = AppSettingsController.instance.playerBufferMode.value;
+    final cacheSecs = switch (bufferMode) {
+      1 => '30',
+      2 => '10',
+      _ => '20',
+    };
     await pp.setProperty('cache-on-disk', 'no');
-    await pp.setProperty('cache-secs', '20');
+    await pp.setProperty('cache-secs', cacheSecs);
     await pp.setProperty('demuxer-max-back-bytes', '4194304');
     await pp.setProperty('cache-pause', 'yes');
     // Desktop live-edge streams may deliver in real time: requiring two seconds
     // here can delay startup while leaving the first decoded image frozen.
     // Keep initial buffering enabled, but use a bounded half-second desktop gate.
-    await pp.setProperty('cache-pause-wait', Platform.isWindows ? '0.5' : '2');
+    await pp.setProperty('cache-pause-wait', playbackBufferWait());
     // 起播先积累少量数据，避免刚出画面就因缓存耗尽而停顿。
     await pp.setProperty('cache-pause-initial', 'yes');
     await pp.setProperty('network-timeout', '10');
+    // 底层 FFmpeg 网络抖动自动无感续传，减少瞬断直接触发黑屏重开流。
+    await pp.setProperty(
+      'stream-lavf-o',
+      'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=2',
+    );
     playbackDiagnostics ??= PlaybackDiagnostics(
       read: (key) => pp.getProperty(key, waitForInitialization: false),
       onSample: playbackSample,
@@ -110,6 +146,17 @@ mixin PlayerMixin {
     await (player.platform as NativePlayer).setProperty('http-proxy', proxy);
   }
 
+  Future<void> setVideoTrackEnabled(bool enabled) async {
+    try {
+      final platform = player.platform;
+      if (platform is NativePlayer) {
+        await platform.setProperty('vid', enabled ? 'auto' : 'no');
+      }
+    } catch (e) {
+      Log.d('切换视频轨道状态失败：$e');
+    }
+  }
+
   /// 视频控制器
   late final videoController = VideoController(
     player,
@@ -129,6 +176,9 @@ mixin PlayerStateMixin on PlayerMixin {
 
   /// 是否进入桌面端小窗
   RxBool smallWindowState = false.obs;
+
+  /// 是否处于纯音频听播模式
+  RxBool audioOnlyMode = false.obs;
 
   /// 是否显示弹幕
   RxBool showDanmakuState = false.obs;
@@ -266,6 +316,17 @@ mixin PlayerDanmakuMixin on PlayerStateMixin {
     danmakuController?.clear();
   }
 
+  Future<void> setAudioOnlyMode(bool enabled) async {
+    if (audioOnlyMode.value == enabled) return;
+    audioOnlyMode.value = enabled;
+    if (enabled) {
+      danmakuController?.clear();
+    }
+    await setVideoTrackEnabled(!enabled);
+  }
+
+  Future<void> toggleAudioOnlyMode() => setAudioOnlyMode(!audioOnlyMode.value);
+
   void addDanmaku(List<DanmakuContentItem> items) {
     if (!showDanmakuState.value) {
       return;
@@ -285,6 +346,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
   StreamSubscription<bool>? _pipSubscription;
   bool _enteringPip = false;
   bool _insidePip = false;
+  bool get isInsidePip => _insidePip;
 
   //final VolumeController volumeController = VolumeController();
 

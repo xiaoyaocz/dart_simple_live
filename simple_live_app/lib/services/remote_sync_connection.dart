@@ -1,17 +1,27 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:win32_registry/win32_registry.dart';
 
-/// Windows 同步连接也直连，不读取系统代理。
+/// 仅为远程同步读取系统代理并支持直连回退，不改变直播请求或全局 HTTP 配置。
 class RemoteSyncConnection {
   final String? Function(Uri) proxyResolver;
 
   RemoteSyncConnection({String? Function(Uri)? proxyResolver})
-      : proxyResolver = proxyResolver ?? ((_) => null);
+      : proxyResolver = proxyResolver ?? _windowsProxy;
+
+  static bool _isLoopback(Uri uri) {
+    final host = uri.host.toLowerCase();
+    if (host == 'localhost') return true;
+    return InternetAddress.tryParse(host)?.isLoopback == true;
+  }
 
   Future<WebSocket> connect(String url,
       {Duration timeout = const Duration(seconds: 15)}) async {
-    final proxy = Platform.isWindows ? 'DIRECT' : proxyResolver(Uri.parse(url));
+    final uri = Uri.parse(url);
+    final proxy = (Platform.isWindows && _isLoopback(uri))
+        ? 'DIRECT'
+        : proxyResolver(uri);
     if (proxy != null && proxy != 'DIRECT') {
       final elapsed = Stopwatch()..start();
       try {
@@ -30,7 +40,7 @@ class RemoteSyncConnection {
   Future<WebSocket> _connect(
       String url, String? proxy, Duration timeout) async {
     final client = HttpClient()..connectionTimeout = timeout;
-    // Windows 明确覆盖任何继承的解析器；其他平台保持原有行为。
+    // 有明确代理指令时覆盖全局 HttpOverrides，否则沿用当前平台默认路由。
     if (proxy != null) client.findProxy = (_) => proxy;
     var timedOut = false;
     try {
@@ -46,6 +56,25 @@ class RemoteSyncConnection {
     } finally {
       // 握手成功的 WebSocket 已脱离 HttpClient；失败则关闭待连接套接字。
       client.close(force: true);
+    }
+  }
+
+  static String? _windowsProxy(Uri uri) {
+    if (!Platform.isWindows) return null;
+    if (_isLoopback(uri)) return 'DIRECT';
+    try {
+      final key = Registry.openPath(RegistryHive.currentUser,
+          path: r'Software\Microsoft\Windows\CurrentVersion\Internet Settings');
+      try {
+        return proxyDirective(uri,
+            enabled: key.getIntValue('ProxyEnable') == 1,
+            server: key.getStringValue('ProxyServer') ?? '',
+            bypass: key.getStringValue('ProxyOverride') ?? '');
+      } finally {
+        key.close();
+      }
+    } catch (_) {
+      return null;
     }
   }
 

@@ -153,7 +153,7 @@ void main() {
     expect(restored.categoryName, beforeCancel);
   });
 
-  test('未开播转开播等待最新分类后发布状态，单次详情请求', () async {
+  test('未开播转开播先发布状态，随后用单次详情补齐分类', () async {
     final site = _Site();
     Sites.allSites['huya'] = Site(
         id: original.id,
@@ -170,7 +170,7 @@ void main() {
     final statusBeforeCategory = item.liveStatus.value;
     gate.complete();
     await update;
-    expect(statusBeforeCategory, 1);
+    expect(statusBeforeCategory, 2);
     expect(item.liveStatus.value, 2);
     expect(item.categoryName, '英雄联盟');
     expect(site.detailRequests, 1);

@@ -52,6 +52,19 @@ void main() {
     expect(native.properties['cache-on-disk'], 'no');
     expect(native.properties['interpolation'], 'no');
     expect(native.properties['video-sync'], 'audio');
+    expect(native.properties['audio-pitch-correction'], 'yes');
+    expect(native.properties['audio-resample-cutoff'], '0.96');
+    if (Platform.isWindows) {
+      expect(native.properties['scale'], 'spline36');
+      expect(native.properties['cscale'], 'spline36');
+      expect(native.properties['dscale'], 'mitchell');
+      expect(native.properties['correct-downscaling'], 'yes');
+      expect(native.properties['linear-downscaling'], 'yes');
+      expect(native.properties['sigmoid-upscaling'], 'yes');
+      expect(native.properties['dither-depth'], 'auto');
+      expect(native.properties['tone-mapping'], 'bt.2446a');
+      expect(native.properties['hdr-compute-peak'], 'yes');
+    }
     expect(native.properties.containsKey('fps'), isFalse);
     expect(native.properties.containsKey('vf'), isFalse);
     expect(native.properties.containsKey('override-display-fps'), isFalse);

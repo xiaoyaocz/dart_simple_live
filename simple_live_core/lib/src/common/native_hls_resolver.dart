@@ -52,6 +52,7 @@ Future<LivePlayUrl> preferNativeHls(
           urls: [],
           headers: input.headers,
           nativeVariants: variants,
+          actualQuality: input.actualQuality,
         );
       }
       return input;
@@ -73,6 +74,7 @@ Future<LivePlayUrl> preferNativeHls(
       headers: input.headers,
       nativeVariants: variants,
       selectedNativeVariant: selected,
+      actualQuality: input.actualQuality,
     );
   }
 
@@ -81,7 +83,11 @@ Future<LivePlayUrl> preferNativeHls(
   } on Exception {
     return maxFrameRate == null
         ? input
-        : LivePlayUrl(urls: [], headers: input.headers);
+        : LivePlayUrl(
+            urls: [],
+            headers: input.headers,
+            actualQuality: input.actualQuality,
+          );
   } finally {
     cancel.cancel('Native HLS preference finished');
   }

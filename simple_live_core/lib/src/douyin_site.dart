@@ -441,7 +441,8 @@ class DouyinSite implements LiveSite {
     final webPartition = douyinWebPartition(room, roomData['data']);
     var owner = room["owner"];
 
-    var status = asT<int?>(room["status"]) ?? 0;
+    final status = int.tryParse(room['status']?.toString() ?? '');
+    if (status == null) throw StateError('抖音房间未返回直播状态');
 
     // roomId是一次性的，用户每次重新开播都会生成一个新的roomId
     // 所以如果roomId对应的直播间状态不是直播中，就通过webRid获取直播间信息
@@ -533,8 +534,6 @@ class DouyinSite implements LiveSite {
 
     var owner = roomData["owner"];
 
-    var roomStatus = (asT<int?>(roomData["status"]) ?? 0) == 2;
-
     // 主要是为了获取cookie,用于弹幕websocket连接
     var headers = await getRequestHeaders();
     return LiveRoomDetail(
@@ -544,17 +543,11 @@ class DouyinSite implements LiveSite {
       leafCategoryName: firstCategoryName([webPartition?['title']]),
       webParentCategoryName: douyinWebParentCategoryName(roomData, data),
       title: roomData["title"].toString(),
-      cover: roomStatus ? roomData["cover"]["url_list"][0].toString() : "",
-      userName: roomStatus
-          ? owner["nickname"].toString()
-          : userData["nickname"].toString(),
-      userAvatar: roomStatus
-          ? owner["avatar_thumb"]["url_list"][0].toString()
-          : userData["avatar_thumb"]["url_list"][0].toString(),
-      online: roomStatus
-          ? asT<int?>(roomData["room_view_stats"]["display_value"]) ?? 0
-          : 0,
-      status: roomStatus,
+      cover: _firstRoomImage(roomData['cover']),
+      userName: (owner?['nickname'] ?? userData?['nickname'])?.toString() ?? '',
+      userAvatar: _firstRoomImage(owner?['avatar_thumb'] ?? userData?['avatar_thumb']),
+      online: int.tryParse('${roomData['room_view_stats']?['display_value']}') ?? 0,
+      status: true,
       url: "https://live.douyin.com/$webRid",
       introduction: owner?["signature"]?.toString() ?? "",
       notice: "",
@@ -564,8 +557,13 @@ class DouyinSite implements LiveSite {
         userId: userUniqueId,
         cookie: headers["cookie"],
       ),
-      data: roomStatus ? roomData["stream_url"] : {},
+      data: roomData['stream_url'],
     );
+  }
+
+  String _firstRoomImage(dynamic image) {
+    final urls = image?['url_list'];
+    return urls is List && urls.isNotEmpty ? urls.first.toString() : '';
   }
 
   LiveRoomDetail _offlineRoomDetail(
@@ -919,9 +917,12 @@ class DouyinSite implements LiveSite {
         }
       } else {
         var qualityData = json.decode(streamData)["data"] as Map;
+        final streams =
+            <String, ({LivePlayQuality quality, Set<String> urls, Map stream})>{};
 
         for (var quality in qulityList) {
-          final stream = qualityData[quality["sdk_key"]];
+          final key = quality["sdk_key"];
+          final stream = qualityData[key];
           if (stream is! Map) continue;
           final urls = <String>{};
           // Try the alternate CDN before switching transports.
@@ -950,6 +951,48 @@ class DouyinSite implements LiveSite {
           );
           if (urls.isNotEmpty) {
             qualities.add(qualityItem);
+            if (key is String) {
+              streams[key] = (quality: qualityItem, urls: urls, stream: stream);
+            }
+          }
+        }
+
+        // 原画有时重复下发某个低档的全部地址。独立原画流始终保留。
+        final original = streams['origin'];
+        if (original != null) {
+          for (final entry in streams.entries) {
+            final alias = entry.value;
+            if (entry.key == 'origin' ||
+                alias.quality.sort >= original.quality.sort ||
+                alias.urls.length != original.urls.length ||
+                !alias.urls.containsAll(original.urls)) {
+              continue;
+            }
+            var selected = alias;
+            final originalPixels = _streamPixels(original.stream) ??
+                _streamPixels(alias.stream);
+            if (originalPixels != null) {
+              var bestPixels = originalPixels;
+              for (final candidate in streams.values) {
+                if (candidate.urls.any(original.urls.contains)) continue;
+                final pixels = _streamPixels(candidate.stream);
+                if (pixels != null && pixels > bestPixels) {
+                  bestPixels = pixels;
+                  selected = candidate;
+                }
+              }
+            }
+            final index = qualities.indexOf(original.quality);
+            qualities[index] = LivePlayQuality(
+              quality: original.quality.quality,
+              sort: original.quality.sort,
+              frameRate: selected.quality.frameRate,
+              data: LivePlayUrl(
+                urls: selected.urls.toList(),
+                actualQuality: selected.quality.quality,
+              ),
+            );
+            break;
           }
         }
       }
@@ -967,13 +1010,29 @@ class DouyinSite implements LiveSite {
 
   double? _streamFrameRate(dynamic main) {
     final direct = metadataFrameRate(main);
-    if (direct != null || main is! Map) return direct;
-    final params = main['sdk_params'];
+    return direct ?? metadataFrameRate(_streamParams(main));
+  }
+
+  Map? _streamParams(dynamic route) {
+    if (route is! Map) return null;
+    final params = route['sdk_params'];
     try {
-      return metadataFrameRate(params is String ? json.decode(params) : params);
+      final decoded = params is String ? json.decode(params) : params;
+      return decoded is Map ? decoded : null;
     } on FormatException {
       return null;
     }
+  }
+
+  int? _streamPixels(Map stream) {
+    final size = _streamParams(stream['main'])?['resolution'] ??
+        _streamParams(stream['backup'])?['resolution'];
+    if (size is! String) return null;
+    final match = RegExp(r'^(\d+)\s*[xX×]\s*(\d+)$').firstMatch(size.trim());
+    if (match == null) return null;
+    final width = int.tryParse(match[1]!) ?? 0;
+    final height = int.tryParse(match[2]!) ?? 0;
+    return width > 0 && height > 0 ? width * height : null;
   }
 
   @override
@@ -981,8 +1040,11 @@ class DouyinSite implements LiveSite {
     required LiveRoomDetail detail,
     required LivePlayQuality quality,
   }) async {
+    final data = quality.data;
     // 返回列表的副本，防止外部 clear() 影响原始数据
-    return LivePlayUrl(urls: List<String>.from(quality.data));
+    return data is LivePlayUrl
+        ? LivePlayUrl(urls: [...data.urls], actualQuality: data.actualQuality)
+        : LivePlayUrl(urls: List<String>.from(data));
   }
 
   @override

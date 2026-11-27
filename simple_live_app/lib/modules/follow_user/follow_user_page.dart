@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyrefresh/easy_refresh.dart';
@@ -13,6 +15,7 @@ import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart'
 import 'package:simple_live_app/modules/follow_user/follow_category_name.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
@@ -146,6 +149,14 @@ class _FollowUserPageState extends State<FollowUserPage>
       appBar: AppBar(
         title: const Text("关注用户"),
         actions: [
+          if (Platform.isWindows)
+            IconButton(
+              tooltip: '多画面同屏',
+              onPressed: () {
+                Get.toNamed(RoutePath.kMultiView);
+              },
+              icon: const Icon(Icons.grid_view_outlined),
+            ),
           PopupMenuButton(
             itemBuilder: (context) {
               return const [

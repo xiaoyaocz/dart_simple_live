@@ -206,6 +206,110 @@ void main() {
       expect(calls, 2);
     },
   );
+  test('Bili fallback reports the highest delivered tier and keeps its lines together', () async {
+    final info = playInfo('low');
+    final playurl = info['data']['playurl_info']['playurl'];
+    playurl['g_qn_desc'].add({'qn': 250, 'desc': '超清'});
+    playurl['stream'][0]['format'][0]['codec'].add({
+      'codec_name': 'hevc',
+      'current_qn': 250,
+      'base_url': '/hd.flv',
+      'url_info': [
+        {'host': 'https://primary.test', 'extra': ''},
+        {'host': 'https://backup.test', 'extra': ''},
+      ],
+    });
+    core.HttpClient.instance.dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (request, handler) =>
+          handler.resolve(Response(requestOptions: request, data: info)),
+    ));
+    final urls = await _Bili().getPlayUrls(
+      detail: room(),
+      quality: LivePlayQuality(quality: '原画', data: 10000),
+    );
+    expect(urls.urls, [
+      'https://primary.test/hd.flv',
+      'https://backup.test/hd.flv',
+    ]);
+    expect(urls.actualQuality, '超清');
+  });
+  test('Bili merges accept_qn across all protocols, formats, and codecs sorted highest first', () async {
+    Uri? seenUri;
+    final info = {
+      'data': {
+        'playurl_info': {
+          'playurl': {
+            'g_qn_desc': [
+              {'qn': 30000, 'desc': '杜比'},
+              {'qn': 20000, 'desc': '4K'},
+              {'qn': 10000, 'desc': '原画'},
+              {'qn': 250, 'desc': '超清'},
+            ],
+            'stream': [
+              {
+                'protocol_name': 'http_stream',
+                'format': [
+                  {
+                    'format_name': 'flv',
+                    'codec': [
+                      {
+                        'codec_name': 'avc',
+                        'current_qn': 10000,
+                        'accept_qn': [10000, 250],
+                        'base_url': '/flv_10000.flv',
+                        'url_info': [
+                          {'host': 'https://flv.test', 'extra': ''},
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                'protocol_name': 'http_hls',
+                'format': [
+                  {
+                    'format_name': 'fmp4',
+                    'codec': [
+                      {
+                        'codec_name': 'hevc',
+                        'current_qn': 30000,
+                        'accept_qn': [30000, 20000, 10000, 250],
+                        'base_url': '/hls_30000.m3u8',
+                        'url_info': [
+                          {'host': 'https://hls.test', 'extra': ''},
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    };
+    var calls = 0;
+    core.HttpClient.instance.dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (request, handler) {
+        calls++;
+        seenUri = request.uri;
+        handler.resolve(Response(requestOptions: request, data: info));
+      },
+    ));
+    final site = _Bili();
+    final detail = room();
+    final qualities = await site.getPlayQualites(detail: detail);
+    expect(qualities.map((q) => q.data).toList(), [30000, 20000, 10000, 250]);
+    expect(qualities.first.quality, '杜比');
+    expect(seenUri?.queryParameters['dolby'], '5');
+    expect(seenUri?.queryParameters['panorama'], '1');
+    // Cached highest delivered qn (30000 on http_hls/hevc) is reused without an extra request.
+    final top = await site.getPlayUrls(detail: detail, quality: qualities.first);
+    expect(top.urls, ['https://hls.test/hls_30000.m3u8']);
+    expect(top.actualQuality, '杜比');
+    expect(calls, 1);
+  });
   for (final entry in <String, LiveSite>{
     'douyu': DouyuSite(),
     'huya': HuyaSite(),

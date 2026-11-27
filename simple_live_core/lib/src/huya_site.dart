@@ -465,7 +465,7 @@ class HuyaSite implements LiveSite {
 
   /// 走 mp.huya.com 的 JSON 接口：17KB / ~0.3s，
   /// 比拉 m.huya.com 整个 HTML（59KB / ~0.6s）再正则解析快一半。
-  Future<LiveRoomDetail> _getRoomDetailViaApi(String roomId) async {
+  Future<Map> _getProfileRoom(String roomId) async {
     final result = await HttpClient.instance.getJson(
       "https://mp.huya.com/cache.php",
       queryParameters: {
@@ -481,6 +481,11 @@ class HuyaSite implements LiveSite {
     );
     final data = result["data"];
     if (data is! Map) throw StateError('虎牙接口未返回房间数据');
+    return data;
+  }
+
+  Future<LiveRoomDetail> _getRoomDetailViaApi(String roomId) async {
+    final data = await _getProfileRoom(roomId);
     final live = (data["liveData"] as Map?) ?? const {};
     final profile = (data["profileInfo"] as Map?) ?? const {};
     final stream = (data["stream"] as Map?) ?? const {};
@@ -712,7 +717,7 @@ class HuyaSite implements LiveSite {
       userAvatar: tProfileInfo["sAvatar180"].toString(),
       introduction: tLiveInfo["sIntroduction"].toString(),
       notice: roomInfo["welcomeText"].toString(),
-      status: roomInfo["roomInfo"]["eLiveStatus"] == 2,
+      status: status == 2,
       data: HuyaUrlDataModel(
         url:
             "https:${utf8.decode(base64.decode(roomInfo["roomProfile"]["liveLineUrl"].toString()))}",
@@ -840,8 +845,22 @@ class HuyaSite implements LiveSite {
 
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
-    var roomInfo = await _getRoomInfo(roomId);
-    return roomInfo["roomInfo"]["eLiveStatus"] == 2;
+    try {
+      final room = await _getProfileRoom(roomId)
+          .timeout(const Duration(seconds: 3));
+      switch (room['liveStatus']) {
+        case 'ON':
+          return true;
+        case 'OFF':
+          return false;
+      }
+    } catch (error) {
+      CoreLog.error(error);
+    }
+    final room = await _getRoomInfo(roomId);
+    final status = int.tryParse('${room["roomInfo"]?["eLiveStatus"]}');
+    if (status == null) throw StateError('虎牙房间未返回直播状态');
+    return status == 2;
   }
 
   /// 匿名登录获取uid

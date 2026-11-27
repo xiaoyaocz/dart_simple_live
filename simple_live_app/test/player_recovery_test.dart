@@ -116,6 +116,7 @@ class _Bili extends BiliBiliSite {
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async => _liveDetail();
   int calls = 0;
+  String? actualQuality;
   @override
   Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail,
@@ -124,7 +125,7 @@ class _Bili extends BiliBiliSite {
     return LivePlayUrl(urls: [
       'https://first/live.flv?token=new',
       'https://next/live.flv?token=new',
-    ]);
+    ], actualQuality: actualQuality);
   }
 }
 
@@ -382,6 +383,77 @@ void main() {
     await tester.pump();
     expect(room.playUrls, ['https://first/live.flv']);
     expect(room.fake.opens, 1);
+  });
+  testWidgets('抖音原画复用低档时，刷新线路后显示实际档位', (tester) async {
+    final source = _Douyin()
+      ..pending = Future.value(_liveDetail(data: [
+        LivePlayQuality(
+          quality: '原画',
+          sort: 2,
+          data: LivePlayUrl(
+            urls: ['https://fresh/1080p.flv'],
+            actualQuality: '蓝光',
+          ),
+        ),
+      ]));
+    final room = stalledDouyin(source, ['https://expired/720p.flv']);
+    room.mediaError('断流');
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(room.playUrls, ['https://fresh/1080p.flv']);
+    expect(room.currentQualityInfo.value, '原画（实播蓝光）');
+    expect(room.qualites[room.currentQuality].quality, '原画');
+  });
+  testWidgets('抖音原画和蓝光共用线路时，角标随手选档位更新', (tester) async {
+    final room = stalledDouyin(_Douyin(), ['https://shared/live.flv']);
+    room.qualites.assignAll([
+      LivePlayQuality(
+        quality: '原画',
+        data: LivePlayUrl(
+          urls: ['https://shared/live.flv'],
+          actualQuality: '蓝光',
+        ),
+      ),
+      LivePlayQuality(quality: '蓝光', data: ['https://shared/live.flv']),
+    ]);
+
+    for (final (index, label) in [
+      (0, '原画（实播蓝光）'),
+      (1, '蓝光'),
+      (0, '原画（实播蓝光）'),
+    ]) {
+      room.selectManualQuality(index);
+      await tester.pump();
+      expect(room.currentQualityInfo.value, label);
+      expect(room.playUrls, ['https://shared/live.flv']);
+    }
+  });
+  testWidgets('抖音刷新返回相同线路时也更新实际档位', (tester) async {
+    final source = _Douyin()
+      ..pending = Future.value(_liveDetail(data: [
+        LivePlayQuality(
+          quality: '原画',
+          sort: 2,
+          data: ['https://shared/live.flv'],
+        ),
+      ]));
+    final room = stalledDouyin(source, ['https://shared/live.flv']);
+    room.qualites[0] = LivePlayQuality(
+      quality: '原画',
+      sort: 2,
+      data: LivePlayUrl(
+        urls: ['https://shared/live.flv'],
+        actualQuality: '蓝光',
+      ),
+    );
+    room.selectManualQuality(0);
+    await tester.pump();
+    room.mediaError('断流');
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(source.refreshes, 1);
+    expect(room.currentQualityInfo.value, '原画');
+    expect(room.playUrls, ['https://shared/live.flv']);
   });
   test('重试当前线路必须重新打开连接', () async {
     final room = _Room();
@@ -644,5 +716,53 @@ void main() {
     expect(room.playUrls.last, contains('token=new'));
     expect(room.fake.opens, 1);
     expect(room.currentLineIndex, 1);
+  });
+
+  testWidgets('同档线路反复断流时保留原画，重连失败后提示', (tester) async {
+    final source = _Bili();
+    final room = _Room(
+      source: Site(id: 'douyu', name: '', logo: '', liveSite: source),
+    );
+    room.detail.value = _liveDetail();
+    room.liveStatus.value = true;
+    room.qualites.addAll([
+      LivePlayQuality(quality: '原画', data: 0),
+      LivePlayQuality(quality: '超清', data: 1),
+    ]);
+    room.currentQuality = 0;
+    room.currentLineIndex = 0;
+    room.playUrls.add('https://first/live.flv');
+    room.hasPlayed.value = true;
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      room.mediaError('断流');
+      await tester.pump(const Duration(seconds: 3));
+      room.hasPlayed.value = true;
+    }
+
+    expect(room.currentQuality, 0);
+    expect(room.fake.opens, 2);
+    expect(source.calls, 0);
+    expect(room.errorMsg.value, '播放失败');
+  });
+
+  testWidgets('B站明示下发画质并在恢复后更新，保留手动档位', (tester) async {
+    final site = _Bili()..actualQuality = '超清';
+    final room = _Room(
+      source: Site(id: 'bilibili', name: '', logo: '', liveSite: site),
+    );
+    room.detail.value = _liveDetail();
+    room.qualites.add(LivePlayQuality(quality: '原画', data: 10000));
+    room.selectManualQuality(0);
+    await tester.pump();
+    expect(room.currentQualityInfo.value, '原画（实播超清）');
+    expect(room.currentQuality, 0);
+
+    site.actualQuality = '原画';
+    room.mediaError('断流');
+    await tester.pump(const Duration(seconds: 3));
+    expect(site.calls, 2);
+    expect(room.currentQualityInfo.value, '原画');
+    expect(room.currentQuality, 0);
   });
 }

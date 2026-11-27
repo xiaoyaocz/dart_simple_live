@@ -79,6 +79,28 @@ void main() {
     await expectLater(_Bili(status: null).getRoomDetail(roomId: '1'), throwsStateError);
   });
 
+  test('虎牙直播状态优先用 JSON，必要时接受网页字符串状态', () async {
+    var useProfile = true;
+    respond((request) => request.uri.path == '/cache.php'
+        ? {'data': {'liveStatus': useProfile ? 'ON' : null}}
+        : 'window.HNF_GLOBAL_INIT = {"roomInfo":{"eLiveStatus":"2"}}</script>');
+    final site = HuyaSite();
+    expect(await site.getLiveStatus(roomId: '1'), isTrue);
+    expect(paths, ['/cache.php']);
+    useProfile = false;
+    expect(await site.getLiveStatus(roomId: '1'), isTrue);
+    expect(paths, ['/cache.php', '/cache.php', '/1']);
+  });
+
+  test('斗鱼字符串直播状态和轮播标记可以区分', () async {
+    var replay = '0';
+    respond((_) => {'room': {'room_id': 1, 'show_status': '1', 'videoLoop': replay}});
+    final site = DouyuSite();
+    expect(await site.getLiveStatus(roomId: '1'), isTrue);
+    replay = '1';
+    expect(await site.getLiveStatus(roomId: '1'), isFalse);
+  });
+
   test('斗鱼录像轮播不能被下播短路', () async {
     respond((request) => request.uri.path == '/betard/1'
         ? {'room': {'room_id': 1, 'show_status': 2, 'videoLoop': 1}} : null);
@@ -180,5 +202,15 @@ void main() {
     expect(room.userName, '主播');
     expect(paths, ['/webcast/room/web/enter/']);
     expect(room.danmakuData, isNull);
+  });
+
+  test('抖音已开播但缺少封面和头像时仍返回直播状态', () async {
+    respond((request) => request.uri.path == '/webcast/room/web/enter/'
+        ? {'data': {'data': [{'status': '2', 'id_str': '123', 'title': '正在直播'}]}}
+        : null);
+    final room = await DouyinSite().getRoomDetail(roomId: '123');
+    expect(room.status, isTrue);
+    expect(room.cover, isEmpty);
+    expect(paths, ['/webcast/room/web/enter/']);
   });
 }

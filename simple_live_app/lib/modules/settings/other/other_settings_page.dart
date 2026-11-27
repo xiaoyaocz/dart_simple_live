@@ -8,9 +8,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/settings/other/other_settings_controller.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
-import 'package:simple_live_app/widgets/settings/settings_menu.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 class OtherSettingsPage extends GetView<OtherSettingsController> {
   const OtherSettingsPage({super.key});
@@ -52,98 +50,6 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                   ),
                 ],
               ),
-            ),
-          ),
-          Padding(
-            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
-            child: Text(
-              "播放器高级设置",
-              style: Get.textTheme.titleSmall,
-            ),
-          ),
-          Padding(
-            padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
-            child: Text.rich(
-              TextSpan(
-                text: "请勿随意修改以下设置，除非你知道自己在做什么。\n在修改以下设置前，你应该先查阅",
-                children: [
-                  WidgetSpan(
-                    child: GestureDetector(
-                      onTap: () {
-                        launchUrlString(
-                            "https://mpv.io/manual/stable/#video-output-drivers");
-                      },
-                      child: const Text(
-                        "MPV的文档",
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontSize: 12,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ),
-          SettingsCard(
-            child: Column(
-              children: [
-                Obx(
-                  () => SettingsSwitch(
-                    value:
-                        AppSettingsController.instance.customPlayerOutput.value,
-                    title: "手动指定播放驱动与解码器",
-                    subtitle: AppSettingsController.instance.customPlayerOutput.value
-                        ? "已启用下方手动配置，重新进入直播间生效；不兼容配置自动回退"
-                        : "使用自动配置；开启后可修改下方选项，关闭不会清除已选值",
-                    onChanged: (e) {
-                      AppSettingsController.instance.setCustomPlayerOutput(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu(
-                    title: "视频输出驱动(--vo)",
-                    enabled: AppSettingsController.instance.customPlayerOutput.value,
-                    value:
-                        AppSettingsController.instance.videoOutputDriver.value,
-                    valueMap: controller.videoOutputDrivers,
-                    onChanged: (e) {
-                      AppSettingsController.instance.setVideoOutputDriver(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu(
-                    title: "音频输出驱动(--ao)",
-                    enabled: AppSettingsController.instance.customPlayerOutput.value,
-                    value:
-                        AppSettingsController.instance.audioOutputDriver.value,
-                    valueMap: controller.audioOutputDrivers,
-                    onChanged: (e) {
-                      AppSettingsController.instance.setAudioOutputDriver(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu(
-                    title: "硬件解码器(--hwdec)",
-                    enabled: AppSettingsController.instance.customPlayerOutput.value,
-                    value: AppSettingsController
-                        .instance.videoHardwareDecoder.value,
-                    valueMap: controller.hardwareDecoder,
-                    onChanged: (e) {
-                      AppSettingsController.instance.setVideoHardwareDecoder(e);
-                    },
-                  ),
-                ),
-              ],
             ),
           ),
           Padding(

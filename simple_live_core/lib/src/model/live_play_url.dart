@@ -10,11 +10,15 @@ class LivePlayUrl {
   final List<NativeHlsVariant> nativeVariants;
   final NativeHlsVariant? selectedNativeVariant;
 
+  /// 平台响应确认的清晰度。未返回画质信息时为空。
+  final String? actualQuality;
+
   LivePlayUrl({
     required this.urls,
     this.headers,
     this.nativeVariants = const [],
     this.selectedNativeVariant,
+    this.actualQuality,
   });
 
   @override

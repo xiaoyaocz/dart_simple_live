@@ -291,6 +291,61 @@ class LiveRoomPage extends StatelessWidget {
         ),
         Obx(
           () => Visibility(
+            visible: controller.audioOnlyMode.value &&
+                !controller.roomOffline.value,
+            child: Positioned.fill(
+              child: Container(
+                color: const Color(0xFF101318),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    NetImage(
+                      controller.detail.value?.userAvatar ?? "",
+                      width: 72,
+                      height: 72,
+                      borderRadius: 36,
+                    ),
+                    AppStyle.vGap12,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.headphones,
+                          color: Colors.lightBlueAccent,
+                          size: 18,
+                        ),
+                        AppStyle.hGap8,
+                        Text(
+                          "${controller.detail.value?.userName ?? ''} · 仅音频播放中",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppStyle.vGap12,
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white38),
+                      ),
+                      onPressed: () {
+                        controller.setAudioOnlyMode(false);
+                      },
+                      icon: const Icon(Icons.videocam_outlined, size: 18),
+                      label: const Text("恢复画面"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Obx(
+          () => Visibility(
             visible: controller.roomOffline.value,
             child: const Center(
               child: Text(
@@ -553,29 +608,31 @@ class LiveRoomPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  buildOfficialChatArea(Obx(
-                    () => Stack(
+                  buildOfficialChatArea(Obx(() {
+                    final chatGap =
+                        AppSettingsController.instance.chatTextGap.value * 2;
+                    return Stack(
                       children: [
                         GestureDetector(
                           // 覆盖文字和空白处，双击与“最新”按钮保持相同行为。
                           behavior: HitTestBehavior.opaque,
                           onDoubleTap: scrollToLatest,
-                          child: ListView.separated(
-                            controller: controller.scrollController,
-                            separatorBuilder: (_, i) => Obx(
-                              () => SizedBox(
+                          child: RepaintBoundary(
+                            child: ListView.separated(
+                              controller: controller.scrollController,
+                              addAutomaticKeepAlives: false,
+                              separatorBuilder: (_, i) => SizedBox(
                                 // *2与原来的EdgeInsets.symmetric(vertical: )做兼容
-                                height: AppSettingsController
-                                        .instance.chatTextGap.value *
-                                    2,
+                                height: chatGap,
                               ),
+                              padding: AppStyle.edgeInsetsA12,
+                              itemCount: controller.messages.length,
+                              itemBuilder: (context, i) {
+                                var item = controller.messages[i];
+                                return buildInteractiveMessageItem(
+                                    context, item);
+                              },
                             ),
-                            padding: AppStyle.edgeInsetsA12,
-                            itemCount: controller.messages.length,
-                            itemBuilder: (context, i) {
-                              var item = controller.messages[i];
-                              return buildMessageItem(context, item);
-                            },
                           ),
                         ),
                         Visibility(
@@ -591,8 +648,8 @@ class LiveRoomPage extends StatelessWidget {
                           ),
                         ),
                       ],
-                    ),
-                  )),
+                    );
+                  })),
                   if (controller.site.id == Constant.kBiliBili)
                     buildSuperChats(),
                   buildFollowList(),
@@ -600,6 +657,117 @@ class LiveRoomPage extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildInteractiveMessageItem(BuildContext context, LiveMessage message) {
+    final child = buildMessageItem(context, message);
+    if (message.userName == 'LiveSysMessage' ||
+        controller.isSelfMessage(message)) {
+      return child;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => showChatMessageActions(context, message),
+      onSecondaryTapUp: (details) => showChatMessageActions(
+        context,
+        message,
+        position: details.globalPosition,
+      ),
+      child: child,
+    );
+  }
+
+  Future<void> showChatMessageActions(
+    BuildContext context,
+    LiveMessage message, {
+    Offset? position,
+  }) async {
+    final userName = message.userName.trim();
+    final text = message.message.trim();
+    if (userName.isEmpty && text.isEmpty) return;
+
+    void handleAction(String action) {
+      if (action == 'block_user' && userName.isNotEmpty) {
+        AppSettingsController.instance.addShieldUser(userName);
+        SmartDialog.showToast('已屏蔽用户：$userName');
+      } else if (action == 'copy' && text.isNotEmpty) {
+        Utils.copyToClipboard(text);
+        SmartDialog.showToast('已复制弹幕');
+      } else if (action == 'block_keyword' && text.isNotEmpty) {
+        AppSettingsController.instance.addShieldList(text);
+        SmartDialog.showToast('已添加到关键词屏蔽');
+      }
+    }
+
+    if (position != null) {
+      final overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox;
+      final selected = await showMenu<String>(
+        context: context,
+        position: RelativeRect.fromRect(
+          overlay.globalToLocal(position) & Size.zero,
+          Offset.zero & overlay.size,
+        ),
+        items: [
+          if (userName.isNotEmpty)
+            PopupMenuItem(
+              value: 'block_user',
+              child: Text('屏蔽该用户（$userName）'),
+            ),
+          if (text.isNotEmpty)
+            const PopupMenuItem(
+              value: 'copy',
+              child: Text('复制弹幕'),
+            ),
+          if (text.isNotEmpty)
+            const PopupMenuItem(
+              value: 'block_keyword',
+              child: Text('添加到关键词屏蔽'),
+            ),
+        ],
+      );
+      if (selected != null) handleAction(selected);
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      constraints: const BoxConstraints(maxWidth: 480),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (userName.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.person_off_outlined),
+                title: Text('屏蔽该用户（$userName）'),
+                onTap: () {
+                  Get.back();
+                  handleAction('block_user');
+                },
+              ),
+            if (text.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('复制弹幕'),
+                onTap: () {
+                  Get.back();
+                  handleAction('copy');
+                },
+              ),
+            if (text.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.block_outlined),
+                title: const Text('添加到关键词屏蔽'),
+                onTap: () {
+                  Get.back();
+                  handleAction('block_keyword');
+                },
+              ),
           ],
         ),
       ),
@@ -973,6 +1141,24 @@ class LiveRoomPage extends StatelessWidget {
                 Get.back();
                 controller.showPlayUrlsSheet();
               },
+            ),
+
+            Obx(
+              () => ListTile(
+                leading: Icon(
+                  controller.audioOnlyMode.value
+                      ? Icons.videocam_outlined
+                      : Icons.headphones_outlined,
+                ),
+                title: Text(
+                  controller.audioOnlyMode.value ? "退出纯音频模式" : "纯音频听播模式",
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.toggleAudioOnlyMode();
+                },
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.aspect_ratio_outlined),

@@ -13,12 +13,19 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/search/search_room_url.dart';
 import 'package:simple_live_app/modules/search/search_web_navigation.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/services/bilibili_account_service.dart';
 
 class AppSearchController extends GetxController {
+  AppSearchController({bool? preferDesktopWeb})
+      : preferDesktopWeb = preferDesktopWeb ?? Platform.isAndroid;
+
+  final bool preferDesktopWeb;
   final selectedSite = Rxn<Site>();
   final roomId = RxnString();
+  final dismissedRoomPromptId = RxnString();
   final webViewVisible = true.obs;
   final webViewLoading = false.obs;
+  final loadProgress = 0.obs;
   final webViewError = RxnString();
   final webViewRevision = 0.obs;
   InAppWebViewController? webViewController;
@@ -30,7 +37,86 @@ class AppSearchController extends GetxController {
   bool _connectionRetried = false;
   Uri? _navigationUrl;
   Uri? _loadingUrl;
+  String? _lastDesktopRedirectKey;
+  double? _lastSyncedViewportWidth;
+  bool _syncingBiliCookie = false;
   bool _httpErrorForNavigation = false;
+
+  bool get showRoomPrompt =>
+      preferDesktopWeb &&
+      roomId.value != null &&
+      webViewVisible.value &&
+      dismissedRoomPromptId.value != roomId.value;
+
+  void dismissRoomPrompt() {
+    dismissedRoomPromptId.value = roomId.value;
+  }
+
+  /// 若在移动端搜索网页中登录了 B 站，同步 Cookie 到账号服务以解锁高画质播放。
+  Future<void> persistMobileWebSession() async {
+    if (!Platform.isAndroid || !preferDesktopWeb) return;
+    try {
+      final cookieManager = CookieManager.instance();
+      if (selectedSite.value?.id == Constant.kBiliBili &&
+          !_syncingBiliCookie &&
+          Get.isRegistered<BiliBiliAccountService>() &&
+          !BiliBiliAccountService.instance.logined.value) {
+        _syncingBiliCookie = true;
+        try {
+          final merged = <String, String>{};
+          for (final url in const [
+            'https://bilibili.com',
+            'https://live.bilibili.com',
+          ]) {
+            final list = await cookieManager.getCookies(url: WebUri(url));
+            for (final c in list) {
+              final value = '${c.value ?? ''}';
+              if (c.name.isNotEmpty && value.isNotEmpty) {
+                merged[c.name] = value;
+              }
+            }
+          }
+          if ((merged['SESSDATA'] ?? '').isNotEmpty) {
+            final cookieStr =
+                merged.entries.map((e) => '${e.key}=${e.value}').join(';');
+            BiliBiliAccountService.instance.setCookie(cookieStr);
+            await BiliBiliAccountService.instance.loadUserInfo();
+          }
+        } finally {
+          _syncingBiliCookie = false;
+        }
+      }
+    } catch (e) {
+      Log.d('持久化移动端搜索网页登录态失败：$e');
+    }
+  }
+
+  /// 同步移动端桌面网页的自适应视口缩放，适配首次加载与横竖屏宽度变化。
+  Future<void> syncDesktopViewport(
+    double viewWidthDp, {
+    bool force = false,
+  }) async {
+    if (!preferDesktopWeb || _closing || isClosed || !webViewVisible.value) {
+      return;
+    }
+    if (viewWidthDp <= 0) return;
+    if (!force &&
+        _lastSyncedViewportWidth != null &&
+        (_lastSyncedViewportWidth! - viewWidthDp).abs() < 2.0) {
+      return;
+    }
+    final view = webViewController;
+    final revision = webViewRevision.value;
+    if (view == null || !_isCurrent(view, revision)) return;
+    _lastSyncedViewportWidth = viewWidthDp;
+    try {
+      await view.evaluateJavascript(
+        source: SearchWebNavigation.buildDesktopViewportCall(viewWidthDp),
+      );
+    } catch (e) {
+      Log.d('同步桌面网页自适应视口失败：$e');
+    }
+  }
 
   Uri get webViewUrl =>
       _navigationUrl ?? SearchRoomUrl.homeUriFor(selectedSite.value!.id);
@@ -91,10 +177,14 @@ class AppSearchController extends GetxController {
     _connectionRetried = false;
     webViewController = null;
     _navigationUrl = null;
+    _lastDesktopRedirectKey = null;
+    _lastSyncedViewportWidth = null;
     webViewRevision.value++;
     webViewVisible.value = true;
+    loadProgress.value = 0;
     startLoading(SearchRoomUrl.homeUriFor(site.id));
     roomId.value = null;
+    dismissedRoomPromptId.value = null;
     selectedSite.value = site;
   }
 
@@ -107,20 +197,29 @@ class AppSearchController extends GetxController {
     final detectedRoomId = site == null || uri == null
         ? null
         : SearchRoomUrl.roomIdFor(site.id, uri);
+    if (detectedRoomId != roomId.value) {
+      dismissedRoomPromptId.value = null;
+    }
     roomId.value = detectedRoomId;
   }
 
   void reset() {
+    unawaited(persistMobileWebSession());
     webViewRevision.value++;
-    webViewController?.removeJavaScriptHandler(handlerName: SearchWebNavigation.handlerName);
+    webViewController?.removeJavaScriptHandler(
+        handlerName: SearchWebNavigation.handlerName);
     _loadTimer?.cancel();
     webViewLoading.value = false;
+    loadProgress.value = 0;
     webViewError.value = null;
     webViewVisible.value = true;
     roomId.value = null;
+    dismissedRoomPromptId.value = null;
     selectedSite.value = null;
     _navigationUrl = null;
     _loadingUrl = null;
+    _lastDesktopRedirectKey = null;
+    _lastSyncedViewportWidth = null;
     _httpErrorForNavigation = false;
     webViewController = null;
   }
@@ -134,6 +233,21 @@ class AppSearchController extends GetxController {
     }
   }
 
+  /// Android 系统返回键处理：优先网页后退，其次返回平台选择页，最后退出搜索页。
+  Future<bool> handleBackPress() async {
+    if (selectedSite.value == null) return true;
+    final view = webViewController;
+    final revision = webViewRevision.value;
+    if (view != null && _isCurrent(view, revision) && await view.canGoBack()) {
+      if (_isCurrent(view, revision)) {
+        await view.goBack();
+      }
+      return false;
+    }
+    reset();
+    return false;
+  }
+
   Future<void> reloadWebView() async {
     if (_closing || isClosed) return;
     final recreate = Platform.isWindows &&
@@ -143,6 +257,7 @@ class AppSearchController extends GetxController {
       _disposeWebViewEnvironment();
       webViewRevision.value++;
     }
+    _lastDesktopRedirectKey = null;
     startLoading();
     if (!recreate) await webViewController?.reload();
   }
@@ -163,6 +278,7 @@ class AppSearchController extends GetxController {
     _loadingUrl = uri ?? _navigationUrl;
     _httpErrorForNavigation = false;
     webViewLoading.value = true;
+    loadProgress.value = 10;
     webViewError.value = null;
     _loadTimer?.cancel();
     _loadTimer = Timer(const Duration(seconds: 20), () {
@@ -189,9 +305,11 @@ class AppSearchController extends GetxController {
   }
 
   void updateLoadProgress(int progress) {
-    // Windows 插件的 66 对应 DOMContentLoaded；100 在失败时也会发送。
-    // 页面已可操作后不再等待广告、图片等非必要资源，避免误报超时。
-    if (Platform.isWindows && progress >= 66 && progress < 100) {
+    loadProgress.value = progress.clamp(0, 100);
+    // Windows 插件的 66 对应 DOMContentLoaded；Android 进度达到 75 时主体已可交互；
+    // 100 在失败时也会发送，不能作为成功信号。
+    if ((Platform.isWindows && progress >= 66 && progress < 100) ||
+        (preferDesktopWeb && progress >= 75 && progress < 100)) {
       finishLoading();
     }
   }
@@ -238,6 +356,7 @@ class AppSearchController extends GetxController {
     if (_closing || isClosed || !_matchesLoadingUrl(uri)) return false;
     _loadTimer?.cancel();
     webViewLoading.value = false;
+    loadProgress.value = 100;
     // Android also finishes documents served with HTTP 4xx/5xx. Only a new
     // navigation resets that failure; a late success may still clear a timeout.
     if (!_httpErrorForNavigation) webViewError.value = null;
@@ -255,8 +374,10 @@ class AppSearchController extends GetxController {
   void onClose() {
     if (_closing) return;
     _closing = true;
+    unawaited(persistMobileWebSession());
     webViewRevision.value++;
-    webViewController?.removeJavaScriptHandler(handlerName: SearchWebNavigation.handlerName);
+    webViewController?.removeJavaScriptHandler(
+        handlerName: SearchWebNavigation.handlerName);
     webViewController = null;
     _loadTimer?.cancel();
     _disposeWebViewEnvironment();
@@ -265,17 +386,54 @@ class AppSearchController extends GetxController {
 
   Future<bool> openPopup(CreateWindowAction action) async {
     final url = action.request.url;
-    if (_closing || isClosed || url == null || webViewController == null) return false;
-    updateUrl(url);
+    if (_closing || isClosed || url == null || webViewController == null) {
+      return false;
+    }
+    if (SearchRoomUrl.isBlockedExternalScheme(url)) {
+      return false;
+    }
+    final site = selectedSite.value;
+    final targetUri = preferDesktopWeb && site != null
+        ? (SearchRoomUrl.desktopUriFor(site.id, url) ?? url)
+        : url;
+    updateUrl(targetUri);
     // Windows 插件在返回 false 后执行默认导航，不能在两端重复 loadUrl。
     if (!Platform.isWindows) {
-      await webViewController!.loadUrl(urlRequest: action.request);
+      await webViewController!.loadUrl(
+        urlRequest: targetUri == url
+            ? action.request
+            : URLRequest(url: WebUri(targetUri.toString())),
+      );
     }
     return false;
   }
 
   NavigationActionPolicy handleNavigation(NavigationAction action) {
-    if (action.isForMainFrame) updateUrl(action.request.url);
+    final uri = action.request.url;
+    if (uri != null && SearchRoomUrl.isBlockedExternalScheme(uri)) {
+      Log.d('拦截外部 APP 唤起或下载链接：$uri');
+      return NavigationActionPolicy.CANCEL;
+    }
+    if (action.isForMainFrame && uri != null) {
+      final site = selectedSite.value;
+      if (preferDesktopWeb && site != null) {
+        final desktopUri = SearchRoomUrl.desktopUriFor(site.id, uri);
+        if (desktopUri != null) {
+          final redirectKey = '${desktopUri.host}${desktopUri.path}';
+          if (_lastDesktopRedirectKey != redirectKey) {
+            _lastDesktopRedirectKey = redirectKey;
+            updateUrl(desktopUri);
+            if (webViewController != null) {
+              unawaited(webViewController!.loadUrl(
+                urlRequest: URLRequest(url: WebUri(desktopUri.toString())),
+              ));
+            }
+            return NavigationActionPolicy.CANCEL;
+          }
+        }
+      }
+      updateUrl(uri);
+    }
     return NavigationActionPolicy.ALLOW;
   }
 
@@ -283,14 +441,26 @@ class AppSearchController extends GetxController {
     final view = webViewController;
     final revision = webViewRevision.value;
     if (view == null || !webViewVisible.value || !_isCurrent(view, revision)) {
+      if (roomId.value != null && webViewVisible.value) {
+        await openRoom();
+      }
       return;
     }
     try {
-      // 快捷键不依赖顶部按钮是否已出现：先读取真实地址，补上遗漏的导航回调。
+      // 快捷键不依赖顶部按钮是否已出现：先读取真实地址，补上遗漏的导航回调；
+      // 若页面尚未跳转完成，保留已通过点击/脚本捕获的房间 ID，避免误清空。
+      final fallbackRoomId = roomId.value;
       final uri = await view.getUrl();
       if (!_isCurrent(view, revision)) return;
-      if (uri != null) updateUrl(uri);
-      await openRoom();
+      if (uri != null) {
+        final site = selectedSite.value;
+        final currentRoomId =
+            site == null ? null : SearchRoomUrl.roomIdFor(site.id, uri);
+        if (currentRoomId != null || fallbackRoomId == null) {
+          updateUrl(uri);
+        }
+      }
+      await openRoom(detectedRoomId: roomId.value ?? fallbackRoomId);
     } catch (error, stack) {
       Log.e('打开当前网页直播间失败：$error', stack);
     }
@@ -301,7 +471,9 @@ class AppSearchController extends GetxController {
     final site = selectedSite.value;
     final id = detectedRoomId ?? roomId.value;
     if (site == null || id == null) return;
-    if (Platform.isWindows || site.id == Constant.kDouyin) {
+    if (Platform.isWindows ||
+        Platform.isAndroid ||
+        site.id == Constant.kDouyin) {
       final webView = webViewController;
       final revision = webViewRevision.value;
       _openingRoom = true;
@@ -309,6 +481,7 @@ class AppSearchController extends GetxController {
         if (Platform.isWindows) {
           await webView?.evaluateJavascript(source: SearchWebMedia.holdMedia);
         } else {
+          await webView?.pauseTimers();
           await webView?.pause();
         }
         if (!_isCurrent(webView, revision)) return;
@@ -322,9 +495,11 @@ class AppSearchController extends GetxController {
           await WidgetsBinding.instance.endOfFrame;
           if (_isCurrent(webView, revision)) {
             if (Platform.isWindows) {
-              await webView?.evaluateJavascript(source: SearchWebMedia.restoreMedia);
+              await webView?.evaluateJavascript(
+                  source: SearchWebMedia.restoreMedia);
             } else {
               await webView?.resume();
+              await webView?.resumeTimers();
             }
           }
         }

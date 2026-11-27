@@ -22,47 +22,106 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
               leading: buildIcon(),
               title: Text(controller.info.name),
               subtitle: Text(
-                  "${controller.info.type.toUpperCase()}   ${controller.info.address}"),
+                  "${controller.info.type.toUpperCase()}   ${controller.client.address}:${controller.client.port}"),
             ),
           ),
-          AppStyle.vGap12,
+          Obx(() {
+            final status = controller.lastSyncStatus.value;
+            if (status.isEmpty) return const SizedBox.shrink();
+            final isErr = controller.lastSyncError.value;
+            return Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: SettingsCard(
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(
+                    isErr ? Icons.error_outline : Icons.check_circle_outline,
+                    color: isErr ? Colors.redAccent : Colors.green,
+                  ),
+                  title: Text(
+                    status,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+            );
+          }),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 16),
+            child: Text(
+              "发送本机数据到 ${controller.info.name}",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
           SettingsCard(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Remix.heart_line),
-                  title: const Text("同步关注列表"),
+                  title: const Text("发送关注列表和标签"),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncFollowAndTag();
-                  },
+                  onTap: controller.syncFollowAndTag,
                 ),
                 AppStyle.divider,
                 ListTile(
                   leading: const Icon(Icons.history),
-                  title: const Text("同步观看记录"),
+                  title: const Text("发送观看记录"),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncHistory();
-                  },
+                  onTap: controller.syncHistory,
                 ),
                 AppStyle.divider,
                 ListTile(
                   leading: const Icon(Remix.shield_keyhole_line),
-                  title: const Text("同步弹幕屏蔽词"),
+                  title: const Text("发送弹幕屏蔽词"),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncBlockedWord();
-                  },
+                  onTap: controller.syncBlockedWord,
                 ),
                 AppStyle.divider,
                 ListTile(
                   leading: const Icon(Remix.account_circle_line),
-                  title: const Text("同步哔哩哔哩账号"),
+                  title: const Text("发送哔哩哔哩账号"),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncBiliAccount();
-                  },
+                  onTap: controller.syncBiliAccount,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 16),
+            child: Text(
+              "从 ${controller.info.name} 拉取数据到本机",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Remix.download_2_line),
+                  title: const Text("拉取关注列表和标签"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: controller.pullFollowAndTag,
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text("拉取观看记录"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: controller.pullHistory,
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Remix.shield_keyhole_line),
+                  title: const Text("拉取弹幕屏蔽词"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: controller.pullBlockedWord,
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Remix.account_circle_line),
+                  title: const Text("拉取哔哩哔哩账号"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: controller.pullBiliAccount,
                 ),
               ],
             ),

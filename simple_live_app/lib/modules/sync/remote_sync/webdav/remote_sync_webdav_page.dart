@@ -85,6 +85,20 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                           onLongPress:
                               controller.isSyncing.value ? null : showSetting,
                         ),
+                        AppStyle.divider,
+                        SwitchListTile(
+                          secondary: const Icon(Icons.sync),
+                          title: const Text("自动同步"),
+                          subtitle: Text(
+                            controller.lastAutoSyncStatus.isEmpty
+                                ? "启动自动拉取合并，关注/标签/屏蔽词变更后自动上传"
+                                : "启动自动拉取合并，变更后自动上传\n${controller.lastAutoSyncStatus}",
+                          ),
+                          value: controller.autoSyncEnabled,
+                          onChanged: controller.isSyncing.value
+                              ? null
+                              : controller.setAutoSyncEnabled,
+                        ),
                       ],
               ),
             ),

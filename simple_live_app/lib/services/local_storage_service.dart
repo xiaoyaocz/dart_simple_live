@@ -178,6 +178,39 @@ class LocalStorageService extends GetxService {
   /// 各平台已识别的本人弹幕昵称（siteId -> nickname）
   static const String kSelfChatNicknames = "SelfChatNicknames";
 
+  /// 主播开播提醒通知
+  static const String kLiveNotificationEnable = "LiveNotificationEnable";
+
+  /// WebDAV 自动同步开关
+  static const String kWebDAVAutoSync = "WebDAVAutoSync";
+
+  /// 后台切换纯音频听播
+  static const String kBackgroundAudioOnly = "BackgroundAudioOnly";
+
+  /// 弹幕屏蔽用户列表
+  static const String kDanmuShieldUsers = "DanmuShieldUsers";
+
+  /// 弹幕刷屏重复合并开关
+  static const String kDanmuMergeDuplicate = "DanmuMergeDuplicate";
+
+  /// 弹幕刷屏重复合并时间窗（秒）
+  static const String kDanmuMergeWindowSeconds = "DanmuMergeWindowSeconds";
+
+  /// 播放器缓冲策略：0=均衡（默认），1=抗抖稳流，2=低延迟
+  static const String kPlayerBufferMode = "PlayerBufferMode";
+
+  /// 直播累积延迟自动微倍速追帧
+  static const String kLiveCatchupEnable = "LiveCatchupEnable";
+
+  /// 频繁卡顿/丢帧自动降清晰度
+  static const String kAutoDowngradeQuality = "AutoDowngradeQuality";
+
+  /// 开播/切清晰度前 CDN 线路测速优选
+  static const String kStreamRouteProbeEnable = "StreamRouteProbeEnable";
+
+  /// 持久化 CDN 线路质量历史（仅存 origin，不含签名）
+  static const String kPlaybackRouteHistory = "PlaybackRouteHistory";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 

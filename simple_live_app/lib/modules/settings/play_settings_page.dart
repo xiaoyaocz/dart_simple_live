@@ -34,37 +34,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               children: [
                 Obx(
                   () => SettingsSwitch(
-                    title: "硬件解码",
-                    value: controller.hardwareDecode.value,
-                    subtitle: "播放失败可尝试关闭此选项",
-                    onChanged: (e) {
-                      controller.setHardwareDecode(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(() => SettingsSwitch(
-                  title: '原生高帧率优先',
-                  subtitle: '自动选流优先已知帧率，1080P 120fps 优于 4K 60fps。不插帧；未知帧率保留原有画质偏好，直播间手动选择后停止自动调整。',
-                  value: controller.preferNativeFrameRate.value,
-                  onChanged: controller.setPreferNativeFrameRate,
-                )),
-                if (Platform.isAndroid) AppStyle.divider,
-                Obx(
-                  () => Visibility(
-                    visible: Platform.isAndroid,
-                    child: SettingsSwitch(
-                      title: "兼容模式",
-                      subtitle: "若播放卡顿可尝试打开此选项",
-                      value: controller.playerCompatMode.value,
-                      onChanged: (e) {
-                        controller.setPlayerCompatMode(e);
-                      },
-                    ),
-                  ),
-                ),
-                Obx(
-                  () => SettingsSwitch(
                     title: "进入后台自动暂停",
                     value: controller.playerAutoPause.value,
                     onChanged: (e) {
@@ -86,17 +55,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     },
                     onChanged: (e) {
                       controller.setScaleMode(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsSwitch(
-                    title: "使用HTTPS链接",
-                    subtitle: "将http链接替换为https",
-                    value: controller.playerForceHttps.value,
-                    onChanged: (e) {
-                      controller.setPlayerForceHttps(e);
                     },
                   ),
                 ),
@@ -143,48 +101,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     value: controller.playershowSuperChat.value,
                     onChanged: (e) {
                       controller.setPlayerShowSuperChat(e);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
-            child: Text(
-              "清晰度",
-              style: Get.textTheme.titleSmall,
-            ),
-          ),
-          SettingsCard(
-            child: Column(
-              children: [
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "默认清晰度",
-                    value: controller.qualityLevel.value,
-                    valueMap: const {
-                      0: "最低",
-                      1: "中等",
-                      2: "最高",
-                    },
-                    onChanged: (e) {
-                      controller.setQualityLevel(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "数据网络清晰度",
-                    value: controller.qualityLevelCellular.value,
-                    valueMap: const {
-                      0: "最低",
-                      1: "中等",
-                      2: "最高",
-                    },
-                    onChanged: (e) {
-                      controller.setQualityLevelCellular(e);
                     },
                   ),
                 ),

@@ -16,14 +16,6 @@ import 'package:simple_live_app/services/local_storage_service.dart';
 class OtherSettingsController extends BaseController {
   RxList<LogFileModel> logFiles = <LogFileModel>[].obs;
 
-  // The UI and runtime use the same platform policy, including imported values.
-  Map<String, String> get videoOutputDrivers =>
-      AppSettingsController.instance.outputPolicy.videoOutputs;
-  Map<String, String> get audioOutputDrivers =>
-      AppSettingsController.instance.outputPolicy.audioOutputs;
-  Map<String, String> get hardwareDecoder =>
-      AppSettingsController.instance.outputPolicy.hardwareDecoders;
-
   @override
   void onInit() {
     loadLogFiles();

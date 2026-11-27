@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -122,6 +124,25 @@ class MinePage extends StatelessWidget {
                 Get.toNamed(RoutePath.kTools);
               },
             ),
+            if (Platform.isWindows) ...[
+              Divider(
+                indent: 12,
+                endIndent: 12,
+                color: Colors.grey.withAlpha(25),
+              ),
+              ListTile(
+                leading: const Icon(Icons.grid_view_outlined),
+                title: const Text("多画面同屏"),
+                subtitle: const Text("同时观看 2/4 个直播间，单击画面切换声音"),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey,
+                ),
+                onTap: () {
+                  Get.toNamed(RoutePath.kMultiView);
+                },
+              ),
+            ],
             Divider(
               indent: 12,
               endIndent: 12,

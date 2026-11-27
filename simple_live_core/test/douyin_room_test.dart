@@ -59,6 +59,97 @@ Map<String, dynamic> roomResponse({bool living = true}) {
 void main() {
   setUp(() => CoreLog.enableLog = false);
 
+  test('原画标称 720p 时仍按平台档位排列并使用对应直播流', () async {
+    Map<String, Object?> route(String name, String resolution) => {
+      'main': {
+        'flv': 'https://example.com/$name.flv',
+        'sdk_params': jsonEncode({'resolution': resolution}),
+      },
+    };
+    final detail = LiveRoomDetail(
+      roomId: '1', title: '', cover: '', userName: '', userAvatar: '',
+      online: 0, status: true, url: '', data: {
+        'live_core_sdk_data': {'pull_data': {
+          'options': {'qualities': [
+            {'name': '原画', 'sdk_key': 'origin', 'level': 5},
+            {'name': '蓝光', 'sdk_key': 'uhd', 'level': 4},
+          ]},
+          'stream_data': jsonEncode({'data': {
+            'origin': route('origin', '1280x720'),
+            'uhd': route('uhd', '1920x1080'),
+          }}),
+        }},
+      },
+    );
+    final site = DouyinSite();
+    final qualities = await site.getPlayQualites(detail: detail);
+    expect(qualities.map((item) => item.quality), ['原画', '蓝光']);
+    expect((await site.getPlayUrls(detail: detail, quality: qualities.first)).urls,
+        ['https://example.com/origin.flv']);
+    expect((await site.getPlayUrls(detail: detail, quality: qualities.last)).urls,
+        ['https://example.com/uhd.flv']);
+  });
+
+  for (final hasSharperStream in [true, false]) {
+    test('原画复用超清地址时按真实档位播放（有更清晰流=$hasSharperStream）', () async {
+      Map<String, Object?> stream(String name, String size) => {
+        for (final route in ['main', 'backup'])
+          route: {
+            'flv': 'https://$route.test/$name.flv',
+            'hls': 'https://$route.test/$name.m3u8',
+            'sdk_params': jsonEncode({'resolution': size, 'fps': 60}),
+          },
+      };
+      final hd = stream('hd', '1280x720');
+      final detail = LiveRoomDetail(
+        roomId: '1',
+        title: '',
+        cover: '',
+        userName: '',
+        userAvatar: '',
+        online: 0,
+        status: true,
+        url: '',
+        data: {
+          'live_core_sdk_data': {
+            'pull_data': {
+              'options': {
+                'qualities': [
+                  {'name': '原画', 'sdk_key': 'origin', 'level': 5},
+                  if (hasSharperStream)
+                    {'name': '蓝光', 'sdk_key': 'uhd', 'level': 4},
+                  {'name': '超清', 'sdk_key': 'hd', 'level': 3},
+                ],
+              },
+              'stream_data': jsonEncode({
+                'data': {
+                  'origin': hd,
+                  'hd': hd,
+                  if (hasSharperStream) 'uhd': stream('uhd', '1920x1080'),
+                },
+              }),
+            },
+          },
+        },
+      );
+      final site = DouyinSite();
+      final qualities = await site.getPlayQualites(detail: detail);
+      expect(qualities.first.quality, '原画');
+      final result = await site.getPlayUrls(
+        detail: detail,
+        quality: qualities.first,
+      );
+      final selected = hasSharperStream ? 'uhd' : 'hd';
+      expect(result.actualQuality, hasSharperStream ? '蓝光' : '超清');
+      expect(result.urls, [
+        'https://main.test/$selected.flv',
+        'https://backup.test/$selected.flv',
+        'https://main.test/$selected.m3u8',
+        'https://backup.test/$selected.m3u8',
+      ]);
+    });
+  }
+
   void intercept(void Function(RequestOptions, RequestInterceptorHandler) run) {
     final interceptor = InterceptorsWrapper(onRequest: run);
     core.HttpClient.instance.dio.interceptors.add(interceptor);

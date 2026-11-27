@@ -139,8 +139,21 @@ class BiliBiliSite implements LiveSite {
           item["desc"].toString();
     }
 
-    for (var item in result["data"]["playurl_info"]["playurl"]["stream"][0]
-        ["format"][0]["codec"][0]["accept_qn"]) {
+    final acceptQn = <int>{};
+    for (final streamItem
+        in (result["data"]["playurl_info"]["playurl"]["stream"] as List? ??
+            const [])) {
+      for (final formatItem in (streamItem["format"] as List? ?? const [])) {
+        for (final codecItem in (formatItem["codec"] as List? ?? const [])) {
+          for (final qn in (codecItem["accept_qn"] as List? ?? const [])) {
+            final parsed = int.tryParse('$qn');
+            if (parsed != null) acceptQn.add(parsed);
+          }
+        }
+      }
+    }
+    final sortedQn = acceptQn.toList()..sort((a, b) => b.compareTo(a));
+    for (var item in sortedQn) {
       var qualityItem = LivePlayQuality(
         quality: qualitiesMap[item] ?? "未知清晰度",
         data: item,
@@ -178,7 +191,7 @@ class BiliBiliSite implements LiveSite {
     if (cached != null) return cached;
     var result = await _fetchPlayInfo(detail.roomId, qn: quality.data);
     return _parsePlayUrls(
-      result["data"]["playurl_info"]["playurl"]["stream"],
+      result["data"]["playurl_info"]["playurl"],
       quality: int.tryParse('${quality.data}'),
     );
   }
@@ -200,9 +213,11 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {
         "room_id": roomId,
         "protocol": "0,1",
-        "format": qn == null ? "0,1,2" : "0,2",
+        "format": "0,1,2",
         "codec": "0,1",
         "platform": "web",
+        "dolby": "5",
+        "panorama": "1",
         if (qn != null) "qn": qn,
       },
       header: await getHeader(),
@@ -219,10 +234,9 @@ class BiliBiliSite implements LiveSite {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188",
   };
 
-  LivePlayUrl _parsePlayUrls(List streamList, {required int? quality}) {
-    var urls = <String>[];
-    final matchingUrls = <String>[];
-    for (var streamItem in streamList) {
+  LivePlayUrl _parsePlayUrls(Map playurl, {required int? quality}) {
+    final urlsByQuality = <int?, List<String>>{};
+    for (var streamItem in playurl["stream"]) {
       var formatList = streamItem["format"];
       for (var formatItem in formatList) {
         var codecList = [...formatItem["codec"]]
@@ -234,34 +248,60 @@ class BiliBiliSite implements LiveSite {
         for (var codecItem in codecList) {
           var urlList = codecItem["url_info"];
           var baseUrl = codecItem["base_url"].toString();
-          final matchesQuality = quality != null &&
-              int.tryParse('${codecItem["current_qn"]}') == quality;
+          final currentQn = int.tryParse('${codecItem["current_qn"]}');
           for (var urlItem in urlList) {
             final url = "${urlItem["host"]}$baseUrl${urlItem["extra"]}";
-            urls.add(url);
-            if (matchesQuality) matchingUrls.add(url);
+            (urlsByQuality[currentQn] ??= []).add(url);
           }
         }
       }
     }
-    // 对链接进行排序，包含mcdn的在后
+    final available = urlsByQuality.keys.whereType<int>().toList()..sort();
+    final delivered = available.isEmpty
+        ? null
+        : available.lastWhere(
+            (qn) => quality == null || qn <= quality,
+            orElse: () => available.first,
+          );
+    final urls = (urlsByQuality[delivered] ?? []).toSet();
+    String? actualQuality;
+    if (delivered != null) {
+      for (final entry in playurl["g_qn_desc"] ?? const []) {
+        if (int.tryParse('${entry["qn"]}') == delivered) {
+          actualQuality = entry["desc"]?.toString();
+          break;
+        }
+      }
+      if ((actualQuality?.isNotEmpty != true) && delivered != quality) {
+        actualQuality = '清晰度 $delivered';
+      }
+    }
     // 保留接口给出的线路顺序，并将 mcdn 放在备用位置。
-    urls = (matchingUrls.isEmpty ? urls : matchingUrls).toSet().toList();
-    urls = [
-      ...urls.where((url) => !url.contains("mcdn")),
-      ...urls.where((url) => url.contains("mcdn")),
-    ];
-    return LivePlayUrl(urls: urls, headers: _playHeaders);
+    return LivePlayUrl(
+      urls: [
+        ...urls.where((url) => !url.contains("mcdn")),
+        ...urls.where((url) => url.contains("mcdn")),
+      ],
+      headers: _playHeaders,
+      actualQuality: actualQuality,
+    );
   }
 
   void _cachePlayUrl(String roomId, dynamic playurl) {
     try {
-      final streams = playurl["stream"] as List;
-      final qn = int.tryParse(
-        streams[0]["format"][0]["codec"][0]["current_qn"].toString(),
-      );
+      int? qn;
+      for (final streamItem in (playurl["stream"] as List? ?? const [])) {
+        for (final formatItem in (streamItem["format"] as List? ?? const [])) {
+          for (final codecItem in (formatItem["codec"] as List? ?? const [])) {
+            final current = int.tryParse('${codecItem["current_qn"]}');
+            if (current != null && (qn == null || current > qn)) {
+              qn = current;
+            }
+          }
+        }
+      }
       if (qn == null) return;
-      final playUrl = _parsePlayUrls(streams, quality: qn);
+      final playUrl = _parsePlayUrls(playurl, quality: qn);
       if (playUrl.urls.isEmpty) return;
       if (_cachedPlayUrls.length >= 8) {
         _cachedPlayUrls.remove(_cachedPlayUrls.keys.first);
@@ -518,7 +558,9 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {"room_id": roomId},
       header: await getHeader(),
     );
-    return (asT<int?>(result["data"]["live_status"]) ?? 0) == 1;
+    final status = int.tryParse('${result["data"]?["live_status"]}');
+    if (status == null) throw StateError('B站房间未返回直播状态');
+    return status == 1;
   }
 
   @override

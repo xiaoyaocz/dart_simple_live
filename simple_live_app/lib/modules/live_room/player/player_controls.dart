@@ -454,6 +454,21 @@ Widget buildFullControls(
                   ),
                   AppStyle.hGap12,
                   IconButton(
+                    tooltip: controller.audioOnlyMode.value ? "退出纯音频" : "纯音频听播",
+                    onPressed: () {
+                      controller.toggleAudioOnlyMode();
+                    },
+                    icon: Icon(
+                      controller.audioOnlyMode.value
+                          ? Icons.videocam_outlined
+                          : Icons.headphones_outlined,
+                      color: controller.audioOnlyMode.value
+                          ? Colors.lightBlueAccent
+                          : Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  IconButton(
                     onPressed: () {
                       controller.saveScreenshot();
                     },
@@ -899,6 +914,21 @@ Widget buildControls(
                     ),
                   ),
                 ),
+                IconButton(
+                  tooltip: controller.audioOnlyMode.value ? "退出纯音频" : "纯音频听播",
+                  onPressed: () {
+                    controller.toggleAudioOnlyMode();
+                  },
+                  icon: Icon(
+                    controller.audioOnlyMode.value
+                        ? Icons.videocam_outlined
+                        : Icons.headphones_outlined,
+                    color: controller.audioOnlyMode.value
+                        ? Colors.lightBlueAccent
+                        : Colors.white,
+                    size: 22,
+                  ),
+                ),
                 Visibility(
                   visible: !Platform.isAndroid && !Platform.isIOS,
                   child: IconButton(
@@ -1057,8 +1087,7 @@ void showQualitesInfo(LiveRoomController controller) {
           minLeadingWidth: 16,
           onTap: () {
             Utils.hideRightDialog();
-            controller.currentQuality = i;
-            controller.getPlayUrl();
+            controller.selectManualQuality(i);
           },
         );
       },

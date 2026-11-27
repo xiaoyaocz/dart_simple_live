@@ -22,9 +22,11 @@ class _Service extends FollowService {
 
 class _GateSite extends HuyaSite {
   final requests = <Completer<bool>>[];
+  final requestedRooms = <String>[];
   final details = <Completer<LiveRoomDetail>>[];
   @override
   Future<bool> getLiveStatus({required String roomId}) {
+    requestedRooms.add(roomId);
     final gate = Completer<bool>();
     requests.add(gate);
     return gate.future;
@@ -95,8 +97,9 @@ FollowUser _user(String id, {int status = 0}) => FollowUser(
       categoryName: '旧分类',
     )..liveStatus.value = status;
 
-LiveRoomDetail _detail(String category, int heat) => LiveRoomDetail(
-      roomId: 'race',
+LiveRoomDetail _detail(String category, int heat, {String roomId = 'race'}) =>
+    LiveRoomDetail(
+      roomId: roomId,
       title: '',
       cover: '',
       userName: '',
@@ -157,6 +160,31 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  test('虎牙别名刷新后合并到正式房间并保留标签，同名主播各自保留', () async {
+    final alias = _user('dank1ng');
+    final canonical = _user('12345');
+    final namesake = _user('67890');
+    await db.addFollow(alias);
+    await db.addFollow(canonical);
+    await db.addFollow(namesake);
+    final tag = await db.addFollowTag('CS2');
+    await db.updateFollowTag(
+        tag.copyWith(userId: [alias.id, canonical.id, namesake.id]));
+    await service.loadData();
+    for (var i = 0; i < 3; i++) {
+      await _until(() => site.requests.length > i);
+      final isAlias = site.requestedRooms[i] == alias.roomId;
+      site.requests[i].complete(isAlias);
+    }
+    await _until(() => site.details.isNotEmpty);
+    site.details.single.complete(_detail('CS2', 900, roomId: canonical.roomId));
+    await _until(() => service.followList.length == 2);
+    expect(service.followList.map((user) => user.id),
+        unorderedEquals([canonical.id, namesake.id]));
+    expect(db.followBox.get(alias.id), isNull);
+    expect(db.getFollowTag('CS2')!.userId, [canonical.id, namesake.id]);
+  });
+
   test('旧轮详情响应不覆盖新轮直播状态、分类、热度或持久化数据', () async {
     final item = _user('race');
     await db.addFollow(item);
@@ -167,7 +195,7 @@ void main() {
     site.requests[1].complete(true);
     await _tick();
     site.details[1].complete(_detail('最新分类', 900));
-    await _until(() => !service.updating.value);
+    await _until(() => item.categoryName == '最新分类');
     expect(item.liveStatus.value, 2);
     site.details[0].complete(_detail('过期分类', 1));
     await _tick();
@@ -179,6 +207,34 @@ void main() {
     await db.followBox.close();
     db.followBox = await Hive.openBox<FollowUser>('follow');
     expect(db.followBox.get(item.id)!.categoryName, '最新分类');
+  });
+
+  test('慢详情不占用状态并发，开播名单先更新且停止转圈', () async {
+    final first = _user('first');
+    final second = _user('second');
+    await db.addFollow(first);
+    await db.addFollow(second);
+    await service.loadData();
+    site.requests.first.complete(true);
+    await _until(() => site.requests.length == 2);
+    expect(service.liveList, [first]);
+    site.requests.last.complete(true);
+    await _until(() => !service.updating.value && site.details.isNotEmpty);
+    expect(service.liveList, containsAll([first, second]));
+    site.details.first.completeError(StateError('详情暂不可用'));
+    await _until(() => site.details.length == 2);
+    site.details.last.complete(_detail('最新分类', 10));
+    await _until(() => second.heat == 10);
+    expect(service.liveList, containsAll([first, second]));
+  });
+
+  test('状态请求失败保留上次已开播的主播', () async {
+    final item = _user('known', status: 2);
+    await db.addFollow(item);
+    await service.loadData();
+    site.requests.single.completeError(StateError('临时网络故障'));
+    await _until(() => !service.updating.value);
+    expect(service.liveList.single, same(item));
   });
 
   test('旧轮完成不能提前结束仍在等待的当前轮', () async {
@@ -207,7 +263,7 @@ void main() {
     await service.loadData(updateStatus: false);
     site.details[0].complete(_detail('过期分类', 1));
     await _tick();
-    expect(old.liveStatus.value, 0);
+    expect(old.liveStatus.value, 2);
     expect(old.heat, isNull);
     expect(old.categoryName, '旧分类');
     expect(replacement.categoryName, '重新关注');
@@ -379,7 +435,7 @@ void main() {
     site.requests[2].complete(true);
     await _until(() => site.details.length == 1);
     site.details.single.complete(_detail('最新', 100));
-    await _until(() => !service.updating.value);
+    await _until(() => item.categoryName == '最新');
     final events = <dynamic>[];
     final subscription = service.updatedListStream.listen(events.add);
     site.requests[0].complete(false);

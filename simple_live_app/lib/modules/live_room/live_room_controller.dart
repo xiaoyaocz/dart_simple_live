@@ -5,9 +5,12 @@ import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/services/room_emoticons.dart';
 import 'package:simple_live_app/services/self_danmaku_identity.dart';
 import 'package:simple_live_app/services/search_danmaku_credentials.dart';
+import 'package:simple_live_app/services/danmaku_throttle.dart';
+import 'package:simple_live_app/services/live_catchup_controller.dart';
 import 'package:simple_live_app/services/playback_diagnostics.dart';
 import 'package:simple_live_app/services/room_startup_cache.dart';
 import 'package:simple_live_app/services/playback_route_history.dart';
+import 'package:simple_live_app/services/stream_route_prober.dart';
 import 'package:simple_live_app/widgets/live_message_content.dart';
 import 'dart:io';
 
@@ -31,6 +34,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controller.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
+import 'package:simple_live_app/services/danmaku_filter.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
@@ -92,60 +96,111 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   var currentQuality = -1;
   bool _nativeAutoSelection = false;
   final _nativeDropGuard = PlaybackDropGuard();
+  final _liveCatchup = LiveCatchupController();
+  double _appliedPlaybackRate = 1.0;
+  Duration? _liveLagBaseline;
+  (Duration, Duration)? _previousLagSample;
+  bool _adaptiveBufferRaised = false;
+  bool _observedVideoOutput = false;
+  final _danmakuThrottle = DanmakuThrottle();
+  @visibleForTesting
+  bool enableRouteProbe = !Platform.environment.containsKey('FLUTTER_TEST');
+  @visibleForTesting
+  StreamRouteProber routeProber = StreamRouteProber();
   List<NativeHlsVariant> _nativeVariants = [];
-  int? _nativeFallbackFrom;
   double? _nativeFpsCeiling;
-  final _qualityFallbacks = <int>{};
+
+  void _applyCatchupRate(double targetRate) {
+    if ((targetRate - _appliedPlaybackRate).abs() < 0.005) return;
+    _appliedPlaybackRate = targetRate;
+    try {
+      unawaited(player.setRate(targetRate).catchError((Object e) {
+        Log.d('更新追帧倍速失败：$e');
+      }));
+    } catch (e) {
+      Log.d('更新追帧倍速失败：$e');
+    }
+  }
+
+  void _resetCatchupRate() {
+    _liveCatchup.reset();
+    _applyCatchupRate(1.0);
+  }
 
   @override
   void playbackSample(PlaybackSnapshot sample) {
-    if (!_nativeAutoSelection || !AppSettingsController.instance.preferNativeFrameRate.value ||
-        _roomClosed || isBackground ||
-        !hasPlayed.value || _playback.recovery != null || !player.state.playing) {
-      _nativeDropGuard.reset();
-      return;
-    }
-    if (!_nativeDropGuard.add(sample, sample.elapsed,
-        buffering: player.state.buffering)) {
-      return;
-    }
-    final fps = sample.sourceFps;
-    if (fps == null) return;
-    final variant = chooseNativeHlsVariant(_nativeVariants,
-        displayHz: nativeDisplayHz, maxFrameRate: fps - 1);
-    if (variant != null && variant.frameRate >= 59 &&
-        (playUrls.isEmpty || variant.uri.toString() != playUrls[currentLineIndex])) {
-      // Reuse the already parsed manifest; do not probe the network on every sample.
-      playUrls.value = _nativeVariants
-          .where((v) => (v.frameRate - variant.frameRate).abs() < 0.01)
-          .map((v) => v.uri.toString()).toSet().toList();
-      playUrls.remove(variant.uri.toString());
-      playUrls.insert(0, variant.uri.toString());
-      currentLineIndex = 0;
-      _nativeFpsCeiling = variant.frameRate;
-      currentQualityInfo.value = 'HLS · ${variant.frameRate.toStringAsFixed(2)}fps（清单标称）';
-      _nativeDropGuard.reset();
-      unawaited(setPlayer());
-      return;
-    }
-    var candidate = -1;
-    var best = 0.0;
-    for (var i = 0; i < qualites.length; i++) {
-      final rate = nativeFrameRate(qualites[i].frameRate);
-      if (i == currentQuality || _qualityFallbacks.contains(i) || rate == null ||
-          rate >= fps - 1 || rate < 59 ||
-          (nativeDisplayHz > 0 && rate > nativeDisplayHz + 1)) {
-        continue;
+    final settings = AppSettingsController.instance;
+    final sampleActive = !_roomClosed &&
+        !isBackground &&
+        !roomOffline.value &&
+        hasPlayed.value &&
+        _playback.recovery == null &&
+        player.state.playing;
+
+    // 1. 直播累积延迟自动微倍速追帧
+    final position = player.state.position;
+    final offset = sample.elapsed - position;
+    final previous = _previousLagSample;
+    if (!sampleActive || !liveStatus.value || audioOnlyMode.value) {
+      _liveLagBaseline = null;
+      _previousLagSample = null;
+    } else {
+      if (_liveLagBaseline == null || offset < _liveLagBaseline! ||
+          (previous != null && (position < previous.$2 ||
+              sample.elapsed - previous.$1 > const Duration(seconds: 25)))) {
+        _liveLagBaseline = offset;
       }
-      if (rate > best) { candidate = i; best = rate; }
+      _previousLagSample = (sample.elapsed, position);
     }
-    if (candidate < 0) return;
-    _qualityFallbacks.add(currentQuality);
-    _nativeFallbackFrom = currentQuality;
-    currentQuality = candidate;
-    _nativeDropGuard.reset();
-    Log.d('持续丢帧，自动回退到已知原生帧率档位：${qualites[candidate].quality}');
-    getPlayUrl();
+    final baseline = _liveLagBaseline;
+    final buffered = sample.cacheSeconds;
+    final targetRate = _liveCatchup.evaluate(
+      baseline != null && buffered != null && buffered > 2.5 &&
+          previous != null && position > previous.$2
+          ? (offset - baseline).inMilliseconds / 1000
+          : null,
+      enabled: settings.liveCatchupEnable.value,
+      buffering: player.state.buffering,
+      active: sampleActive && !audioOnlyMode.value,
+    );
+    _applyCatchupRate(targetRate);
+
+    // 2. 原生高帧率自动回退（保留原有帧率降档逻辑）
+    if (_nativeAutoSelection && settings.preferNativeFrameRate.value) {
+      if (!sampleActive) {
+        _nativeDropGuard.reset();
+        return;
+      }
+      if (!_nativeDropGuard.add(sample, sample.elapsed,
+          buffering: player.state.buffering)) {
+        return;
+      }
+      final fps = sample.sourceFps;
+      if (fps == null) return;
+      final variant = chooseNativeHlsVariant(_nativeVariants,
+          displayHz: nativeDisplayHz, maxFrameRate: fps - 1);
+      if (variant != null &&
+          variant.frameRate >= 59 &&
+          (playUrls.isEmpty ||
+              variant.uri.toString() != playUrls[currentLineIndex])) {
+        // Reuse the already parsed manifest; do not probe the network on every sample.
+        playUrls.value = _nativeVariants
+            .where((v) => (v.frameRate - variant.frameRate).abs() < 0.01)
+            .map((v) => v.uri.toString())
+            .toSet()
+            .toList();
+        playUrls.remove(variant.uri.toString());
+        playUrls.insert(0, variant.uri.toString());
+        currentLineIndex = 0;
+        _nativeFpsCeiling = variant.frameRate;
+        _showPlayingQuality(variant);
+        _nativeDropGuard.reset();
+        unawaited(setPlayer());
+        return;
+      }
+    } else {
+      _nativeDropGuard.reset();
+    }
   }
 
   var currentQualityInfo = "".obs;
@@ -205,8 +260,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   final _openMarks = <String, int>{};
   final _lineWatch = Stopwatch();
   (String, String, String)? _openingRoute;
-  String get _routeQuality => currentQuality >= 0 && currentQuality < qualites.length
-      ? qualites[currentQuality].quality : '';
+  String _requestedQuality = '';
+  String? _actualQuality;
+  String get _routeQuality => _actualQuality ??
+      (currentQuality >= 0 && currentQuality < qualites.length
+          ? qualites[currentQuality].quality
+          : '');
   int _offlineCheckRequest = -1;
   bool _isCurrentRoomRequest(int request) =>
       !_roomClosed && request == _roomRequest;
@@ -281,6 +340,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     currentQuality = -1;
     currentLineIndex = -1;
     currentQualityInfo.value = '';
+    _requestedQuality = '';
+    _actualQuality = null;
     currentLineInfo.value = '';
     _liveDurationTimer?.cancel();
     liveDuration.value = '00:00:00';
@@ -435,37 +496,57 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     // Reading older history must not turn an active room into an unbounded log.
     final limit = disableAutoScroll.value ? 1000 : 200;
     if (messages.length >= limit) {
-      messages.removeRange(0, messages.length - limit + 1);
+      // 直接截断并追加后仅通知一次 UI 重建，减少高并发聊天下的主线程开销。
+      // ignore: invalid_use_of_protected_member
+      final raw = messages.value;
+      raw.removeRange(0, raw.length - limit + 1);
+      raw.add(message);
+      messages.refresh();
+      return;
     }
     messages.add(message);
   }
+
+  final _danmakuFilter = DanmakuFilter();
+  bool _backgroundAudioDowngraded = false;
 
   /// 接收到WebSocket信息
   void onWSMessage(LiveMessage msg) {
     if (_roomClosed) return;
     if (msg.type == LiveMessageType.chat) {
-
-      // 关键词屏蔽检查
-      for (var keyword in AppSettingsController.instance.shieldList) {
-        Pattern? pattern;
-        if (Utils.isRegexFormat(keyword)) {
-          String removedSlash = Utils.removeRegexFormat(keyword);
-          try {
-            pattern = RegExp(removedSlash);
-          } catch (e) {
-            // should avoid this during add keyword
-            Log.d("关键词：$keyword 正则格式错误");
-          }
-        } else {
-          pattern = keyword;
+      final settings = AppSettingsController.instance;
+      final selfMessage = isSelfMessage(msg);
+      final decision = _danmakuFilter.evaluate(
+        message: msg.message,
+        userName: msg.userName,
+        keywordRules: settings.shieldList,
+        blockedUsers: settings.shieldUserList,
+        isSelf: selfMessage,
+        mergeDuplicate: settings.danmuMergeDuplicate.value,
+        mergeWindowSeconds: settings.danmuMergeWindowSeconds.value,
+      );
+      if (!decision.shouldDisplay) {
+        if (decision.action == DanmakuFilterAction.blockKeyword ||
+            decision.action == DanmakuFilterAction.blockUser) {
+          Log.d("规则：${decision.matchedRule}\n已屏蔽消息内容：${msg.message}");
         }
-        if (pattern != null && msg.message.contains(pattern)) {
-          Log.d("关键词：$keyword\n已屏蔽消息内容：${msg.message}");
-          return;
-        }
+        return;
       }
 
-      _appendChatMessage(msg);
+      final displayMsg =
+          decision.action == DanmakuFilterAction.foldDuplicate &&
+                  decision.displayMessage != null
+              ? LiveMessage(
+                  type: msg.type,
+                  userName: msg.userName,
+                  message: decision.displayMessage!,
+                  color: msg.color,
+                  data: msg.data,
+                  userId: msg.userId,
+                )
+              : msg;
+
+      _appendChatMessage(displayMsg);
 
       // 同一帧消息合并滚动，避免每条消息重复提交布局后的滚动操作。
       if (!_chatScrollScheduled && !disableAutoScroll.value) {
@@ -475,7 +556,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           if (!_roomClosed) chatScrollToBottom();
         });
       }
-      if (!liveStatus.value || isBackground) {
+      if (!liveStatus.value || isBackground || audioOnlyMode.value) {
         return;
       }
 
@@ -483,22 +564,33 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       final request = _roomRequest;
       void display() {
         if (_roomClosed || request != _roomRequest || isBackground ||
+            audioOnlyMode.value ||
             !liveStatus.value || !identical(resolver,_emoticons)) return;
-        final parts = messageParts(msg);
+        final canvas = danmakuController;
+        final activeOnScreen = canvas == null
+            ? 0
+            : canvas.scrollDanmaku.length + canvas.staticDanmaku.length;
+        if (!_danmakuThrottle.allow(
+          activeOnScreen: activeOnScreen,
+          selfSend: selfMessage,
+        )) {
+          return;
+        }
+        final parts = messageParts(displayMsg);
         addDanmaku([
-          DanmakuContentItem(msg.message,
-            extra: msg,
-            selfSend: isSelfMessage(msg),
+          DanmakuContentItem(displayMsg.message,
+            extra: displayMsg,
+            selfSend: selfMessage,
             spans: parts.any((p)=>p.emoticon != null) ? emoticonDanmakuSpans(parts) : null,
-            color:Color.fromARGB(255,msg.color.r,msg.color.g,msg.color.b)),
+            color:Color.fromARGB(255,displayMsg.color.r,displayMsg.color.g,displayMsg.color.b)),
         ]);
       }
-      final resolved = messageParts(msg);
+      final resolved = messageParts(displayMsg);
       // Unknown first-room tokens can use the in-flight directory. Ordinary
       // text and known/native images never wait; chat itself is always immediate.
       final hasUnknownToken = resolved.any((p)=>p.emoticon == null &&
         (p.text.contains('[') || p.text.contains('/{'))) ||
-        (msg.emoticonKey != null && !resolved.any((p)=>p.emoticon != null));
+        (displayMsg.emoticonKey != null && !resolved.any((p)=>p.emoticon != null));
       final pending = hasUnknownToken ? resolver?.retryIfDue() : null;
       if (pending != null && _pendingEmoticonDanmaku < 200) {
         _pendingEmoticonDanmaku++;
@@ -539,6 +631,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   void loadData({bool reusePrefetch = false}) async {
     resetFollowShortcut();
     if (_roomClosed) return;
+    _danmakuThrottle.reset();
+    _resetCatchupRate();
     final request = ++_roomRequest;
     final playRequest = _playback.advance();
     _nativePlaybackEvents?.reset();
@@ -579,6 +673,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           : RoomStartupCache.instance.refresh(roomSite.liveSite, roomIdToLoad));
       if (!_isCurrentRoomRequest(request)) return;
       detail.value = roomDetail;
+      if (site.id == Constant.kHuya) _refreshFollowed();
       _markOpen('详情');
       if (!roomDetail.status && !roomDetail.isRecord) {
         _setRoomOffline(roomDetail);
@@ -619,7 +714,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
       addHistory();
       // 确认房间关注状态
-      followed.value = DBService.instance.getFollowExist("${site.id}_$roomId");
+      _refreshFollowed();
       online.value = detail.value!.online;
       liveStatus.value = detail.value!.status || detail.value!.isRecord;
       if (detail.value!.isRecord) {
@@ -669,7 +764,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         roomOffline.value ||
         detail.value == null) return;
     qualites.clear();
-    _qualityFallbacks.clear();
     _nativeFpsCeiling = null;
     _nativeDropGuard.reset();
     currentQuality = -1;
@@ -684,11 +778,13 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       if (!_isCurrentRequest(request)) return;
       qualites.value = playQualites;
       _markOpen('清晰度');
-      var qualityLevel = await getQualityLevel();
-      final cellular = usesCellularQuality && await _isCellularNetwork();
+      final qualityLevel = await getQualityLevel();
+      final preferNativeFps =
+          AppSettingsController.instance.preferNativeFrameRate.value;
+      final cellular =
+          preferNativeFps && usesCellularQuality && await _isCellularNetwork();
       if (!_isCurrentRequest(request)) return;
-      _nativeAutoSelection =
-          !cellular && AppSettingsController.instance.preferNativeFrameRate.value;
+      _nativeAutoSelection = preferNativeFps && !cellular;
       if (qualityLevel == 2) {
         //最高
         currentQuality = 0;
@@ -721,9 +817,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   Future<int> _readQualityLevel() async {
     final settings = AppSettingsController.instance;
-    return usesCellularQuality && await _isCellularNetwork()
-        ? settings.qualityLevelCellular.value
-        : settings.qualityLevel.value;
+    final quality = settings.qualityLevel.value;
+    final cellularQuality = settings.qualityLevelCellular.value;
+    if (quality == cellularQuality || !usesCellularQuality) return quality;
+    return await _isCellularNetwork() ? cellularQuality : quality;
   }
 
   // 桌面没有移动流量画质策略，不调用原生网络查询。
@@ -756,8 +853,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
     final quality = qualites[currentQuality];
-    final fallbackFrom = _nativeFallbackFrom;
-    _nativeFallbackFrom = null;
     final roomDetail = detail.value!;
     try {
       var playUrl = await _retryPlayRequest(() async {
@@ -769,47 +864,70 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       if (!_isCurrentRequest(currentRequest)) return;
       // Manual quality choices are never replaced by automatic master selection.
       if (_nativeAutoSelection && AppSettingsController.instance.preferNativeFrameRate.value) {
-        final qualityCap = fallbackFrom != null ? nativeFrameRate(quality.frameRate) : null;
-        final fallbackFps = qualityCap != null && (_nativeFpsCeiling == null || qualityCap < _nativeFpsCeiling!)
-            ? qualityCap : _nativeFpsCeiling;
-        final ceiling = fallbackFps != null && (nativeDisplayHz <= 0 || fallbackFps < nativeDisplayHz)
-            ? fallbackFps : nativeDisplayHz;
-        playUrl = await preferNativeHls(playUrl, displayHz: ceiling, maxFrameRate: fallbackFps);
+        final ceiling = _nativeFpsCeiling;
+        final displayHz = ceiling != null &&
+                (nativeDisplayHz <= 0 || ceiling < nativeDisplayHz)
+            ? ceiling
+            : nativeDisplayHz;
+        playUrl = await preferNativeHls(
+          playUrl,
+          displayHz: displayHz,
+          maxFrameRate: ceiling,
+        );
         if (playUrl.urls.isEmpty) throw StateError('此清单没有符合稳定播放要求的帧率档位');
-        if (fallbackFps != null && _isCurrentRequest(currentRequest)) _nativeFpsCeiling = fallbackFps;
         if (!_isCurrentRequest(currentRequest)) return;
       }
       _nativeVariants = playUrl.nativeVariants;
       final urls = [...playUrl.urls];
+      final servedQuality = playUrl.actualQuality ?? quality.quality;
       final preferred = playUrl.selectedNativeVariant == null
-          ? PlaybackRouteHistory.instance.select(site.id, quality.quality, urls) : 0;
+          ? PlaybackRouteHistory.instance.select(site.id, servedQuality, urls)
+          : 0;
+      final shouldProbe = playUrl.selectedNativeVariant == null &&
+          urls.length >= 2 &&
+          enableRouteProbe &&
+          AppSettingsController.instance.streamRouteProbeEnable.value &&
+          !PlaybackRouteHistory.instance
+              .hasProvenRoute(site.id, servedQuality, urls);
       if (preferred > 0) urls.insert(0, urls.removeAt(preferred));
       playUrls.value = urls;
       _markOpen('地址');
       playHeaders = playUrl.headers;
-      final variant = playUrl.selectedNativeVariant;
-      currentQualityInfo.value = variant == null ? quality.quality
-          : 'HLS · ${variant.frameRate.toStringAsFixed(2)}fps（清单标称）';
+      _updatePlayingQuality(playUrl, quality);
       currentLineIndex = 0;
       currentLineInfo.value = "线路1";
       mediaErrorRetryCount = 0;
       errorMsg.value = '';
       initPlaylist(currentRequest);
+      if (shouldProbe) {
+        unawaited(_probeStartupBackup(currentRequest, urls, servedQuality,
+            playUrl.headers));
+      }
     } catch (e) {
       if (!_isCurrentRequest(currentRequest)) return;
-      if (fallbackFrom != null) {
-        _qualityFallbacks.add(currentQuality);
-        currentQuality = fallbackFrom;
-        _nativeDropGuard.reset();
-        Log.d('自动降档未取得可用流，保留原连接');
-        return;
-      }
       Log.logPrint(e);
       if (site.id == Constant.kHuya && e is StateError) {
         errorMsg.value = e.message.toString();
       }
       SmartDialog.showToast("无法读取播放地址");
     }
+  }
+
+  void _updatePlayingQuality(LivePlayUrl playUrl, LivePlayQuality requested) {
+    _requestedQuality = requested.quality;
+    _actualQuality = playUrl.actualQuality;
+    _showPlayingQuality(playUrl.selectedNativeVariant);
+  }
+
+  void _showPlayingQuality(NativeHlsVariant? variant) {
+    final label = Utils.playbackQualityLabel(_requestedQuality, _actualQuality);
+    if (variant == null) {
+      currentQualityInfo.value = label;
+      return;
+    }
+    final fps = 'HLS · ${variant.frameRate.toStringAsFixed(2)}fps（清单标称）';
+    currentQualityInfo.value =
+        _actualQuality == null ? fps : '$label · $fps';
   }
 
   void changePlayLine(int index) {
@@ -820,6 +938,22 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     //重置错误次数
     mediaErrorRetryCount = 0;
     setPlayer();
+  }
+
+  Future<void> _probeStartupBackup(int request, List<String> urls,
+      String quality, Map<String, String>? headers) async {
+    final revision = _playback.openRevision;
+    final backup = await routeProber.selectFastest(
+        site: site.id, quality: quality, urls: urls, headers: headers,
+        recordHistory: false);
+    bool current() => _isCurrentRequest(request) &&
+        revision == _playback.openRevision && currentLineIndex == 0 &&
+        !isBackground && liveStatus.value && !hasPlayed.value &&
+        _playback.recovery == null;
+    if (backup <= 0 || backup >= urls.length || !current()) return;
+    _playback.startupProbeTimer = Timer(const Duration(seconds: 3), () {
+      if (current()) changePlayLine(backup);
+    });
   }
 
   void initPlaylist(int request) {
@@ -856,13 +990,32 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         _douyinRecoveryProgress = null;
         playbackDiagnostics?.reset();
         _nativeDropGuard.reset();
+        _resetCatchupRate();
+        _liveLagBaseline = null;
+        _previousLagSample = null;
+        if (_adaptiveBufferRaised) {
+          await _setAdaptiveBuffer(false);
+          if (!isCurrent()) return;
+        }
         _openingRoute = (site.id, _routeQuality, mediaUrl);
         _lineWatch..reset()..start();
         _markOpen('提交开流');
         final native = await _prepareNativePlaybackEvents();
         if (!isCurrent()) return;
         final revision = _playback.openRevision;
+        final videoOutputWatch = Stopwatch()..start();
         await player.open(Media(url, httpHeaders: headers));
+        if (native != null && isCurrent() && !_observedVideoOutput &&
+            !audioOnlyMode.value) {
+          _observedVideoOutput = true;
+          unawaited(videoController.waitUntilFirstFrameRendered.then((_) {
+            if (!isCurrent()) return;
+            Log.d('视频输出就绪 ${videoOutputWatch.elapsedMilliseconds}ms（播放器回调）');
+          }).catchError((Object error) => Log.d('视频输出计时失败：$error')));
+        }
+        if (isCurrent() && (audioOnlyMode.value || _backgroundAudioDowngraded)) {
+          await setVideoTrackEnabled(false);
+        }
         if (native != null && isCurrent()) {
           try {
             final entry = int.tryParse(await native.getProperty('playlist/0/id'));
@@ -881,6 +1034,17 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         errorMsg.value = "播放失败";
       }
     });
+  }
+
+  Future<void> _setAdaptiveBuffer(bool raised) async {
+    try {
+      final native = player.platform;
+      if (native is! NativePlayer) return;
+      await native.setProperty('cache-pause-wait', playbackBufferWait(adaptive: raised));
+      _adaptiveBufferRaised = raised;
+    } catch (error) {
+      Log.d('更新缓冲门槛失败：$error');
+    }
   }
 
   Future<NativePlayer?> _prepareNativePlaybackEvents() async {
@@ -1017,6 +1181,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
             });
             playUrls.value = fresh.urls;
             playHeaders = fresh.headers;
+            _updatePlayingQuality(fresh, qualites[currentQuality]);
             currentLineIndex = sameLine >= 0 ? sameLine : -1;
           }
         } catch (e) {
@@ -1056,7 +1221,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     final quality = qualites[qualityIndex];
     final args = detail.value?.danmakuData;
     final id = args is DouyinDanmakuArgs ? args.webRid : roomId;
-    PlaybackRouteHistory.instance.failure(site.id, quality.quality, playUrls[currentLineIndex]);
+    PlaybackRouteHistory.instance.failure(site.id, _routeQuality, playUrls[currentLineIndex]);
     try {
       final freshRoom = await source.refreshRoomDetail(roomId: id)
           .timeout(const Duration(seconds: 3));
@@ -1078,16 +1243,17 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           if (!stillStalled()) return;
         }
         final newLine = fresh.urls.indexWhere((url) => !playUrls.contains(url));
-        if (newLine >= 0) {
+        final nextLine = newLine >= 0
+            ? newLine
+            : fresh.urls.indexOf(playUrls[currentLineIndex]);
+        if (nextLine >= 0) {
           final urls = [...fresh.urls];
-          urls.insert(0, urls.removeAt(newLine));
+          urls.insert(0, urls.removeAt(nextLine));
           qualites[qualityIndex] = freshQuality;
           playUrls.value = urls;
           playHeaders = fresh.headers;
           _nativeVariants = fresh.nativeVariants;
-          final variant = fresh.selectedNativeVariant;
-          currentQualityInfo.value = variant == null ? freshQuality.quality
-              : 'HLS · ${variant.frameRate.toStringAsFixed(2)}fps（清单标称）';
+          _updatePlayingQuality(fresh, freshQuality);
           currentLineIndex = 0;
           mediaErrorRetryCount++;
           await setPlayer();
@@ -1106,6 +1272,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   @override
   void mediaPosition(Duration position) {
     super.mediaPosition(position);
+    if (position > Duration.zero) _playback.startupProbeTimer?.cancel();
     if (site.id == Constant.kDouyin && mediaErrorRetryCount > 0 &&
         position > Duration.zero && !player.state.buffering) {
       final start = _douyinRecoveryProgress ??= position;
@@ -1145,6 +1312,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
     if (_playback.bufferingTimer?.isActive ?? false) return;
     if (_roomClosed || isBackground || playUrls.isEmpty) return;
+    _resetCatchupRate();
     final newRebuffer = hasPlayed.value && !_playback.rebufferWatch.isRunning;
     if (newRebuffer) _playback.rebufferWatch.start();
     final request = _playback.generation;
@@ -1152,7 +1320,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     final position = player.state.position;
     // 多线路起播无进展时提早试备用线；单线路保留15秒宽限。
     final hasBackup = line + 1 < playUrls.length;
-    if (site.id == Constant.kBiliBili && newRebuffer && hasBackup) {
+    final adaptive = AppSettingsController.instance.playerBufferMode.value == 0;
+    if (newRebuffer && (hasBackup || adaptive)) {
       final revision = _playback.openRevision;
       _playback.shortBufferingTimer = Timer(const Duration(seconds: 1), () {
         _playback.shortBufferingTimer = null;
@@ -1168,7 +1337,15 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
           _playback.rebufferBurstCount = 0;
         }
         // 一次长缓冲仍由原看门狗处理。反复短卡则提前换同画质备用线。
-        if (++_playback.rebufferBurstCount >= 3) {
+        final count = ++_playback.rebufferBurstCount;
+        if (adaptive && count == 2 && !_adaptiveBufferRaised) {
+          unawaited(_playback.enqueue(() async {
+            if (revision == _playback.openRevision && _isCurrentRequest(request)) {
+              await _setAdaptiveBuffer(true);
+            }
+          }));
+        }
+        if (count >= 3 && hasBackup) {
           PlaybackRouteHistory.instance.failure(site.id, _routeQuality, playUrls[line]);
           changePlayLine(line + 1);
         }
@@ -1361,11 +1538,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     if (detail.value == null) {
       return;
     }
-    var id = "${site.id}_$roomId";
+    final followRoom = _followRoomId;
+    final id = '${site.id}_$followRoom';
     DBService.instance.addFollow(
       FollowUser(
         id: id,
-        roomId: roomId,
+        roomId: followRoom,
         siteId: site.id,
         userName: detail.value?.userName ?? "",
         face: detail.value?.userAvatar ?? "",
@@ -1374,6 +1552,21 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
+  }
+
+  String get _followRoomId {
+    final canonical = detail.value?.roomId;
+    return site.id == Constant.kHuya && canonical != null &&
+            RegExp(r'^[1-9][0-9]*$').hasMatch(canonical)
+        ? canonical
+        : roomId;
+  }
+
+  void _refreshFollowed() {
+    final database = DBService.instance;
+    final canonical = _followRoomId;
+    followed.value = database.getFollowExist('${site.id}_$canonical') ||
+        (canonical != roomId && database.getFollowExist('${site.id}_$roomId'));
   }
 
   /// 取消关注用户
@@ -1385,8 +1578,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
 
-    var id = "${site.id}_$roomId";
-    DBService.instance.deleteFollow(id);
+    final canonical = _followRoomId;
+    final id = '${site.id}_$canonical';
+    final database = DBService.instance;
+    if (canonical == roomId) {
+      await database.deleteFollow(id);
+    } else {
+      await database.deleteFollows([id, '${site.id}_$roomId']);
+    }
     followed.value = false;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
   }
@@ -1607,6 +1806,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     );
   }
 
+  void selectManualQuality(int index) {
+    _nativeFpsCeiling = null;
+    _nativeAutoSelection = false;
+    _nativeDropGuard.reset();
+    currentQuality = index;
+    getPlayUrl();
+  }
+
   void showQualitySheet() {
     Utils.showBottomSheet(
       title: "切换清晰度",
@@ -1614,12 +1821,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         groupValue: currentQuality,
         onChanged: (e) {
           Get.back();
-          _nativeFallbackFrom = null;
-          _nativeFpsCeiling = null;
-          _nativeAutoSelection = false;
-          _nativeDropGuard.reset();
-          currentQuality = e ?? 0;
-          getPlayUrl();
+          selectManualQuality(e ?? 0);
         },
         child: ListView.builder(
           itemCount: qualites.length,
@@ -1709,29 +1911,53 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   void showDanmuShield() {
     TextEditingController keywordController = TextEditingController();
+    TextEditingController userController = TextEditingController();
 
     void addKeyword() {
-      if (keywordController.text.isEmpty) {
-        SmartDialog.showToast("请输入关键词");
+      final raw = keywordController.text.trim();
+      final error = DanmakuFilter.validateRule(raw);
+      if (error != null) {
+        SmartDialog.showToast(error);
         return;
       }
 
-      AppSettingsController.instance
-          .addShieldList(keywordController.text.trim());
+      AppSettingsController.instance.addShieldList(raw);
       keywordController.text = "";
     }
 
+    void addBlockedUser() {
+      final user = userController.text.trim();
+      if (user.isEmpty) {
+        SmartDialog.showToast("请输入用户名");
+        return;
+      }
+      AppSettingsController.instance.addShieldUser(user);
+      userController.text = "";
+    }
+
     Utils.showBottomSheet(
-      title: "关键词屏蔽",
+      title: "弹幕屏蔽",
       child: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
+          Obx(
+            () => SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text("刷屏重复弹幕合并"),
+              subtitle: Text(
+                "${AppSettingsController.instance.danmuMergeWindowSeconds.value}秒内重复弹幕折叠显示",
+              ),
+              value: AppSettingsController.instance.danmuMergeDuplicate.value,
+              onChanged: AppSettingsController.instance.setDanmuMergeDuplicate,
+            ),
+          ),
+          AppStyle.vGap8,
           TextField(
             controller: keywordController,
             decoration: InputDecoration(
               contentPadding: AppStyle.edgeInsetsH12,
               border: const OutlineInputBorder(),
-              hintText: "请输入关键词",
+              hintText: "关键词或 /正则/ /正则/i",
               suffixIcon: TextButton.icon(
                 onPressed: addKeyword,
                 icon: const Icon(Icons.add),
@@ -1760,6 +1986,61 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
                       borderRadius: AppStyle.radius24,
                       onTap: () {
                         AppSettingsController.instance.removeShieldList(item);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: AppStyle.radius24,
+                        ),
+                        padding: AppStyle.edgeInsetsH12.copyWith(
+                          top: 4,
+                          bottom: 4,
+                        ),
+                        child: Text(
+                          item,
+                          style: Get.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          AppStyle.vGap24,
+          TextField(
+            controller: userController,
+            decoration: InputDecoration(
+              contentPadding: AppStyle.edgeInsetsH12,
+              border: const OutlineInputBorder(),
+              hintText: "输入要屏蔽的用户名",
+              suffixIcon: TextButton.icon(
+                onPressed: addBlockedUser,
+                icon: const Icon(Icons.person_off_outlined),
+                label: const Text("屏蔽"),
+              ),
+            ),
+            onSubmitted: (e) {
+              addBlockedUser();
+            },
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Text(
+              "已屏蔽${AppSettingsController.instance.shieldUserList.length}个用户（点击移除）",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          AppStyle.vGap12,
+          Obx(
+            () => Wrap(
+              runSpacing: 12,
+              spacing: 12,
+              children: AppSettingsController.instance.shieldUserList
+                  .map(
+                    (item) => InkWell(
+                      borderRadius: AppStyle.radius24,
+                      onTap: () {
+                        AppSettingsController.instance.removeShieldUser(item);
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -1953,6 +2234,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
     // 清除全部消息
     _stopDanmaku();
+    _danmakuFilter.resetDeduplication();
+    _danmakuThrottle.reset();
+    _resetCatchupRate();
     messages.clear();
     superChats.clear();
     danmakuController?.clear();
@@ -1988,13 +2272,30 @@ ${errorStackTrace ?? ''}''');
       //进入后台，关闭弹幕
       danmakuController?.clear();
       isBackground = true;
+      _liveLagBaseline = null;
+      _previousLagSample = null;
       _playback.cancelWatchdogs();
+      final settings = AppSettingsController.instance;
+      if (!settings.playerAutoPause.value &&
+          settings.backgroundAudioOnly.value &&
+          !isInsidePip &&
+          !audioOnlyMode.value &&
+          liveStatus.value) {
+        _backgroundAudioDowngraded = true;
+        unawaited(setVideoTrackEnabled(false));
+      }
     } else
     //返回前台
     if (state == AppLifecycleState.resumed) {
       Log.d("返回前台");
       final wasBackground = isBackground;
       isBackground = false;
+      if (_backgroundAudioDowngraded) {
+        _backgroundAudioDowngraded = false;
+        if (!audioOnlyMode.value) {
+          unawaited(setVideoTrackEnabled(true));
+        }
+      }
       if (wasBackground && playUrls.isNotEmpty && player.state.buffering) {
         mediaBuffering(true);
       }
@@ -2057,6 +2358,11 @@ ${errorStackTrace ?? ''}''');
     _autoExitFallbackTimer?.cancel();
 
     _stopDanmaku();
+    _danmakuFilter.resetDeduplication();
+    _danmakuThrottle.reset();
+    _liveCatchup.reset();
+    _appliedPlaybackRate = 1.0;
+    unawaited(PlaybackRouteHistory.instance.flushPersistence());
     danmakuController = null;
     _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
     await _playback.settled;

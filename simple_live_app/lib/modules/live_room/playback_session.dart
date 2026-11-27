@@ -13,6 +13,7 @@ class PlaybackSession {
   Timer? bufferingTimer;
   Timer? failureTimer;
   Timer? shortBufferingTimer;
+  Timer? startupProbeTimer;
   Duration? rebufferBurstStart;
   int rebufferBurstCount = 0;
   final rebufferWatch = Stopwatch();
@@ -35,6 +36,8 @@ class PlaybackSession {
     failureTimer = null;
     shortBufferingTimer?.cancel();
     shortBufferingTimer = null;
+    startupProbeTimer?.cancel();
+    startupProbeTimer = null;
     rebufferBurstStart = null;
     rebufferBurstCount = 0;
     rebufferWatch

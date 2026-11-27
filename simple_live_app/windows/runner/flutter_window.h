@@ -7,6 +7,7 @@
 #include <flutter/method_channel.h>
 
 #include <memory>
+#include <string>
 
 #include "win32_window.h"
 #include "windows_share_bridge.h"
@@ -30,6 +31,10 @@ class FlutterWindow : public Win32Window {
   void HideToTray();
   void RestoreFromTray();
   void RemoveTrayIcon();
+  void ShowTrayNotification(const std::wstring& title,
+                            const std::wstring& body,
+                            const std::string& site_id,
+                            const std::string& room_id);
   void InvalidateAppearance();
   flutter::EncodableMap DisplayCapabilities();
   std::wstring refresh_device_;
@@ -38,6 +43,8 @@ class FlutterWindow : public Win32Window {
   WPARAM appearance_size_state_ = SIZE_RESTORED;
   bool tray_icon_visible_ = false;
   HWND tray_window_ = nullptr;
+  std::string last_notify_site_id_;
+  std::string last_notify_room_id_;
 
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> window_channel_;
   std::unique_ptr<WindowsShareBridge> windows_share_bridge_;

@@ -7,7 +7,7 @@ import 'package:simple_live_app/services/local_storage_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  test('native FPS priority defaults off and enabling survives storage reload',
+  test('旧版帧率优先配置不覆盖最高画质优先的默认策略',
       () async {
     final directory =
         await Directory.systemTemp.createTemp('native-fps-preference-');
@@ -18,10 +18,10 @@ void main() {
     try {
       final settings = AppSettingsController()..onInit();
       expect(settings.preferNativeFrameRate.value, isFalse);
-      settings.setPreferNativeFrameRate(true);
+      await storage.setValue(LocalStorageService.kPreferNativeFrameRate, true);
       await storage.settingsBox.flush();
       expect((AppSettingsController()..onInit()).preferNativeFrameRate.value,
-          isTrue);
+          isFalse);
     } finally {
       Get.reset();
       await Hive.close();

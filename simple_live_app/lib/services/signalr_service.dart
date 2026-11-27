@@ -113,19 +113,31 @@ class SignalRService {
   Future<WebSocket> _connectViaLanRelay(List<String> relayAddresses) async {
     final sync = SyncService.instance;
     final tried = <String>{};
-    Future<WebSocket?> tryAddress(String rawAddress) async {
-      final address = rawAddress.trim();
-      if (InternetAddress.tryParse(address)?.type != InternetAddressType.IPv4 ||
-          !tried.add(address)) {
+    Future<WebSocket?> tryAddress(String rawAddress, {int? defaultPort}) async {
+      var trimmed = rawAddress.trim();
+      var port = defaultPort ?? SyncService.httpPort;
+      if (trimmed.contains(':')) {
+        final parts = trimmed.split(':');
+        trimmed = parts.first.trim();
+        port = int.tryParse(parts.last.trim()) ?? port;
+      }
+      if (InternetAddress.tryParse(trimmed)?.type != InternetAddressType.IPv4 ||
+          !tried.add('$trimmed:$port')) {
         return null;
       }
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 2)
+        ..findProxy = (_) => 'DIRECT';
       try {
         return await WebSocket.connect(
-          'ws://$address:${SyncService.httpPort}/sync-relay',
+          'ws://$trimmed:$port/sync-relay',
+          customClient: client,
         ).timeout(const Duration(seconds: 2));
       } catch (error) {
-        Log.logPrint('局域网同步转接失败 ($address)：$error');
+        Log.logPrint('局域网同步转接失败 ($trimmed:$port)：$error');
         return null;
+      } finally {
+        client.close(force: true);
       }
     }
 
@@ -141,7 +153,7 @@ class SignalRService {
     while (DateTime.now().isBefore(deadline)) {
       for (final client in sync.scanClients.toList()) {
         if (!{'windows', 'macos', 'linux'}.contains(client.type)) continue;
-        final socket = await tryAddress(client.address);
+        final socket = await tryAddress(client.address, defaultPort: client.port);
         if (socket != null) return socket;
       }
       await Future.delayed(const Duration(milliseconds: 300));

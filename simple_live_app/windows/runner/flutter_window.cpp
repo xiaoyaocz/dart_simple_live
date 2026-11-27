@@ -23,6 +23,16 @@ MONITORINFOEXW DisplayForWindow(HWND window) {
       reinterpret_cast<MONITORINFO*>(&info));
   return info;
 }
+std::wstring Utf8ToWide(const std::string& input) {
+  if (input.empty()) return L"";
+  const int size = MultiByteToWideChar(
+      CP_UTF8, 0, input.data(), static_cast<int>(input.size()), nullptr, 0);
+  if (size <= 0) return L"";
+  std::wstring output(static_cast<size_t>(size), L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, input.data(), static_cast<int>(input.size()),
+                      output.data(), size);
+  return output;
+}
 }
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -70,6 +80,23 @@ bool FlutterWindow::OnCreate() {
           result->Success();
         } else if (call.method_name() == "exitApp") {
           PostMessageW(GetHandle(), kExitMessage, 0, 0);
+          result->Success();
+        } else if (call.method_name() == "showNotification") {
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (!args) {
+            result->Error("arguments", "Expected notification arguments");
+            return;
+          }
+          auto text = [&](const char* key) -> std::string {
+            auto it = args->find(flutter::EncodableValue(key));
+            if (it == args->end()) return "";
+            const auto* str = std::get_if<std::string>(&it->second);
+            return str ? *str : "";
+          };
+          ShowTrayNotification(Utf8ToWide(text("title")),
+                               Utf8ToWide(text("body")),
+                               text("siteId"),
+                               text("roomId"));
           result->Success();
         } else if (call.method_name() == "appearanceCapabilities") {
           // RtlGetVersion is not affected by the application's compatibility manifest.
@@ -203,6 +230,26 @@ void FlutterWindow::RestoreFromTray() {
   SetForegroundWindow(GetHandle());
 }
 
+void FlutterWindow::ShowTrayNotification(const std::wstring& title,
+                                         const std::wstring& body,
+                                         const std::string& site_id,
+                                         const std::string& room_id) {
+  EnsureTrayIcon();
+  if (!tray_icon_visible_) return;
+  NOTIFYICONDATAW icon{};
+  icon.cbSize = sizeof(icon);
+  icon.hWnd = tray_window_;
+  icon.uID = 1;
+  icon.uFlags = NIF_INFO;
+  icon.dwInfoFlags = NIIF_INFO;
+  wcsncpy_s(icon.szInfoTitle, title.c_str(), _TRUNCATE);
+  wcsncpy_s(icon.szInfo, body.c_str(), _TRUNCATE);
+  if (Shell_NotifyIconW(NIM_MODIFY, &icon)) {
+    last_notify_site_id_ = site_id;
+    last_notify_room_id_ = room_id;
+  }
+}
+
 void FlutterWindow::InvalidateAppearance() {
   // Merge the activate/restore/display messages from one transition. Do not
   // force on WM_THEMECHANGED: setting our own DWM attributes can send it again.
@@ -273,6 +320,19 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   if (message == kTrayMessage) {
     if (lparam == WM_LBUTTONDBLCLK) {
       RestoreFromTray();
+    } else if (lparam == NIN_BALLOONUSERCLICK) {
+      RestoreFromTray();
+      if (window_channel_ && !last_notify_site_id_.empty() &&
+          !last_notify_room_id_.empty()) {
+        window_channel_->InvokeMethod(
+            "onNotificationClick",
+            std::make_unique<flutter::EncodableValue>(flutter::EncodableMap{
+                {flutter::EncodableValue("siteId"),
+                 flutter::EncodableValue(last_notify_site_id_)},
+                {flutter::EncodableValue("roomId"),
+                 flutter::EncodableValue(last_notify_room_id_)},
+            }));
+      }
     } else if (lparam == WM_RBUTTONUP) {
       HMENU menu = CreatePopupMenu();
       AppendMenuW(menu, MF_STRING, kShowCommand, L"打开 Simple Live");

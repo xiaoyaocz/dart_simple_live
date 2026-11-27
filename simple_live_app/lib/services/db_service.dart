@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/collection.dart';
 
@@ -15,6 +16,7 @@ class DBService extends GetxService {
   Future<void> _tagMutationTail = Future.value();
   Box<List>? _tagOrderBox;
   final Map<String, String> _tagAliases = {};
+  final Map<String, String> _followRoomAliases = {};
 
   // The tail absorbs errors only for queue continuity; the caller still receives
   // the original failed future and can retry the idempotent migration.
@@ -132,6 +134,7 @@ class DBService extends GetxService {
         final resolved = _resolveTagId(id);
         await tagBox.delete(resolved);
         await _normalizeFollowTags();
+        WebDavAutoSyncService.notifyLocalMutation();
       });
 
   Future<void> updateFollowTag(FollowUserTag followTag) =>
@@ -146,6 +149,7 @@ class DBService extends GetxService {
                 : followTag.userId.toSet().toList());
         await tagBox.put(id, tag);
         await _normalizeFollowTags();
+        WebDavAutoSyncService.notifyLocalMutation();
       });
 
   Future<FollowUserTag> addFollowTag(String tag) =>
@@ -158,6 +162,7 @@ class DBService extends GetxService {
         final item = FollowUserTag(id: uuid.v4(), tag: tag, userId: []);
         await tagBox.put(item.id, item);
         await _normalizeFollowTags();
+        WebDavAutoSyncService.notifyLocalMutation();
         return tagBox.get(item.id)!;
       });
 
@@ -176,6 +181,7 @@ class DBService extends GetxService {
       // A separate, lazily opened metadata box preserves both UUID keys and
       // ordering without clearing the tag box or dropping concurrently added tags.
       await _tagOrderBox!.put('ids', order);
+      WebDavAutoSyncService.notifyLocalMutation();
     });
   }
 
@@ -187,13 +193,67 @@ class DBService extends GetxService {
     return followBox.values.toList();
   }
 
+  /// Move a platform-confirmed room alias and its tag memberships to the
+  /// canonical follow key. Write the destination before removing the alias.
+  Future<bool> mergeFollowRoom(FollowUser source, String roomId,
+          {required bool Function() isCurrent}) =>
+      runFollowTagMutation(() async {
+        final id = '${source.siteId}_$roomId';
+        if (id == source.id || !isCurrent()) return false;
+        final target = followBox.get(id) ??
+            FollowUser(
+              id: id,
+              roomId: roomId,
+              siteId: source.siteId,
+              userName: source.userName,
+              face: source.face,
+              addTime: source.addTime,
+              tag: source.tag,
+              categoryName: source.categoryName,
+            );
+        if (source.addTime.isBefore(target.addTime)) {
+          target.addTime = source.addTime;
+        }
+        if (target.tag == '全部') target.tag = source.tag;
+        target.categoryName = source.categoryName ?? target.categoryName;
+        target.liveStatus.value = source.liveStatus.value;
+        target.liveStartTime = source.liveStartTime;
+        target.heat = source.heat;
+        await followBox.put(id, target);
+        for (final key in tagBox.keys.toList()) {
+          final tag = tagBox.get(key);
+          if (tag == null || !tag.userId.contains(source.id)) continue;
+          final members =
+              tag.userId.map((member) => member == source.id ? id : member);
+          await tagBox.put(key, tag.copyWith(userId: members.toSet().toList()));
+        }
+        await followBox.delete(source.id);
+        _followRoomAliases[source.id] = id;
+        return true;
+      });
+
   Future addFollow(FollowUser follow) async {
+    await followBox.put(follow.id, follow);
+    WebDavAutoSyncService.notifyLocalMutation();
+  }
+
+  /// Writes follow metadata cached from live status polling without triggering
+  /// WebDAV auto-upload.
+  Future addFollowSilently(FollowUser follow) async {
     await followBox.put(follow.id, follow);
   }
 
-  Future deleteFollow(String id) async {
-    await followBox.delete(id);
-  }
+  Future deleteFollow(String id) => deleteFollows([id]);
+
+  Future<void> deleteFollows(Iterable<String> ids) =>
+      runFollowTagMutation(() async {
+        await followBox.deleteAll({
+          ...ids,
+          for (final id in ids)
+            if (_followRoomAliases.containsKey(id)) _followRoomAliases[id]!,
+        });
+        WebDavAutoSyncService.notifyLocalMutation();
+      });
 
   History? getHistory(String id) {
     if (historyBox.containsKey(id)) {

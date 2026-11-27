@@ -172,15 +172,48 @@ class RemoteSyncRoomController extends BaseController {
 
   void onReceiveFavorite(bool overlay, String data) async {
     try {
-      var jsonBody = json.decode(data);
+      var jsonBody = json.decode(data) as List;
+      var added = 0;
+      var updated = 0;
       for (var item in jsonBody) {
-        var user = FollowUser.fromJson(item);
-        if (!DBService.instance.followBox.containsKey(user.id)) {
+        var user = FollowUser.fromJson(Map<String, dynamic>.from(item as Map));
+        final existing = DBService.instance.followBox.get(user.id);
+        if (existing == null) {
           await DBService.instance.followBox.put(user.id, user);
+          added++;
+        } else {
+          var changed = false;
+          if (user.userName.isNotEmpty && existing.userName != user.userName) {
+            existing.userName = user.userName;
+            changed = true;
+          }
+          if (user.face.isNotEmpty && existing.face != user.face) {
+            existing.face = user.face;
+            changed = true;
+          }
+          if (existing.tag == "全部" && user.tag.isNotEmpty && user.tag != "全部") {
+            existing.tag = user.tag;
+            changed = true;
+          }
+          if ((existing.categoryName == null ||
+                  existing.categoryName!.isEmpty) &&
+              user.categoryName != null &&
+              user.categoryName!.isNotEmpty) {
+            existing.categoryName = user.categoryName;
+            changed = true;
+          }
+          if (changed) {
+            await DBService.instance.followBox.put(user.id, existing);
+            updated++;
+          }
         }
       }
       EventBus.instance.emit(Constant.kUpdateFollow, 0);
-      SmartDialog.showToast("已同步关注列表");
+      SmartDialog.showToast(
+        added > 0 || updated > 0
+            ? "已同步关注列表（新增$added，更新$updated）"
+            : "已同步关注列表（无新增）",
+      );
     } catch (e) {
       SmartDialog.showToast("同步失败:$e");
       Log.logPrint(e);
@@ -189,14 +222,19 @@ class RemoteSyncRoomController extends BaseController {
 
   void onReceiveHistory(bool overlay, String data) async {
     try {
-      var jsonBody = json.decode(data);
+      var jsonBody = json.decode(data) as List;
+      var added = 0;
       for (var item in jsonBody) {
-        var history = History.fromJson(item);
-        if (!DBService.instance.historyBox.containsKey(history.id)) {
+        var history = History.fromJson(Map<String, dynamic>.from(item as Map));
+        final existing = DBService.instance.historyBox.get(history.id);
+        if (existing == null || history.updateTime.isAfter(existing.updateTime)) {
           await DBService.instance.addOrUpdateHistory(history);
+          added++;
         }
       }
-      SmartDialog.showToast('已同步历史记录');
+      SmartDialog.showToast(
+        added > 0 ? '已同步历史记录（新增/更新$added条）' : '已同步历史记录（无新增）',
+      );
       EventBus.instance.emit(Constant.kUpdateHistory, 0);
     } catch (e) {
       SmartDialog.showToast("同步失败:$e");
@@ -209,7 +247,7 @@ class RemoteSyncRoomController extends BaseController {
       var jsonBody = json.decode(data);
       for (var item in jsonBody) {
         // add to Hive
-        AppSettingsController.instance.addShieldList(item);
+        AppSettingsController.instance.addShieldList(item.toString());
       }
       SmartDialog.showToast('已同步屏蔽词');
     } catch (e) {
@@ -222,12 +260,14 @@ class RemoteSyncRoomController extends BaseController {
     try {
       var jsonBody = json.decode(data);
       var cookie = jsonBody['cookie'];
-      if (BiliBiliAccountService.instance.cookie.isEmpty &&
-          cookie is String &&
-          cookie.isNotEmpty) {
-        BiliBiliAccountService.instance.setCookie(cookie);
-        BiliBiliAccountService.instance.loadUserInfo();
-        SmartDialog.showToast('已同步哔哩哔哩账号');
+      if (cookie is String && cookie.isNotEmpty) {
+        if (BiliBiliAccountService.instance.cookie != cookie) {
+          BiliBiliAccountService.instance.setCookie(cookie);
+          BiliBiliAccountService.instance.loadUserInfo();
+          SmartDialog.showToast('已同步哔哩哔哩账号');
+        } else {
+          SmartDialog.showToast('哔哩哔哩账号已是最新');
+        }
       }
     } catch (e) {
       SmartDialog.showToast("同步失败:$e");
@@ -252,16 +292,16 @@ class RemoteSyncRoomController extends BaseController {
         overlay: false,
         content: data,
       );
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       if (resp.isSuccess) {
-        SmartDialog.showToast("已发送关注列表");
+        SmartDialog.showToast("已发送 ${users.length} 个关注");
       } else {
         SmartDialog.showToast("发送失败:${resp.message}");
       }
     } catch (e) {
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       SmartDialog.showToast("发送失败:$e");
       Log.logPrint(e);
-    } finally {
-      SmartDialog.dismiss();
     }
   }
 
@@ -280,16 +320,16 @@ class RemoteSyncRoomController extends BaseController {
         overlay: false,
         content: data,
       );
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       if (resp.isSuccess) {
-        SmartDialog.showToast("已发送历史记录");
+        SmartDialog.showToast("已发送 ${histores.length} 条历史记录");
       } else {
         SmartDialog.showToast("发送失败:${resp.message}");
       }
     } catch (e) {
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       SmartDialog.showToast("发送失败:$e");
       Log.logPrint(e);
-    } finally {
-      SmartDialog.dismiss();
     }
   }
 
@@ -309,16 +349,16 @@ class RemoteSyncRoomController extends BaseController {
         overlay: false,
         content: data,
       );
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       if (resp.isSuccess) {
-        SmartDialog.showToast("已发送屏蔽词");
+        SmartDialog.showToast("已发送 ${shieldList.length} 条屏蔽词");
       } else {
         SmartDialog.showToast("发送失败:${resp.message}");
       }
     } catch (e) {
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       SmartDialog.showToast("发送失败:$e");
       Log.logPrint(e);
-    } finally {
-      SmartDialog.dismiss();
     }
   }
 
@@ -342,16 +382,16 @@ class RemoteSyncRoomController extends BaseController {
           "cookie": BiliBiliAccountService.instance.cookie,
         }),
       );
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       if (resp.isSuccess) {
         SmartDialog.showToast("已发送哔哩哔哩账号");
       } else {
         SmartDialog.showToast("发送失败:${resp.message}");
       }
     } catch (e) {
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       SmartDialog.showToast("同步失败:$e");
       Log.logPrint(e);
-    } finally {
-      SmartDialog.dismiss();
     }
   }
 
@@ -359,6 +399,8 @@ class RemoteSyncRoomController extends BaseController {
     if (_qrSheetOpen) return;
     _qrKnownUserIds = roomUsers.map(_userId).toSet();
     _qrSheetOpen = true;
+    final relay =
+        Get.isRegistered<SyncService>() ? SyncService.instance.qrAddress : '';
     Utils.showBottomSheet(
       title: "房间信息",
       child: Column(
@@ -368,8 +410,8 @@ class RemoteSyncRoomController extends BaseController {
                     (Platform.isWindows ||
                         Platform.isMacOS ||
                         Platform.isLinux) &&
-                    SyncService.instance.ipAddress.value.isNotEmpty
-                ? '${currentRoomId.value}|${SyncService.instance.ipAddress.value}'
+                    relay.isNotEmpty
+                ? '${currentRoomId.value}|$relay'
                 : currentRoomId.value,
             version: QrVersions.auto,
             backgroundColor: Colors.white,

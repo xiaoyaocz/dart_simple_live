@@ -458,7 +458,7 @@ class HuyaSite implements LiveSite {
       return await _getRoomDetailViaApi(roomId);
     } catch (e) {
       // 接口字段变化或风控时退回页面解析，保证功能不中断。
-      CoreLog.error('虎牙 JSON 详情失败，回退页面解析：${e.runtimeType}');
+      CoreLog.d('虎牙 JSON 详情失败，回退页面解析：${e.runtimeType}');
       return _getRoomDetailViaHtml(roomId);
     }
   }

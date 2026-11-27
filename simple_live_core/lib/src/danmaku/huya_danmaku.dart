@@ -155,7 +155,7 @@ class HuyaDanmaku implements LiveDanmaku {
         }
       }
     } catch (e) {
-      CoreLog.error(e);
+      CoreLog.d('虎牙弹幕解析跳过：${e.runtimeType}');
     }
   }
 }

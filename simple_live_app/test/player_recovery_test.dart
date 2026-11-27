@@ -21,6 +21,7 @@ class _Player implements Player {
   final _Streams stream = _Streams();
   int opens = 0;
   int jumps = 0;
+  int disposes = 0;
   Completer<void>? opening;
   @override
   PlayerState state = const PlayerState(playing: true, buffering: true);
@@ -28,6 +29,11 @@ class _Player implements Player {
   Future<void> open(Playable playable, {bool play = true}) async {
     opens++;
     await opening?.future;
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposes++;
   }
 
   @override
@@ -764,5 +770,35 @@ void main() {
     expect(site.calls, 2);
     expect(room.currentQualityInfo.value, '原画');
     expect(room.currentQuality, 0);
+  });
+
+  testWidgets('关闭直播间时即使开流队列阻塞也能超时释放播放器', (tester) async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const toggleChannel =
+        'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle';
+    messenger.setMockMessageHandler(toggleChannel,
+        (_) async => const StandardMessageCodec().encodeMessage([null]));
+    messenger.setMockMethodCallHandler(
+        SystemChannels.platform, (_) async => null);
+    addTearDown(() {
+      messenger.setMockMessageHandler(toggleChannel, null);
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+    final room = _Room();
+    room.playUrls.add('https://first/live.flv');
+    room.currentLineIndex = 0;
+    final blocked = room.fake.opening = Completer<void>();
+    unawaited(room.setPlayer());
+    await tester.pump();
+    expect(room.fake.opens, 1);
+
+    room.onDelete();
+    await tester.pump(const Duration(seconds: 2));
+    for (var i = 0; i < 6 && room.fake.disposes == 0; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(room.fake.disposes, 1);
+    if (!blocked.isCompleted) blocked.complete();
   });
 }

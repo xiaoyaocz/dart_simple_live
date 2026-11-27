@@ -93,7 +93,6 @@ class DouyinDanmaku implements LiveDanmaku {
 
     var url = "$uri&signature=$sign";
     var backupUrl = url.replaceAll("webcast3-ws-web-lq", "webcast5-ws-web-lf");
-    print(url);
     webScoketUtils = WebScoketUtils(
       url: url,
       backupUrl: backupUrl,

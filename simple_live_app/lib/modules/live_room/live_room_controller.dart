@@ -2221,6 +2221,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     _resetOfficialEditor();
 
     final request = ++_roomRequest;
+    _liveDurationTimer?.cancel();
+    _liveDurationTimer = null;
+    playbackDiagnostics?.reset();
+    _nativeDropGuard.reset();
     _lineWatch.stop();
     _playback.advance();
     _nativePlaybackEvents?.reset();
@@ -2335,37 +2339,48 @@ ${errorStackTrace ?? ''}''');
 
   @override
   void onClose() async {
-    resetFollowShortcut();
-    _resetOfficialEditor();
-    _roomClosed = true;
-    _nativePlaybackEvents?.dispose();
-    _nativePlaybackEvents = null;
-    _lineWatch.stop();
-    disposeStream();
-    _emoticons?.dispose();
-    _emoticons = null;
-    ++_roomRequest;
-    _playback.advance();
-    SmartDialog.dismiss(status: SmartStatus.loading);
-    _volumeSliderTimer?.cancel();
-    if (_volumeSliderOpen) {
-      SmartDialog.dismiss(status: SmartStatus.attach, tag: _volumeSliderTag);
-    }
-    WidgetsBinding.instance.removeObserver(this);
-    scrollController.removeListener(scrollListener);
-    scrollController.dispose();
-    autoExitTimer?.cancel();
-    _autoExitFallbackTimer?.cancel();
+    try {
+      resetFollowShortcut();
+      _resetOfficialEditor();
+      _roomClosed = true;
+      _nativePlaybackEvents?.dispose();
+      _nativePlaybackEvents = null;
+      _lineWatch.stop();
+      disposeStream();
+      _emoticons?.dispose();
+      _emoticons = null;
+      ++_roomRequest;
+      _playback.advance();
+      try {
+        unawaited(SmartDialog.dismiss(status: SmartStatus.loading)
+            .catchError((Object _) {}));
+        if (_volumeSliderOpen) {
+          unawaited(SmartDialog.dismiss(
+                  status: SmartStatus.attach, tag: _volumeSliderTag)
+              .catchError((Object _) {}));
+        }
+      } catch (_) {}
+      _volumeSliderTimer?.cancel();
+      WidgetsBinding.instance.removeObserver(this);
+      scrollController.removeListener(scrollListener);
+      scrollController.dispose();
+      autoExitTimer?.cancel();
+      _autoExitFallbackTimer?.cancel();
 
-    _stopDanmaku();
-    _danmakuFilter.resetDeduplication();
-    _danmakuThrottle.reset();
-    _liveCatchup.reset();
-    _appliedPlaybackRate = 1.0;
-    unawaited(PlaybackRouteHistory.instance.flushPersistence());
-    danmakuController = null;
-    _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
-    await _playback.settled;
-    super.onClose();
+      _stopDanmaku();
+      _danmakuFilter.resetDeduplication();
+      _danmakuThrottle.reset();
+      _liveCatchup.reset();
+      _appliedPlaybackRate = 1.0;
+      unawaited(PlaybackRouteHistory.instance.flushPersistence());
+      danmakuController = null;
+      _liveDurationTimer?.cancel(); // 页面关闭时取消定时器
+      _liveDurationTimer = null;
+      try {
+        await _playback.settled.timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    } finally {
+      super.onClose();
+    }
   }
 }

@@ -44,7 +44,7 @@ mixin PlayerMixin {
           1024 *
           1024,
       logLevel: AppSettingsController.instance.logEnable.value
-          ? MPVLogLevel.info
+          ? MPVLogLevel.warn
           : MPVLogLevel.error,
     ),
   );
@@ -85,6 +85,7 @@ mixin PlayerMixin {
     await pp.setProperty('audio-pitch-correction', 'yes');
     await pp.setProperty('audio-resample-cutoff', '0.96');
     if (Platform.isWindows) {
+      await pp.setProperty('audio-buffer', '0.5');
       // 桌面大屏高画质 GPU 缩放与 HDR 色调映射，提升 1080P→2K/4K 清晰度与色彩准确度。
       await pp.setProperty('scale', 'spline36');
       await pp.setProperty('cscale', 'spline36');
@@ -973,7 +974,9 @@ class PlayerController extends BaseController
       }
     });
     _logSubscription = player.stream.log.listen((event) {
-      Log.d("播放器日志：$event");
+      if (!kReleaseMode || AppSettingsController.instance.logEnable.value) {
+        Log.d("播放器日志：$event");
+      }
     });
     _widthSubscription = player.stream.width.listen((event) {
       Log.d(

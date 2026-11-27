@@ -55,6 +55,7 @@ void main() {
     expect(native.properties['audio-pitch-correction'], 'yes');
     expect(native.properties['audio-resample-cutoff'], '0.96');
     if (Platform.isWindows) {
+      expect(native.properties['audio-buffer'], '0.5');
       expect(native.properties['scale'], 'spline36');
       expect(native.properties['cscale'], 'spline36');
       expect(native.properties['dscale'], 'mitchell');

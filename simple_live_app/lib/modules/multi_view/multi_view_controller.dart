@@ -47,7 +47,7 @@ class MultiViewTileRuntime {
             1024 *
             1024,
         logLevel: settings.logEnable.value
-            ? MPVLogLevel.info
+            ? MPVLogLevel.warn
             : MPVLogLevel.error,
       ),
     );
@@ -76,9 +76,11 @@ class MultiViewTileRuntime {
       if (platform is NativePlayer) {
         if (Platform.isWindows) {
           await platform.setProperty('http-proxy', '');
+          await platform.setProperty('audio-buffer', '0.5');
         }
         await platform.setProperty('interpolation', 'no');
         await platform.setProperty('video-sync', 'audio');
+        await platform.setProperty('audio-pitch-correction', 'yes');
         await platform.setProperty('cache-on-disk', 'no');
         await platform.setProperty('cache-secs', '15');
         await platform.setProperty('demuxer-max-back-bytes', '2097152');

@@ -176,7 +176,13 @@ void initCoreLog() {
         Log.d(msg);
         break;
       case Level.error:
-        Log.e(msg, StackTrace.current);
+        if (!kReleaseMode) {
+          Log.addDebugLog(msg, Colors.red);
+        }
+        Log.writeLog(msg, Level.error);
+        if (kDebugMode) {
+          print(msg);
+        }
         break;
       case Level.info:
         Log.i(msg);

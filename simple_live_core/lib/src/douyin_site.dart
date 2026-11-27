@@ -49,8 +49,6 @@ class DouyinSite implements LiveSite {
   }
 
   void _logDebug(String msg) {
-    // 同时使用 print 和 CoreLog 确保日志输出
-    print("[Douyin] $msg");
     CoreLog.d("[Douyin] $msg");
   }
 
@@ -996,9 +994,8 @@ class DouyinSite implements LiveSite {
           }
         }
       }
-    } catch (e, stackTrace) {
-      CoreLog.error(e);
-      CoreLog.error(stackTrace);
+    } catch (e) {
+      CoreLog.error('抖音清晰度解析失败：${e.runtimeType}');
     }
     // var qualityData = json.decode(
     //     detail.data["live_core_sdk_data"]["pull_data"]["stream_data"])["data"];

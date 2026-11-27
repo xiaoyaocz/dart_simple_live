@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:path/path.dart' as p;
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_core/simple_live_core.dart';
 
 class OtherSettingsController extends BaseController {
   RxList<LogFileModel> logFiles = <LogFileModel>[].obs;
@@ -23,14 +25,16 @@ class OtherSettingsController extends BaseController {
   }
 
   void setLogEnable(e) {
-    AppSettingsController.instance.setLogEnable(e);
-    if (e) {
+    final enabled = e == true;
+    AppSettingsController.instance.setLogEnable(enabled);
+    CoreLog.enableLog = !kReleaseMode || enabled;
+    if (enabled) {
       Log.initWriter();
       Future.delayed(const Duration(milliseconds: 100), () {
         loadLogFiles();
       });
     } else {
-      Log.disposeWriter();
+      unawaited(Log.disposeWriter());
     }
   }
 

@@ -8,6 +8,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/sync_client_info_model.dart';
+import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
@@ -54,6 +55,13 @@ class AppNavigator {
     }
 
     RoomStartupCache.instance.prefetch(site.liveSite, roomId);
+    final currentRoute = Get.currentRoute.split('?').first;
+    final currentTag = Get.parameters['instance'];
+    if (currentRoute == RoutePath.kLiveRoomDetail &&
+        Get.isRegistered<LiveRoomController>(tag: currentTag)) {
+      Get.find<LiveRoomController>(tag: currentTag).resetRoom(site, roomId);
+      return;
+    }
     await Get.toNamed(RoutePath.kLiveRoomDetail, arguments: site, parameters: {
       "roomId": roomId,
       "instance": '${++_nextRoomInstance}',

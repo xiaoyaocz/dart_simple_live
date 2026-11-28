@@ -1,13 +1,16 @@
+import 'common/request_pool.dart';
+import 'dart:async';
 import 'dart:convert';
+import 'model/room_category_name.dart';
 import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
+import 'package:simple_live_core/src/common/core_error.dart';
 import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_resp.dart';
-import 'package:simple_live_core/src/model/tars/get_cdn_token_req.dart';
-import 'package:simple_live_core/src/model/tars/get_cdn_token_resp.dart';
 import 'package:simple_live_core/src/model/tars/huya_user_id.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
 
@@ -20,13 +23,21 @@ class HuyaSite implements LiveSite {
       "HYSDK(Windows, 30000002)_APP(pc_exe&7060000&official)_SDK(trans&2.32.3.5646)";
 
   static Map<String, String> requestHeaders =  {
-      'Origin': baseUrl,
-      'Referer': baseUrl,
+      'Origin': 'https://www.huya.com',
+      'Referer': 'https://www.huya.com/',
       'User-Agent': HYSDK_UA,
   };
 
   final BaseTarsHttp tupClient =
-  BaseTarsHttp("http://wup.huya.com", "liveui", headers: requestHeaders);
+      BaseTarsHttp(
+          "https://wup.huya.com",
+          "liveui",
+          timeOut: 6,
+          headers: requestHeaders,
+        )
+        ..dio.options.sendTimeout = const Duration(seconds: 6)
+        ..dio.options.receiveTimeout = const Duration(seconds: 6);
+  final Map<String, Future<String>> _tokenRequests = {};
 
   String? playUserAgent;
   @override
@@ -37,6 +48,9 @@ class HuyaSite implements LiveSite {
 
   @override
   LiveDanmaku getDanmaku() => HuyaDanmaku();
+
+  @override
+  void prefetchRoom(String roomId) {}
 
   @override
   Future<List<LiveCategory>> getCategores() async {
@@ -57,9 +71,7 @@ class HuyaSite implements LiveSite {
   Future<List<LiveSubCategory>> getSubCategores(String id) async {
     var result = await HttpClient.instance.getJson(
       "https://live.cdn.huya.com/liveconfig/game/bussLive",
-      queryParameters: {
-        "bussType": id,
-      },
+      queryParameters: {"bussType": id},
     );
 
     List<LiveSubCategory> subs = [];
@@ -89,8 +101,10 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveCategoryResult> getCategoryRooms(LiveSubCategory category,
-      {int page = 1}) async {
+  Future<LiveCategoryResult> getCategoryRooms(
+    LiveSubCategory category, {
+    int page = 1,
+  }) async {
     var resultText = await HttpClient.instance.getJson(
       "https://www.huya.com/cache.php",
       queryParameters: {
@@ -98,7 +112,7 @@ class HuyaSite implements LiveSite {
         "do": "getLiveListByPage",
         "tagAll": 0,
         "gameId": category.id,
-        "page": page
+        "page": page,
       },
     );
     var result = json.decode(resultText);
@@ -127,62 +141,31 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<List<LivePlayQuality>> getPlayQualites(
-      {required LiveRoomDetail detail}) {
+  Future<List<LivePlayQuality>> getPlayQualites({
+    required LiveRoomDetail detail,
+  }) {
     List<LivePlayQuality> qualities = <LivePlayQuality>[];
     var urlData = detail.data as HuyaUrlDataModel;
     if (urlData.bitRates.isEmpty) {
       urlData.bitRates = [
-        HuyaBitRateModel(
-          name: "原画",
-          bitRate: 0,
-        ),
+        HuyaBitRateModel(name: "原画", bitRate: 0),
         HuyaBitRateModel(name: "高清", bitRate: 2000),
       ];
     }
-    // if (urlData.lines.isEmpty) {
-    //   urlData.lines = [
-    //     HuyaLineModel(line: "tx.flv.huya.com", lineType: HuyaLineType.flv,),
-    //     HuyaLineModel(line: "bd.flv.huya.com", lineType: HuyaLineType.flv),
-    //     HuyaLineModel(line: "al.flv.huya.com", lineType: HuyaLineType.flv),
-    //     HuyaLineModel(line: "hw.flv.huya.com", lineType: HuyaLineType.flv),
-    //   ];
-    // }
-    //var url = getRealUrl(urlData.url);
-
     for (var item in urlData.bitRates) {
-      // var urls = <String>[];
-      // for (var line in urlData.lines) {
-      //   var src = line.line;
-      //   src += "/${line.streamName}";
-      //   if (line.lineType == HuyaLineType.flv) {
-      //     //src = src.replaceAll(".m3u8", ".flv");
-      //     src += ".flv";
-      //   }
-      //   if (line.lineType == HuyaLineType.hls) {
-      //     src += ".m3u8";
-      //   }
-      //   var parms = processAnticode(
-      //     line.lineType == HuyaLineType.flv
-      //         ? line.flvAntiCode
-      //         : line.hlsAntiCode,
-      //     urlData.uid,
-      //     line.streamName,
-      //   );
-      //   src += "?$parms";
-      //   if (item.bitRate > 0) {
-      //     src += "&ratio=${item.bitRate}";
-      //   }
-      //   urls.add(src);
-      // }
-
-      qualities.add(LivePlayQuality(
-        data: {
-          "urls": urlData.lines,
-          "bitRate": item.bitRate,
-        },
-        quality: item.name,
-      ));
+      qualities.add(
+        LivePlayQuality(
+          data: {
+            "urls": urlData.lines,
+            "bitRate": item.bitRate,
+            // 虎牙 14000 档也提供原生 AVC 2K；内置 mpv 可直接解码，
+            // 不必为它走 HEVC FLV 私有封装或等待 HLS 分片。
+            "codec": item.codecType == 1 && item.bitRate != 14000 ? 265 : 264,
+          },
+          quality: item.name,
+          frameRate: item.frameRate,
+        ),
+      );
     }
 
     return Future.value(qualities);
@@ -196,9 +179,7 @@ class HuyaSite implements LiveSite {
     try {
       var result = await HttpClient.instance.getJson(
         "https://github.iill.moe/xiaoyaocz/dart_simple_live/master/assets/play_config.json",
-        queryParameters: {
-          "ts": DateTime.now().millisecondsSinceEpoch,
-        },
+        queryParameters: {"ts": DateTime.now().millisecondsSinceEpoch},
       );
       playUserAgent = json.decode(result)['huya']['user_agent'];
     } catch (e) {
@@ -208,31 +189,149 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LivePlayUrl> getPlayUrls(
-      {required LiveRoomDetail detail,
-      required LivePlayQuality quality}) async {
+  Future<LivePlayUrl> getPlayUrls({
+    required LiveRoomDetail detail,
+    required LivePlayQuality quality,
+  }) async {
     var ls = <String>[];
-    for (var element in quality.data["urls"]) {
-      var line = element as HuyaLineModel;
-      var url = await getPlayUrl(line, quality.data["bitRate"]);
-      ls.add(url);
+    final lines = List<HuyaLineModel>.from(quality.data["urls"]);
+    if (quality.data["codec"] == 265) {
+      // 内置解复用器不支持虎牙 codec-id 12 的私有 HEVC FLV。
+      // 只构造 HLS，不让起播等无关 FLV 的 WUP 鉴权（最长 8 秒）。
+      final urls = await Future.wait(lines
+          .where((line) => line.lineType == HuyaLineType.hls)
+          .map((line) => getPlayUrl(line, quality.data["bitRate"], codec: 265)));
+      return _selectHevcHls(urls);
+    }
+    final resolved = await Future.wait<String>(
+      lines.map<Future<String>>((line) async {
+        try {
+          var url = await getPlayUrl(
+            line,
+            quality.data["bitRate"],
+            codec: quality.data["codec"] ?? 264,
+          );
+          return url;
+        } catch (e) {
+          CoreLog.error(e);
+          return "";
+        }
+      }),
+    );
+    for (var url in resolved) {
+      if (url.isNotEmpty && !ls.contains(url)) ls.add(url);
     }
     // 最新UA需要额外验证，此方法暂时弃用
     // var ua = await getHuYaUA();
+    return LivePlayUrl(urls: ls, headers: {"user-agent": HYSDK_UA});
+  }
+
+  Future<LivePlayUrl> _selectHevcHls(List<String> urls) async {
+    if (urls.isEmpty) throw StateError('虎牙当前画质未提供 HLS 线路');
+    final selected = Completer<String?>();
+    final cancel = CancelToken();
+    final rejected = <String>{};
+    var permissionDenied = false;
+    var remaining = urls.length;
+    // O(n) 小清单请求；首个有效响应立即交给播放器，不等最慢 CDN。
+    for (final url in urls) {
+      unawaited(() async {
+        try {
+          final text = (await HttpClient.instance.getText(
+            url,
+            // 与原生播放器的清单 GET 保持一致，避免 CDN 返回不同缓存响应。
+            header: {"user-agent": HYSDK_UA, "Range": "bytes=0-"},
+            cancel: cancel,
+          )).trimLeft();
+          final hasSegments = text.contains('#EXTINF:') ||
+              text.contains('#EXT-X-STREAM-INF:');
+          final hasUri = text.split('\n').any((line) =>
+              line.trim().isNotEmpty && !line.trimLeft().startsWith('#'));
+          if (text.startsWith('#EXTM3U') && hasSegments && hasUri) {
+            if (!selected.isCompleted) selected.complete(url);
+          } else {
+            rejected.add(url);
+          }
+        } catch (e) {
+          if (e is CoreError && (e.statusCode == 401 || e.statusCode == 403)) {
+            permissionDenied = true;
+          }
+          rejected.add(url);
+        } finally {
+          if (--remaining == 0 && !selected.isCompleted) selected.complete(null);
+        }
+      }());
+    }
+    String? winner;
+    try {
+      // 失效线路不再逐条占用播放器的 15 秒起播看门狗。
+      winner = await selected.future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
+    } finally {
+      cancel.cancel('HLS selection finished');
+    }
+    if (winner == null) {
+      throw StateError(permissionDenied
+          ? '平台拒绝此画质，可能需要 VIP 播放权限，请切换 2K 或在官方客户端验证权限'
+          : '虎牙当前画质线路暂不可用，请切换画质或重试');
+    }
     return LivePlayUrl(
-      urls: ls,
+      urls: [winner, ...urls.where((url) => url != winner && !rejected.contains(url))],
       headers: {"user-agent": HYSDK_UA},
     );
   }
 
-  Future<String> getPlayUrl(HuyaLineModel line, int bitRate) async {
-    var antiCode = await getCndTokenInfoEx(line.streamName);
+  Future<String> getPlayUrl(
+    HuyaLineModel line,
+    int bitRate, {
+    int codec = 264,
+  }) async {
+    // 原生 FLV 鉴权用于持续连接，页面鉴权仅作为接口不可用时的后备。
+    var antiCode = line.lineType == HuyaLineType.hls
+        ? line.hlsAntiCode
+        : line.flvAntiCode;
+    if (line.lineType == HuyaLineType.flv) {
+      try {
+        final token = await _getPlaybackToken(line.streamName);
+        if (token.isNotEmpty) antiCode = token;
+      } catch (e) {
+        CoreLog.error('虎牙原生鉴权失败，使用页面后备：${e.runtimeType}');
+      }
+    }
+    if (antiCode.isEmpty) {
+      throw StateError('虎牙当前线路缺少播放鉴权');
+    }
     antiCode = buildAntiCode(line.streamName, line.presenterUid, antiCode);
-    var url = '${line.line}/${line.streamName}.flv?${antiCode}&codec=264';
+    var extension = line.lineType == HuyaLineType.hls ? 'm3u8' : 'flv';
+    // 4K 等 HEVC 档位没有对应的 AVC 流，必须使用平台声明的编码。
+    // 部分 HEVC CDN 的明文 HTTP 地址不能起播，使用同源 HTTPS。
+    final base = codec == 265
+        ? line.line.replaceFirst(RegExp(r'^http:'), 'https:')
+        : line.line;
+    var url = '$base/${line.streamName}.$extension?$antiCode&codec=$codec';
     if (bitRate > 0) {
       url += "&ratio=$bitRate";
     }
     return url;
+  }
+
+  // 只共享正在进行的请求，后续恢复重新取得凭据，不永久缓存过期令牌。
+  Future<String> _getPlaybackToken(String stream) async {
+    final pending = _tokenRequests[stream];
+    if (pending != null) return pending;
+    final request = getCndTokenInfoEx(
+      stream,
+    ).timeout(const Duration(seconds: 8));
+    _tokenRequests[stream] = request;
+    try {
+      return await request;
+    } finally {
+      if (identical(_tokenRequests[stream], request)) {
+        _tokenRequests.remove(stream);
+      }
+    }
   }
 
   // 构造 anticode, python转写
@@ -246,13 +345,14 @@ class HuyaSite implements LiveSite {
     }
 
     var ctype = mapAnti["ctype"]?.first ?? "huya_pc_exe";
-    var platformId = int.tryParse(mapAnti["t"]?.first ?? "0");
+    var platformId = int.tryParse(mapAnti["t"]?.first ?? "100") ?? 100;
 
     bool isWap = platformId == 103;
     var clacStartTime = DateTime.now().millisecondsSinceEpoch;
 
     CoreLog.i(
-        "using $presenterUid | ctype-{$ctype} | platformId - {$platformId} | isWap - {$isWap} | $clacStartTime");
+      "using $presenterUid | ctype-{$ctype} | platformId - {$platformId} | isWap - {$isWap} | $clacStartTime",
+    );
 
     var seqId = presenterUid + clacStartTime;
     final secretHash =
@@ -285,10 +385,7 @@ class HuyaSite implements LiveSite {
       't': platformId,
     };
     if (isWap) {
-      antiCodeRes.addAll({
-        'uid': presenterUid,
-        'uuid': uuid,
-      });
+      antiCodeRes.addAll({'uid': presenterUid, 'uuid': uuid});
     } else {
       antiCodeRes['u'] = convertUid;
     }
@@ -316,7 +413,7 @@ class HuyaSite implements LiveSite {
         "m": "LiveList",
         "do": "getLiveListByPage",
         "tagAll": 0,
-        "page": page
+        "page": page,
       },
     );
     var result = json.decode(resultText);
@@ -345,8 +442,202 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
+  Future<LiveRoomDetail> getRoomDetail({required String roomId}) =>
+      _roomRequests.run(roomId, () => _loadRoomDetail(roomId));
+
+  final _roomRequests = InFlightRequests<LiveRoomDetail>();
+
+  @override
+  Future<LiveRoomDetail> refreshRoomDetail({required String roomId}) {
+    _roomRequests.invalidate(roomId);
+    return getRoomDetail(roomId: roomId);
+  }
+
+  Future<LiveRoomDetail> _loadRoomDetail(String roomId) async {
+    try {
+      return await _getRoomDetailViaApi(roomId);
+    } catch (e) {
+      // 接口字段变化或风控时退回页面解析，保证功能不中断。
+      CoreLog.d('虎牙 JSON 详情失败，回退页面解析：${e.runtimeType}');
+      return _getRoomDetailViaHtml(roomId);
+    }
+  }
+
+  /// 走 mp.huya.com 的 JSON 接口：17KB / ~0.3s，
+  /// 比拉 m.huya.com 整个 HTML（59KB / ~0.6s）再正则解析快一半。
+  Future<Map> _getProfileRoom(String roomId) async {
+    final result = await HttpClient.instance.getJson(
+      "https://mp.huya.com/cache.php",
+      queryParameters: {
+        "m": "Live",
+        "do": "profileRoom",
+        "roomid": roomId,
+        "showSecret": "1",
+      },
+      header: {
+        "user-agent": kUserAgent,
+        "referer": "https://www.huya.com/$roomId",
+      },
+    );
+    final data = result["data"];
+    if (data is! Map) throw StateError('虎牙接口未返回房间数据');
+    return data;
+  }
+
+  Future<LiveRoomDetail> _getRoomDetailViaApi(String roomId) async {
+    final data = await _getProfileRoom(roomId);
+    final live = (data["liveData"] as Map?) ?? const {};
+    final profile = (data["profileInfo"] as Map?) ?? const {};
+    final stream = (data["stream"] as Map?) ?? const {};
+    final isLive = data["liveStatus"]?.toString() == "ON";
+
+    if (!isLive) {
+      return LiveRoomDetail(
+        roomId: live["profileRoom"]?.toString() ?? roomId,
+        title:
+            live["introduction"]?.toString() ??
+            live["roomName"]?.toString() ??
+            '',
+        cover: live["screenshot"]?.toString() ?? '',
+        userName: profile["nick"]?.toString() ?? '',
+        userAvatar: profile["avatar180"]?.toString() ?? '',
+        online: 0,
+        status: false,
+        url: 'https://www.huya.com/$roomId',
+        categoryId: live["gameId"]?.toString(),
+        categoryName: firstCategoryName([
+          live["gameFullName"],
+          live["gameHostName"],
+        ]),
+      );
+    }
+
+    final streamList = (stream["baseSteamInfoList"] as List?) ?? const [];
+    final lines = <HuyaLineModel>[];
+    for (final item in streamList) {
+      if (item is! Map) continue;
+      final flvUrl = item["sFlvUrl"]?.toString() ?? "";
+      final streamName = item["sStreamName"]?.toString() ?? "";
+      if (flvUrl.isEmpty || streamName.isEmpty) continue;
+      lines.add(
+        HuyaLineModel(
+          line: flvUrl,
+          lineType: HuyaLineType.flv,
+          flvAntiCode: item["sFlvAntiCode"]?.toString() ?? "",
+          hlsAntiCode: item["sHlsAntiCode"]?.toString() ?? "",
+          streamName: streamName,
+          cdnType: item["sCdnType"]?.toString() ?? "",
+          presenterUid: item["lPresenterUid"] ?? 0,
+        ),
+      );
+    }
+    // 保留 FLV 优先顺序，追加 HLS 作为断流后的备用运输方式。
+    for (final item in streamList) {
+      if (item is! Map) continue;
+      final hlsUrl = item["sHlsUrl"]?.toString() ?? "";
+      final hlsAntiCode = item["sHlsAntiCode"]?.toString() ?? "";
+      final streamName = item["sStreamName"]?.toString() ?? "";
+      if (hlsUrl.isEmpty || hlsAntiCode.isEmpty || streamName.isEmpty) {
+        continue;
+      }
+      lines.add(
+        HuyaLineModel(
+          line: hlsUrl,
+          lineType: HuyaLineType.hls,
+          flvAntiCode: item["sFlvAntiCode"]?.toString() ?? "",
+          hlsAntiCode: hlsAntiCode,
+          streamName: streamName,
+          cdnType: item["sCdnType"]?.toString() ?? "",
+          presenterUid: item["lPresenterUid"] ?? 0,
+        ),
+      );
+    }
+    if (lines.isEmpty) throw StateError('虎牙接口未返回可用线路');
+
+    final bitRates = <HuyaBitRateModel>[];
+    final rawRates = live["bitRateInfo"];
+    if (rawRates is String && rawRates.isNotEmpty) {
+      for (final item in json.decode(rawRates) as List) {
+        if (item is! Map) continue;
+        final name = item["sDisplayName"]?.toString() ?? "";
+        if (name.isEmpty || name.contains("HDR")) continue;
+        bitRates.add(
+          HuyaBitRateModel(
+            bitRate: item["iBitRate"] ?? 0,
+            name: name,
+            codecType: item["iCodecType"] ?? 0,
+            frameRate: metadataFrameRate(item),
+          ),
+        );
+      }
+    }
+
+    final firstLine = streamList.isNotEmpty && streamList.first is Map
+        ? streamList.first as Map
+        : const {};
+
+    return LiveRoomDetail(
+      categoryId: live["gameId"]?.toString(),
+      categoryName: firstCategoryName([
+        live["gameFullName"],
+        live["gameHostName"],
+      ]),
+      cover: live["screenshot"]?.toString() ?? '',
+      online: live["userCount"] ?? 0,
+      roomId: live["profileRoom"]?.toString() ?? roomId,
+      title:
+          live["introduction"]?.toString() ??
+          live["roomName"]?.toString() ??
+          '',
+      userName: profile["nick"]?.toString() ?? '',
+      userAvatar: profile["avatar180"]?.toString() ?? '',
+      introduction: live["introduction"]?.toString() ?? '',
+      notice: data["welcomeText"]?.toString() ?? '',
+      status: true,
+      data: HuyaUrlDataModel(
+        url: '',
+        lines: lines,
+        bitRates: bitRates,
+        uid: getUid(t: 13, e: 10),
+      ),
+      danmakuData: HuyaDanmakuArgs(
+        ayyuid: live["yyid"] ?? profile["yyid"] ?? 0,
+        topSid: firstLine["lChannelId"] ?? 0,
+        subSid: firstLine["lSubChannelId"] ?? 0,
+      ),
+      url: "https://www.huya.com/$roomId",
+    );
+  }
+
+  Future<LiveRoomDetail> _getRoomDetailViaHtml(String roomId) async {
     var roomInfo = await _getRoomInfo(roomId);
+    final status = int.tryParse(
+      roomInfo['roomInfo']['eLiveStatus']?.toString() ?? '',
+    );
+    if (status == null) throw StateError('虎牙房间未返回直播状态');
+    if (status != 2) {
+      // Stream info and liveLineUrl are commonly absent after shutdown.
+      final live = roomInfo['roomInfo']['tLiveInfo'];
+      final profile = roomInfo['roomInfo']['tProfileInfo'];
+      return LiveRoomDetail(
+        roomId: live?['lProfileRoom']?.toString() ?? roomId,
+        title:
+            live?['sIntroduction']?.toString() ??
+            live?['sRoomName']?.toString() ??
+            '',
+        cover: live?['sScreenshot']?.toString() ?? '',
+        userName: profile?['sNick']?.toString() ?? '',
+        userAvatar: profile?['sAvatar180']?.toString() ?? '',
+        online: 0,
+        status: false,
+        url: 'https://www.huya.com/$roomId',
+        categoryId: live?['iGameId']?.toString(),
+        categoryName: firstCategoryName([
+          live?['sGameFullName'],
+          live?['sGameName'],
+        ]),
+      );
+    }
     var tLiveInfo = roomInfo["roomInfo"]["tLiveInfo"];
     var tProfileInfo = roomInfo["roomInfo"]["tProfileInfo"];
 
@@ -360,16 +651,36 @@ class HuyaSite implements LiveSite {
     var lines = tLiveInfo["tLiveStreamInfo"]["vStreamInfo"]["value"];
     for (var item in lines) {
       if ((item["sFlvUrl"]?.toString() ?? "").isNotEmpty) {
-        huyaLines.add(HuyaLineModel(
-          line: item["sFlvUrl"].toString(),
-          lineType: HuyaLineType.flv,
-          flvAntiCode: item["sFlvAntiCode"].toString(),
+        huyaLines.add(
+          HuyaLineModel(
+            line: item["sFlvUrl"].toString(),
+            lineType: HuyaLineType.flv,
+            flvAntiCode: item["sFlvAntiCode"]?.toString() ?? "",
+            hlsAntiCode: item["sHlsAntiCode"]?.toString() ?? "",
+            streamName: item["sStreamName"].toString(),
+            cdnType: item["sCdnType"].toString(),
+            presenterUid: item["lPresenterUid"] ?? roomInfo["topSid"] ?? 0,
+          ),
+        );
+      }
+    }
+    // 保留 FLV 优先顺序，追加页面提供的 HLS 作为断流后的备用运输方式。
+    for (var item in lines) {
+      if ((item["sHlsUrl"]?.toString() ?? "").isEmpty ||
+          (item["sHlsAntiCode"]?.toString() ?? "").isEmpty) {
+        continue;
+      }
+      huyaLines.add(
+        HuyaLineModel(
+          line: item["sHlsUrl"].toString(),
+          lineType: HuyaLineType.hls,
+          flvAntiCode: item["sFlvAntiCode"]?.toString() ?? "",
           hlsAntiCode: item["sHlsAntiCode"].toString(),
           streamName: item["sStreamName"].toString(),
           cdnType: item["sCdnType"].toString(),
-          presenterUid: roomInfo["topSid"]??0,
-        ));
-      }
+          presenterUid: item["lPresenterUid"] ?? roomInfo["topSid"] ?? 0,
+        ),
+      );
     }
 
     //清晰度
@@ -379,16 +690,25 @@ class HuyaSite implements LiveSite {
       if (name.contains("HDR")) {
         continue;
       }
-      huyaBiterates.add(HuyaBitRateModel(
-        bitRate: item["iBitRate"],
-        name: name,
-      ));
+      huyaBiterates.add(
+        HuyaBitRateModel(
+          bitRate: item["iBitRate"],
+          name: name,
+          codecType: item["iCodecType"] ?? 0,
+          frameRate: metadataFrameRate(item),
+        ),
+      );
     }
 
     var topSid = roomInfo["topSid"];
     var subSid = roomInfo["subSid"];
 
     return LiveRoomDetail(
+      categoryId: tLiveInfo["iGameId"]?.toString(),
+      categoryName: firstCategoryName([
+        tLiveInfo['sGameFullName'],
+        tLiveInfo['sGameName'],
+      ]),
       cover: tLiveInfo["sScreenshot"].toString(),
       online: tLiveInfo["lTotalCount"],
       roomId: tLiveInfo["lProfileRoom"].toString(),
@@ -397,7 +717,7 @@ class HuyaSite implements LiveSite {
       userAvatar: tProfileInfo["sAvatar180"].toString(),
       introduction: tLiveInfo["sIntroduction"].toString(),
       notice: roomInfo["welcomeText"].toString(),
-      status: roomInfo["roomInfo"]["eLiveStatus"] == 2,
+      status: status == 2,
       data: HuyaUrlDataModel(
         url:
             "https:${utf8.decode(base64.decode(roomInfo["roomProfile"]["liveLineUrl"].toString()))}",
@@ -418,15 +738,12 @@ class HuyaSite implements LiveSite {
     var resultText = await HttpClient.instance.getText(
       "https://m.huya.com/$roomId",
       queryParameters: {},
-      header: {
-        "user-agent": kUserAgent,
-      },
+      header: {"user-agent": kUserAgent},
     );
     var text = RegExp(
-            r"window\.HNF_GLOBAL_INIT.=.\{[\s\S]*?\}[\s\S]*?</script>",
-            multiLine: false)
-        .firstMatch(resultText)
-        ?.group(0);
+      r"window\.HNF_GLOBAL_INIT.=.\{[\s\S]*?\}[\s\S]*?</script>",
+      multiLine: false,
+    ).firstMatch(resultText)?.group(0);
     var jsonText = text!
         .replaceAll(RegExp(r"window\.HNF_GLOBAL_INIT.=."), '')
         .replaceAll("</script>", "")
@@ -436,19 +753,22 @@ class HuyaSite implements LiveSite {
 
     var jsonObj = json.decode(jsonText);
     var topSid = int.tryParse(
-        RegExp(r'lChannelId":([0-9]+)').firstMatch(resultText)?.group(1) ??
-            "0");
+      RegExp(r'lChannelId":([0-9]+)').firstMatch(resultText)?.group(1) ?? "0",
+    );
     var subSid = int.tryParse(
-        RegExp(r'lSubChannelId":([0-9]+)').firstMatch(resultText)?.group(1) ??
-            "0");
+      RegExp(r'lSubChannelId":([0-9]+)').firstMatch(resultText)?.group(1) ??
+          "0",
+    );
     jsonObj["topSid"] = topSid;
     jsonObj["subSid"] = subSid;
     return jsonObj;
   }
 
   @override
-  Future<LiveSearchRoomResult> searchRooms(String keyword,
-      {int page = 1}) async {
+  Future<LiveSearchRoomResult> searchRooms(
+    String keyword, {
+    int page = 1,
+  }) async {
     var resultText = await HttpClient.instance.getJson(
       "https://search.cdn.huya.com/",
       queryParameters: {
@@ -490,8 +810,10 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchAnchorResult> searchAnchors(String keyword,
-      {int page = 1}) async {
+  Future<LiveSearchAnchorResult> searchAnchors(
+    String keyword, {
+    int page = 1,
+  }) async {
     var resultText = await HttpClient.instance.getJson(
       "https://search.cdn.huya.com/",
       queryParameters: {
@@ -522,9 +844,113 @@ class HuyaSite implements LiveSite {
   }
 
   @override
+  bool get supportsFollowStatusBatch => false;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async =>
+      const {};
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != HuyaSite) {
+      final isLive = await getLiveStatus(roomId: roomId);
+      return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+    }
+    try {
+      final room = await _getProfileRoom(roomId)
+          .timeout(const Duration(seconds: 4));
+      final liveStatus = room['liveStatus']?.toString();
+      if (liveStatus == 'ON' || liveStatus == 'OFF') {
+        final isLive = liveStatus == 'ON';
+        final live = (room['liveData'] as Map?) ?? const {};
+        final resolved = live['profileRoom']?.toString().trim();
+        final onlineVal =
+            int.tryParse('${live['userCount'] ?? live['totalCount'] ?? ''}') ??
+                0;
+        final rawStart = live['startTime']?.toString().trim();
+        final showTime = isLive &&
+                rawStart != null &&
+                RegExp(r'^[1-9]\d*$').hasMatch(rawStart)
+            ? rawStart
+            : null;
+        final intro = live['introduction']?.toString() ?? '';
+        final title = intro.isNotEmpty ? intro : live['roomName']?.toString();
+        return LiveFollowStatus(
+          isLive: isLive,
+          resolvedRoomId:
+              resolved != null && resolved.isNotEmpty ? resolved : null,
+          online: isLive && onlineVal > 0 ? onlineVal : null,
+          categoryName: firstCategoryName([
+            live['gameFullName'],
+            live['gameHostName'],
+          ]),
+          showTime: showTime,
+          title: title,
+          needsDetailFallback: false,
+        );
+      }
+    } catch (error) {
+      CoreLog.error(error);
+    }
+
+    final room = await _getRoomInfo(roomId);
+    final roomInfo = room['roomInfo'] is Map ? room['roomInfo'] as Map : null;
+    final status = int.tryParse('${roomInfo?["eLiveStatus"]}');
+    if (status == null) throw StateError('虎牙房间未返回直播状态');
+    final isLive = status == 2;
+    final tLiveInfo =
+        roomInfo?['tLiveInfo'] is Map ? roomInfo!['tLiveInfo'] as Map : null;
+    final tProfileInfo = roomInfo?['tProfileInfo'] is Map
+        ? roomInfo!['tProfileInfo'] as Map
+        : null;
+    final resolved =
+        (tLiveInfo?['lProfileRoom'] ?? tProfileInfo?['lProfileRoom'])
+            ?.toString()
+            .trim();
+    final onlineVal = int.tryParse('${tLiveInfo?['lTotalCount'] ?? ''}') ?? 0;
+    final rawStart = tLiveInfo?['lStartTime']?.toString().trim();
+    final showTime = isLive &&
+            rawStart != null &&
+            RegExp(r'^[1-9]\d*$').hasMatch(rawStart)
+        ? rawStart
+        : null;
+    final intro = tLiveInfo?['sIntroduction']?.toString() ?? '';
+    final title = intro.isNotEmpty ? intro : tLiveInfo?['sRoomName']?.toString();
+    return LiveFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: resolved != null && resolved.isNotEmpty ? resolved : null,
+      online: isLive && onlineVal > 0 ? onlineVal : null,
+      categoryName: firstCategoryName([
+        tLiveInfo?['sGameFullName'],
+        tLiveInfo?['sGameName'],
+        tLiveInfo?['sGameHostName'],
+      ]),
+      showTime: showTime,
+      title: title,
+      needsDetailFallback: false,
+    );
+  }
+
+  @override
   Future<bool> getLiveStatus({required String roomId}) async {
-    var roomInfo = await _getRoomInfo(roomId);
-    return roomInfo["roomInfo"]["eLiveStatus"] == 2;
+    try {
+      final room = await _getProfileRoom(roomId)
+          .timeout(const Duration(seconds: 3));
+      switch (room['liveStatus']) {
+        case 'ON':
+          return true;
+        case 'OFF':
+          return false;
+      }
+    } catch (error) {
+      CoreLog.error(error);
+    }
+    final room = await _getRoomInfo(roomId);
+    final status = int.tryParse('${room["roomInfo"]?["eLiveStatus"]}');
+    if (status == null) throw StateError('虎牙房间未返回直播状态');
+    return status == 2;
   }
 
   /// 匿名登录获取uid
@@ -536,11 +962,9 @@ class HuyaSite implements LiveSite {
         "byPass": 3,
         "context": "",
         "version": "2.4",
-        "data": {}
+        "data": {},
       },
-      header: {
-        "user-agent": kUserAgent,
-      },
+      header: {"user-agent": kUserAgent},
     );
     return result["data"]["uid"].toString();
   }
@@ -634,35 +1058,41 @@ class HuyaSite implements LiveSite {
         .convert(utf8.encode('$seqId|${query["ctype"]}|${query["t"]}'))
         .toString();
     final wsSecret = md5
-        .convert(utf8.encode(
-            '${wsSecretPrefix}_${uid}_${streamname}_${wsSecretHash}_$wsTime'))
+        .convert(
+          utf8.encode(
+            '${wsSecretPrefix}_${uid}_${streamname}_${wsSecretHash}_$wsTime',
+          ),
+        )
         .toString();
 
-    return Uri(queryParameters: {
-      "wsSecret": wsSecret,
-      "wsTime": wsTime,
-      "seqid": seqId,
-      "ctype": query["ctype"]!,
-      "ver": "1",
-      "fs": query["fs"]!,
-      // "sphdcdn": query["sphdcdn"] ?? "",
-      // "sphdDC": query["sphdDC"] ?? "",
-      // "sphd": query["sphd"] ?? "",
-      // "exsphd": query["exsphd"] ?? "",
-      "dMod": "mseh-0",
-      "sdkPcdn": "1_1",
-      "uid": uid,
-      "uuid": getUUid(),
-      "t": query["t"]!,
-      "sv": "202411221719",
-      "sdk_sid": "1732862566708",
-      "a_block": "0"
-    }).query;
+    return Uri(
+      queryParameters: {
+        "wsSecret": wsSecret,
+        "wsTime": wsTime,
+        "seqid": seqId,
+        "ctype": query["ctype"]!,
+        "ver": "1",
+        "fs": query["fs"]!,
+        // "sphdcdn": query["sphdcdn"] ?? "",
+        // "sphdDC": query["sphdDC"] ?? "",
+        // "sphd": query["sphd"] ?? "",
+        // "exsphd": query["exsphd"] ?? "",
+        "dMod": "mseh-0",
+        "sdkPcdn": "1_1",
+        "uid": uid,
+        "uuid": getUUid(),
+        "t": query["t"]!,
+        "sv": "202411221719",
+        "sdk_sid": "1732862566708",
+        "a_block": "0",
+      },
+    ).query;
   }
 
   @override
-  Future<List<LiveSuperChatMessage>> getSuperChatMessage(
-      {required String roomId}) {
+  Future<List<LiveSuperChatMessage>> getSuperChatMessage({
+    required String roomId,
+  }) {
     //尚不支持
     return Future.value([]);
   }
@@ -692,10 +1122,7 @@ class HuyaUrlDataModel {
   }
 }
 
-enum HuyaLineType {
-  flv,
-  hls,
-}
+enum HuyaLineType { flv, hls }
 
 class HuyaLineModel {
   final String line;
@@ -735,10 +1162,14 @@ class HuyaLineModel {
 class HuyaBitRateModel {
   final String name;
   final int bitRate;
+  final int codecType;
+  final double? frameRate;
 
   HuyaBitRateModel({
     required this.bitRate,
     required this.name,
+    this.codecType = 0,
+    this.frameRate,
   });
 
   @override
@@ -746,6 +1177,7 @@ class HuyaBitRateModel {
     return json.encode({
       "name": name,
       "bitRate": bitRate,
+      "codecType": codecType,
     });
   }
 }

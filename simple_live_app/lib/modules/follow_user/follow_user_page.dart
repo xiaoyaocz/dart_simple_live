@@ -1,20 +1,145 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyrefresh/easy_refresh.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
+import 'package:simple_live_app/modules/follow_user/follow_category_name.dart';
+import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
-import 'package:simple_live_app/widgets/page_grid_view.dart';
+import 'package:simple_live_app/widgets/status/app_empty_widget.dart';
+import 'package:simple_live_app/widgets/status/app_error_widget.dart';
 
-class FollowUserPage extends GetView<FollowUserController> {
+class FollowUserPage extends StatefulWidget {
   const FollowUserPage({Key? key}) : super(key: key);
+
+  @override
+  State<FollowUserPage> createState() => _FollowUserPageState();
+}
+
+class _FollowUserPageState extends State<FollowUserPage>
+    with SingleTickerProviderStateMixin {
+  FollowUserController get controller => Get.find<FollowUserController>();
+  late final AnimationController _filterFade =
+      AnimationController(vsync: this, value: 1);
+  FollowUserTag? _targetFilter;
+  double _horizontalDistance = 0;
+  int _filterChange = 0;
+  Worker? _navigationWorker;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.restoreDefaultFilter();
+    // 主导航缓存页面；返回关注页时也恢复默认，而非沿用临时筛选。
+    if (Get.isRegistered<IndexedController>()) {
+      final navigation = Get.find<IndexedController>();
+      _navigationWorker = ever<int>(navigation.index, (index) {
+        if (index >= 0 &&
+            index < navigation.items.length &&
+            navigation.items[index].index == 1) {
+          _filterChange++;
+          _targetFilter = null;
+          _filterFade.value = 1;
+          controller.restoreDefaultFilter();
+        }
+      });
+    }
+  }
+
+  Future<void> _showDefaultFilterMenu(
+      FollowUserTag option, Offset position) async {
+    final overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final local = overlay.globalToLocal(position);
+    final isDefault = controller.defaultFilterId.value == option.id;
+    final selected = await showMenu<bool>(
+      context: context,
+      position: RelativeRect.fromRect(
+          Rect.fromLTWH(local.dx, local.dy, 0, 0), Offset.zero & overlay.size),
+      items: [
+        CheckedPopupMenuItem<bool>(
+          value: true,
+          checked: isDefault,
+          enabled: !isDefault,
+          child: Text(isDefault ? '当前默认显示' : '设为默认显示'),
+        ),
+      ],
+    );
+    if (selected != true || !mounted) return;
+    try {
+      await controller.setDefaultFilter(option);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('默认显示设置失败，请重试')));
+    }
+  }
+
+  bool get _mobile => defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+
+  Future<void> _selectFilter(FollowUserTag option) async {
+    if (!_mobile) {
+      controller.setFilterMode(option);
+      return;
+    }
+    if ((_targetFilter ?? controller.filterMode.value).id == option.id) return;
+    _targetFilter = option;
+    final change = ++_filterChange;
+    try {
+      await _filterFade.animateTo(0,
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut).orCancel;
+      if (!mounted || change != _filterChange) return;
+      controller.setFilterMode(option);
+      await _filterFade.animateTo(1,
+          duration: const Duration(milliseconds: 130),
+          curve: Curves.easeIn).orCancel;
+      if (mounted && change == _filterChange) _targetFilter = null;
+    } on TickerCanceled {
+      // 新的切换或页面退出会取消旧动画，旧回调不再更新筛选。
+    }
+  }
+
+  Widget _buildFilterContent(BuildContext context, int count) {
+    final list = _buildFollowList(context, count);
+    if (!_mobile) return list;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: (_) => _horizontalDistance = 0,
+      onHorizontalDragUpdate: (details) =>
+          _horizontalDistance += details.primaryDelta ?? 0,
+      onHorizontalDragEnd: (_) {
+        if (_horizontalDistance.abs() < 48) return;
+        final index = controller.tagList.indexWhere((tag) =>
+            tag.id == (_targetFilter ?? controller.filterMode.value).id);
+        if (index < 0 || index > 2) return;
+        final next = index + (_horizontalDistance < 0 ? 1 : -1);
+        if (next >= 0 && next <= 2) _selectFilter(controller.tagList[next]);
+      },
+      child: FadeTransition(opacity: _filterFade, child: list),
+    );
+  }
+
+  @override
+  void dispose() {
+    _navigationWorker?.dispose();
+    _filterFade.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +149,14 @@ class FollowUserPage extends GetView<FollowUserController> {
       appBar: AppBar(
         title: const Text("关注用户"),
         actions: [
+          if (Platform.isWindows)
+            IconButton(
+              tooltip: '多画面同屏',
+              onPressed: () {
+                Get.toNamed(RoutePath.kMultiView);
+              },
+              icon: const Icon(Icons.grid_view_outlined),
+            ),
           PopupMenuButton(
             itemBuilder: (context) {
               return const [
@@ -133,12 +266,25 @@ class FollowUserPage extends GetView<FollowUserController> {
                       child: Wrap(
                           spacing: 12,
                           children: controller.tagList.map((option) {
-                            return FilterButton(
+                            final button = FilterButton(
                               text: option.tag,
                               selected: controller.filterMode.value == option,
                               onTap: () {
-                                controller.setFilterMode(option);
+                                _selectFilter(option);
                               },
+                            );
+                            if (!controller.tagList.take(3).contains(option)) {
+                              return button;
+                            }
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onSecondaryTapUp: (details) =>
+                                  _showDefaultFilterMenu(
+                                      option, details.globalPosition),
+                              onLongPressStart: (details) =>
+                                  _showDefaultFilterMenu(
+                                      option, details.globalPosition),
+                              child: button,
                             );
                           }).toList()),
                     ),
@@ -148,33 +294,109 @@ class FollowUserPage extends GetView<FollowUserController> {
             ),
           ),
           Expanded(
-            child: PageGridView(
-              crossAxisSpacing: 12,
-              crossAxisCount: count,
-              pageController: controller,
-              firstRefresh: true,
-              showPCRefreshButton: false,
-              itemBuilder: (_, i) {
-                var item = controller.list[i];
-                var site = Sites.allSites[item.siteId]!;
-                return FollowUserItem(
-                  item: item,
-                  onRemove: () {
-                    controller.removeItem(item);
-                  },
-                  onTap: () {
-                    AppNavigator.toLiveRoomDetail(
-                        site: site, roomId: item.roomId);
-                  },
-                  onLongPress: () {
-                    setFollowTagDialog(item);
-                  },
-                );
-              },
-            ),
+            child: _buildFilterContent(context, count),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFollowList(BuildContext context, int count) {
+    return Obx(() {
+      // controller.list 已由原有筛选逻辑过滤；按首次出现顺序分组。
+      final groups = <String, List<FollowUser>>{};
+      for (final item in controller.list) {
+        final name = normalizeFollowCategory(item.categoryName);
+        groups.putIfAbsent(name, () => []).add(item);
+      }
+      return Stack(
+        children: [
+          EasyRefresh(
+            header: MaterialHeader(
+              completeDuration: const Duration(milliseconds: 400),
+            ),
+            scrollController: controller.scrollController,
+            controller: controller.easyRefreshController,
+            firstRefresh: true,
+            onRefresh: controller.refreshData,
+            child: CustomScrollView(
+              slivers: [
+                for (final group in controller.sortCategoryGroups(groups))
+                  SliverToBoxAdapter(
+                    key: ValueKey(group.key),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: AppStyle.edgeInsetsV8.copyWith(left: 16),
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${group.key} ${group.value.length}人',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        LayoutBuilder(builder: (_, constraints) {
+                          final width =
+                              (constraints.maxWidth - 12 * (count - 1)) / count;
+                          return Wrap(
+                            spacing: 12,
+                            children: [
+                              for (final item in controller.sortCategoryMembers(
+                                  group.value,
+                                  AppSettingsController.instance.siteSort.toList()))
+                                SizedBox(
+                                  key: ValueKey(item.id),
+                                  width: width,
+                                  child: _buildFollowItem(item),
+                                ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Offstage(
+            offstage: !controller.pageEmpty.value,
+            child: controller.filterMode.value.tag != '全部' &&
+                    !FollowService.instance.updating.value &&
+                    FollowService.instance.followList.any((item) => item.liveStatus.value == 0)
+                ? AppErrorWidget(
+                    errorMsg: '关注记录仍在，直播状态暂未获取，请重试或切换“全部”',
+                    onRefresh: () => controller.refreshData())
+                : AppEmptyWidget(onRefresh: () => controller.refreshData()),
+          ),
+          Offstage(
+            offstage: !controller.pageError.value,
+            child: AppErrorWidget(
+              errorMsg: controller.errorMsg.value,
+              onRefresh: () => controller.refreshData(),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildFollowItem(FollowUser item) {
+    final site = Sites.allSites[item.siteId]!;
+    return FollowUserItem(
+      item: item,
+      onRemove: () {
+        controller.removeItem(item, confirm: false);
+      },
+      onTap: () {
+        AppNavigator.toLiveRoomDetail(site: site, roomId: item.roomId);
+      },
+      onLongPress: () {
+        setFollowTagDialog(item);
+      },
     );
   }
 

@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
+import 'package:simple_live_app/widgets/settings/window_material_settings.dart';
 
 class AppstyleSettingPage extends GetView<AppSettingsController> {
   const AppstyleSettingPage({Key? key}) : super(key: key);
@@ -17,6 +19,10 @@ class AppstyleSettingPage extends GetView<AppSettingsController> {
       body: ListView(
         padding: AppStyle.edgeInsetsA12,
         children: [
+          if (Platform.isWindows || Platform.isAndroid) ...[
+            const WindowMaterialSettings(),
+            AppStyle.vGap12,
+          ],
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 0),
             child: Text(

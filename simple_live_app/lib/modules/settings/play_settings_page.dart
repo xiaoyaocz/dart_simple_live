@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -14,6 +15,14 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
 
   @override
   Widget build(BuildContext context) {
+    final overridePlatform = debugDefaultTargetPlatformOverride;
+    final showWindowsEnhancements =
+        overridePlatform == TargetPlatform.windows ||
+            (overridePlatform == null && Platform.isWindows);
+    final showMobileEnhancements =
+        overridePlatform == TargetPlatform.android ||
+            overridePlatform == TargetPlatform.iOS ||
+            (overridePlatform == null && (Platform.isAndroid || Platform.isIOS));
     return Scaffold(
       appBar: AppBar(
         title: const Text("直播间设置"),
@@ -32,46 +41,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Obx(
-                  () => SettingsSwitch(
-                    title: "硬件解码",
-                    value: controller.hardwareDecode.value,
-                    subtitle: "播放失败可尝试关闭此选项",
-                    onChanged: (e) {
-                      controller.setHardwareDecode(e);
-                    },
-                  ),
-                ),
-                if (Platform.isAndroid) AppStyle.divider,
-                Obx(
-                  () => Visibility(
-                    visible: Platform.isAndroid,
-                    child: SettingsSwitch(
-                      title: "兼容模式",
-                      subtitle: "若播放卡顿可尝试打开此选项",
-                      value: controller.playerCompatMode.value,
-                      onChanged: (e) {
-                        controller.setPlayerCompatMode(e);
-                      },
-                    ),
-                  ),
-                ),
-                // AppStyle.divider,
-                // Obx(
-                //   () => SettingsNumber(
-                //     title: "缓冲区大小",
-                //     subtitle: "若播放卡顿可尝试调高此选项",
-                //     value: controller.playerBufferSize.value,
-                //     min: 32,
-                //     max: 1024,
-                //     step: 4,
-                //     unit: "MB",
-                //     onChanged: (e) {
-                //       controller.setPlayerBufferSize(e);
-                //     },
-                //   ),
-                // ),
-                AppStyle.divider,
                 Obx(
                   () => SettingsSwitch(
                     title: "进入后台自动暂停",
@@ -95,17 +64,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     },
                     onChanged: (e) {
                       controller.setScaleMode(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsSwitch(
-                    title: "使用HTTPS链接",
-                    subtitle: "将http链接替换为https",
-                    value: controller.playerForceHttps.value,
-                    onChanged: (e) {
-                      controller.setPlayerForceHttps(e);
                     },
                   ),
                 ),
@@ -161,48 +119,6 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
           Padding(
             padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
             child: Text(
-              "清晰度",
-              style: Get.textTheme.titleSmall,
-            ),
-          ),
-          SettingsCard(
-            child: Column(
-              children: [
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "默认清晰度",
-                    value: controller.qualityLevel.value,
-                    valueMap: const {
-                      0: "最低",
-                      1: "中等",
-                      2: "最高",
-                    },
-                    onChanged: (e) {
-                      controller.setQualityLevel(e);
-                    },
-                  ),
-                ),
-                AppStyle.divider,
-                Obx(
-                  () => SettingsMenu<int>(
-                    title: "数据网络清晰度",
-                    value: controller.qualityLevelCellular.value,
-                    valueMap: const {
-                      0: "最低",
-                      1: "中等",
-                      2: "最高",
-                    },
-                    onChanged: (e) {
-                      controller.setQualityLevelCellular(e);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
-            child: Text(
               "聊天区",
               style: Get.textTheme.titleSmall,
             ),
@@ -247,6 +163,82 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ],
             ),
           ),
+          if (showWindowsEnhancements) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "画质与音频增强",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+            SettingsCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "AI 超分增强（FSRCNNX）",
+                      subtitle: "1080p 放大到 2K/4K 时锐化细节；独显推荐，低配或想省电可关闭",
+                      value: controller.windowsSuperResolution.value,
+                      onChanged: controller.setWindowsSuperResolution,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "动态画面平滑（补帧）",
+                      subtitle: "mpv 时间域帧平滑（非 AI 光流）；高刷屏可按需开启，可能轻微增加延迟",
+                      value: controller.windowsInterpolation.value,
+                      onChanged: controller.setWindowsInterpolation,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "WASAPI 音频独占",
+                      subtitle: "绕过系统混音直出声卡；开启后播放直播时其他软件将静音，重进直播间生效",
+                      value: controller.windowsAudioExclusive.value,
+                      onChanged: controller.setWindowsAudioExclusive,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (showMobileEnhancements) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "画质与流畅增强",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+            SettingsCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "画面去色带（Deband）",
+                      subtitle: "消除直播暗部压缩色块与断层；GPU 开销极低，默认开启",
+                      value: controller.mobileDeband.value,
+                      onChanged: controller.setMobileDeband,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "高刷动态画面平滑（补帧）",
+                      subtitle:
+                          "mpv 时间域帧平滑（非 AI 光流）；90/120Hz 旗舰机可按需开启，可能轻微增加功耗与延迟",
+                      value: controller.mobileInterpolation.value,
+                      onChanged: controller.setMobileInterpolation,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

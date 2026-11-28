@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:remixicon/remixicon.dart';
@@ -20,6 +21,11 @@ class Utils {
   static DateFormat dateFormat = DateFormat("MM-dd HH:mm");
   static DateFormat dateFormatWithYear = DateFormat("yyyy-MM-dd HH:mm");
   static DateFormat timeFormat = DateFormat("HH:mm:ss");
+
+  static String playbackQualityLabel(String requested, String? actual) =>
+      actual == null || actual.isEmpty || actual == requested
+          ? requested
+          : '$requested（实播$actual）';
 
   /// 处理时间
   static String parseTime(DateTime? dt) {
@@ -53,33 +59,92 @@ class Utils {
     String cancel = '',
     bool selectable = false,
     List<Widget>? actions,
+    BoxConstraints? constraints,
+    double maxContentHeight = 400,
+    bool doubleTapConfirm = false,
   }) async {
-    var result = await Get.dialog(
-      AlertDialog(
-        title: Text(title),
-        content: Container(
-          constraints: const BoxConstraints(
-            maxHeight: 400,
-          ),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: AppStyle.edgeInsetsV12,
-              child: selectable ? SelectableText(content) : Text(content),
-            ),
+    PointerDownEvent? pointerDown;
+    PointerUpEvent? previousTap;
+    var confirmed = false;
+    void resetTaps(PointerEvent event) {
+      pointerDown = null;
+      previousTap = null;
+    }
+
+    final dialog = AlertDialog(
+      constraints: constraints,
+      title: Text(title),
+      content: Container(
+        constraints: BoxConstraints(maxHeight: maxContentHeight),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: AppStyle.edgeInsetsV12,
+            child: selectable ? SelectableText(content) : Text(content),
           ),
         ),
-        actions: [
-          ...?actions,
-          TextButton(
-            onPressed: (() => Get.back(result: false)),
-            child: Text(cancel.isEmpty ? "取消" : cancel),
-          ),
-          TextButton(
-            onPressed: (() => Get.back(result: true)),
-            child: Text(confirm.isEmpty ? "确定" : confirm),
-          ),
-        ],
       ),
+      actions:
+          [
+                ...?actions,
+                TextButton(
+                  onPressed: (() => Get.back(result: false)),
+                  child: Text(cancel.isEmpty ? "取消" : cancel),
+                ),
+                TextButton(
+                  onPressed: (() => Get.back(result: true)),
+                  child: Text(confirm.isEmpty ? "确定" : confirm),
+                ),
+              ]
+              .map(
+                (action) => doubleTapConfirm
+                    ? Listener(onPointerUp: resetTaps, child: action)
+                    : action,
+              )
+              .toList(),
+    );
+    var result = await Get.dialog(
+      doubleTapConfirm
+          // 使用原始指针事件，避免链接文字的双击选择手势抢走双击。
+          // deferToChild 保证仅弹窗卡片命中，遮罩不触发确认。
+          ? Listener(
+              onPointerDown: (event) {
+                if (event.buttons != kPrimaryButton) {
+                  resetTaps(event);
+                  return;
+                }
+                pointerDown = event;
+              },
+              onPointerMove: (event) {
+                if (pointerDown != null &&
+                    (event.position - pointerDown!.position).distance >
+                        kTouchSlop) {
+                  resetTaps(event);
+                }
+              },
+              onPointerCancel: resetTaps,
+              onPointerUp: (event) {
+                final down = pointerDown;
+                pointerDown = null;
+                if (confirmed ||
+                    down == null ||
+                    down.pointer != event.pointer ||
+                    event.timeStamp - down.timeStamp > kLongPressTimeout) {
+                  previousTap = null;
+                  return;
+                }
+                final previous = previousTap;
+                previousTap = event;
+                if (previous != null &&
+                    down.timeStamp - previous.timeStamp <= kDoubleTapTimeout &&
+                    (event.position - previous.position).distance <=
+                        kDoubleTapSlop) {
+                  confirmed = true;
+                  Get.back(result: true);
+                }
+              },
+              child: dialog,
+            )
+          : dialog,
     );
     return result ?? false;
   }
@@ -115,66 +180,119 @@ class Utils {
     double width = 320,
     bool useSystem = false,
   }) {
+    showSideDialog(
+      title: title,
+      onDismiss: onDismiss,
+      child: child,
+      width: width,
+      useSystem: useSystem,
+    );
+  }
+
+  static void showSideDialog({
+    String? title,
+    Function()? onDismiss,
+    required Widget child,
+    double width = 320,
+    double Function(BuildContext context)? widthBuilder,
+    bool fromLeft = false,
+    bool useSystem = false,
+    bool showHeader = true,
+    Color? maskColor,
+    double borderRadius = 4,
+    int? surfaceAlpha,
+  }) {
     SmartDialog.show(
-      alignment: Alignment.topRight,
+      alignment: fromLeft ? Alignment.topLeft : Alignment.topRight,
       animationBuilder: (controller, child, animationParam) {
-        //从右到左
         return SlideTransition(
           position: Tween<Offset>(
-            begin: const Offset(1, 0),
+            begin: fromLeft ? const Offset(-1, 0) : const Offset(1, 0),
             end: Offset.zero,
-          ).animate(controller.view),
+          ).animate(CurvedAnimation(
+            parent: controller.view,
+            curve: Curves.easeOutCubic,
+          )),
           child: child,
         );
       },
       useSystem: useSystem,
-      maskColor: Colors.transparent,
+      maskColor: maskColor ?? Colors.transparent,
+      onDismiss: onDismiss,
       animationTime: const Duration(milliseconds: 200),
-      builder: (context) => Container(
-        width: width + MediaQuery.of(context).padding.right,
-        padding: EdgeInsets.only(right: MediaQuery.of(context).padding.right),
-        decoration: BoxDecoration(
-          color: Get.theme.cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(4),
-            bottomLeft: Radius.circular(4),
+      builder: (context) {
+        final mediaPadding = MediaQuery.paddingOf(context);
+        final edgeInset = fromLeft ? mediaPadding.left : mediaPadding.right;
+        final contentWidth = widthBuilder?.call(context) ?? width;
+        final theme = Theme.of(context);
+        final borderSide = BorderSide(
+          color: theme.dividerColor.withAlpha(36),
+          width: 0.8,
+        );
+        final cardSurface = surfaceAlpha != null
+            ? theme.cardColor.withAlpha(surfaceAlpha)
+            : theme.cardColor;
+        return Container(
+          width: contentWidth + edgeInset,
+          padding: EdgeInsets.only(
+            left: fromLeft ? edgeInset : 0,
+            right: fromLeft ? 0 : edgeInset,
           ),
-        ),
-        child: SafeArea(
-          left: false,
-          right: false,
-          child: MediaQuery(
-            data: const MediaQueryData(padding: EdgeInsets.zero),
-            child: Column(
-              children: [
-                ListTile(
-                  visualDensity: VisualDensity.compact,
-                  contentPadding: EdgeInsets.zero,
-                  leading: IconButton(
-                    onPressed: () {
-                      SmartDialog.dismiss(status: SmartStatus.allCustom).then(
-                        (value) => onDismiss?.call(),
-                      );
-                    },
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  title: Text(
-                    title,
-                    style: Get.textTheme.titleMedium,
-                  ),
-                ),
-                Divider(
-                  height: 1,
-                  color: Colors.grey.withAlpha(25),
-                ),
-                Expanded(
-                  child: child,
-                ),
-              ],
+          decoration: BoxDecoration(
+            color: cardSurface,
+            border: fromLeft
+                ? Border(right: borderSide)
+                : Border(left: borderSide),
+            borderRadius: BorderRadius.only(
+              topLeft: fromLeft ? Radius.zero : Radius.circular(borderRadius),
+              bottomLeft:
+                  fromLeft ? Radius.zero : Radius.circular(borderRadius),
+              topRight: fromLeft ? Radius.circular(borderRadius) : Radius.zero,
+              bottomRight:
+                  fromLeft ? Radius.circular(borderRadius) : Radius.zero,
             ),
           ),
-        ),
-      ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: SafeArea(
+              left: false,
+              right: false,
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                removeBottom: true,
+                removeLeft: true,
+                removeRight: true,
+                child: showHeader
+                    ? Column(
+                        children: [
+                          ListTile(
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: EdgeInsets.zero,
+                            leading: IconButton(
+                              onPressed: () {
+                                SmartDialog.dismiss(status: SmartStatus.allCustom);
+                              },
+                              icon: const Icon(Icons.arrow_back),
+                            ),
+                            title: Text(
+                              title ?? '',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                          Divider(
+                            height: 1,
+                            color: Colors.grey.withAlpha(25),
+                          ),
+                          Expanded(child: child),
+                        ],
+                      )
+                    : child,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -1,5 +1,49 @@
-simple_live_app/.vscode/settings.json
-simple_live_tv_app/.vscode/settings.json
+# 本机编辑器、Flutter 缓存与构建产物
+**/.vscode/
+**/.idea/
+**/.dart_tool/
+**/.fvm/
+**/.pub-cache/
+**/.gradle/
+**/build/
+**/flutter/ephemeral/
+**/Flutter/ephemeral/
+dist/
+
+# 临时文件与本机配置
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+.DS_Store
+Thumbs.db
+**/local.properties
+**/key.properties
+*.local.json
+*.user.json
+
+# 私有环境、签名与凭据
+.env
+.env.*
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+*.key
+**/google-services.json
+**/GoogleService-Info.plist
+**/credentials.json
+**/secrets.json
+**/secrets.yaml
+**/cookies.txt
+**/cookies.json
+**/cookies.db
+**/cookies.sqlite
+simple_live_core/demo/getCdnTokenInfo*.bin
 
 # macOS Spotlight Search index file
 *.DS_Store

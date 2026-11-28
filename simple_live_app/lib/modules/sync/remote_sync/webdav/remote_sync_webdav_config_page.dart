@@ -49,7 +49,8 @@ class _RemoteSyncWebDAVConfigPageState
             onPressed: () {
               Utils.showInformationHelpDialog(
                 content: [
-                  const Text("此功能可以将您的数据备份到 WebDAV 服务器中或者进行数据恢复.\n"),
+                  const Text(
+                      "上传保留云端已有关注，下载保留本机已有关注；仅补充目的端未关注的主播，不覆盖已有关注、标签或排序。\n"),
                   const Text(
                       "WebDAV 服务器地址请以 http:// 或 https:// 开头，如坚果云(点击复制)："),
                   Padding(

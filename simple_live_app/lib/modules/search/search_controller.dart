@@ -1,90 +1,512 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:flutter/material.dart';
-
+import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
+import 'package:simple_live_app/services/search_web_session.dart';
+import 'package:simple_live_app/services/search_web_media.dart';
+import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
-import 'package:simple_live_app/modules/search/search_list_controller.dart';
+import 'package:simple_live_app/modules/search/search_room_url.dart';
+import 'package:simple_live_app/modules/search/search_web_navigation.dart';
+import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/services/bilibili_account_service.dart';
 
-class AppSearchController extends GetxController
-    with GetSingleTickerProviderStateMixin {
-  late TabController tabController;
-  int index = 0;
+class AppSearchController extends GetxController {
+  AppSearchController({bool? preferDesktopWeb})
+      : preferDesktopWeb = preferDesktopWeb ?? Platform.isAndroid;
 
-  var searchMode = 0.obs;
+  final bool preferDesktopWeb;
+  final selectedSite = Rxn<Site>();
+  final roomId = RxnString();
+  final dismissedRoomPromptId = RxnString();
+  final webViewVisible = true.obs;
+  final webViewLoading = false.obs;
+  final loadProgress = 0.obs;
+  final webViewError = RxnString();
+  final webViewRevision = 0.obs;
+  InAppWebViewController? webViewController;
+  Future<WebViewEnvironment?>? _webViewEnvironment;
+  Timer? _loadTimer;
+  bool _closing = false;
+  bool _openingRoom = false;
+  bool _directConnection = false; // Existing profile selection, not routing.
+  bool _connectionRetried = false;
+  Uri? _navigationUrl;
+  Uri? _loadingUrl;
+  String? _lastDesktopRedirectKey;
+  double? _lastSyncedViewportWidth;
+  bool _syncingBiliCookie = false;
+  bool _httpErrorForNavigation = false;
 
-  AppSearchController() {
-    tabController =
-        TabController(length: Sites.supportSites.length, vsync: this);
-    tabController.animation?.addListener(() {
-      var currentIndex = (tabController.animation?.value ?? 0).round();
-      if (index == currentIndex) {
-        return;
+  bool get showRoomPrompt =>
+      preferDesktopWeb &&
+      roomId.value != null &&
+      webViewVisible.value &&
+      dismissedRoomPromptId.value != roomId.value;
+
+  void dismissRoomPrompt() {
+    dismissedRoomPromptId.value = roomId.value;
+  }
+
+  /// 若在移动端搜索网页中登录了 B 站，同步 Cookie 到账号服务以解锁高画质播放。
+  Future<void> persistMobileWebSession() async {
+    if (!Platform.isAndroid || !preferDesktopWeb) return;
+    try {
+      final cookieManager = CookieManager.instance();
+      if (selectedSite.value?.id == Constant.kBiliBili &&
+          !_syncingBiliCookie &&
+          Get.isRegistered<BiliBiliAccountService>() &&
+          !BiliBiliAccountService.instance.logined.value) {
+        _syncingBiliCookie = true;
+        try {
+          final merged = <String, String>{};
+          for (final url in const [
+            'https://bilibili.com',
+            'https://live.bilibili.com',
+          ]) {
+            final list = await cookieManager.getCookies(url: WebUri(url));
+            for (final c in list) {
+              final value = '${c.value ?? ''}';
+              if (c.name.isNotEmpty && value.isNotEmpty) {
+                merged[c.name] = value;
+              }
+            }
+          }
+          if ((merged['SESSDATA'] ?? '').isNotEmpty) {
+            final cookieStr =
+                merged.entries.map((e) => '${e.key}=${e.value}').join(';');
+            BiliBiliAccountService.instance.setCookie(cookieStr);
+            await BiliBiliAccountService.instance.loadUserInfo();
+          }
+        } finally {
+          _syncingBiliCookie = false;
+        }
       }
+    } catch (e) {
+      Log.d('持久化移动端搜索网页登录态失败：$e');
+    }
+  }
 
-      index = currentIndex;
-      // if (Sites.supportSites[index].id == Constant.kDouyin) {
-      //   return;
-      // }
+  /// 同步移动端桌面网页的自适应视口缩放，适配首次加载与横竖屏宽度变化。
+  Future<void> syncDesktopViewport(
+    double viewWidthDp, {
+    bool force = false,
+  }) async {
+    if (!preferDesktopWeb || _closing || isClosed || !webViewVisible.value) {
+      return;
+    }
+    if (viewWidthDp <= 0) return;
+    if (!force &&
+        _lastSyncedViewportWidth != null &&
+        (_lastSyncedViewportWidth! - viewWidthDp).abs() < 2.0) {
+      return;
+    }
+    final view = webViewController;
+    final revision = webViewRevision.value;
+    if (view == null || !_isCurrent(view, revision)) return;
+    _lastSyncedViewportWidth = viewWidthDp;
+    try {
+      await view.evaluateJavascript(
+        source: SearchWebNavigation.buildDesktopViewportCall(viewWidthDp),
+      );
+    } catch (e) {
+      Log.d('同步桌面网页自适应视口失败：$e');
+    }
+  }
 
-      var controller =
-          Get.find<SearchListController>(tag: Sites.supportSites[index].id);
+  Uri get webViewUrl =>
+      _navigationUrl ?? SearchRoomUrl.homeUriFor(selectedSite.value!.id);
 
-      if (controller.list.isEmpty &&
-          !controller.pageEmpty.value &&
-          controller.keyword.isNotEmpty) {
-        controller.refreshData();
+  bool isCurrentWebView(InAppWebViewController? view, int revision) =>
+      !_closing && !isClosed && webViewRevision.value == revision &&
+      (identical(webViewController, view) ||
+          (webViewController != null && view != null &&
+              // Windows creates a fresh Dart wrapper for onWebViewCreated,
+              // while navigation callbacks reuse another wrapper. Their
+              // underlying platform controller identifies the actual WebView.
+              identical(webViewController!.platform, view.platform)));
+
+  bool _isCurrent(InAppWebViewController? view, int revision) =>
+      isCurrentWebView(view, revision);
+
+  Future<WebViewEnvironment?> get webViewEnvironment =>
+      _webViewEnvironment ??= _createWebViewEnvironment();
+
+  Future<WebViewEnvironment?> _createWebViewEnvironment() async {
+    if (!Platform.isWindows) return null;
+    final revision = webViewRevision.value;
+    final directConnection = _directConnection;
+    try {
+      final creation = SearchWebSession.create(
+        siteId: selectedSite.value?.id, direct: directConnection);
+      try {
+        return await creation.timeout(const Duration(seconds: 20));
+      } on TimeoutException {
+        // 超时不能取消原生创建；迟到的环境创建成功后仍需释放。
+        unawaited(creation
+            .then((environment) => environment.dispose())
+            .catchError((Object error, StackTrace stackTrace) {
+          Log.e('释放超时网页环境失败：$error', stackTrace);
+        }));
+        rethrow;
+      }
+    } catch (error, stackTrace) {
+      Log.e('搜索页 WebView2 环境启动失败：$error', stackTrace);
+      if (!isClosed && webViewRevision.value == revision) {
+        final code =
+            error is PlatformException ? int.tryParse(error.code) : null;
+        final detail = code == null
+            ? ''
+            : '（错误码 0x${code.toUnsigned(32).toRadixString(16).padLeft(8, '0')}）';
+        failLoading('网页组件启动失败，请点击右上角刷新重试$detail');
+      }
+      rethrow;
+    }
+  }
+
+  void selectSite(Site site) {
+    if (_closing || isClosed) return;
+    // Reopening search must not replace the profile that holds this site's login.
+    final direct = SearchWebSession.usesDirect(site.id);
+    if (direct != _directConnection) _disposeWebViewEnvironment();
+    _directConnection = direct;
+    _connectionRetried = false;
+    webViewController = null;
+    _navigationUrl = null;
+    _lastDesktopRedirectKey = null;
+    _lastSyncedViewportWidth = null;
+    webViewRevision.value++;
+    webViewVisible.value = true;
+    loadProgress.value = 0;
+    startLoading(SearchRoomUrl.homeUriFor(site.id));
+    roomId.value = null;
+    dismissedRoomPromptId.value = null;
+    selectedSite.value = site;
+  }
+
+  void updateUrl(Uri? uri) {
+    if (_closing || isClosed || !webViewVisible.value) return;
+    if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
+      _navigationUrl = uri;
+    }
+    final site = selectedSite.value;
+    final detectedRoomId = site == null || uri == null
+        ? null
+        : SearchRoomUrl.roomIdFor(site.id, uri);
+    if (detectedRoomId != roomId.value) {
+      dismissedRoomPromptId.value = null;
+    }
+    roomId.value = detectedRoomId;
+  }
+
+  void reset() {
+    unawaited(persistMobileWebSession());
+    webViewRevision.value++;
+    webViewController?.removeJavaScriptHandler(
+        handlerName: SearchWebNavigation.handlerName);
+    _loadTimer?.cancel();
+    webViewLoading.value = false;
+    loadProgress.value = 0;
+    webViewError.value = null;
+    webViewVisible.value = true;
+    roomId.value = null;
+    dismissedRoomPromptId.value = null;
+    selectedSite.value = null;
+    _navigationUrl = null;
+    _loadingUrl = null;
+    _lastDesktopRedirectKey = null;
+    _lastSyncedViewportWidth = null;
+    _httpErrorForNavigation = false;
+    webViewController = null;
+  }
+
+  Future<void> goBackInWebView() async {
+    final view = webViewController;
+    final revision = webViewRevision.value;
+    if (!_isCurrent(view, revision) || view == null) return;
+    if (await view.canGoBack() && _isCurrent(view, revision)) {
+      await view.goBack();
+    }
+  }
+
+  /// Android 系统返回键处理：优先网页后退，其次返回平台选择页，最后退出搜索页。
+  Future<bool> handleBackPress() async {
+    if (selectedSite.value == null) return true;
+    final view = webViewController;
+    final revision = webViewRevision.value;
+    if (view != null && _isCurrent(view, revision) && await view.canGoBack()) {
+      if (_isCurrent(view, revision)) {
+        await view.goBack();
+      }
+      return false;
+    }
+    reset();
+    return false;
+  }
+
+  Future<void> reloadWebView() async {
+    if (_closing || isClosed) return;
+    final recreate = Platform.isWindows &&
+        (webViewController == null || webViewError.value != null);
+    if (recreate) {
+      webViewController = null;
+      _disposeWebViewEnvironment();
+      webViewRevision.value++;
+    }
+    _lastDesktopRedirectKey = null;
+    startLoading();
+    if (!recreate) await webViewController?.reload();
+  }
+
+  void _disposeWebViewEnvironment() {
+    final pending = _webViewEnvironment;
+    _webViewEnvironment = null;
+    if (pending == null) return;
+    unawaited(pending.then((environment) async {
+      await environment?.dispose();
+    }).catchError((Object error, StackTrace stackTrace) {
+      Log.e('释放搜索网页环境失败：$error', stackTrace);
+    }));
+  }
+
+  void startLoading([Uri? uri]) {
+    if (_closing || isClosed) return;
+    _loadingUrl = uri ?? _navigationUrl;
+    _httpErrorForNavigation = false;
+    webViewLoading.value = true;
+    loadProgress.value = 10;
+    webViewError.value = null;
+    _loadTimer?.cancel();
+    _loadTimer = Timer(const Duration(seconds: 20), () {
+      if (webViewLoading.value) {
+        if (webViewController != null && _retryConnection()) return;
+        failLoading('网页加载超时，请检查网络后重新加载');
       }
     });
   }
 
-  StreamSubscription<dynamic>? streamSubscription;
-
-  TextEditingController searchController = TextEditingController();
-
-  @override
-  void onInit() {
-    for (var site in Sites.supportSites) {
-      // if (site.id == Constant.kDouyin) {
-      //   Get.put(DouyinSearchController(site));
-      // } else {
-      Get.put(
-        SearchListController(site),
-        tag: site.id,
-      );
-      //}
+  bool _retryConnection() {
+    // 抖音进入播放器时网页被隐藏；此时重建会使 openRoom 无法恢复旧视图。
+    if (!Platform.isWindows || _connectionRetried || _closing || isClosed ||
+        !webViewVisible.value || selectedSite.value == null) {
+      return false;
     }
-
-    super.onInit();
+    Log.w('搜索网页网络连接失败，保留原登录数据重试：$_navigationUrl');
+    _connectionRetried = true;
+    webViewController = null;
+    _disposeWebViewEnvironment();
+    webViewRevision.value++;
+    startLoading();
+    return true;
   }
 
-  void doSearch() {
-    if (searchController.text.isEmpty) {
+  void updateLoadProgress(int progress) {
+    loadProgress.value = progress.clamp(0, 100);
+    // Windows 插件的 66 对应 DOMContentLoaded；Android 进度达到 75 时主体已可交互；
+    // 100 在失败时也会发送，不能作为成功信号。
+    if ((Platform.isWindows && progress >= 66 && progress < 100) ||
+        (preferDesktopWeb && progress >= 75 && progress < 100)) {
+      finishLoading();
+    }
+  }
+
+  void handleLoadError(WebResourceRequest request, WebResourceError error) {
+    if (_closing || isClosed || request.isForMainFrame != true) return;
+    // 快速跳转或刷新取消的是旧导航，不是新页面加载失败。
+    if (error.type == WebResourceErrorType.CANCELLED) return;
+    Log.w('搜索网页加载失败：${request.url} ${error.type} ${error.description}');
+    final connectionError = {
+      // WebView2 未映射部分 Chromium 网络错误（包括代理连接失败）。
+      WebResourceErrorType.UNKNOWN,
+      WebResourceErrorType.TIMEOUT,
+      WebResourceErrorType.HOST_LOOKUP,
+      WebResourceErrorType.CANNOT_CONNECT_TO_HOST,
+      WebResourceErrorType.SERVER_UNREACHABLE,
+      WebResourceErrorType.CONNECTION_ABORTED,
+      WebResourceErrorType.RESET,
+      WebResourceErrorType.NETWORK_CONNECTION_LOST,
+      WebResourceErrorType.IO,
+      WebResourceErrorType.VALID_PROXY_AUTHENTICATION_REQUIRED,
+    }.contains(error.type);
+    if (connectionError && _retryConnection()) return;
+    failLoading('网页加载失败（${error.type}），请检查网络后重新加载');
+  }
+
+  void handleHttpError(WebResourceRequest request, WebResourceResponse response) {
+    if (_closing || isClosed || request.isForMainFrame != true ||
+        !_matchesLoadingUrl(request.url)) {
       return;
     }
-    for (var site in Sites.supportSites) {
-      // if (site.id == Constant.kDouyin) {
-      //   var controller = Get.find<DouyinSearchController>();
-      //   controller.keyword = searchController.text;
-      //   controller.searchMode.value = searchMode.value;
-      //   controller.reloadWebView();
-      // } else {
-      var controller = Get.find<SearchListController>(tag: site.id);
-      controller.clear();
-      controller.keyword = searchController.text;
-      controller.searchMode.value = searchMode.value;
-      //}
-    }
-    // if (Sites.supportSites[index].id != Constant.kDouyin) {
-    var controller =
-        Get.find<SearchListController>(tag: Sites.supportSites[index].id);
-    controller.refreshData();
-    //}
+    _httpErrorForNavigation = true;
+    Log.w('搜索网页 HTTP 错误：${request.url} ${response.statusCode}');
+    failLoading('网站返回错误（HTTP ${response.statusCode}），请稍后重新加载');
+  }
+
+  // Compare document URLs, not fragments: a hash change is not a new request.
+  // A late old-URL callback must not settle or fail the newer navigation.
+  bool _matchesLoadingUrl(Uri? uri) =>
+      uri == null || _loadingUrl == null ||
+      uri.removeFragment() == _loadingUrl!.removeFragment();
+
+  bool finishLoading([Uri? uri]) {
+    if (_closing || isClosed || !_matchesLoadingUrl(uri)) return false;
+    _loadTimer?.cancel();
+    webViewLoading.value = false;
+    loadProgress.value = 100;
+    // Android also finishes documents served with HTTP 4xx/5xx. Only a new
+    // navigation resets that failure; a late success may still clear a timeout.
+    if (!_httpErrorForNavigation) webViewError.value = null;
+    return true;
+  }
+
+  void failLoading(String message) {
+    if (_closing || isClosed) return;
+    _loadTimer?.cancel();
+    webViewLoading.value = false;
+    webViewError.value = message;
   }
 
   @override
   void onClose() {
-    streamSubscription?.cancel();
+    if (_closing) return;
+    _closing = true;
+    unawaited(persistMobileWebSession());
+    webViewRevision.value++;
+    webViewController?.removeJavaScriptHandler(
+        handlerName: SearchWebNavigation.handlerName);
+    webViewController = null;
+    _loadTimer?.cancel();
+    _disposeWebViewEnvironment();
     super.onClose();
+  }
+
+  Future<bool> openPopup(CreateWindowAction action) async {
+    final url = action.request.url;
+    if (_closing || isClosed || url == null || webViewController == null) {
+      return false;
+    }
+    if (SearchRoomUrl.isBlockedExternalScheme(url)) {
+      return false;
+    }
+    final site = selectedSite.value;
+    final targetUri = preferDesktopWeb && site != null
+        ? (SearchRoomUrl.desktopUriFor(site.id, url) ?? url)
+        : url;
+    updateUrl(targetUri);
+    // Windows 插件在返回 false 后执行默认导航，不能在两端重复 loadUrl。
+    if (!Platform.isWindows) {
+      await webViewController!.loadUrl(
+        urlRequest: targetUri == url
+            ? action.request
+            : URLRequest(url: WebUri(targetUri.toString())),
+      );
+    }
+    return false;
+  }
+
+  NavigationActionPolicy handleNavigation(NavigationAction action) {
+    final uri = action.request.url;
+    if (uri != null && SearchRoomUrl.isBlockedExternalScheme(uri)) {
+      Log.d('拦截外部 APP 唤起或下载链接：$uri');
+      return NavigationActionPolicy.CANCEL;
+    }
+    if (action.isForMainFrame && uri != null) {
+      final site = selectedSite.value;
+      if (preferDesktopWeb && site != null) {
+        final desktopUri = SearchRoomUrl.desktopUriFor(site.id, uri);
+        if (desktopUri != null) {
+          final redirectKey = '${desktopUri.host}${desktopUri.path}';
+          if (_lastDesktopRedirectKey != redirectKey) {
+            _lastDesktopRedirectKey = redirectKey;
+            updateUrl(desktopUri);
+            if (webViewController != null) {
+              unawaited(webViewController!.loadUrl(
+                urlRequest: URLRequest(url: WebUri(desktopUri.toString())),
+              ));
+            }
+            return NavigationActionPolicy.CANCEL;
+          }
+        }
+      }
+      updateUrl(uri);
+    }
+    return NavigationActionPolicy.ALLOW;
+  }
+
+  Future<void> openCurrentRoom() async {
+    final view = webViewController;
+    final revision = webViewRevision.value;
+    if (view == null || !webViewVisible.value || !_isCurrent(view, revision)) {
+      if (roomId.value != null && webViewVisible.value) {
+        await openRoom();
+      }
+      return;
+    }
+    try {
+      // 快捷键不依赖顶部按钮是否已出现：先读取真实地址，补上遗漏的导航回调；
+      // 若页面尚未跳转完成，保留已通过点击/脚本捕获的房间 ID，避免误清空。
+      final fallbackRoomId = roomId.value;
+      final uri = await view.getUrl();
+      if (!_isCurrent(view, revision)) return;
+      if (uri != null) {
+        final site = selectedSite.value;
+        final currentRoomId =
+            site == null ? null : SearchRoomUrl.roomIdFor(site.id, uri);
+        if (currentRoomId != null || fallbackRoomId == null) {
+          updateUrl(uri);
+        }
+      }
+      await openRoom(detectedRoomId: roomId.value ?? fallbackRoomId);
+    } catch (error, stack) {
+      Log.e('打开当前网页直播间失败：$error', stack);
+    }
+  }
+
+  Future<void> openRoom({String? detectedRoomId}) async {
+    if (_closing || isClosed || _openingRoom) return;
+    final site = selectedSite.value;
+    final id = detectedRoomId ?? roomId.value;
+    if (site == null || id == null) return;
+    if (Platform.isWindows ||
+        Platform.isAndroid ||
+        site.id == Constant.kDouyin) {
+      final webView = webViewController;
+      final revision = webViewRevision.value;
+      _openingRoom = true;
+      try {
+        if (Platform.isWindows) {
+          await webView?.evaluateJavascript(source: SearchWebMedia.holdMedia);
+        } else {
+          await webView?.pauseTimers();
+          await webView?.pause();
+        }
+        if (!_isCurrent(webView, revision)) return;
+        webViewVisible.value = false;
+        await WidgetsBinding.instance.endOfFrame;
+        if (!_isCurrent(webView, revision)) return;
+        await AppNavigator.toLiveRoomDetail(site: site, roomId: id);
+      } finally {
+        if (_isCurrent(webView, revision)) {
+          webViewVisible.value = true;
+          await WidgetsBinding.instance.endOfFrame;
+          if (_isCurrent(webView, revision)) {
+            if (Platform.isWindows) {
+              await webView?.evaluateJavascript(
+                  source: SearchWebMedia.restoreMedia);
+            } else {
+              await webView?.resume();
+              await webView?.resumeTimers();
+            }
+          }
+        }
+        _openingRoom = false;
+      }
+      return;
+    }
+    AppNavigator.toLiveRoomDetail(site: site, roomId: id);
   }
 }

@@ -31,6 +31,11 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
+# Plugins also contain UTF-8 source. A clean build on a Chinese Windows host
+# must not interpret those files as code page 936 and fail under /WX (C4819).
+if(MSVC)
+  add_compile_options(/utf-8)
+endif()
 
 # Compilation settings that should be applied to most targets.
 #
@@ -56,6 +61,15 @@ add_subdirectory("runner")
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
+include(media_kit_video.cmake)
+simplelive_patch_media_kit_video()
+
+# This plugin still uses C++/WinRT's experimental coroutine support. VS 2026
+# requires an explicit opt-in until the upstream plugin migrates to C++20.
+if(MSVC AND TARGET permission_handler_windows_plugin)
+  target_compile_definitions(permission_handler_windows_plugin PRIVATE
+    _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
 
 
 # === Installation ===

@@ -1,50 +1,326 @@
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:canvas_danmaku/canvas_danmaku.dart';
+import 'package:simple_live_app/widgets/danmaku/canvas_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
-import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/modules/live_room/player/fullscreen_follow_panel.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
-import 'package:simple_live_app/services/follow_service.dart';
-import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
-import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'dart:async';
 import 'package:simple_live_core/simple_live_core.dart';
+
+/// 播放缓冲提示。
+///
+/// 打开直播间时不显示任何加载符号：白色转圈会直接盖在画面上，
+/// 而首帧通常在几百毫秒内到达，弹出来只是闪一下。
+/// 只有持续缓冲才淡入一行浅色文字，恢复后立即消失。
+class PlayerBufferingHint extends StatefulWidget {
+  const PlayerBufferingHint({
+    super.key,
+    required this.buffering,
+    required this.visible,
+    this.delay = const Duration(milliseconds: 2000),
+  });
+
+  /// 播放器是否处于缓冲状态
+  final bool buffering;
+
+  /// 外部可见条件，例如房间已下播时不再提示
+  final bool visible;
+
+  /// 持续缓冲多久后才提示
+  final Duration delay;
+
+  @override
+  State<PlayerBufferingHint> createState() => _PlayerBufferingHintState();
+}
+
+class _PlayerBufferingHintState extends State<PlayerBufferingHint> {
+  Timer? _timer;
+  bool _show = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant PlayerBufferingHint oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.buffering != widget.buffering ||
+        oldWidget.visible != widget.visible) {
+      // 这里的赋值不能 setState：didUpdateWidget 处在构建流程内，随后必然重建。
+      _sync();
+    }
+  }
+
+  void _sync() {
+    final active = widget.visible && widget.buffering;
+    if (!active) {
+      _timer?.cancel();
+      _timer = null;
+      _show = false;
+      return;
+    }
+    if (_show || _timer != null) return;
+    _timer = Timer(widget.delay, () {
+      _timer = null;
+      if (!mounted) return;
+      if (!widget.visible || !widget.buffering) return;
+      setState(() => _show = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_show) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withAlpha(90),
+          borderRadius: const BorderRadius.all(Radius.circular(6)),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Text(
+            "缓冲中",
+            style: TextStyle(fontSize: 12, color: Colors.white, height: 1.2),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 Widget playerControls(
   VideoState videoState,
   LiveRoomController controller,
 ) {
   return Obx(() {
-    if (controller.fullScreenState.value) {
-      return buildFullControls(
-        videoState,
-        controller,
-      );
-    }
-    return buildControls(
-      videoState.context.orientation == Orientation.portrait,
-      videoState,
-      controller,
+    final controls = controller.fullScreenState.value
+        ? buildFullControls(videoState, controller)
+        : buildControls(
+            MediaQuery.orientationOf(videoState.context) ==
+                Orientation.portrait,
+            videoState,
+            controller,
+          );
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (_, event) => controller.officialEditorFocused.value
+          ? KeyEventResult.ignored : handlePlayerShortcut(
+        event,
+        onFollowKey: controller.followByDoubleQ,
+        onComposeDanmaku: controller.openDanmakuComposer,
+        onResetFollowKey: controller.resetFollowShortcut,
+        onToggleDanmaku: () => controller.showDanmakuState.toggle(),
+        onToggleFullscreen: () {
+          if (controller.fullScreenState.value) {
+            controller.exitFull();
+          } else {
+            controller.enterFullScreen();
+          }
+        },
+      ),
+      child: !Platform.isAndroid && !Platform.isIOS
+          ? Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerSignal: (event) =>
+                  _onVolumePointerSignal(event, controller, null),
+              child: controls,
+            )
+          : controls,
     );
   });
+}
+
+/// Enter belongs to the visible room, even after a click moves focus outside
+/// the player's Focus subtree. Run before child controls consume it as Activate.
+class DesktopDanmakuShortcut extends StatefulWidget {
+  const DesktopDanmakuShortcut({super.key, required this.onCompose, required this.child, this.isEditing});
+  final VoidCallback onCompose;
+  final Widget child;
+  final bool Function()? isEditing;
+
+  @override
+  State<DesktopDanmakuShortcut> createState() => _DesktopDanmakuShortcutState();
+}
+
+class _DesktopDanmakuShortcutState extends State<DesktopDanmakuShortcut> {
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addEarlyKeyEventHandler(_onKey);
+  }
+
+  KeyEventResult _onKey(KeyEvent event) {
+    if (!mounted || widget.isEditing?.call() == true || ModalRoute.of(context)?.isCurrent != true ||
+        event is! KeyDownEvent || _editingTextOrModifiedShortcut() ||
+        HardwareKeyboard.instance.isShiftPressed ||
+        (event.logicalKey != LogicalKeyboardKey.enter &&
+            event.logicalKey != LogicalKeyboardKey.numpadEnter)) {
+      return KeyEventResult.ignored;
+    }
+    widget.onCompose();
+    return KeyEventResult.handled;
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeEarlyKeyEventHandler(_onKey);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+bool _editingTextOrModifiedShortcut() {
+  final keyboard = HardwareKeyboard.instance;
+  final focusContext = FocusManager.instance.primaryFocus?.context;
+  final editable = focusContext?.widget is EditableText
+      ? focusContext!.widget as EditableText
+      : focusContext?.findAncestorWidgetOfExactType<EditableText>();
+  return keyboard.isControlPressed ||
+      keyboard.isAltPressed ||
+      keyboard.isMetaPressed ||
+      (editable != null && !editable.readOnly);
+}
+
+KeyEventResult handlePlayerShortcut(
+  KeyEvent event, {
+  required VoidCallback onToggleDanmaku,
+  required VoidCallback onToggleFullscreen,
+  VoidCallback? onRefresh,
+  VoidCallback? onFollowKey,
+  VoidCallback? onResetFollowKey,
+  VoidCallback? onComposeDanmaku,
+}) {
+  if (_editingTextOrModifiedShortcut()) {
+    onResetFollowKey?.call();
+    return KeyEventResult.ignored;
+  }
+  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+  if (event.logicalKey == LogicalKeyboardKey.keyQ && onFollowKey != null) {
+    onFollowKey();
+    // 第一击也消费，避免同一个事件冒泡到页面后被当作第二击。
+    return KeyEventResult.handled;
+  }
+  onResetFollowKey?.call();
+  if ((event.logicalKey == LogicalKeyboardKey.enter ||
+      event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
+      !HardwareKeyboard.instance.isShiftPressed && onComposeDanmaku != null) {
+    onComposeDanmaku();
+    return KeyEventResult.handled;
+  }
+  if (event.logicalKey == LogicalKeyboardKey.keyD) {
+    onToggleDanmaku();
+    return KeyEventResult.handled;
+  }
+  if (event.logicalKey == LogicalKeyboardKey.keyF) {
+    onToggleFullscreen();
+    return KeyEventResult.handled;
+  }
+  if (event.logicalKey == LogicalKeyboardKey.keyR && onRefresh != null) {
+    onRefresh();
+    return KeyEventResult.handled;
+  }
+  return KeyEventResult.ignored;
+}
+
+double volumeAfterScroll(double currentVolume, double scrollDeltaY) {
+  if (scrollDeltaY == 0) return currentVolume;
+  return (currentVolume + (scrollDeltaY < 0 ? 5 : -5)).clamp(0, 100).toDouble();
+}
+
+/// Outside Video's controls/overlays so wheel input also reaches the actual
+/// video surface and letterbox margins when its controls are hidden.
+Widget playerVolumeScrollArea({
+  required Widget child,
+  required LiveRoomController controller,
+}) {
+  if (Platform.isAndroid || Platform.isIOS) return child;
+  return Listener(
+    behavior: HitTestBehavior.opaque,
+    onPointerSignal: (event) => _onVolumePointerSignal(event, controller, null),
+    child: Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        // Independent of the hidden control bar; only the volume card opens.
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: IgnorePointer(
+            child: SizedBox(key: controller.volumeScrollAnchorKey, width: 240, height: 1),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void _onVolumePointerSignal(
+  PointerSignalEvent event,
+  LiveRoomController controller,
+  BuildContext? targetContext,
+) {
+  if (event is PointerScrollEvent && event.scrollDelta.dy != 0) {
+    // The volume icon also receives this event. Resolve at the deepest listener
+    // so a single wheel tick cannot adjust both icon and video-area volume.
+    GestureBinding.instance.pointerSignalResolver.register(event, (signal) {
+      adjustVolumeOnScroll(signal, controller);
+      final anchor = targetContext ?? controller.volumeScrollAnchorKey.currentContext;
+      if (anchor != null) controller.showVolumeSlider(anchor);
+    });
+  }
+}
+
+void adjustVolumeOnScroll(
+  PointerSignalEvent event,
+  LiveRoomController controller,
+) {
+  if (event is! PointerScrollEvent || event.scrollDelta.dy == 0) return;
+  final settings = AppSettingsController.instance;
+  final volume = volumeAfterScroll(
+    settings.playerVolume.value,
+    event.scrollDelta.dy,
+  );
+  settings.setPlayerVolume(volume);
+  controller.player.setVolume(volume);
+}
+
+Widget playerWindowDragArea({
+  required Widget child,
+  required bool isSmallWindow,
+}) {
+  return isSmallWindow ? DragToMoveArea(child: child) : child;
 }
 
 Widget buildFullControls(
   VideoState videoState,
   LiveRoomController controller,
 ) {
-  var padding = MediaQuery.of(videoState.context).padding;
+  var padding = MediaQuery.paddingOf(videoState.context);
   GlobalKey volumeButtonkey = GlobalKey();
-  return DragToMoveArea(
+  return playerWindowDragArea(
     child: Stack(
       children: [
         Container(),
@@ -66,13 +342,13 @@ Widget buildFullControls(
 
         Center(
           child: // 中间
-              StreamBuilder(
+              StreamBuilder<bool>(
             stream: videoState.widget.controller.player.stream.buffering,
             initialData: videoState.widget.controller.player.state.buffering,
-            builder: (_, s) => Visibility(
-              visible: s.data ?? false,
-              child: const Center(
-                child: CircularProgressIndicator(),
+            builder: (_, s) => Obx(
+              () => PlayerBufferingHint(
+                buffering: s.data ?? false,
+                visible: controller.hasPlayed.value && !controller.roomOffline.value,
               ),
             ),
           ),
@@ -80,16 +356,24 @@ Widget buildFullControls(
         Positioned.fill(
           child: GestureDetector(
             onTap: controller.onTap,
-            onDoubleTapDown: controller.onDoubleTap,
+            onDoubleTap: controller.onDoubleTap,
             onLongPress: () {
               if (controller.lockControlsState.value) {
                 return;
               }
               showFollowUser(controller);
             },
-            onVerticalDragStart: controller.onVerticalDragStart,
-            onVerticalDragUpdate: controller.onVerticalDragUpdate,
-            onVerticalDragEnd: controller.onVerticalDragEnd,
+            // Mobile brightness/volume drags otherwise steal mouse double taps
+            // as soon as the cursor moves a few pixels while pressed.
+            onVerticalDragStart: Platform.isAndroid || Platform.isIOS
+                ? controller.onVerticalDragStart
+                : null,
+            onVerticalDragUpdate: Platform.isAndroid || Platform.isIOS
+                ? controller.onVerticalDragUpdate
+                : null,
+            onVerticalDragEnd: Platform.isAndroid || Platform.isIOS
+                ? controller.onVerticalDragEnd
+                : null,
             child: MouseRegion(
               onHover: (PointerHoverEvent event) {
                 controller.onHover(event, videoState.context);
@@ -166,6 +450,21 @@ Widget buildFullControls(
                     ),
                   ),
                   AppStyle.hGap12,
+                  IconButton(
+                    tooltip: controller.audioOnlyMode.value ? "退出纯音频" : "纯音频听播",
+                    onPressed: () {
+                      controller.toggleAudioOnlyMode();
+                    },
+                    icon: Icon(
+                      controller.audioOnlyMode.value
+                          ? Icons.videocam_outlined
+                          : Icons.headphones_outlined,
+                      color: controller.audioOnlyMode.value
+                          ? Colors.lightBlueAccent
+                          : Colors.white,
+                      size: 24,
+                    ),
+                  ),
                   IconButton(
                     onPressed: () {
                       controller.saveScreenshot();
@@ -298,16 +597,21 @@ Widget buildFullControls(
                   const Expanded(child: Center()),
                   Visibility(
                     visible: !Platform.isAndroid && !Platform.isIOS,
-                    child: IconButton(
-                      key: volumeButtonkey,
-                      onPressed: () {
-                        controller
-                            .showVolumeSlider(volumeButtonkey.currentContext!);
-                      },
-                      icon: const Icon(
-                        Icons.volume_down,
-                        size: 24,
-                        color: Colors.white,
+                    child: Listener(
+                      onPointerSignal: (event) => _onVolumePointerSignal(
+                          event, controller, volumeButtonkey.currentContext),
+                      child: IconButton(
+                        key: volumeButtonkey,
+                        onPressed: () {
+                          controller.showVolumeSlider(
+                            volumeButtonkey.currentContext!,
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.volume_down,
+                          size: 24,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -395,6 +699,7 @@ Widget buildFullControls(
         ),
       ],
     ),
+    isSmallWindow: controller.smallWindowState.value,
   );
 }
 
@@ -452,13 +757,13 @@ Widget buildControls(
 
       // 中间
       Center(
-        child: StreamBuilder(
+        child: StreamBuilder<bool>(
           stream: videoState.widget.controller.player.stream.buffering,
           initialData: videoState.widget.controller.player.state.buffering,
-          builder: (_, s) => Visibility(
-            visible: s.data ?? false,
-            child: const Center(
-              child: CircularProgressIndicator(),
+          builder: (_, s) => Obx(
+            () => PlayerBufferingHint(
+              buffering: s.data ?? false,
+              visible: controller.hasPlayed.value && !controller.roomOffline.value,
             ),
           ),
         ),
@@ -466,10 +771,16 @@ Widget buildControls(
       Positioned.fill(
         child: GestureDetector(
           onTap: controller.onTap,
-          onDoubleTapDown: controller.onDoubleTap,
-          onVerticalDragStart: controller.onVerticalDragStart,
-          onVerticalDragUpdate: controller.onVerticalDragUpdate,
-          onVerticalDragEnd: controller.onVerticalDragEnd,
+          onDoubleTap: controller.onDoubleTap,
+          onVerticalDragStart: Platform.isAndroid || Platform.isIOS
+              ? controller.onVerticalDragStart
+              : null,
+          onVerticalDragUpdate: Platform.isAndroid || Platform.isIOS
+              ? controller.onVerticalDragUpdate
+              : null,
+          onVerticalDragEnd: Platform.isAndroid || Platform.isIOS
+              ? controller.onVerticalDragEnd
+              : null,
           //onLongPress: controller.showDebugInfo,
           child: MouseRegion(
             onEnter: controller.onEnter,
@@ -555,17 +866,21 @@ Widget buildControls(
                 const Expanded(child: Center()),
                 Visibility(
                   visible: !Platform.isAndroid && !Platform.isIOS,
-                  child: IconButton(
-                    key: volumeButtonkey,
-                    onPressed: () {
-                      controller.showVolumeSlider(
-                        volumeButtonkey.currentContext!,
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.volume_down,
-                      size: 24,
-                      color: Colors.white,
+                  child: Listener(
+                    onPointerSignal: (event) => _onVolumePointerSignal(
+                        event, controller, volumeButtonkey.currentContext),
+                    child: IconButton(
+                      key: volumeButtonkey,
+                      onPressed: () {
+                        controller.showVolumeSlider(
+                          volumeButtonkey.currentContext!,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.volume_down,
+                        size: 24,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -594,6 +909,21 @@ Widget buildControls(
                       controller.currentLineInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: controller.audioOnlyMode.value ? "退出纯音频" : "纯音频听播",
+                  onPressed: () {
+                    controller.toggleAudioOnlyMode();
+                  },
+                  icon: Icon(
+                    controller.audioOnlyMode.value
+                        ? Icons.videocam_outlined
+                        : Icons.headphones_outlined,
+                    color: controller.audioOnlyMode.value
+                        ? Colors.lightBlueAccent
+                        : Colors.white,
+                    size: 22,
                   ),
                 ),
                 Visibility(
@@ -646,14 +976,14 @@ Widget buildControls(
 }
 
 Widget buildDanmuView(VideoState videoState, LiveRoomController controller) {
-  var padding = MediaQuery.of(videoState.context).padding;
+  var padding = MediaQuery.paddingOf(videoState.context);
   controller.danmakuView ??= DanmakuScreen(
     key: controller.globalDanmuKey,
     createdController: controller.initDanmakuController,
     option: DanmakuOption(
       fontSize: AppSettingsController.instance.danmuSize.value,
       area: AppSettingsController.instance.danmuArea.value,
-      duration: AppSettingsController.instance.danmuSpeed.value.toInt(),
+      duration: AppSettingsController.instance.danmuSpeed.value,
       opacity: AppSettingsController.instance.danmuOpacity.value,
       //strokeWidth: AppSettingsController.instance.danmuStrokeWidth.value,
       fontWeight: AppSettingsController.instance.danmuFontWeight.value,
@@ -754,8 +1084,7 @@ void showQualitesInfo(LiveRoomController controller) {
           minLeadingWidth: 16,
           onTap: () {
             Utils.hideRightDialog();
-            controller.currentQuality = i;
-            controller.getPlayUrl();
+            controller.selectManualQuality(i);
           },
         );
       },
@@ -852,49 +1181,29 @@ void showFollowUser(LiveRoomController controller) {
     return;
   }
 
-  Utils.showRightDialog(
-    title: "关注列表",
-    width: 400,
+  final isMobile = defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+  Utils.showSideDialog(
+    fromLeft: !isMobile,
     useSystem: true,
-    child: Obx(
-      () => Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: FollowService.instance.loadData,
-            child: ListView.builder(
-              itemCount: FollowService.instance.liveList.length,
-              itemBuilder: (_, i) {
-                var item = FollowService.instance.liveList[i];
-                return Obx(
-                  () => FollowUserItem(
-                    item: item,
-                    playing: controller.rxSite.value.id == item.siteId &&
-                        controller.rxRoomId.value == item.roomId,
-                    onTap: () {
-                      Utils.hideRightDialog();
-                      controller.resetRoom(
-                        Sites.allSites[item.siteId]!,
-                        item.roomId,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Obx(
-                () => DesktopRefreshButton(
-                  refreshing: FollowService.instance.updating.value,
-                  onPressed: FollowService.instance.loadData,
-                ),
-              ),
-            ),
-        ],
-      ),
+    showHeader: false,
+    borderRadius: 12,
+    surfaceAlpha: 244,
+    maskColor: Colors.black.withAlpha(48),
+    widthBuilder: (context) => computeFullscreenFollowLayout(
+      MediaQuery.sizeOf(context),
+      MediaQuery.paddingOf(context),
+      isMobile: isMobile,
+    ).panelWidth,
+    child: FullscreenFollowPanel(
+      controller: controller,
+      fromLeft: !isMobile,
+      isMobile: isMobile,
+      onClose: Utils.hideRightDialog,
+      onSelectRoom: (site, roomId) {
+        Utils.hideRightDialog();
+        controller.resetRoom(site, roomId);
+      },
     ),
   );
 }

@@ -22,49 +22,64 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
               leading: buildIcon(),
               title: Text(controller.info.name),
               subtitle: Text(
-                  "${controller.info.type.toUpperCase()}   ${controller.info.address}"),
+                  "${controller.info.type.toUpperCase()}   ${controller.client.address}:${controller.client.port}"),
             ),
           ),
-          AppStyle.vGap12,
+          Obx(() {
+            final status = controller.lastSyncStatus.value;
+            if (status.isEmpty) return const SizedBox.shrink();
+            final isErr = controller.lastSyncError.value;
+            return Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: SettingsCard(
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(
+                    isErr ? Icons.error_outline : Icons.check_circle_outline,
+                    color: isErr ? Colors.redAccent : Colors.green,
+                  ),
+                  title: Text(
+                    status,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+            );
+          }),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 16),
+            child: Text(
+              "发送本机数据到 ${controller.info.name}",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
           SettingsCard(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Remix.heart_line),
-                  title: const Text("同步关注列表"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncFollowAndTag();
-                  },
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text("同步观看记录"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncHistory();
-                  },
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.shield_keyhole_line),
-                  title: const Text("同步弹幕屏蔽词"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncBlockedWord();
-                  },
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.account_circle_line),
-                  title: const Text("同步哔哩哔哩账号"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncBiliAccount();
-                  },
-                ),
-              ],
+            child: ListTile(
+              leading: const Icon(Icons.cloud_upload_outlined),
+              title: const Text("一键发送全部数据"),
+              subtitle: const Text(
+                "包含关注与标签、观看记录、弹幕屏蔽、哔哩哔哩与 WebDAV 账号",
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.syncAll,
+            ),
+          ),
+          Padding(
+            padding: AppStyle.edgeInsetsA12.copyWith(top: 16),
+            child: Text(
+              "从 ${controller.info.name} 拉取数据到本机",
+              style: Get.textTheme.titleSmall,
+            ),
+          ),
+          SettingsCard(
+            child: ListTile(
+              leading: const Icon(Remix.download_2_line),
+              title: const Text("一键拉取全部数据"),
+              subtitle: const Text(
+                "包含关注与标签、观看记录、弹幕屏蔽、哔哩哔哩与 WebDAV 账号",
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.pullAll,
             ),
           ),
         ],

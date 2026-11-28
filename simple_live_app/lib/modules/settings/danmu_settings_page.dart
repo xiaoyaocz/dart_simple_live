@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:canvas_danmaku/canvas_danmaku.dart';
+import 'package:simple_live_app/widgets/danmaku/canvas_danmaku.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -173,7 +173,7 @@ class DanmuSettingsView extends GetView<AppSettingsController> {
                   onChanged: (e) {
                     controller.setDanmuSpeed(e.toDouble());
                     updateDanmuOption(
-                      danmakuController?.option.copyWith(duration: e.toInt()),
+                      danmakuController?.option.copyWith(duration: e.toDouble()),
                     );
                   },
                 ),

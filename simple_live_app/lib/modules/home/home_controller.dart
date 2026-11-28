@@ -48,6 +48,15 @@ class HomeController extends GetxController
     Get.toNamed(RoutePath.kSearch);
   }
 
+  void refreshPlatform(String siteId) {
+    final index = Sites.supportSites.indexWhere((site) => site.id == siteId);
+    if (index < 0) return;
+    tabController.animateTo(index);
+    final home = Get.find<HomeListController>(tag: siteId);
+    if (home.scrollController.hasClients) home.scrollController.jumpTo(0);
+    unawaited(home.refreshData());
+  }
+
   @override
   void onClose() {
     streamSubscription?.cancel();

@@ -11,7 +11,6 @@ dependencies:
     sdk: flutter
   simple_live_core:
     path: ../simple_live_core
-  cupertino_icons: ^1.0.2
   remixicon: ^1.0.0 #Remix图标
 
   # 框架、工具
@@ -23,8 +22,6 @@ dependencies:
   intl: ^0.20.2 #国际化
   flutter_screenutil: ^5.9.3 #UI适配
   uuid: ^4.5.1 #UUID
-  signalr_netcore: ^1.4.4 #SignalR
-  crypto: ^3.0.6
 
   #Widget
   flutter_staggered_grid_view: ^0.7.0 #瀑布流/GridView
@@ -34,12 +31,10 @@ dependencies:
   marquee: ^2.3.0 #跑马灯
   lottie: ^3.3.2 #Lottie动画
   qr_flutter: ^4.1.0 #二维码
-  sticky_headers: ^0.3.0+2 #吸顶
   canvas_danmaku: ^0.2.7 #弹幕
 
   #系统交互
   package_info_plus: ^9.0.0 #包信息
-  url_launcher: ^6.3.2 #打开链接
   network_info_plus: ^7.0.0
   shelf: ^1.4.2
   shelf_router: ^1.1.4

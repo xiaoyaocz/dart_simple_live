@@ -9,8 +9,10 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "main.cpp"
+  "native_crash_recorder.cpp"
   "utils.cpp"
   "win32_window.cpp"
+  "windows_share_bridge.cpp"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
   "Runner.rc"
   "runner.exe.manifest"
@@ -34,6 +36,11 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 # dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "shell32.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "dbghelp.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "runtimeobject.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "advapi32.lib")
+target_compile_options(${BINARY_NAME} PRIVATE /utf-8)
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.

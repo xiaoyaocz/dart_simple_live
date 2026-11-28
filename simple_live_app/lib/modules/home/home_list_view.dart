@@ -22,6 +22,8 @@ class HomeListView extends StatelessWidget {
         pageController: controller,
         padding: AppStyle.edgeInsetsA12,
         firstRefresh: true,
+        autoLoadMore: true,
+        autoLoadAllowed: () => controller.canAutoLoad,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         crossAxisCount: c,

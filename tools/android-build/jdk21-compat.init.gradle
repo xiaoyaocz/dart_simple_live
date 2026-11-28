@@ -1,0 +1,11 @@
+// Per-build compatibility: this plugin fixes Java at 17 but leaves Kotlin at host JDK.
+// Do not change the application target or global Flutter/JDK configuration.
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects { project ->
+        if (project.name == 'auto_orientation_v2') {
+            project.tasks.matching { task -> task.hasProperty('kotlinOptions') }.configureEach {
+                kotlinOptions.jvmTarget = '17'
+            }
+        }
+    }
+}

@@ -3,10 +3,14 @@ import 'package:hive/hive.dart';
 import 'package:simple_live_app/app/log.dart';
 
 class LocalStorageService extends GetxService {
+  static const kPreferNativeFrameRate = "PreferNativeFrameRate";
   static LocalStorageService get instance => Get.find<LocalStorageService>();
 
   /// 首次运行
   static const String kFirstRun = "FirstRun";
+
+  /// Windows 关闭窗口时的选择：0 询问、1 退出、2 最小化到托盘
+  static const String kCloseAction = "WindowsCloseAction";
 
   /// 缩放模式
   static const String kPlayerScaleMode = "ScaleMode";
@@ -16,6 +20,12 @@ class LocalStorageService extends GetxService {
 
   /// 首页排序
   static const String kHomeSort = "HomeSort";
+
+  /// 关注页默认状态：0 全部、1 直播中、2 未开播（不保存临时筛选）。
+  static const String kFollowDefaultFilter = "FollowDefaultFilter";
+
+  /// 关注列表最近一次开播状态快照（本地冷启动秒开用，不上传 WebDAV）。
+  static const String kFollowStatusSnapshot = "FollowStatusSnapshot";
 
   /// 显示模式
   /// * [0] 跟随系统
@@ -168,6 +178,57 @@ class LocalStorageService extends GetxService {
   /// WebDAV_最后一次备份时间
   static const String kWebDAVLastRecoverTime = "kWebDAVLastRecoverTime";
 
+  /// 各平台已识别的本人弹幕昵称（siteId -> nickname）
+  static const String kSelfChatNicknames = "SelfChatNicknames";
+
+  /// 主播开播提醒通知
+  static const String kLiveNotificationEnable = "LiveNotificationEnable";
+
+  /// WebDAV 自动同步开关
+  static const String kWebDAVAutoSync = "WebDAVAutoSync";
+
+  /// 后台切换纯音频听播
+  static const String kBackgroundAudioOnly = "BackgroundAudioOnly";
+
+  /// 弹幕屏蔽用户列表
+  static const String kDanmuShieldUsers = "DanmuShieldUsers";
+
+  /// 弹幕刷屏重复合并开关
+  static const String kDanmuMergeDuplicate = "DanmuMergeDuplicate";
+
+  /// 弹幕刷屏重复合并时间窗（秒）
+  static const String kDanmuMergeWindowSeconds = "DanmuMergeWindowSeconds";
+
+  /// 播放器缓冲策略：0=均衡（默认），1=抗抖稳流，2=低延迟
+  static const String kPlayerBufferMode = "PlayerBufferMode";
+
+  /// 直播累积延迟自动微倍速追帧
+  static const String kLiveCatchupEnable = "LiveCatchupEnable";
+
+  /// 频繁卡顿/丢帧自动降清晰度
+  static const String kAutoDowngradeQuality = "AutoDowngradeQuality";
+
+  /// 开播/切清晰度前 CDN 线路测速优选
+  static const String kStreamRouteProbeEnable = "StreamRouteProbeEnable";
+
+  /// 持久化 CDN 线路质量历史（仅存 origin，不含签名）
+  static const String kPlaybackRouteHistory = "PlaybackRouteHistory";
+
+  /// Windows AI 超分着色器开关（FSRCNNX）
+  static const String kWindowsSuperResolution = "WindowsSuperResolution";
+
+  /// Windows 动态画面平滑（补帧）开关
+  static const String kWindowsInterpolation = "WindowsInterpolation";
+
+  /// Windows WASAPI 音频独占开关
+  static const String kWindowsAudioExclusive = "WindowsAudioExclusive";
+
+  /// 手机端画面去色带（Deband）开关
+  static const String kMobileDeband = "MobileDeband";
+
+  /// 手机端高刷动态画面平滑（补帧）开关
+  static const String kMobileInterpolation = "MobileInterpolation";
+
   late Box settingsBox;
   late Box<String> shieldBox;
 
@@ -199,5 +260,28 @@ class LocalStorageService extends GetxService {
   Future removeValue<T>(dynamic key) async {
     Log.d("Remove LocalStorage：$key");
     return await settingsBox.delete(key);
+  }
+
+  String getSelfChatNickname(String siteId) {
+    final raw = getValue<dynamic>(kSelfChatNicknames, const {});
+    if (raw is Map && raw[siteId] is String) {
+      return (raw[siteId] as String).trim();
+    }
+    return '';
+  }
+
+  Future<void> setSelfChatNickname(String siteId, String nickname) async {
+    final clean = nickname.trim();
+    if (siteId.isEmpty || clean.isEmpty) return;
+    final raw = getValue<dynamic>(kSelfChatNicknames, const {});
+    final next = <String, String>{
+      if (raw is Map)
+        for (final entry in raw.entries)
+          if (entry.key is String && entry.value is String)
+            entry.key as String: entry.value as String,
+    };
+    if (next[siteId] == clean) return;
+    next[siteId] = clean;
+    await setValue(kSelfChatNicknames, next);
   }
 }

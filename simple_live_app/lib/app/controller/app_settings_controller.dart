@@ -1,14 +1,20 @@
 import 'dart:io';
+import 'package:simple_live_app/services/window_appearance_controller.dart';
 
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/player_output_policy.dart';
+import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AppSettingsController extends GetxController {
+  AppSettingsController({PlayerOutputPolicy? outputPolicy})
+      : outputPolicy = outputPolicy ?? PlayerOutputPolicy(Platform.operatingSystem);
+  final PlayerOutputPolicy outputPolicy;
   static AppSettingsController get instance =>
       Get.find<AppSettingsController>();
 
@@ -34,7 +40,7 @@ class AppSettingsController extends GetxController {
     danmuSpeed.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuSpeed, 10.0);
     danmuEnable.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kDanmuEnable, true);
+        .getValue(LocalStorageService.kDanmuEnable, false);
     danmuStrokeWidth.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuStrokeWidth, 2.0);
     danmuTopMargin.value = LocalStorageService.instance
@@ -44,8 +50,6 @@ class AppSettingsController extends GetxController {
     danmuFontWeight.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuFontWeight, 4);
 
-    hardwareDecode.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kHardwareDecode, true);
     chatTextSize.value = LocalStorageService.instance
         .getValue(LocalStorageService.kChatTextSize, 14.0);
 
@@ -57,11 +61,6 @@ class AppSettingsController extends GetxController {
       false,
     );
 
-    qualityLevel.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kQualityLevel, 1);
-    qualityLevelCellular.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kQualityLevelCellular, 1);
-
     autoExitEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoExitEnable, false);
 
@@ -71,20 +70,29 @@ class AppSettingsController extends GetxController {
     roomAutoExitDuration.value = LocalStorageService.instance
         .getValue(LocalStorageService.kRoomAutoExitDuration, 60);
 
-    playerCompatMode.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kPlayerCompatMode, false);
-
     playerAutoPause.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerAutoPause, false);
-
-    playerForceHttps.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kPlayerForceHttps, false);
 
     autoFullScreen.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoFullScreen, false);
 
     // ignore: invalid_use_of_protected_member
     shieldList.value = LocalStorageService.instance.shieldBox.values.toSet();
+    final rawShieldUsers = LocalStorageService.instance
+        .getValue<dynamic>(LocalStorageService.kDanmuShieldUsers, const <String>[]);
+    if (rawShieldUsers is List) {
+      shieldUserList.assignAll(
+        rawShieldUsers
+            .whereType<String>()
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty),
+      );
+    }
+    danmuMergeDuplicate.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuMergeDuplicate, true);
+    danmuMergeWindowSeconds.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kDanmuMergeWindowSeconds, 5)
+        .clamp(2, 15);
 
     scaleMode.value = LocalStorageService.instance.getValue(
       LocalStorageService.kPlayerScaleMode,
@@ -107,42 +115,11 @@ class AppSettingsController extends GetxController {
     bilibiliLoginTip.value = LocalStorageService.instance
         .getValue(LocalStorageService.kBilibiliLoginTip, true);
 
-    playerBufferSize.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kPlayerBufferSize, 32);
-
     logEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kLogEnable, false);
     if (logEnable.value) {
       Log.initWriter();
     }
-
-    customPlayerOutput.value = LocalStorageService.instance
-        .getValue(LocalStorageService.kCustomPlayerOutput, false);
-
-    videoOutputDriver.value = LocalStorageService.instance.getValue(
-      LocalStorageService.kVideoOutputDriver,
-      Platform.isAndroid ? "gpu" : "libmpv",
-    );
-
-    audioOutputDriver.value = LocalStorageService.instance.getValue(
-      LocalStorageService.kAudioOutputDriver,
-      Platform.isAndroid
-          ? "audiotrack"
-          : Platform.isLinux
-              ? "pulse"
-              : Platform.isWindows
-                  ? "wasapi"
-                  : Platform.isIOS
-                      ? "audiounit"
-                      : Platform.isMacOS
-                          ? "coreaudio"
-                          : "sdl",
-    );
-
-    videoHardwareDecoder.value = LocalStorageService.instance.getValue(
-      LocalStorageService.kVideoHardwareDecoder,
-      Platform.isAndroid ? "auto-safe" : "auto",
-    );
 
     autoUpdateFollowEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kAutoUpdateFollowEnable, true);
@@ -152,6 +129,24 @@ class AppSettingsController extends GetxController {
 
     updateFollowThreadCount.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowThreadCount, 0);  // 默认 0 = 自动
+
+    liveNotificationEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kLiveNotificationEnable, false);
+
+    webDavAutoSync.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWebDAVAutoSync, false);
+
+    windowsSuperResolution.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWindowsSuperResolution, true);
+    windowsInterpolation.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWindowsInterpolation, false);
+    windowsAudioExclusive.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kWindowsAudioExclusive, false);
+
+    mobileDeband.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kMobileDeband, true);
+    mobileInterpolation.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kMobileInterpolation, false);
 
     initSiteSort();
     initHomeSort();
@@ -238,14 +233,15 @@ class AppSettingsController extends GetxController {
 
     LocalStorageService.instance.setValue(LocalStorageService.kThemeMode, i);
     Get.changeThemeMode(mode);
+    if (Get.isRegistered<WindowAppearanceController>()) {
+      Get.find<WindowAppearanceController>().apply();
+    }
   }
 
-  var hardwareDecode = true.obs;
-  void setHardwareDecode(bool e) {
-    hardwareDecode.value = e;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kHardwareDecode, e);
-  }
+  // 最高画质优先，源码可启用跨画质档位的原生帧率优先策略。
+  final preferNativeFrameRate = false.obs;
+
+  final hardwareDecode = true.obs;
 
   var chatTextSize = 14.0.obs;
   void setChatTextSize(double e) {
@@ -290,7 +286,7 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuOpacity, e);
   }
 
-  var danmuEnable = true.obs;
+  var danmuEnable = false.obs;
   void setDanmuEnable(bool e) {
     danmuEnable.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kDanmuEnable, e);
@@ -310,19 +306,9 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kDanmuFontWeight, e);
   }
 
-  var qualityLevel = 1.obs;
-  void setQualityLevel(int level) {
-    qualityLevel.value = level;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kQualityLevel, level);
-  }
+  final qualityLevel = 2.obs;
 
-  var qualityLevelCellular = 1.obs;
-  void setQualityLevelCellular(int level) {
-    qualityLevelCellular.value = level;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kQualityLevelCellular, level);
-  }
+  final qualityLevelCellular = 2.obs;
 
   var autoExitEnable = false.obs;
   void setAutoExitEnable(bool e) {
@@ -345,19 +331,58 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kRoomAutoExitDuration, e);
   }
 
-  var playerCompatMode = false.obs;
-  void setPlayerCompatMode(bool e) {
-    playerCompatMode.value = e;
+  final playerCompatMode = false.obs;
+
+  late final playerBufferSize =
+      (outputPolicy.platform == 'windows' ? 256 : 128).obs;
+
+  /// Windows AI 超分着色器开关（FSRCNNX）
+  var windowsSuperResolution = true.obs;
+  void setWindowsSuperResolution(bool e) {
+    windowsSuperResolution.value = e;
     LocalStorageService.instance
-        .setValue(LocalStorageService.kPlayerCompatMode, e);
+        .setValue(LocalStorageService.kWindowsSuperResolution, e);
   }
 
-  var playerBufferSize = 32.obs;
-  void setPlayerBufferSize(int e) {
-    playerBufferSize.value = e;
+  /// Windows 动态画面平滑（补帧）开关
+  var windowsInterpolation = false.obs;
+  void setWindowsInterpolation(bool e) {
+    windowsInterpolation.value = e;
     LocalStorageService.instance
-        .setValue(LocalStorageService.kPlayerBufferSize, e);
+        .setValue(LocalStorageService.kWindowsInterpolation, e);
   }
+
+  /// Windows WASAPI 音频独占开关
+  var windowsAudioExclusive = false.obs;
+  void setWindowsAudioExclusive(bool e) {
+    windowsAudioExclusive.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kWindowsAudioExclusive, e);
+  }
+
+  /// 手机端画面去色带（Deband）开关
+  var mobileDeband = true.obs;
+  void setMobileDeband(bool e) {
+    mobileDeband.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kMobileDeband, e);
+  }
+
+  /// 手机端高刷动态画面平滑（补帧）开关
+  var mobileInterpolation = false.obs;
+  void setMobileInterpolation(bool e) {
+    mobileInterpolation.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kMobileInterpolation, e);
+  }
+
+  /// 缓冲策略：0=均衡（默认），1=抗抖稳流，2=低延迟
+  final playerBufferMode = 0.obs;
+
+  /// 直播累积延迟自动微倍速追帧
+  final liveCatchupEnable = true.obs;
+
+  /// 开播/切清晰度前 CDN 线路测速优选
+  final streamRouteProbeEnable = true.obs;
 
   var playerAutoPause = false.obs;
   void setPlayerAutoPause(bool e) {
@@ -365,6 +390,8 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance
         .setValue(LocalStorageService.kPlayerAutoPause, e);
   }
+
+  final backgroundAudioOnly = true.obs;
 
   var autoFullScreen = false.obs;
   void setAutoFullScreen(bool e) {
@@ -382,18 +409,73 @@ class AppSettingsController extends GetxController {
 
   RxSet<String> shieldList = <String>{}.obs;
   void addShieldList(String e) {
-    shieldList.add(e);
-    LocalStorageService.instance.shieldBox.put(e, e);
+    final trimmed = e.trim();
+    if (trimmed.isEmpty) return;
+    if (!shieldList.add(trimmed)) return;
+    LocalStorageService.instance.shieldBox.put(trimmed, trimmed);
+    WebDavAutoSyncService.notifyLocalMutation();
   }
 
   void removeShieldList(String e) {
-    shieldList.remove(e);
+    if (!shieldList.remove(e)) return;
     LocalStorageService.instance.shieldBox.delete(e);
+    WebDavAutoSyncService.notifyLocalMutation();
   }
 
   Future clearShieldList() async {
     shieldList.clear();
     await LocalStorageService.instance.shieldBox.clear();
+    WebDavAutoSyncService.notifyLocalMutation();
+  }
+
+  RxSet<String> shieldUserList = <String>{}.obs;
+  void addShieldUser(String userName) {
+    final trimmed = userName.trim();
+    if (trimmed.isEmpty) return;
+    if (!shieldUserList.add(trimmed)) return;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kDanmuShieldUsers,
+      shieldUserList.toList(),
+    );
+    WebDavAutoSyncService.notifyLocalMutation();
+  }
+
+  void removeShieldUser(String userName) {
+    if (!shieldUserList.remove(userName)) return;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kDanmuShieldUsers,
+      shieldUserList.toList(),
+    );
+    WebDavAutoSyncService.notifyLocalMutation();
+  }
+
+  var danmuMergeDuplicate = true.obs;
+  void setDanmuMergeDuplicate(bool e) {
+    danmuMergeDuplicate.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuMergeDuplicate, e);
+  }
+
+  var danmuMergeWindowSeconds = 5.obs;
+  void setDanmuMergeWindowSeconds(int e) {
+    final clamped = e.clamp(2, 15);
+    danmuMergeWindowSeconds.value = clamped;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDanmuMergeWindowSeconds, clamped);
+  }
+
+  var liveNotificationEnable = false.obs;
+  void setLiveNotificationEnable(bool e) {
+    liveNotificationEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kLiveNotificationEnable, e);
+  }
+
+  var webDavAutoSync = false.obs;
+  void setWebDavAutoSync(bool e) {
+    webDavAutoSync.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kWebDAVAutoSync, e);
   }
 
   void setScaleMode(int value) {
@@ -476,33 +558,13 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kLogEnable, e);
   }
 
-  var customPlayerOutput = false.obs;
-  void setCustomPlayerOutput(bool e) {
-    customPlayerOutput.value = e;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kCustomPlayerOutput, e);
-  }
+  final customPlayerOutput = false.obs;
 
-  var videoOutputDriver = "".obs;
-  void setVideoOutputDriver(String e) {
-    videoOutputDriver.value = e;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kVideoOutputDriver, e);
-  }
+  final videoOutputDriver = 'auto'.obs;
 
-  var audioOutputDriver = "".obs;
-  void setAudioOutputDriver(String e) {
-    audioOutputDriver.value = e;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kAudioOutputDriver, e);
-  }
+  final audioOutputDriver = 'auto'.obs;
 
-  var videoHardwareDecoder = "".obs;
-  void setVideoHardwareDecoder(String e) {
-    videoHardwareDecoder.value = e;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kVideoHardwareDecoder, e);
-  }
+  final videoHardwareDecoder = 'auto'.obs;
 
   var autoUpdateFollowEnable = false.obs;
   void setAutoUpdateFollowEnable(bool e) {
@@ -525,10 +587,5 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kUpdateFollowThreadCount, e);
   }
 
-  var playerForceHttps = false.obs;
-  void setPlayerForceHttps(bool e) {
-    playerForceHttps.value = e;
-    LocalStorageService.instance
-        .setValue(LocalStorageService.kPlayerForceHttps, e);
-  }
+  final playerForceHttps = false.obs;
 }

@@ -43,6 +43,17 @@ class LiveRoomDetail {
   /// 显示时间
   final String? showTime;
 
+  /// 当前直播间所属的游戏分类 ID
+  final String? categoryId;
+
+  /// 当前直播间所属的游戏分类名称
+  final String? categoryName;
+
+  /// 网页原始分区路径的最深名称，供关注分类使用。
+  final String? leafCategoryName;
+  /// 网页路径中叶子标题缺失时可回退的上级名称。
+  final String? webParentCategoryName;
+
   LiveRoomDetail({
     required this.roomId,
     required this.title,
@@ -58,6 +69,10 @@ class LiveRoomDetail {
     required this.url,
     this.isRecord = false,
     this.showTime,
+    this.categoryId,
+    this.categoryName,
+    this.leafCategoryName,
+    this.webParentCategoryName,
   });
 
   @override

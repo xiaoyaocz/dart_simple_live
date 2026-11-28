@@ -1,5 +1,11 @@
+import 'common/native_quality.dart';
+import 'common/core_error.dart';
+import 'common/request_pool.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'model/room_category_name.dart';
+import 'common/core_log.dart';
+import 'model/live_follow_status.dart';
 import 'dart:math';
 
 import 'package:simple_live_core/src/common/http_client.dart';
@@ -94,7 +100,14 @@ class DouyuSite implements LiveSite {
   @override
   Future<List<LivePlayQuality>> getPlayQualites({
     required LiveRoomDetail detail,
-  }) async {
+  }) => _qualityRequests.run(
+    jsonEncode([detail.roomId, detail.data.toString()]),
+    () => _loadPlayQualities(detail),
+  );
+
+  final _qualityRequests = InFlightRequests<List<LivePlayQuality>>();
+
+  Future<List<LivePlayQuality>> _loadPlayQualities(LiveRoomDetail detail) async {
     var data = detail.data.toString();
     data += "&cdn=&rate=-1&ver=Douyu_223061205&iar=1&ive=1&hevc=0&fa=0";
     List<LivePlayQuality> qualities = [];
@@ -124,6 +137,7 @@ class DouyuSite implements LiveSite {
         LivePlayQuality(
           quality: item["name"].toString(),
           data: DouyuPlayData(item["rate"], cdns),
+          frameRate: metadataFrameRate(item),
         ),
       );
     }
@@ -138,17 +152,34 @@ class DouyuSite implements LiveSite {
     var args = detail.data.toString();
     var data = quality.data as DouyuPlayData;
 
-    List<String> urls = [];
-    for (var item in data.cdns) {
-      var url = await getPlayUrl(detail.roomId, args, data.rate, item);
-      if (url.isNotEmpty) {
-        urls.add(url);
-      }
-    }
+    final resolved = await Future.wait(
+      data.cdns.map((item) async {
+        try {
+          return await getPlayUrl(detail.roomId, args, data.rate, item);
+        } catch (e) {
+          // 单条线路失败时继续读取其他线路。
+          CoreLog.error(e);
+          return '';
+        }
+      }),
+    );
+    final urls = resolved.where((url) => url.isNotEmpty).toSet().toList();
     return LivePlayUrl(urls: urls);
   }
 
   Future<String> getPlayUrl(
+    String roomId,
+    String args,
+    int rate,
+    String cdn,
+  ) => _playUrlRequests.run(
+    jsonEncode([roomId, args, rate, cdn]),
+    () => _loadPlayUrl(roomId, args, rate, cdn),
+  );
+
+  final _playUrlRequests = InFlightRequests<String>();
+
+  Future<String> _loadPlayUrl(
     String roomId,
     String args,
     int rate,
@@ -166,7 +197,19 @@ class DouyuSite implements LiveSite {
       formUrlEncoded: true,
     );
 
-    return "${result["data"]["rtmp_url"]}/${HtmlUnescape().convert(result["data"]["rtmp_live"].toString())}";
+    var data = result["data"];
+    if (data is! Map) return "";
+    var host = data["rtmp_url"]?.toString() ?? "";
+    var stream = data["rtmp_live"]?.toString() ?? "";
+    if (host.isEmpty || stream.isEmpty) return "";
+    var url = "$host/${HtmlUnescape().convert(stream)}";
+    var uri = Uri.tryParse(url);
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != "https" && uri.scheme != "http")) {
+      return "";
+    }
+    return url;
   }
 
   @override
@@ -175,6 +218,10 @@ class DouyuSite implements LiveSite {
       "https://www.douyu.com/japi/weblist/apinc/allpage/6/$page",
       queryParameters: {},
     );
+
+    if (result['error'] != 0 || result['data']?['rl'] is! List) {
+      throw CoreError('斗鱼推荐接口未返回有效数据，请稍后刷新');
+    }
 
     var items = <LiveRoomItem>[];
     for (var item in result['data']['rl']) {
@@ -190,26 +237,34 @@ class DouyuSite implements LiveSite {
       );
       items.add(roomItem);
     }
-    var hasMore = page < result['data']['pgcnt'];
+    // The live endpoint can report pgcnt=0 while later pages still exist.
+    // Only a positive page count is authoritative; otherwise use raw rows
+    // (before filtering non-room cards) and stop on an empty upstream page.
+    final pageCount = int.tryParse('${result['data']['pgcnt']}') ?? 0;
+    final hasMore = pageCount > 0
+        ? page < pageCount
+        : (result['data']['rl'] as List).isNotEmpty;
     return LiveCategoryResult(hasMore: hasMore, items: items);
   }
 
+  final _encPrefetch = PrefetchRequests<String>();
+  final _h5Prefetch = PrefetchRequests<Map>();
+
+  /// 取流加密串和 h5 房间信息都只依赖 roomId，进房时先和房间信息一起发出去。
   @override
-  Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    Map roomInfo = await _getRoomInfo(roomId);
+  void prefetchRoom(String roomId) {
+    _encPrefetch.prefetch(roomId, () => _fetchHomeH5Enc(roomId));
+    _h5Prefetch.prefetch(roomId, () => _fetchH5Room(roomId));
+  }
 
-    Map h5RoomInfo = await HttpClient.instance.getJson(
-      "https://www.douyu.com/swf_api/h5room/$roomId",
-      queryParameters: {},
-      header: {
-        'referer': 'https://www.douyu.com/$roomId',
-        'user-agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
-      },
-    );
-    String? showTime = h5RoomInfo["data"]?["show_time"]?.toString();
+  Future<String> _takeHomeH5Enc(String roomId) =>
+      _encPrefetch.take(roomId, () => _fetchHomeH5Enc(roomId));
 
-    var jsEncResult = await HttpClient.instance.getText(
+  Future<Map> _takeH5Room(String roomId) =>
+      _h5Prefetch.take(roomId, () => _fetchH5Room(roomId));
+
+  Future<String> _fetchHomeH5Enc(String roomId) {
+    return HttpClient.instance.getText(
       "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId",
       queryParameters: {},
       header: {
@@ -218,7 +273,80 @@ class DouyuSite implements LiveSite {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43",
       },
     );
-    var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
+  }
+
+  Future<Map> _fetchH5Room(String roomId) async {
+    final result = await HttpClient.instance.getJson(
+      "https://www.douyu.com/swf_api/h5room/$roomId",
+      queryParameters: {},
+      header: {
+        'referer': 'https://www.douyu.com/$roomId',
+        'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
+      },
+    );
+    return result as Map;
+  }
+
+  @override
+  Future<LiveRoomDetail> getRoomDetail({required String roomId}) =>
+      _roomRequests.run(roomId, () => _loadRoomDetail(roomId));
+
+  final _roomRequests = InFlightRequests<LiveRoomDetail>();
+
+  @override
+  Future<LiveRoomDetail> refreshRoomDetail({required String roomId}) {
+    _roomRequests.invalidate(roomId);
+    return getRoomDetail(roomId: roomId);
+  }
+
+  Future<LiveRoomDetail> _loadRoomDetail(String roomId) async {
+    Map roomInfo = await _getRoomInfo(roomId);
+    final status = int.tryParse(roomInfo['show_status']?.toString() ?? '');
+    if (status == null) throw StateError('斗鱼房间未返回直播状态');
+    final replay = roomInfo['videoLoop']?.toString() == '1';
+    if (status != 1 && !replay) {
+      // No H5/signature requests after the primary API confirms offline.
+      return LiveRoomDetail(
+        roomId: roomInfo['room_id']?.toString() ?? roomId,
+        title: roomInfo['room_name']?.toString() ?? '',
+        cover: roomInfo['room_pic']?.toString() ?? '',
+        userName: roomInfo['owner_name']?.toString() ?? '',
+        userAvatar: roomInfo['owner_avatar']?.toString() ?? '',
+        online: 0,
+        status: false,
+        url: 'https://www.douyu.com/$roomId',
+        categoryId: roomInfo['cate_id']?.toString(),
+        categoryName: firstCategoryName([
+          roomInfo['cate2_name'],
+          roomInfo['cate_name'],
+          roomInfo['cate1_name'],
+        ]),
+      );
+    }
+
+    // 开播时间与取流加密串互不依赖，并发发出，少等一次往返。
+    // A public URL may be a VIP alias. H5, signing and CDN APIs require rid.
+    final realRoomId = roomInfo['room_id']?.toString() ?? roomId;
+    final h5RoomRequest = _takeH5Room(realRoomId);
+    final jsEncRequest = _takeHomeH5Enc(realRoomId);
+    // 若 h5 请求先抛错，加密串请求的失败不应变成未捕获异常。
+    jsEncRequest.catchError((Object _) => '');
+    Map h5RoomInfo = await h5RoomRequest;
+    String? showTime = h5RoomInfo["data"]?["show_time"]?.toString();
+    var jsEncResult = await jsEncRequest;
+    dynamic signing;
+    try {
+      signing = jsonDecode(jsEncResult);
+    } on FormatException {
+      throw CoreError('斗鱼播放签名返回异常，请刷新重试');
+    }
+    final crptext = signing is Map && signing['data'] is Map
+        ? signing['data']['room$realRoomId']
+        : null;
+    if (crptext is! String || crptext.isEmpty) {
+      throw CoreError('斗鱼未返回播放签名，请刷新重试');
+    }
 
     if (showTime != null && showTime.isNotEmpty) {
       try {
@@ -247,12 +375,18 @@ class DouyuSite implements LiveSite {
       userAvatar: roomInfo["owner_avatar"].toString(),
       introduction: roomInfo["show_details"].toString(),
       notice: "",
-      status: roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1,
+      status: status == 1 && !replay,
       danmakuData: roomInfo["room_id"].toString(),
       data: DouyuSign.getSign(crptext, roomInfo["room_id"].toString()),
       url: "https://www.douyu.com/$roomId",
-      isRecord: roomInfo["videoLoop"] == 1,
+      isRecord: replay,
       showTime: showTime,
+      categoryId: roomInfo["cate_id"]?.toString(),
+      categoryName: firstCategoryName([
+        roomInfo['cate2_name'], h5RoomInfo['data']?['cate2_name'],
+        roomInfo['cate_name'], h5RoomInfo['data']?['cate_name'],
+        roomInfo['cate1_name'], h5RoomInfo['data']?['cate1_name'],
+      ]),
     );
   }
 
@@ -291,6 +425,48 @@ class DouyuSite implements LiveSite {
   }
 
   Future<Map> _getRoomInfo(String roomId) async {
+    final payload = await _getRoomPayload(roomId);
+    return payload['room'] as Map;
+  }
+
+  Future<Map> _getRoomPayload(String roomId) async {
+    final direct = await _getBetardPayload(roomId);
+    if (direct != null) return direct;
+
+    // /betard/<VIP alias> can return a 200 HTML "room closed" page even
+    // though the anchor is live. Resolve the public alias from official H5
+    // page data, then query the numeric room exactly once (no recursion).
+    final html = await HttpClient.instance.getText(
+      'https://m.douyu.com/${Uri.encodeComponent(roomId)}',
+      header: {'Referer': 'https://m.douyu.com/'},
+    );
+    final match = RegExp(
+      r'''<script\b[^>]*\bid=["']vike_pageContext["'][^>]*>([\s\S]*?)</script>''',
+    ).firstMatch(html);
+    String? realRoomId;
+    if (match != null) {
+      try {
+        final context = jsonDecode(match.group(1)!);
+        final info = context is Map ? context['pageProps'] : null;
+        final room = info is Map ? info['room'] : null;
+        final details = room is Map ? room['roomInfo'] : null;
+        final metadata = details is Map ? details['roomInfo'] : null;
+        if (metadata is Map) realRoomId = metadata['rid']?.toString();
+      } on FormatException {
+        // A changed/error page is not room metadata.
+      }
+    }
+    if (realRoomId == null ||
+        realRoomId == roomId ||
+        !RegExp(r'^[1-9]\d*$').hasMatch(realRoomId)) {
+      throw CoreError('未获取到斗鱼直播间信息，请检查房间号或稍后刷新');
+    }
+    final resolved = await _getBetardPayload(realRoomId);
+    if (resolved == null) throw CoreError('斗鱼直播间信息返回异常，请稍后刷新');
+    return resolved;
+  }
+
+  Future<Map?> _getBetardPayload(String roomId) async {
     var result = await HttpClient.instance.getJson(
       "https://www.douyu.com/betard/$roomId",
       queryParameters: {},
@@ -300,13 +476,14 @@ class DouyuSite implements LiveSite {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
       },
     );
-    Map roomInfo;
     if (result is String) {
-      roomInfo = json.decode(result)["room"];
-    } else {
-      roomInfo = result["room"];
+      try {
+        result = jsonDecode(result);
+      } on FormatException {
+        return null;
+      }
     }
-    return roomInfo;
+    return result is Map && result['room'] is Map ? result : null;
   }
 
   //生成指定长度的16进制随机字符串
@@ -361,9 +538,61 @@ class DouyuSite implements LiveSite {
   }
 
   @override
+  bool get supportsFollowStatusBatch => false;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async =>
+      const {};
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != DouyuSite) {
+      final isLive = await getLiveStatus(roomId: roomId);
+      return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+    }
+    final payload = await _getRoomPayload(roomId);
+    final room = payload['room'] as Map;
+    final game = payload['game'] is Map ? payload['game'] as Map : null;
+    final status = int.tryParse('${room['show_status']}');
+    if (status == null) throw StateError('斗鱼房间未返回直播状态');
+    final bizAll =
+        room['room_biz_all'] is Map ? room['room_biz_all'] as Map : null;
+    final replay = room['videoLoop']?.toString() == '1' ||
+        bizAll?['videoLoop']?.toString() == '1';
+    final isLive = status == 1 && !replay;
+    final onlineVal = int.tryParse('${bizAll?['hot'] ?? room['hot'] ?? ''}') ?? 0;
+    final rawShowTime = room['show_time']?.toString().trim();
+    final showTime = isLive &&
+            rawShowTime != null &&
+            RegExp(r'^[1-9]\d*$').hasMatch(rawShowTime)
+        ? rawShowTime
+        : null;
+    final resolved = room['room_id']?.toString().trim();
+    return LiveFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: resolved != null && resolved.isNotEmpty ? resolved : null,
+      online: isLive && onlineVal > 0 ? onlineVal : null,
+      categoryName: firstCategoryName([
+        room['cate2_name'],
+        room['second_lvl_name'],
+        game?['tag_name'],
+        room['cate_name'],
+        room['cate1_name'],
+      ]),
+      showTime: showTime,
+      title: room['room_name']?.toString(),
+      needsDetailFallback: false,
+    );
+  }
+
+  @override
   Future<bool> getLiveStatus({required String roomId}) async {
-    var roomInfo = await _getRoomInfo(roomId);
-    return roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1;
+    final room = await _getRoomInfo(roomId);
+    final status = int.tryParse('${room["show_status"]}');
+    if (status == null) throw StateError('斗鱼房间未返回直播状态');
+    return status == 1 && room['videoLoop']?.toString() != '1';
   }
 
   int parseHotNum(String hn) {

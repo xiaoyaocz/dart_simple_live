@@ -6,7 +6,10 @@ export 'src/huya_site.dart';
 export 'src/bilibili_site.dart';
 export 'src/douyu_site.dart';
 export 'src/douyin_site.dart';
+export 'src/scripts/douyin_sign.dart';
+export 'src/common/core_error.dart';
 export 'src/common/core_log.dart';
+export 'src/model/live_follow_status.dart';
 export 'src/model/live_message.dart';
 export 'src/danmaku/bilibili_danmaku.dart';
 export 'src/danmaku/douyu_danmaku.dart';
@@ -21,3 +24,10 @@ export 'src/model/live_room_item.dart';
 export 'src/model/live_search_result.dart';
 export 'src/model/live_anchor_item.dart';
 export 'src/model/live_play_url.dart';
+
+export 'src/model/live_emoticon.dart';
+export 'src/danmaku/platform_emoticons.dart';
+export 'src/danmaku/emoticon_seeds.dart';
+
+export 'src/common/native_quality.dart';
+export 'src/common/native_hls_resolver.dart';

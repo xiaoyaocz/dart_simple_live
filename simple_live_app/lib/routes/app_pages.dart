@@ -6,6 +6,8 @@ import 'package:simple_live_app/modules/category/detail/category_detail_page.dar
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/live_room_page.dart';
+import 'package:simple_live_app/modules/multi_view/multi_view_controller.dart';
+import 'package:simple_live_app/modules/multi_view/multi_view_page.dart';
 import 'package:simple_live_app/modules/settings/follow_settings_page.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_config_page.dart';
 import 'package:simple_live_app/modules/sync/remote_sync/webdav/remote_sync_webdav_controller.dart';
@@ -97,13 +99,16 @@ class AppPages {
     //直播间
     GetPage(
       name: RoutePath.kLiveRoomDetail,
-      page: () => const LiveRoomPage(),
-      binding: BindingsBuilder.put(
-        () => LiveRoomController(
-          pSite: Get.arguments,
-          pRoomId: Get.parameters["roomId"] ?? "",
-        ),
-      ),
+      page: () => LiveRoomPage(roomTag: Get.parameters["instance"]),
+      binding: BindingsBuilder(() {
+        Get.put(
+          LiveRoomController(
+            pSite: Get.arguments,
+            pRoomId: Get.parameters["roomId"] ?? "",
+          ),
+          tag: Get.parameters["instance"],
+        );
+      }),
     ),
     //弹幕设置
     GetPage(
@@ -247,6 +252,14 @@ class AppPages {
     GetPage(
       name: RoutePath.kSettingsFollow,
       page: () => const FollowSettingsPage(),
+    ),
+    //多画面同屏（桌面端）
+    GetPage(
+      name: RoutePath.kMultiView,
+      page: () => const MultiViewPage(),
+      bindings: [
+        BindingsBuilder.put(() => MultiViewController()),
+      ],
     ),
   ];
 }

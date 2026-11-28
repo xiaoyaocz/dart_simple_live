@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:simple_live_app/modules/sync/local_sync/scan_qr/sync_scan_qr_controller.dart';
 
 class SyncScanQRPage extends GetView<SyncScanQRControlelr> {
@@ -13,98 +13,93 @@ class SyncScanQRPage extends GetView<SyncScanQRControlelr> {
         title: const Text('扫描二维码'),
         actions: [
           IconButton(
-            onPressed: () {
-              controller.qrController?.toggleFlash();
-            },
+            onPressed: controller.toggleTorch,
             icon: const Icon(Icons.flash_on),
           ),
           // 反转摄像头
           IconButton(
-            onPressed: () {
-              controller.qrController?.flipCamera();
-            },
+            onPressed: controller.switchCamera,
             icon: const Icon(Icons.flip_camera_android),
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          QRView(
-            key: controller.qrKey,
-            onQRViewCreated: controller.onQRViewCreated,
-          ),
-          const ScanRectangle(),
-        ],
-      ),
+      body: Obx(() {
+        final cameraReady = controller.cameraReady.value;
+        if (cameraReady == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!cameraReady) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('需要相机权限才能扫描二维码'),
+                TextButton(
+                  onPressed: controller.retryCamera,
+                  child: const Text('授权相机'),
+                ),
+              ],
+            ),
+          );
+        }
+        return Stack(
+          children: [
+            MobileScanner(
+              controller: controller.scannerController,
+              onDetect: controller.onDetect,
+              tapToFocus: true,
+              errorBuilder: (context, error) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('相机启动失败，请检查相机权限'),
+                    TextButton(
+                      onPressed: controller.retryCamera,
+                      child: const Text('重试'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const IgnorePointer(child: ScanRectangle()),
+            Positioned(
+              bottom: 36,
+              left: 16,
+              right: 16,
+              child: Center(
+                child: Obx(() => Text(
+                      controller.hint.value,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        backgroundColor: Colors.black54,
+                      ),
+                    )),
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
 
-class ScanRectangle extends StatefulWidget {
+class ScanRectangle extends StatelessWidget {
   const ScanRectangle({super.key});
-
-  @override
-  State<ScanRectangle> createState() => _ScanRectangleState();
-}
-
-class _ScanRectangleState extends State<ScanRectangle>
-    with SingleTickerProviderStateMixin {
-  late AnimationController animeController;
-  late Animation<Offset> animation;
-
-  @override
-  void initState() {
-    animeController =
-        AnimationController(duration: const Duration(seconds: 2), vsync: this);
-    animeController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        animeController.reverse();
-      } else if (status == AnimationStatus.dismissed) {
-        animeController.forward();
-      }
-    });
-    animation = Tween(
-      begin: const Offset(0, 0),
-      end: const Offset(0, 1),
-    ).animate(animeController);
-    animeController.forward();
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        height: 240,
-        width: 240,
+        height: 280,
+        width: 280,
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.grey.withAlpha(50),
+            color: Colors.white70,
             width: 2,
           ),
-        ),
-        child: SlideTransition(
-          position: animation,
-          child: Container(
-            height: 240,
-            width: 240,
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  width: 2,
-                  color: Colors.green,
-                ),
-              ),
-            ),
-          ),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    animeController.dispose();
-    super.dispose();
   }
 }

@@ -117,4 +117,11 @@ class BasePageController<T> extends BaseController {
       easyRefreshController.callRefresh();
     }
   }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    easyRefreshController.dispose();
+    super.onClose();
+  }
 }

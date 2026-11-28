@@ -1,4 +1,9 @@
+import 'common/core_log.dart';
+import 'common/native_quality.dart';
+import 'common/request_pool.dart';
 import 'dart:convert';
+import 'model/live_follow_status.dart';
+import 'model/room_category_name.dart';
 
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
@@ -25,6 +30,7 @@ class BiliBiliSite implements LiveSite {
 
   String cookie = "";
   int userId = 0;
+  String _authRoomKey(String roomId) => jsonEncode([cookie, userId, roomId]);
 
   @override
   LiveDanmaku getDanmaku() => BiliBiliDanmaku();
@@ -62,10 +68,7 @@ class BiliBiliSite implements LiveSite {
     List<LiveCategory> categories = [];
     var result = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/room/v1/Area/getList",
-      queryParameters: {
-        "need_entrance": 1,
-        "parent_id": 0,
-      },
+      queryParameters: {"need_entrance": 1, "parent_id": 0},
       header: await getHeader(),
     );
     for (var item in result["data"]) {
@@ -90,8 +93,10 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<LiveCategoryResult> getCategoryRooms(LiveSubCategory category,
-      {int page = 1}) async {
+  Future<LiveCategoryResult> getCategoryRooms(
+    LiveSubCategory category, {
+    int page = 1,
+  }) async {
     const baseUrl =
         "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList";
 
@@ -122,86 +127,204 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<List<LivePlayQuality>> getPlayQualites(
-      {required LiveRoomDetail detail}) async {
+  Future<List<LivePlayQuality>> getPlayQualites({
+    required LiveRoomDetail detail,
+  }) async {
     List<LivePlayQuality> qualities = [];
-    var result = await HttpClient.instance.getJson(
-      "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
-      queryParameters: {
-        "room_id": detail.roomId,
-        "protocol": "0,1",
-        "format": "0,1,2",
-        "codec": "0,1",
-        "platform": "web",
-      },
-      header: await getHeader(),
-    );
+    final accountRoom = _authRoomKey(detail.roomId);
+    var result = await _takePlayInfo(detail.roomId);
     var qualitiesMap = <int, String>{};
+    final frameRates = <int, double?>{};
     for (var item in result["data"]["playurl_info"]["playurl"]["g_qn_desc"]) {
+      frameRates[int.tryParse(item["qn"].toString()) ?? 0] = metadataFrameRate(item);
       qualitiesMap[int.tryParse(item["qn"].toString()) ?? 0] =
           item["desc"].toString();
     }
 
-    for (var item in result["data"]["playurl_info"]["playurl"]["stream"][0]
-        ["format"][0]["codec"][0]["accept_qn"]) {
+    final acceptQn = <int>{};
+    for (final streamItem
+        in (result["data"]["playurl_info"]["playurl"]["stream"] as List? ??
+            const [])) {
+      for (final formatItem in (streamItem["format"] as List? ?? const [])) {
+        for (final codecItem in (formatItem["codec"] as List? ?? const [])) {
+          for (final qn in (codecItem["accept_qn"] as List? ?? const [])) {
+            final parsed = int.tryParse('$qn');
+            if (parsed != null) acceptQn.add(parsed);
+          }
+        }
+      }
+    }
+    final sortedQn = acceptQn.toList()..sort((a, b) => b.compareTo(a));
+    for (var item in sortedQn) {
       var qualityItem = LivePlayQuality(
         quality: qualitiesMap[item] ?? "未知清晰度",
         data: item,
+        frameRate: frameRates[item],
       );
       qualities.add(qualityItem);
+    }
+    // 同一次响应里已经带回了某个清晰度的直链，先存着，
+    // 选中的清晰度与它一致时省掉一次完全相同的请求。
+    if (accountRoom == _authRoomKey(detail.roomId)) {
+      _cachePlayUrl(
+        detail.roomId,
+        result["data"]["playurl_info"]["playurl"],
+      );
     }
     return qualities;
   }
 
   @override
-  Future<LivePlayUrl> getPlayUrls(
-      {required LiveRoomDetail detail,
-      required LivePlayQuality quality}) async {
-    List<String> urls = [];
-    var result = await HttpClient.instance.getJson(
+  Future<LivePlayUrl> getPlayUrls({
+    required LiveRoomDetail detail,
+    required LivePlayQuality quality,
+  }) => _playUrlRequests.run(
+    jsonEncode([cookie, userId, detail.roomId, quality.data]),
+    () => _loadPlayUrls(detail, quality),
+  );
+
+  final _playUrlRequests = InFlightRequests<LivePlayUrl>();
+
+  Future<LivePlayUrl> _loadPlayUrls(
+    LiveRoomDetail detail,
+    LivePlayQuality quality,
+  ) async {
+    final cached = _takeCachedPlayUrl(detail.roomId, quality.data);
+    if (cached != null) return cached;
+    var result = await _fetchPlayInfo(detail.roomId, qn: quality.data);
+    return _parsePlayUrls(
+      result["data"]["playurl_info"]["playurl"],
+      quality: int.tryParse('${quality.data}'),
+    );
+  }
+
+  final _playInfoPrefetch = PrefetchRequests<dynamic>();
+
+  /// 清晰度接口只认 roomId，可以在等房间详情的同时先发出去。
+  @override
+  void prefetchRoom(String roomId) {
+    _playInfoPrefetch.prefetch(_authRoomKey(roomId), () => _fetchPlayInfo(roomId));
+  }
+
+  Future<dynamic> _takePlayInfo(String roomId) =>
+      _playInfoPrefetch.take(_authRoomKey(roomId), () => _fetchPlayInfo(roomId));
+
+  Future<dynamic> _fetchPlayInfo(String roomId, {Object? qn}) async {
+    return HttpClient.instance.getJson(
       "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo",
       queryParameters: {
-        "room_id": detail.roomId,
+        "room_id": roomId,
         "protocol": "0,1",
-        "format": "0,2",
-        "codec": "0",
+        "format": "0,1,2",
+        "codec": "0,1",
         "platform": "web",
-        "qn": quality.data,
+        "dolby": "5",
+        "panorama": "1",
+        if (qn != null) "qn": qn,
       },
       header: await getHeader(),
     );
-    var streamList = result["data"]["playurl_info"]["playurl"]["stream"];
-    for (var streamItem in streamList) {
+  }
+
+  /// 缓存有效期。直播直链本身带时效，缓存只用于抹掉同一次开播里的重复请求。
+  static const _cachedPlayUrlTtl = Duration(seconds: 30);
+  final _cachedPlayUrls = <String, (int, LivePlayUrl, DateTime)>{};
+
+  static const _playHeaders = {
+    "referer": "https://live.bilibili.com",
+    "user-agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188",
+  };
+
+  LivePlayUrl _parsePlayUrls(Map playurl, {required int? quality}) {
+    final urlsByQuality = <int?, List<String>>{};
+    for (var streamItem in playurl["stream"]) {
       var formatList = streamItem["format"];
       for (var formatItem in formatList) {
-        var codecList = formatItem["codec"];
+        var codecList = [...formatItem["codec"]]
+          ..sort(
+            (a, b) => (a["codec_name"] == "avc" ? 0 : 1).compareTo(
+              b["codec_name"] == "avc" ? 0 : 1,
+            ),
+          );
         for (var codecItem in codecList) {
           var urlList = codecItem["url_info"];
           var baseUrl = codecItem["base_url"].toString();
+          final currentQn = int.tryParse('${codecItem["current_qn"]}');
           for (var urlItem in urlList) {
-            urls.add(
-              "${urlItem["host"]}$baseUrl${urlItem["extra"]}",
-            );
+            final url = "${urlItem["host"]}$baseUrl${urlItem["extra"]}";
+            (urlsByQuality[currentQn] ??= []).add(url);
           }
         }
       }
     }
-    // 对链接进行排序，包含mcdn的在后
-    urls.sort((a, b) {
-      if (a.contains("mcdn")) {
-        return 1;
-      } else {
-        return -1;
+    final available = urlsByQuality.keys.whereType<int>().toList()..sort();
+    final delivered = available.isEmpty
+        ? null
+        : available.lastWhere(
+            (qn) => quality == null || qn <= quality,
+            orElse: () => available.first,
+          );
+    final urls = (urlsByQuality[delivered] ?? []).toSet();
+    String? actualQuality;
+    if (delivered != null) {
+      for (final entry in playurl["g_qn_desc"] ?? const []) {
+        if (int.tryParse('${entry["qn"]}') == delivered) {
+          actualQuality = entry["desc"]?.toString();
+          break;
+        }
       }
-    });
+      if ((actualQuality?.isNotEmpty != true) && delivered != quality) {
+        actualQuality = '清晰度 $delivered';
+      }
+    }
+    // 保留接口给出的线路顺序，并将 mcdn 放在备用位置。
     return LivePlayUrl(
-      urls: urls,
-      headers: {
-        "referer": "https://live.bilibili.com",
-        "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
-      },
+      urls: [
+        ...urls.where((url) => !url.contains("mcdn")),
+        ...urls.where((url) => url.contains("mcdn")),
+      ],
+      headers: _playHeaders,
+      actualQuality: actualQuality,
     );
+  }
+
+  void _cachePlayUrl(String roomId, dynamic playurl) {
+    try {
+      int? qn;
+      for (final streamItem in (playurl["stream"] as List? ?? const [])) {
+        for (final formatItem in (streamItem["format"] as List? ?? const [])) {
+          for (final codecItem in (formatItem["codec"] as List? ?? const [])) {
+            final current = int.tryParse('${codecItem["current_qn"]}');
+            if (current != null && (qn == null || current > qn)) {
+              qn = current;
+            }
+          }
+        }
+      }
+      if (qn == null) return;
+      final playUrl = _parsePlayUrls(playurl, quality: qn);
+      if (playUrl.urls.isEmpty) return;
+      if (_cachedPlayUrls.length >= 8) {
+        _cachedPlayUrls.remove(_cachedPlayUrls.keys.first);
+      }
+      _cachedPlayUrls[_authRoomKey(roomId)] = (qn, playUrl, DateTime.now());
+    } catch (_) {
+      // 响应结构不符预期就不缓存，下次照常单独请求。
+    }
+  }
+
+  LivePlayUrl? _takeCachedPlayUrl(String roomId, Object? qualityData) {
+    final key = _authRoomKey(roomId);
+    final cached = _cachedPlayUrls[key];
+    if (cached == null) return null;
+    if (DateTime.now().difference(cached.$3) > _cachedPlayUrlTtl) {
+      _cachedPlayUrls.remove(key);
+      return null;
+    }
+    if (int.tryParse("$qualityData") != cached.$1) return null;
+    _cachedPlayUrls.remove(key);
+    return cached.$2;
   }
 
   @override
@@ -234,9 +357,44 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
+  Future<LiveRoomDetail> getRoomDetail({required String roomId}) =>
+      _roomRequests.run(_authRoomKey(roomId), () => _loadRoomDetail(roomId));
+
+  final _roomRequests = InFlightRequests<LiveRoomDetail>();
+
+  @override
+  Future<LiveRoomDetail> refreshRoomDetail({required String roomId}) {
+    _roomRequests.invalidate(_authRoomKey(roomId));
+    return getRoomDetail(roomId: roomId);
+  }
+
+  Future<LiveRoomDetail> _loadRoomDetail(String roomId) async {
     var roomInfo = await getRoomInfo(roomId: roomId);
     var realRoomId = roomInfo["room_info"]["room_id"].toString();
+    final status = int.tryParse(
+      roomInfo['room_info']['live_status']?.toString() ?? '',
+    );
+    if (status == null) throw StateError('B站房间未返回直播状态');
+    if (status != 1) {
+      // The room API is authoritative; an offline room needs no chat token.
+      final anchor = roomInfo['anchor_info']?['base_info'];
+      return LiveRoomDetail(
+        roomId: realRoomId,
+        status: false,
+        online: 0,
+        title: roomInfo['room_info']['title']?.toString() ?? '',
+        cover: roomInfo['room_info']['cover']?.toString() ?? '',
+        userName: anchor?['uname']?.toString() ?? '',
+        userAvatar: anchor?['face']?.toString() ?? '',
+        url: 'https://live.bilibili.com/$roomId',
+        categoryId: roomInfo['room_info']['area_id']?.toString(),
+        categoryName: firstCategoryName([
+          roomInfo['room_info']['second_area_name'],
+          roomInfo['room_info']['area_name'],
+          roomInfo['room_info']['parent_area_name'],
+        ]),
+      );
+    }
 
     const danmuInfoBaseUrl =
         "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo";
@@ -300,6 +458,12 @@ class BiliBiliSite implements LiveSite {
         cookie: cookie,
       ),
       showTime: liveStartTime, // 将 liveStartTime 赋值给 showTime 字段
+      categoryId: roomInfo["room_info"]["area_id"]?.toString(),
+      categoryName: firstCategoryName([
+        roomInfo['room_info']['second_area_name'],
+        roomInfo['room_info']['area_name'],
+        roomInfo['room_info']['parent_area_name'],
+      ]),
     );
   }
 
@@ -317,8 +481,10 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchRoomResult> searchRooms(String keyword,
-      {int page = 1}) async {
+  Future<LiveSearchRoomResult> searchRooms(
+    String keyword, {
+    int page = 1,
+  }) async {
     var result = await HttpClient.instance.getJson(
       "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live&cover_type=user_cover",
       queryParameters: {
@@ -329,7 +495,7 @@ class BiliBiliSite implements LiveSite {
         "_extra": "",
         "highlight": 0,
         "single_column": 0,
-        "page": page
+        "page": page,
       },
       header: await getHeader(),
     );
@@ -352,8 +518,10 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchAnchorResult> searchAnchors(String keyword,
-      {int page = 1}) async {
+  Future<LiveSearchAnchorResult> searchAnchors(
+    String keyword, {
+    int page = 1,
+  }) async {
     var result = await HttpClient.instance.getJson(
       "https://api.bilibili.com/x/web-interface/search/type?context=&search_type=live_user&cover_type=user_cover",
       queryParameters: {
@@ -364,7 +532,7 @@ class BiliBiliSite implements LiveSite {
         "_extra": "",
         "highlight": 0,
         "single_column": 0,
-        "page": page
+        "page": page,
       },
       header: await getHeader(),
     );
@@ -385,26 +553,171 @@ class BiliBiliSite implements LiveSite {
     return LiveSearchAnchorResult(hasMore: items.length >= 40, items: items);
   }
 
+  static const int kFollowBatchSize = 40;
+
+  /// 将 B 站开播时间（CST "YYYY-MM-DD HH:MM:SS" 或 Unix 时间戳）转换为秒级时间戳字符串。
+  static String? parseLiveTimeToUnixSeconds(Object? raw) {
+    final text = raw?.toString().trim() ?? '';
+    if (text.isEmpty || text == '0' || text.startsWith('0000-00-00')) {
+      return null;
+    }
+    if (RegExp(r'^[1-9]\d*$').hasMatch(text)) {
+      if (text.length >= 13) {
+        final ms = int.tryParse(text);
+        return ms != null && ms > 0 ? '${ms ~/ 1000}' : null;
+      }
+      return text;
+    }
+    var iso = text.replaceFirst(' ', 'T');
+    if (!RegExp(r'(Z|[+-]\d{2}:?\d{2})$').hasMatch(iso)) {
+      iso = '$iso+08:00';
+    }
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null || parsed.millisecondsSinceEpoch <= 0) {
+      return null;
+    }
+    return '${parsed.millisecondsSinceEpoch ~/ 1000}';
+  }
+
+  @override
+  bool get supportsFollowStatusBatch => runtimeType == BiliBiliSite;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async {
+    if (runtimeType != BiliBiliSite) {
+      return const {};
+    }
+    final ids = <String>[];
+    final seen = <String>{};
+    for (final raw in roomIds) {
+      final clean = raw.trim();
+      if (clean.isNotEmpty && seen.add(clean)) {
+        ids.add(clean);
+      }
+    }
+    if (ids.isEmpty) {
+      return const {};
+    }
+    final results = <String, LiveFollowStatus>{};
+    final header = await getHeader();
+    for (var offset = 0; offset < ids.length; offset += kFollowBatchSize) {
+      final end = (offset + kFollowBatchSize) > ids.length
+          ? ids.length
+          : offset + kFollowBatchSize;
+      final chunk = ids.sublist(offset, end);
+      try {
+        final query = [
+          'req_biz=web_room_componet',
+          ...chunk.map((id) => 'room_ids=${Uri.encodeQueryComponent(id)}'),
+        ].join('&');
+        final url =
+            'https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo?$query';
+        final result = await HttpClient.instance.getJson(url, header: header);
+        if (result is! Map || result['code'] != 0) continue;
+        final data = result['data'];
+        final byRoomIds = data is Map ? data['by_room_ids'] : null;
+        if (byRoomIds is! Map) continue;
+
+        final index = <String, Map>{};
+        for (final mapEntry in byRoomIds.entries) {
+          final value = mapEntry.value;
+          if (value is! Map) continue;
+          final mapKey = mapEntry.key?.toString().trim() ?? '';
+          if (mapKey.isNotEmpty) {
+            index[mapKey] = value;
+          }
+          final canonicalId = value['room_id']?.toString().trim() ?? '';
+          if (canonicalId.isNotEmpty) {
+            index[canonicalId] = value;
+          }
+          final shortId = value['short_id']?.toString().trim() ?? '';
+          if (shortId.isNotEmpty && shortId != '0') {
+            index[shortId] = value;
+          }
+        }
+
+        for (final requestedId in chunk) {
+          final entry = index[requestedId];
+          if (entry == null) continue;
+          final status = int.tryParse('${entry['live_status']}');
+          if (status == null) continue;
+          final isLive = status == 1;
+          final onlineVal = int.tryParse('${entry['online'] ?? ''}') ?? 0;
+          final resolved = entry['room_id']?.toString().trim();
+          results[requestedId] = LiveFollowStatus(
+            isLive: isLive,
+            resolvedRoomId:
+                resolved != null && resolved.isNotEmpty ? resolved : null,
+            online: isLive && onlineVal > 0 ? onlineVal : null,
+            categoryName: firstCategoryName([
+              entry['area_name'],
+              entry['parent_area_name'],
+            ]),
+            showTime:
+                isLive ? parseLiveTimeToUnixSeconds(entry['live_time']) : null,
+            title: entry['title']?.toString(),
+            needsDetailFallback: false,
+          );
+        }
+      } catch (error) {
+        CoreLog.error(error);
+      }
+    }
+    return results;
+  }
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != BiliBiliSite) {
+      final isLive = await getLiveStatus(roomId: roomId);
+      return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+    }
+    var result = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/room/v1/Room/get_info",
+      queryParameters: {"room_id": roomId},
+      header: await getHeader(),
+    );
+    final data = result["data"];
+    final status = int.tryParse('${data?["live_status"]}');
+    if (status == null) throw StateError('B站房间未返回直播状态');
+    final isLive = status == 1;
+    final onlineVal = int.tryParse('${data?["online"] ?? ''}') ?? 0;
+    final resolved = data?["room_id"]?.toString().trim();
+    return LiveFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: resolved != null && resolved.isNotEmpty ? resolved : null,
+      online: isLive && onlineVal > 0 ? onlineVal : null,
+      categoryName: firstCategoryName([
+        data?['area_name'],
+        data?['parent_area_name'],
+      ]),
+      showTime: isLive ? parseLiveTimeToUnixSeconds(data?['live_time']) : null,
+      title: data?['title']?.toString(),
+      needsDetailFallback: false,
+    );
+  }
+
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     var result = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/room/v1/Room/get_info",
-      queryParameters: {
-        "room_id": roomId,
-      },
+      queryParameters: {"room_id": roomId},
       header: await getHeader(),
     );
-    return (asT<int?>(result["data"]["live_status"]) ?? 0) == 1;
+    final status = int.tryParse('${result["data"]?["live_status"]}');
+    if (status == null) throw StateError('B站房间未返回直播状态');
+    return status == 1;
   }
 
   @override
-  Future<List<LiveSuperChatMessage>> getSuperChatMessage(
-      {required String roomId}) async {
+  Future<List<LiveSuperChatMessage>> getSuperChatMessage({
+    required String roomId,
+  }) async {
     var result = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/av/v1/SuperChat/getMessageList",
-      queryParameters: {
-        "room_id": roomId,
-      },
+      queryParameters: {"room_id": roomId},
       header: await getHeader(),
     );
     List<LiveSuperChatMessage> ls = [];
@@ -412,9 +725,7 @@ class BiliBiliSite implements LiveSite {
       var message = LiveSuperChatMessage(
         backgroundBottomColor: item["background_bottom_color"].toString(),
         backgroundColor: item["background_color"].toString(),
-        endTime: DateTime.fromMillisecondsSinceEpoch(
-          item["end_time"] * 1000,
-        ),
+        endTime: DateTime.fromMillisecondsSinceEpoch(item["end_time"] * 1000),
         face: "${item["user_info"]["face"]}@200w.jpg",
         message: item["message"].toString(),
         price: item["price"],
@@ -426,6 +737,14 @@ class BiliBiliSite implements LiveSite {
       ls.add(message);
     }
     return ls;
+  }
+
+  /// 预热 B 站访客 Cookie（buvid3/buvid4），跳过首轮批查前的往返耗时。
+  Future<void> warmup() async {
+    if (buvid3.isNotEmpty || cookie.contains('buvid3')) return;
+    try {
+      await getHeader().timeout(const Duration(seconds: 2));
+    } catch (_) {}
   }
 
   /// 获取 buvid3 和 buvid4
@@ -456,10 +775,7 @@ class BiliBiliSite implements LiveSite {
       );
       return result["data"];
     } catch (e) {
-      return {
-        "b_3": "",
-        "b_4": "",
-      };
+      return {"b_3": "", "b_4": ""};
     }
   }
 
@@ -529,7 +845,7 @@ class BiliBiliSite implements LiveSite {
     20,
     34,
     44,
-    52
+    52,
   ];
   Future<(String, String)> getWbiKeys() async {
     if (kImgKey.isNotEmpty && kSubKey.isNotEmpty) {
@@ -600,10 +916,9 @@ class BiliBiliSite implements LiveSite {
       queryParameters: {},
       header: await getHeader(),
     );
-    var id = RegExp(r'"access_id":"(.*?)"')
-        .firstMatch(resp)
-        ?.group(1)
-        ?.replaceAll("\\", "");
+    var id = RegExp(
+      r'"access_id":"(.*?)"',
+    ).firstMatch(resp)?.group(1)?.replaceAll("\\", "");
     accessId = id ?? "";
     return accessId;
   }

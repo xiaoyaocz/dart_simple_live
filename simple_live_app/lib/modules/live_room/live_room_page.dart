@@ -1,7 +1,10 @@
+import 'package:simple_live_app/widgets/live_message_content.dart';
 import 'dart:io';
+import 'package:simple_live_app/modules/live_room/api_danmaku_panel.dart';
 
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -13,6 +16,8 @@ import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
+import 'package:simple_live_app/modules/live_room/quick_live_room_sort.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
@@ -23,10 +28,18 @@ import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
+import 'package:simple_live_app/widgets/similar_game_rooms_sheet.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
-class LiveRoomPage extends GetView<LiveRoomController> {
-  const LiveRoomPage({Key? key}) : super(key: key);
+class LiveRoomPage extends StatelessWidget {
+  final String? roomTag;
+  const LiveRoomPage({super.key, this.roomTag});
+
+  LiveRoomController get controller => Get.find<LiveRoomController>(tag: roomTag);
+
+  static bool _useLightChatSurface(BuildContext context) =>
+      Theme.of(context).platform == TargetPlatform.windows &&
+      Theme.of(context).brightness == Brightness.light;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +99,17 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             ),
           );
         }
-        if (controller.fullScreenState.value) {
+        final fullScreen = controller.fullScreenState.value;
+        if (Platform.isWindows) {
+          return PopScope(
+            canPop: !fullScreen,
+            onPopInvokedWithResult: (didPop, result) {
+              if (!didPop && fullScreen) controller.exitFull();
+            },
+            child: buildPageUI(fullScreen: fullScreen),
+          );
+        }
+        if (fullScreen) {
           return PopScope(
             canPop: false,
             onPopInvokedWithResult: (e, r) {
@@ -102,6 +125,35 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       },
     );
     if (!Platform.isAndroid) {
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        final focusedPage = Focus(
+          autofocus: true,
+          // Page focus remains active after using the header/chat. The video
+          // controls are not always the primary focus owner after a rebuild.
+          onKeyEvent: (_, event) => controller.officialEditorFocused.value
+              ? KeyEventResult.ignored : handlePlayerShortcut(
+            event,
+            onRefresh: controller.refreshRoom,
+            onComposeDanmaku: controller.openDanmakuComposer,
+            onFollowKey: controller.followByDoubleQ,
+            onResetFollowKey: controller.resetFollowShortcut,
+            onToggleDanmaku: () => controller.showDanmakuState.toggle(),
+            onToggleFullscreen: () {
+              if (controller.fullScreenState.value) {
+                controller.exitFull();
+              } else {
+                controller.enterFullScreen();
+              }
+            },
+          ),
+          child: page,
+        );
+        return Platform.isWindows
+            ? DesktopDanmakuShortcut(
+                onCompose: controller.openDanmakuComposer,
+                isEditing: () => controller.officialEditorFocused.value, child: focusedPage)
+            : focusedPage;
+      }
       return page;
     }
     return PiPSwitcher(
@@ -111,129 +163,95 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     );
   }
 
-  Widget buildPageUI() {
-    return OrientationBuilder(
-      builder: (context, orientation) {
+  Widget buildPageUI({bool fullScreen = false}) {
+    return Builder(
+      builder: (context) {
+        // 同方向缩放只重新布局，不重新构造整个播放页。
+        final orientation = MediaQuery.orientationOf(context);
         return Scaffold(
-          appBar: AppBar(
-            title: Obx(
-              () => Text(controller.detail.value?.title ?? "直播间"),
-            ),
-            actions: buildAppbarActions(context),
-          ),
-          body: orientation == Orientation.portrait
-              ? buildPhoneUI(context)
-              : buildTabletUI(context),
+          appBar: fullScreen
+              ? null
+              : AppBar(
+                  flexibleSpace: Platform.isWindows ||
+                          Platform.isLinux ||
+                          Platform.isMacOS
+                      ? GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onDoubleTap: controller.restoreDefaultWindowSize,
+                          child: const SizedBox.expand(),
+                        )
+                      : null,
+                  title: Obx(
+                    () => Text(controller.detail.value?.title ?? "直播间"),
+                  ),
+                  actions: buildAppbarActions(context),
+                ),
+          body: Platform.isWindows
+              ? buildTabletUI(context,
+                  fullScreen: fullScreen,
+                  portrait: orientation == Orientation.portrait)
+              : orientation == Orientation.portrait
+                  ? buildPhoneUI(context)
+                  : buildTabletUI(context),
         );
       },
     );
   }
 
   Widget buildPhoneUI(BuildContext context) {
-    return Column(
-      children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: buildMediaPlayer(),
-        ),
-        buildUserProfile(context),
-        buildMessageArea(),
-        buildBottomActions(context),
-      ],
+    return SafeArea(
+      top: false,
+      child: Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: buildMediaPlayer(),
+          ),
+          buildUserProfile(context),
+          buildMessageArea(),
+        ],
+      ),
     );
   }
 
-  Widget buildTabletUI(BuildContext context) {
+  Widget buildTabletUI(BuildContext context,
+      {bool fullScreen = false, bool portrait = false}) {
+    final phoneLayout = portrait && !fullScreen;
+    final video = Expanded(child: buildMediaPlayer());
+    final sidebar = phoneLayout ? null : RepaintBoundary(child: Column(children: [
+      buildUserProfile(context), buildMessageArea(),
+    ]));
+    Widget row(bool show, double width) => Row(children: [
+      video,
+      if (show) SizedBox(width: width, child: sidebar),
+    ]);
+    final playerRow = Platform.isWindows ? Obx(() {
+      final requested = controller.officialEditorVisible.value;
+      return LayoutBuilder(builder: (context, constraints) {
+        final available = constraints.maxWidth;
+        const preferredWidth = 300.0;
+        final width = preferredWidth.clamp(0.0, available * 0.85);
+        return row(!phoneLayout && ((!fullScreen && !portrait) || requested), width);
+      });
+    }) : row(!fullScreen && !portrait, 300);
     return Column(
       children: [
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: buildMediaPlayer(),
-              ),
-              SizedBox(
-                width: 300,
-                child: Column(
-                  children: [
-                    buildUserProfile(context),
-                    buildMessageArea(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            border: Border(
-              top: BorderSide(
-                color: Colors.grey.withAlpha(25),
-              ),
+        // 保持视频的父子路径不变，切换时仅改变容器约束。
+        Flexible(
+          flex: phoneLayout ? 0 : 1,
+          fit: FlexFit.tight,
+          child: LayoutBuilder(
+            // 尺寸变化只更新约束，复用视频和聊天子树。
+            builder: (context, constraints) => SizedBox(
+              height: phoneLayout ? constraints.maxWidth * 9 / 16 : null,
+              child: playerRow,
             ),
           ),
-          padding: AppStyle.edgeInsetsV4.copyWith(
-            bottom: AppStyle.bottomBarHeight + 4,
-          ),
-          child: Row(
-            children: [
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  textStyle: const TextStyle(fontSize: 14),
-                ),
-                onPressed: controller.refreshRoom,
-                icon: const Icon(Remix.refresh_line),
-                label: const Text("刷新"),
-              ),
-              AppStyle.hGap4,
-              Obx(
-                () => controller.followed.value
-                    ? TextButton.icon(
-                        style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 14),
-                        ),
-                        onPressed: controller.removeFollowUser,
-                        icon: const Icon(Remix.heart_fill),
-                        label: const Text("取消关注"),
-                      )
-                    : TextButton.icon(
-                        style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 14),
-                        ),
-                        onPressed: controller.followUser,
-                        icon: const Icon(Remix.heart_line),
-                        label: const Text("关注"),
-                      ),
-              ),
-              const Expanded(child: Center()),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  textStyle: const TextStyle(fontSize: 14),
-                ),
-                onPressed: controller.share,
-                icon: const Icon(Remix.share_line),
-                label: const Text("分享"),
-              ),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  textStyle: const TextStyle(fontSize: 14),
-                ),
-                onPressed: controller.copyUrl,
-                icon: const Icon(Remix.file_copy_line),
-                label: const Text("复制链接"),
-              ),
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  textStyle: const TextStyle(fontSize: 14),
-                ),
-                onPressed: controller.copyPlayUrl,
-                icon: const Icon(Remix.file_copy_line),
-                label: const Text("复制播放直链"),
-              ),
-            ],
-          ),
         ),
+        if (phoneLayout) ...[
+          buildUserProfile(context),
+          buildMessageArea(),
+        ],
       ],
     );
   }
@@ -254,9 +272,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
       boxFit = BoxFit.contain;
       aspectRatio = 4 / 3;
     }
-    return Stack(
-      children: [
-        Video(
+    Widget buildVideoWidget() => Video(
           key: controller.globalPlayerKey,
           controller: controller.videoController,
           pauseUponEnteringBackgroundMode:
@@ -268,15 +284,84 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           },
           aspectRatio: aspectRatio,
           fit: boxFit,
+          filterQuality: FilterQuality.medium,
           // 自己实现
           wakelock: false,
+        );
+    final video = Stack(
+      children: [
+        Platform.isWindows
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  controller.updateWindowsVideoViewport(
+                    constraints.biggest,
+                    MediaQuery.devicePixelRatioOf(context),
+                  );
+                  return buildVideoWidget();
+                },
+              )
+            : buildVideoWidget(),
+        Obx(
+          () => Visibility(
+            visible: controller.audioOnlyMode.value &&
+                !controller.roomOffline.value,
+            child: Positioned.fill(
+              child: Container(
+                color: const Color(0xFF101318),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    NetImage(
+                      controller.detail.value?.userAvatar ?? "",
+                      width: 72,
+                      height: 72,
+                      borderRadius: 36,
+                    ),
+                    AppStyle.vGap12,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.headphones,
+                          color: Colors.lightBlueAccent,
+                          size: 18,
+                        ),
+                        AppStyle.hGap8,
+                        Text(
+                          "${controller.detail.value?.userName ?? ''} · 仅音频播放中",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppStyle.vGap12,
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white38),
+                      ),
+                      onPressed: () {
+                        controller.setAudioOnlyMode(false);
+                      },
+                      icon: const Icon(Icons.videocam_outlined, size: 18),
+                      label: const Text("恢复画面"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
         Obx(
           () => Visibility(
-            visible: !controller.liveStatus.value,
+            visible: controller.roomOffline.value,
             child: const Center(
               child: Text(
-                "未开播",
+                "主播已下播",
                 style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
@@ -284,6 +369,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         ),
       ],
     );
+    return playerVolumeScrollArea(controller: controller, child: video);
   }
 
   Widget buildUserProfile(BuildContext context) {
@@ -312,11 +398,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 border: Border.all(color: Colors.grey.withAlpha(50)),
                 borderRadius: AppStyle.radius24,
               ),
-              child: NetImage(
-                controller.detail.value?.userAvatar ?? "",
-                width: 48,
-                height: 48,
-                borderRadius: 24,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onSecondaryTapUp: (details) =>
+                    showAvatarFollowMenu(context, details.globalPosition),
+                child: NetImage(
+                  controller.detail.value?.userAvatar ?? "",
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                ),
               ),
             ),
             AppStyle.hGap12,
@@ -373,6 +464,58 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     );
   }
 
+  Future<void> showAvatarFollowMenu(BuildContext context, Offset position) async {
+    final room = controller;
+    final roomId = room.roomId;
+    final site = room.site;
+    final detail = room.detail.value;
+    if (detail == null || room.isClosed) {
+      return;
+    }
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final wasFollowed = room.followed.value;
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        overlay.globalToLocal(position) & Size.zero,
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'follow',
+          enabled: !wasFollowed,
+          child: wasFollowed
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onDoubleTap: () => Navigator.of(context).pop('unfollow'),
+                  child: const SizedBox(
+                    width: double.infinity,
+                    height: kMinInteractiveDimension,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('已关注'),
+                    ),
+                  ),
+                )
+              : const Text('关注'),
+        ),
+      ],
+    );
+    // 菜单等待期间切房/刷新后，不把旧头像的操作应用到新房间。
+    if (selected == null || room.isClosed || room.roomId != roomId ||
+        room.site != site || !identical(room.detail.value, detail)) {
+      return;
+    }
+    if (selected == 'unfollow' && room.followed.value) {
+      room.removeFollowUser();
+      return;
+    }
+    if (selected != 'follow' || room.followed.value) return;
+    room.followUser();
+    if (room.followed.value) {
+      SmartDialog.showToast('关注成功', displayTime: const Duration(seconds: 2));
+    }
+  }
   Widget buildBottomActions(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -383,7 +526,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
           ),
         ),
       ),
-      padding: EdgeInsets.only(bottom: AppStyle.bottomBarHeight),
+      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
       child: Row(
         children: [
           Expanded(
@@ -433,6 +576,16 @@ class LiveRoomPage extends GetView<LiveRoomController> {
   }
 
   Widget buildMessageArea() {
+    void scrollToLatest() {
+      controller.disableAutoScroll.value = false;
+      controller.chatScrollToBottom();
+      // The composer changes the viewport. A lazy list may refine its extent
+      // only after the first jump lays out its final messages.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!controller.isClosed) controller.chatScrollToBottom();
+      });
+    }
+
     return Expanded(
       child: DefaultTabController(
         length: controller.site.id == Constant.kBiliBili ? 4 : 3,
@@ -467,25 +620,32 @@ class LiveRoomPage extends GetView<LiveRoomController> {
             Expanded(
               child: TabBarView(
                 children: [
-                  Obx(
-                    () => Stack(
+                  buildOfficialChatArea(Obx(() {
+                    final chatGap =
+                        AppSettingsController.instance.chatTextGap.value * 2;
+                    return Stack(
                       children: [
-                        ListView.separated(
-                          controller: controller.scrollController,
-                          separatorBuilder: (_, i) => Obx(
-                            () => SizedBox(
-                              // *2与原来的EdgeInsets.symmetric(vertical: )做兼容
-                              height: AppSettingsController
-                                      .instance.chatTextGap.value *
-                                  2,
+                        GestureDetector(
+                          // 覆盖文字和空白处，双击与“最新”按钮保持相同行为。
+                          behavior: HitTestBehavior.opaque,
+                          onDoubleTap: scrollToLatest,
+                          child: RepaintBoundary(
+                            child: ListView.separated(
+                              controller: controller.scrollController,
+                              addAutomaticKeepAlives: false,
+                              separatorBuilder: (_, i) => SizedBox(
+                                // *2与原来的EdgeInsets.symmetric(vertical: )做兼容
+                                height: chatGap,
+                              ),
+                              padding: AppStyle.edgeInsetsA12,
+                              itemCount: controller.messages.length,
+                              itemBuilder: (context, i) {
+                                var item = controller.messages[i];
+                                return buildInteractiveMessageItem(
+                                    context, item);
+                              },
                             ),
                           ),
-                          padding: AppStyle.edgeInsetsA12,
-                          itemCount: controller.messages.length,
-                          itemBuilder: (_, i) {
-                            var item = controller.messages[i];
-                            return buildMessageItem(item);
-                          },
                         ),
                         Visibility(
                           visible: controller.disableAutoScroll.value,
@@ -493,18 +653,15 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                             right: 12,
                             bottom: 12,
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                controller.disableAutoScroll.value = false;
-                                controller.chatScrollToBottom();
-                              },
+                              onPressed: scrollToLatest,
                               icon: const Icon(Icons.expand_more),
                               label: const Text("最新"),
                             ),
                           ),
                         ),
                       ],
-                    ),
-                  ),
+                    );
+                  })),
                   if (controller.site.id == Constant.kBiliBili)
                     buildSuperChats(),
                   buildFollowList(),
@@ -518,80 +675,204 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     );
   }
 
-  Widget buildMessageItem(LiveMessage message) {
-    if (message.userName == "LiveSysMessage") {
-      return Obx(
-        () => Text(
-          message.message,
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: AppSettingsController.instance.chatTextSize.value,
-          ),
-        ),
-      );
+  Widget buildInteractiveMessageItem(BuildContext context, LiveMessage message) {
+    final child = buildMessageItem(context, message);
+    if (message.userName == 'LiveSysMessage' ||
+        controller.isSelfMessage(message)) {
+      return child;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => showChatMessageActions(context, message),
+      onSecondaryTapUp: (details) => showChatMessageActions(
+        context,
+        message,
+        position: details.globalPosition,
+      ),
+      child: child,
+    );
+  }
+
+  Future<void> showChatMessageActions(
+    BuildContext context,
+    LiveMessage message, {
+    Offset? position,
+  }) async {
+    final userName = message.userName.trim();
+    final text = message.message.trim();
+    if (userName.isEmpty && text.isEmpty) return;
+
+    void handleAction(String action) {
+      if (action == 'block_user' && userName.isNotEmpty) {
+        AppSettingsController.instance.addShieldUser(userName);
+        SmartDialog.showToast('已屏蔽用户：$userName');
+      } else if (action == 'copy' && text.isNotEmpty) {
+        Utils.copyToClipboard(text);
+        SmartDialog.showToast('已复制弹幕');
+      } else if (action == 'block_keyword' && text.isNotEmpty) {
+        AppSettingsController.instance.addShieldList(text);
+        SmartDialog.showToast('已添加到关键词屏蔽');
+      }
     }
 
-    return Obx(
-      () => AppSettingsController.instance.chatBubbleStyle.value
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blueGrey.withAlpha(25),
-                      //borderRadius: AppStyle.radius8,
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(12),
-                        bottomLeft: Radius.circular(12),
-                        bottomRight: Radius.circular(12),
-                      ),
-                    ),
-                    padding:
-                        AppStyle.edgeInsetsA4.copyWith(left: 12, right: 12),
-                    child: Text.rich(
-                      TextSpan(
-                        text: "${message.userName}：",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize:
-                              AppSettingsController.instance.chatTextSize.value,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: message.message,
-                            style: TextStyle(
-                              color: Get.isDarkMode
-                                  ? Colors.white
-                                  : AppColors.black333,
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Text.rich(
-              TextSpan(
-                text: "${message.userName}：",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: AppSettingsController.instance.chatTextSize.value,
-                ),
-                children: [
-                  TextSpan(
-                    text: message.message,
-                    style: TextStyle(
-                      color: Get.isDarkMode ? Colors.white : AppColors.black333,
-                    ),
-                  )
-                ],
-              ),
+    if (position != null) {
+      final overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox;
+      final selected = await showMenu<String>(
+        context: context,
+        position: RelativeRect.fromRect(
+          overlay.globalToLocal(position) & Size.zero,
+          Offset.zero & overlay.size,
+        ),
+        items: [
+          if (userName.isNotEmpty)
+            PopupMenuItem(
+              value: 'block_user',
+              child: Text('屏蔽该用户（$userName）'),
             ),
+          if (text.isNotEmpty)
+            const PopupMenuItem(
+              value: 'copy',
+              child: Text('复制弹幕'),
+            ),
+          if (text.isNotEmpty)
+            const PopupMenuItem(
+              value: 'block_keyword',
+              child: Text('添加到关键词屏蔽'),
+            ),
+        ],
+      );
+      if (selected != null) handleAction(selected);
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      constraints: const BoxConstraints(maxWidth: 480),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (userName.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.person_off_outlined),
+                title: Text('屏蔽该用户（$userName）'),
+                onTap: () {
+                  Get.back();
+                  handleAction('block_user');
+                },
+              ),
+            if (text.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('复制弹幕'),
+                onTap: () {
+                  Get.back();
+                  handleAction('copy');
+                },
+              ),
+            if (text.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.block_outlined),
+                title: const Text('添加到关键词屏蔽'),
+                onTap: () {
+                  Get.back();
+                  handleAction('block_keyword');
+                },
+              ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget buildMessageItem(BuildContext context, LiveMessage message) {
+    final lightChat = _useLightChatSurface(context);
+    const readableStyle = TextStyle(
+      color: Color(0xFF49576A),
+      fontWeight: FontWeight.w500,
+      height: 1.45,
+    );
+    return Obx(() {
+      final size = AppSettingsController.instance.chatTextSize.value;
+      if (message.userName == 'LiveSysMessage') {
+        return Text(
+          message.message,
+          style: lightChat
+              ? readableStyle.copyWith(fontSize: size)
+              : TextStyle(color: Colors.grey, fontSize: size),
+        );
+      }
+      final isSelf = controller.isSelfMessage(message);
+      final content = LiveMessageContent(
+        userName: message.userName,
+        isSelf: isSelf,
+        parts: controller.messageParts(message),
+        fontSize: size,
+        color: lightChat
+            ? const Color(0xFF1C2633)
+            : Get.isDarkMode
+                ? Colors.white
+                : AppColors.black333,
+        labelStyle: lightChat ? readableStyle : null,
+      );
+      if (isSelf) return SelfChatHighlight(child: content);
+      if (!AppSettingsController.instance.chatBubbleStyle.value) return content;
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Flexible(
+            child: Container(
+              decoration: BoxDecoration(
+                color: lightChat
+                    ? const Color(0xFFE7EDF4)
+                    : Colors.blueGrey.withAlpha(25),
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              padding: AppStyle.edgeInsetsA4.copyWith(left: 12, right: 12),
+              child: content,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget buildOfficialChatArea(Widget messages) {
+    final messageList = Builder(
+      builder: (context) => _useLightChatSurface(context)
+          ? ColoredBox(color: const Color(0xFFF5F7FA), child: messages)
+          : messages,
+    );
+    if (!Platform.isWindows) return messageList;
+    return Obx(() {
+      final siteId = controller.rxSite.value.id;
+      final roomId = controller.rxRoomId.value;
+      final detail = controller.detail.value;
+      final focus = controller.officialEditorFocusRequest.value;
+      bool current() => controller.site.id == siteId && controller.roomId == roomId && !controller.isClosed;
+      return Column(children: [
+        Expanded(child: messageList),
+        if (detail != null) ApiDanmakuPanel(
+          key: ValueKey('api-editor:$siteId:$roomId:${detail.roomId}'),
+          siteId: siteId, roomId: detail.roomId, focusRequest: focus,
+          resolveLoginView: controller.resolveDanmakuLoginView,
+          isCurrent: current,
+          emoticons: () => controller.roomEmoticons,
+          roomUri: controller.officialEditorRoomUri,
+          confirmationRoomIds: [detail.roomId,
+            if(detail.danmakuData is DouyinDanmakuArgs)
+              (detail.danmakuData as DouyinDanmakuArgs).roomId],
+          searchEnvironment: const {'huya','douyin'}.contains(siteId) ? controller.officialEditorEnvironment : null,
+          onSelfNameDetected: (name) { if(current()) controller.updateOfficialSelfName(name); },
+          onIdentityDetected: (id,name) { if(current()) controller.updateSelfIdentity(id,name); },
+        ),
+      ]);
+    });
   }
 
   Widget buildSuperChats() {
@@ -729,48 +1010,57 @@ class LiveRoomPage extends GetView<LiveRoomController> {
 
   Widget buildFollowList() {
     return Obx(
-      () => Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: FollowService.instance.loadData,
-            child: ListView.builder(
-              itemCount: FollowService.instance.liveList.length,
-              itemBuilder: (_, i) {
-                var item = FollowService.instance.liveList[i];
-                return Obx(
-                  () => FollowUserItem(
-                    item: item,
-                    playing: controller.rxSite.value.id == item.siteId &&
-                        controller.rxRoomId.value == item.roomId,
-                    onTap: () {
-                      controller.resetRoom(
-                        Sites.allSites[item.siteId]!,
-                        item.roomId,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-          if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Obx(
-                () => DesktopRefreshButton(
-                  refreshing: FollowService.instance.updating.value,
-                  onPressed: FollowService.instance.loadData,
-                ),
+      () {
+        final items = sortQuickLiveRooms(FollowService.instance.liveList.toList(),
+            AppSettingsController.instance.siteSort.toList());
+        return Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: FollowService.instance.loadData,
+              child: ListView.builder(
+                itemCount: items.length,
+                itemBuilder: (_, i) {
+                  var item = items[i];
+                  return Obx(
+                    () => FollowUserItem(
+                      item: item,
+                      playing: controller.rxSite.value.id == item.siteId &&
+                          controller.rxRoomId.value == item.roomId,
+                      onTap: () {
+                        controller.resetRoom(
+                          Sites.allSites[item.siteId]!,
+                          item.roomId,
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
-        ],
-      ),
+            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: Obx(
+                  () => DesktopRefreshButton(
+                    refreshing: FollowService.instance.updating.value,
+                    onPressed: FollowService.instance.loadData,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
   List<Widget> buildAppbarActions(BuildContext context) {
     return [
+      TextButton.icon(
+        onPressed: showSimilarGameRooms,
+        icon: const Icon(Icons.sports_esports_outlined),
+        label: const Text('同类主播'),
+      ),
       IconButton(
         onPressed: () {
           showMore();
@@ -780,6 +1070,37 @@ class LiveRoomPage extends GetView<LiveRoomController> {
     ];
   }
 
+  Future<void> showSimilarGameRooms() async {
+    final roomController = controller;
+    final detail = roomController.detail.value;
+    final site = roomController.site;
+    if (detail == null || roomController.isClosed || roomController.similarGameRoomsOpen) return;
+    roomController.similarGameRoomsOpen = true;
+    bool sameRoom() => !roomController.isClosed && roomController.site == site &&
+        roomController.detail.value?.roomId == detail.roomId;
+    try {
+      final fullCategory = await showModalBottomSheet<LiveSubCategory>(
+        context: Get.context!,
+        constraints: const BoxConstraints(maxWidth: 640),
+        isScrollControlled: true,
+        builder: (_) => SimilarGameRoomsSheet(
+          site: site.liveSite,
+          detail: detail,
+          onRoomSelected: (room) {
+            if (sameRoom()) roomController.resetRoom(site, room.roomId);
+          },
+        ),
+      );
+      if (fullCategory != null && sameRoom()) {
+        final wasPlaying = roomController.player.state.playing;
+        if (wasPlaying) await roomController.player.pause();
+        await Get.toNamed(RoutePath.kCategoryDetail, arguments: [site, fullCategory]);
+        if (sameRoom() && wasPlaying) await roomController.player.play();
+      }
+    } finally {
+      roomController.similarGameRoomsOpen = false;
+    }
+  }
   void showMore() {
     showModalBottomSheet(
       context: Get.context!,
@@ -794,6 +1115,19 @@ class LiveRoomPage extends GetView<LiveRoomController> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Obx(() => ListTile(
+              leading: Icon(controller.followed.value ? Remix.heart_fill : Remix.heart_line),
+              title: Text(controller.followed.value ? '取消关注' : '关注主播'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Get.back();
+                if (controller.followed.value) {
+                  controller.removeFollowUser();
+                } else {
+                  controller.followUser();
+                }
+              },
+            )),
             ListTile(
               leading: const Icon(Icons.refresh),
               title: const Text("刷新"),
@@ -819,6 +1153,24 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 Get.back();
                 controller.showPlayUrlsSheet();
               },
+            ),
+
+            Obx(
+              () => ListTile(
+                leading: Icon(
+                  controller.audioOnlyMode.value
+                      ? Icons.videocam_outlined
+                      : Icons.headphones_outlined,
+                ),
+                title: Text(
+                  controller.audioOnlyMode.value ? "退出纯音频模式" : "纯音频听播模式",
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Get.back();
+                  controller.toggleAudioOnlyMode();
+                },
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.aspect_ratio_outlined),

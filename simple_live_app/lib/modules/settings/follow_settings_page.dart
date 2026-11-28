@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/live_notification_service.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
@@ -50,6 +52,26 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
                         setTimer(context);
                       },
                     ),
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
+                    value: controller.liveNotificationEnable.value,
+                    title: "主播开播提醒",
+                    subtitle: "关注主播从离线变为开播时推送系统通知，点击直达直播间",
+                    onChanged: (e) async {
+                      if (e && Get.isRegistered<LiveNotificationService>()) {
+                        final granted = await LiveNotificationService.instance
+                            .requestPermissionIfNeeded();
+                        if (!granted) {
+                          SmartDialog.showToast("未授予通知权限，无法接收开播提醒");
+                          controller.setLiveNotificationEnable(false);
+                          return;
+                        }
+                      }
+                      controller.setLiveNotificationEnable(e);
+                    },
                   ),
                 ),
                 AppStyle.divider,

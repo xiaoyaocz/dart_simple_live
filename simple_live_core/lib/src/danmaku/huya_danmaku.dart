@@ -136,6 +136,7 @@ class HuyaDanmaku implements LiveDanmaku {
                   : LiveMessageColor.numberToColor(color),
               message: content,
               userName: uname,
+              userId: messageNotice.userInfo.uid.toString(),
             ),
           );
         } else if (wSPushMessage.uri == 8006) {
@@ -154,7 +155,7 @@ class HuyaDanmaku implements LiveDanmaku {
         }
       }
     } catch (e) {
-      CoreLog.error(e);
+      CoreLog.d('虎牙弹幕解析跳过：${e.runtimeType}');
     }
   }
 }

@@ -8,6 +8,7 @@ environment:
 
 dependencies: 
   dio: ^5.5.0+1
+  dio_http2_adapter: ^2.9.0
   logger: ^2.4.0
   web_socket_channel: ^3.0.1
   html_unescape: ^2.0.0

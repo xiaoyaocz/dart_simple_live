@@ -47,9 +47,25 @@ class WebScoketUtils {
     this.onHeartBeat,
     this.headers,
     this.backupUrl,
-  });
+    IOWebSocketChannel Function(String, Map<String, dynamic>?)? connectChannel,
+  }) : _connectChannel = connectChannel ?? _defaultConnect;
+
+  final IOWebSocketChannel Function(String, Map<String, dynamic>?) _connectChannel;
+
+  static IOWebSocketChannel _defaultConnect(
+    String url,
+    Map<String, dynamic>? headers,
+  ) => IOWebSocketChannel.connect(
+    url,
+    connectTimeout: const Duration(seconds: 10),
+    headers: headers,
+  );
+
   IOWebSocketChannel? webSocket;
   Timer? heartBeatTimer;
+
+  // Every close or replacement invalidates pending handshakes and callbacks.
+  int _generation = 0;
 
   /// 重连次数
   int reconnectTime = 0;
@@ -62,20 +78,19 @@ class WebScoketUtils {
 
   void connect({bool retry = false}) async {
     close();
+    final generation = _generation;
     try {
       var wsurl = url;
       if (backupUrl != null && backupUrl!.isNotEmpty && retry) {
         wsurl = backupUrl!;
       }
-      webSocket = IOWebSocketChannel.connect(
-        wsurl,
-        connectTimeout: Duration(seconds: 10),
-        headers: headers,
-      );
-
-      await webSocket?.ready;
+      final channel = _connectChannel(wsurl, headers);
+      webSocket = channel;
+      await channel.ready;
+      if (generation != _generation) return;
       ready();
     } catch (e) {
+      if (generation != _generation) return;
       if (!retry) {
         connect(retry: true);
         return;
@@ -88,21 +103,31 @@ class WebScoketUtils {
   void ready() {
     status = SocketStatus.connected;
 
+    final generation = _generation;
     streamSubscription = webSocket?.stream.listen(
-      (data) => receiveMessage(data),
-      onError: (e, s) => onError(e, s),
-      onDone: onDone,
+      (data) {
+        if (generation == _generation) receiveMessage(data);
+      },
+      onError: (e, s) {
+        if (generation == _generation) onError(e, s);
+      },
+      onDone: () {
+        if (generation == _generation) onDone();
+      },
     );
 
     onReady?.call();
-    initHeartBeat();
+    // The ready callback can synchronously close or replace the connection.
+    if (generation == _generation) initHeartBeat();
   }
 
   void initHeartBeat() {
+    heartBeatTimer?.cancel();
+    final generation = _generation;
     heartBeatTimer = Timer.periodic(
       Duration(milliseconds: heartBeatTime),
       (timer) {
-        onHeartBeat?.call();
+        if (generation == _generation) onHeartBeat?.call();
       },
     );
   }
@@ -122,8 +147,9 @@ class WebScoketUtils {
     if (status == SocketStatus.closed) {
       return;
     }
+    final generation = _generation;
     onReconnect?.call();
-    reconnect();
+    if (generation == _generation) reconnect();
   }
 
   void sendMessage(dynamic message) {
@@ -133,6 +159,7 @@ class WebScoketUtils {
   }
 
   void close() {
+    _generation++;
     status = SocketStatus.closed;
 
     streamSubscription?.cancel();

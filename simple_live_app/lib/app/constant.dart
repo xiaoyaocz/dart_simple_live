@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
 
 class Constant {
+  static const Size kDefaultWindowSize = Size(1280, 720);
+  static const String kRemoteSyncUrl =
+      'wss://simple-live-sync.3439394104.workers.dev/sync';
   static const String kUpdateFollow = "UpdateFollow";
   static const String kUpdateHistory = "UpdateHistory";
 

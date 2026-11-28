@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:simple_live_app/services/windows_direct_network.dart';
+import 'package:simple_live_app/services/window_appearance_controller.dart';
+import 'package:simple_live_app/widgets/mobile_material_background.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +16,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
@@ -20,6 +24,8 @@ import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
+import 'package:simple_live_app/modules/multi_view/multi_view_controller.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
 import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/routes/route_path.dart';
@@ -27,17 +33,29 @@ import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/live_notification_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
+import 'package:simple_live_app/services/playback_route_history.dart';
 import 'package:simple_live_app/services/sync_service.dart';
+import 'package:simple_live_app/services/system_proxy_service.dart';
+import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_core/src/common/http_client.dart' as core_http;
 import 'package:window_manager/window_manager.dart';
 
 import 'package:path/path.dart' as p;
 import 'package:dynamic_color/dynamic_color.dart';
 
 void main() async {
+  WindowsDirectNetwork.initialize();
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemProxyService.instance.initialize();
+  core_http.HttpClient.instance.enableHttp2(
+    shouldUseHttp2: (uri) =>
+        !Platform.isAndroid ||
+        SystemProxyService.instance.playbackProxy(uri.toString()) == null,
+  );
   await migrateData();
   await initWindow();
   MediaKit.ensureInitialized();
@@ -48,6 +66,7 @@ void main() async {
   );
   //初始化服务
   await initServices();
+  unawaited(FollowService.instance.warmupNetwork());
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   //设置状态栏为透明
   SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
@@ -106,6 +125,7 @@ Future initWindow() async {
   }
   await windowManager.ensureInitialized();
   WindowOptions windowOptions = const WindowOptions(
+    size: Constant.kDefaultWindowSize,
     minimumSize: Size(280, 280),
     center: true,
     title: "Simple Live",
@@ -126,15 +146,26 @@ Future initServices() async {
   //本地存储
   Log.d("Init LocalStorage Service");
   await Get.put(LocalStorageService()).init();
+  PlaybackRouteHistory.instance.attachPersistence(
+    read: () => LocalStorageService.instance
+        .getValue(LocalStorageService.kPlaybackRouteHistory, ''),
+    write: (json) => LocalStorageService.instance
+        .setValue(LocalStorageService.kPlaybackRouteHistory, json),
+  );
   await Get.put(DBService()).init();
   //初始化设置控制器
   Get.put(AppSettingsController());
+  await Get.put(WindowAppearanceController()).initialize();
 
   Get.put(BiliBiliAccountService());
 
   Get.put(DouyinAccountService());
 
   Get.put(SyncService());
+
+  await Get.put(LiveNotificationService()).initialize();
+
+  Get.put(WebDavAutoSyncService()).scheduleStartupSync();
 
   Get.put(FollowService());
 
@@ -152,7 +183,13 @@ void initCoreLog() {
         Log.d(msg);
         break;
       case Level.error:
-        Log.e(msg, StackTrace.current);
+        if (!kReleaseMode) {
+          Log.addDebugLog(msg, Colors.red);
+        }
+        Log.writeLog(msg, Level.error);
+        if (kDebugMode) {
+          print(msg);
+        }
         break;
       case Level.info:
         Log.i(msg);
@@ -166,8 +203,185 @@ void initCoreLog() {
   };
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  static const _windowChannel = MethodChannel('simple_live/window');
+  final _keyboardFocusNode = FocusNode();
+  bool _handlingClose = false;
+
+  Future<bool> _exitPlayerFullScreen() async {
+    if (Platform.isAndroid ||
+        Platform.isIOS ||
+        !await windowManager.isFullScreen()) {
+      return false;
+    }
+    final tag = Get.parameters['instance'];
+    if (Get.currentRoute == RoutePath.kLiveRoomDetail &&
+        Get.isRegistered<LiveRoomController>(tag: tag)) {
+      final controller = Get.find<LiveRoomController>(tag: tag);
+      if (controller.fullScreenState.value) {
+        await controller.exitFull();
+        return true;
+      }
+    }
+    if (Get.currentRoute == RoutePath.kMultiView &&
+        Get.isRegistered<MultiViewController>()) {
+      final controller = Get.find<MultiViewController>();
+      if (controller.fullScreen.value) {
+        await controller.exitFullScreen();
+        return true;
+      }
+    }
+    await windowManager.setFullScreen(false);
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (Platform.isWindows) {
+      _windowChannel.setMethodCallHandler((call) async {
+        if (call.method == 'onCloseRequest') await _handleCloseRequest();
+        if (call.method == 'onAppearanceChanged') {
+          await Get.find<WindowAppearanceController>().apply();
+        }
+        if (call.method == 'onAppearanceInvalidated') {
+          await Get.find<WindowAppearanceController>().apply(force: true);
+        }
+        if (call.method == 'onNotificationClick') {
+          final args = call.arguments;
+          if (args is Map && Get.isRegistered<LiveNotificationService>()) {
+            await LiveNotificationService.instance.handleNotificationClick(
+              args['siteId']?.toString() ?? '',
+              args['roomId']?.toString() ?? '',
+            );
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isWindows) _windowChannel.setMethodCallHandler(null);
+    _keyboardFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (Platform.isWindows) Get.find<WindowAppearanceController>().apply();
+  }
+
+  Future<void> _handleCloseRequest() async {
+    if (_handlingClose) return;
+    _handlingClose = true;
+    try {
+      var action = LocalStorageService.instance
+          .getValue(LocalStorageService.kCloseAction, 0);
+      if (action != 1 && action != 2) {
+        bool remember = false;
+        action = await Get.dialog<int>(
+              StatefulBuilder(builder: (context, update) {
+                final colors = Theme.of(context).colorScheme;
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                return Dialog(
+                  backgroundColor: isDark
+                      ? const Color(0xFF242424)
+                      : colors.surfaceContainerHigh,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '关闭窗口？',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 14),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => update(() => remember = !remember),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Checkbox(
+                                  value: remember,
+                                  visualDensity: VisualDensity.compact,
+                                  onChanged: (value) =>
+                                      update(() => remember = value ?? false),
+                                ),
+                                const Text('不再显示，记住我的选择'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF302F2D)
+                                      : colors.surfaceContainerHighest,
+                                  foregroundColor: isDark
+                                      ? Colors.white70
+                                      : colors.onSurface,
+                                ),
+                                onPressed: () => Get.back(result: 2),
+                                child: const Text('最小化到系统托盘'),
+                              ),
+                              const SizedBox(width: 10),
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: isDark
+                                      ? const Color(0xFFF5263E)
+                                      : colors.error,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () => Get.back(result: 1),
+                                child: const Text('退出应用'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              barrierDismissible: true,
+            ) ??
+            0;
+        if (remember && action != 0) {
+          await LocalStorageService.instance
+              .setValue(LocalStorageService.kCloseAction, action);
+        }
+      }
+      if (action == 1 || action == 2) {
+        await _windowChannel
+            .invokeMethod(action == 1 ? 'exitApp' : 'hideToTray');
+      }
+    } catch (error, stackTrace) {
+      Log.e('关闭窗口失败：$error', stackTrace);
+    } finally {
+      _handlingClose = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -190,8 +404,10 @@ class MyApp extends StatelessWidget {
       }
       return GetMaterialApp(
         title: "Simple Live",
-        theme: AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme),
-        darkTheme: AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme),
+        theme: Get.find<WindowAppearanceController>().theme(
+            AppStyle.lightTheme.copyWith(colorScheme: lightColorScheme)),
+        darkTheme: Get.find<WindowAppearanceController>().theme(
+            AppStyle.darkTheme.copyWith(colorScheme: darkColorScheme)),
         themeMode:
             ThemeMode.values[Get.find<AppSettingsController>().themeMode.value],
         initialRoute: RoutePath.kIndex,
@@ -223,7 +439,8 @@ class MyApp extends StatelessWidget {
             const maxNormalPadding = 50.0;
 
             final mediaQueryData = MediaQuery.of(context);
-            final hasAbnormalPadding = mediaQueryData.viewPadding.top > maxNormalPadding;
+            final hasAbnormalPadding =
+                mediaQueryData.viewPadding.top > maxNormalPadding;
 
             final fixedMediaQueryData = hasAbnormalPadding
                 ? mediaQueryData.copyWith(
@@ -231,75 +448,72 @@ class MyApp extends StatelessWidget {
                     padding: fallbackPadding,
                     textScaler: const TextScaler.linear(1.0),
                   )
-                : mediaQueryData.copyWith(textScaler: const TextScaler.linear(1.0));
+                : mediaQueryData.copyWith(
+                    textScaler: const TextScaler.linear(1.0));
 
-            return MediaQuery(
+            final content = MediaQuery(
               data: fixedMediaQueryData,
               child: Stack(
-              children: [
-                //侧键返回
-                RawGestureDetector(
-                  excludeFromSemantics: true,
-                  gestures: <Type, GestureRecognizerFactory>{
-                    FourthButtonTapGestureRecognizer:
-                        GestureRecognizerFactoryWithHandlers<
-                            FourthButtonTapGestureRecognizer>(
-                      () => FourthButtonTapGestureRecognizer(),
-                      (FourthButtonTapGestureRecognizer instance) {
-                        instance.onTapDown = (TapDownDetails details) async {
-                          //如果处于全屏状态，退出全屏
-                          if (!Platform.isAndroid && !Platform.isIOS) {
-                            if (await windowManager.isFullScreen()) {
-                              await windowManager.setFullScreen(false);
-                              return;
-                            }
-                          }
-                          Get.back();
-                        };
-                      },
-                    ),
-                  },
-                  child: KeyboardListener(
-                    focusNode: FocusNode(),
-                    onKeyEvent: (KeyEvent event) async {
-                      if (event is KeyDownEvent &&
-                          event.logicalKey == LogicalKeyboardKey.escape) {
-                        // ESC退出全屏
-                        // 如果处于全屏状态，退出全屏
-                        if (!Platform.isAndroid && !Platform.isIOS) {
-                          if (await windowManager.isFullScreen()) {
-                            await windowManager.setFullScreen(false);
-                            return;
-                          }
-                        }
-                      }
-                    },
-                    child: child!,
-                  ),
-                ),
-
-                //查看DEBUG日志按钮
-                //只在Debug、Profile模式显示
-                Visibility(
-                  visible: !kReleaseMode,
-                  child: Positioned(
-                    right: 12,
-                    bottom: 100 + context.mediaQueryViewPadding.bottom,
-                    child: Opacity(
-                      opacity: 0.4,
-                      child: ElevatedButton(
-                        child: const Text("DEBUG LOG"),
-                        onPressed: () {
-                          Get.bottomSheet(
-                            const DebugLogPage(),
-                          );
+                children: [
+                  //侧键返回
+                  RawGestureDetector(
+                    excludeFromSemantics: true,
+                    gestures: <Type, GestureRecognizerFactory>{
+                      FourthButtonTapGestureRecognizer:
+                          GestureRecognizerFactoryWithHandlers<
+                              FourthButtonTapGestureRecognizer>(
+                        () => FourthButtonTapGestureRecognizer(),
+                        (FourthButtonTapGestureRecognizer instance) {
+                          instance.onTap = () async {
+                            if (await _exitPlayerFullScreen()) return;
+                            Get.back();
+                          };
                         },
+                      ),
+                    },
+                    child: KeyboardListener(
+                      focusNode: _keyboardFocusNode,
+                      onKeyEvent: (KeyEvent event) async {
+                        if (event is KeyDownEvent &&
+                            event.logicalKey == LogicalKeyboardKey.escape) {
+                          await _exitPlayerFullScreen();
+                        }
+                      },
+                      child: child!,
+                    ),
+                  ),
+
+                  //查看DEBUG日志按钮
+                  //只在Debug、Profile模式显示
+                  Visibility(
+                    visible: !kReleaseMode,
+                    child: Positioned(
+                      right: 12,
+                      bottom: 100 + context.mediaQueryViewPadding.bottom,
+                      child: Opacity(
+                        opacity: 0.4,
+                        child: ElevatedButton(
+                          child: const Text("DEBUG LOG"),
+                          onPressed: () {
+                            Get.bottomSheet(
+                              const DebugLogPage(),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            );
+            final appearance = Get.find<WindowAppearanceController>();
+            if (Platform.isAndroid) {
+              return MobileMaterialBackground(controller: appearance, child: content);
+            }
+            // One tint layer only: nested transparent Scaffolds must not accumulate opacity.
+            return ColoredBox(
+              color: Get.find<WindowAppearanceController>().tint(Theme.of(context)),
+              child: content,
             );
           },
         ),

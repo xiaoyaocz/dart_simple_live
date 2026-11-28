@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+      - "!v2.0.0" # 2.0 安装包由维护者手动上传。
 jobs:
   build-mac-ios-android:
     runs-on: macos-latest
@@ -40,7 +41,7 @@ jobs:
       - name: Flutter action
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          flutter-version: "3.44.x"
           cache: true
 
       # 打开MAC Desktop支持
@@ -155,7 +156,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          flutter-version: "3.44.x"
           cache: true
       # 安装依赖
       - name: Update apt-get
@@ -222,7 +223,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.x"
+          flutter-version: "3.44.x"
           cache: true
       - name: Enable Flutter Desktop
         run: flutter config --enable-windows-desktop

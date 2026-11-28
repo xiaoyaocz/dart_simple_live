@@ -36,25 +36,31 @@ class LocalSyncController extends BaseController {
   SyncClientRequest request = SyncClientRequest();
 
   void connect() async {
-    var address = addressController.text;
-    if (address.isEmpty) {
+    var raw = addressController.text.trim();
+    if (raw.isEmpty) {
       SmartDialog.showToast("请输入地址");
       return;
     }
-    if (address.startsWith('http')) {
-      var uri = Uri.tryParse(address);
-      if (uri != null) {
+    var address = raw;
+    var port = SyncService.httpPort;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      var uri = Uri.tryParse(raw);
+      if (uri != null && uri.host.isNotEmpty) {
         address = uri.host;
+        if (uri.hasPort && uri.port > 0) {
+          port = uri.port;
+        }
       }
-    } else if (address.contains(':')) {
-      var parts = address.split(":");
-      address = parts.first;
+    } else if (raw.contains(':')) {
+      var parts = raw.split(":");
+      address = parts.first.trim();
+      port = int.tryParse(parts.last.trim()) ?? SyncService.httpPort;
     }
 
     var client = SyncClinet(
       id: 'manual',
       address: address,
-      port: SyncService.httpPort,
+      port: port,
       name: "手动输入",
       type: Platform.operatingSystem,
     );
@@ -65,11 +71,11 @@ class LocalSyncController extends BaseController {
     try {
       SmartDialog.showLoading(msg: "连接中...");
       var info = await request.getClientInfo(client);
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       AppNavigator.toSyncDevice(client, info);
     } catch (e) {
+      await SmartDialog.dismiss(status: SmartStatus.loading);
       SmartDialog.showToast("连接失败:$e");
-    } finally {
-      SmartDialog.dismiss();
     }
   }
 
@@ -84,7 +90,7 @@ class LocalSyncController extends BaseController {
       showPickerAddress(addressList);
     } else {
       addressController.text = result;
-      //connect();
+      connect();
     }
   }
 
@@ -99,7 +105,7 @@ class LocalSyncController extends BaseController {
             onTap: () {
               Get.back();
               addressController.text = addressList[i];
-              // connect();
+              connect();
             },
           );
         },
@@ -109,6 +115,7 @@ class LocalSyncController extends BaseController {
   }
 
   void showInfo() {
+    final port = SyncService.instance.serverPort.value;
     Utils.showBottomSheet(
       title: "本机信息",
       child: Column(
@@ -120,7 +127,7 @@ class LocalSyncController extends BaseController {
                 Get.back();
               },
               child: QrImageView(
-                data: SyncService.instance.ipAddress.value,
+                data: SyncService.instance.qrAddress,
                 version: QrVersions.auto,
                 backgroundColor: Colors.white,
                 padding: AppStyle.edgeInsetsA12,
@@ -132,7 +139,7 @@ class LocalSyncController extends BaseController {
           Visibility(
             visible: SyncService.instance.httpRunning.value,
             child: Text(
-              '服务已启动：${SyncService.instance.ipAddress.value.split(';').map((e) => '$e:${SyncService.httpPort}').join('；')}',
+              '服务已启动：${SyncService.instance.ipAddress.value.split(';').map((e) => '$e:$port').join('；')}',
               textAlign: TextAlign.center,
             ),
           ),

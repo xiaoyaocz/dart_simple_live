@@ -40,39 +40,64 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                           leading: const Icon(Icons.cloud_circle_outlined),
                           subtitle: Text(controller.user.value),
                           trailing: const Icon(Icons.logout),
-                          onTap: () {
-                            controller.onLogout();
-                          },
+                          onTap: controller.isSyncing.value
+                              ? null
+                              : () => controller.onLogout(),
                         ),
                         AppStyle.divider,
                         ListTile(
-                          title: const Text("上传到云端"),
-                          subtitle: Text("上次上传：${controller.lastUploadTime}"),
+                          title: const Text("上传并补充未关注的"),
+                          enabled: !controller.isSyncing.value,
+                          subtitle: Text(
+                              "保留云端已有关注、标签和顺序\n上次上传：${controller.lastUploadTime}"),
                           leading: const Icon(Icons.cloud_upload_outlined),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            controller.doWebDAVUpload();
-                          },
+                          onTap: controller.isSyncing.value
+                              ? null
+                              : () async {
+                                  await controller.doWebDAVUpload();
+                                },
                         ),
                         AppStyle.divider,
                         ListTile(
-                          title: const Text("恢复到本地"),
-                          subtitle: Text("上次恢复：${controller.lastRecoverTime}"),
+                          title: const Text("下载并补充未关注的"),
+                          enabled: !controller.isSyncing.value,
+                          subtitle: Text(
+                              "保留本机已有关注、标签和顺序\n上次下载：${controller.lastRecoverTime}"),
                           leading: const Icon(Icons.cloud_download_outlined),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.settings),
-                                onPressed: showSetting,
+                                onPressed: controller.isSyncing.value
+                                    ? null
+                                    : showSetting,
                               ),
                               const Icon(Icons.chevron_right),
                             ],
                           ),
-                          onTap: () {
-                            controller.doWebDAVRecovery();
-                          },
-                          onLongPress: showSetting,
+                          onTap: controller.isSyncing.value
+                              ? null
+                              : () async {
+                                  await controller.doWebDAVRecovery();
+                                },
+                          onLongPress:
+                              controller.isSyncing.value ? null : showSetting,
+                        ),
+                        AppStyle.divider,
+                        SwitchListTile(
+                          secondary: const Icon(Icons.sync),
+                          title: const Text("自动同步"),
+                          subtitle: Text(
+                            controller.lastAutoSyncStatus.isEmpty
+                                ? "启动自动拉取合并，关注/标签/屏蔽词变更后自动上传"
+                                : "启动自动拉取合并，变更后自动上传\n${controller.lastAutoSyncStatus}",
+                          ),
+                          value: controller.autoSyncEnabled,
+                          onChanged: controller.isSyncing.value
+                              ? null
+                              : controller.setAutoSyncEnabled,
                         ),
                       ],
               ),
@@ -85,7 +110,7 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
 
   void showSetting() {
     Utils.showBottomSheet(
-      title: '同步选项',
+      title: '下载补充选项（保留本机已有数据）',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -97,7 +122,9 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
               title: const Text("同步关注列表"),
               value: controller.isSyncFollows.value,
               controlAffinity: ListTileControlAffinity.trailing,
-              onChanged: (value) => controller.changeIsSyncFollows(),
+              onChanged: controller.isSyncing.value
+                  ? null
+                  : (value) => controller.changeIsSyncFollows(),
             ),
           ),
           AppStyle.divider,
@@ -107,7 +134,9 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
               title: const Text("同步播放历史记录"),
               value: controller.isSyncHistories.value,
               controlAffinity: ListTileControlAffinity.trailing,
-              onChanged: (value) => controller.changeIsSyncHistories(),
+              onChanged: controller.isSyncing.value
+                  ? null
+                  : (value) => controller.changeIsSyncHistories(),
             ),
           ),
           AppStyle.divider,
@@ -117,7 +146,9 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
               title: const Text("同步屏蔽字"),
               value: controller.isSyncBlockWord.value,
               controlAffinity: ListTileControlAffinity.trailing,
-              onChanged: (value) => controller.changeIsSyncBlockWord(),
+              onChanged: controller.isSyncing.value
+                  ? null
+                  : (value) => controller.changeIsSyncBlockWord(),
             ),
           ),
           AppStyle.divider,
@@ -127,7 +158,9 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
               title: const Text("同步哔哩哔哩账号"),
               value: controller.isSyncBilibiliAccount.value,
               controlAffinity: ListTileControlAffinity.trailing,
-              onChanged: (value) => controller.changeIsSyncBilibiliAccount(),
+              onChanged: controller.isSyncing.value
+                  ? null
+                  : (value) => controller.changeIsSyncBilibiliAccount(),
             ),
           ),
           AppStyle.divider,

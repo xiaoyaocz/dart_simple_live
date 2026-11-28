@@ -4,6 +4,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/home/home_controller.dart';
 import 'package:simple_live_app/modules/home/home_list_view.dart';
+import 'package:simple_live_app/modules/home/home_platform_tab.dart';
 
 class HomePage extends GetView<HomeController> {
   const HomePage({Key? key}) : super(key: key);
@@ -24,15 +25,21 @@ class HomePage extends GetView<HomeController> {
                 (e) => Tab(
                   //text: e.name,
 
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        e.logo,
-                        width: 24,
-                      ),
-                      AppStyle.hGap8,
-                      Text(e.name),
-                    ],
+                  child: HomePlatformTab(
+                    onSelect: () => controller.tabController.animateTo(Sites
+                        .supportSites
+                        .indexWhere((site) => site.id == e.id)),
+                    onRefresh: () => controller.refreshPlatform(e.id),
+                    child: Row(
+                      children: [
+                        Image.asset(
+                          e.logo,
+                          width: 24,
+                        ),
+                        AppStyle.hGap8,
+                        Text(e.name),
+                      ],
+                    ),
                   ),
                 ),
               )

@@ -1,20 +1,20 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:signalr_netcore/signalr_client.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/services/sync_service.dart';
+import 'package:simple_live_app/services/remote_sync_connection.dart';
 
-enum SignalRConnectionState {
-  connecting,
-  connected,
-  disconnected,
-}
+enum SignalRConnectionState { connecting, connected, disconnected }
 
 class SignalRService {
-  static const String kUrl = "https://sync1.nsapps.cn/sync";
+  static const String kUrl = Constant.kRemoteSyncUrl;
+  static const int kRoomIdLength = 6;
 
-  SignalRConnectionState state = SignalRConnectionState.connecting;
+  SignalRConnectionState state = SignalRConnectionState.disconnected;
 
   final _stateStreamController =
       StreamController<SignalRConnectionState>.broadcast();
@@ -25,99 +25,238 @@ class SignalRService {
       StreamController<(bool, String)>.broadcast();
   Stream<(bool, String)> get onFavoriteStream =>
       _onFavoriteStreamController.stream;
-
   final _onHistoryStreamController =
       StreamController<(bool, String)>.broadcast();
   Stream<(bool, String)> get onHistoryStream =>
       _onHistoryStreamController.stream;
-
   final _onShieldWordStreamController =
       StreamController<(bool, String)>.broadcast();
   Stream<(bool, String)> get onShieldWordStream =>
       _onShieldWordStreamController.stream;
-
   final _onBiliAccountStreamController =
       StreamController<(bool, String)>.broadcast();
   Stream<(bool, String)> get onBiliAccountStream =>
       _onBiliAccountStreamController.stream;
-
   final _onRoomDestroyedStreamController = StreamController<String>.broadcast();
   Stream<String> get onRoomDestroyedStream =>
       _onRoomDestroyedStreamController.stream;
-
   final _onRoomUserUpdatedStreamController =
       StreamController<List<RoomUser>>.broadcast();
   Stream<List<RoomUser>> get onRoomUserUpdatedStream =>
       _onRoomUserUpdatedStreamController.stream;
 
-  HubConnection? hubConnection;
-  Future<void> connect() async {
-    hubConnection = HubConnectionBuilder().withUrl(kUrl).build();
-    hubConnection!.onclose(({Exception? error}) {
-      state = SignalRConnectionState.disconnected;
-      _stateStreamController.add(state);
-    });
-    hubConnection!.onreconnected(({String? connectionId}) {
-      Log.d("reconnected: $connectionId");
-      state = SignalRConnectionState.connected;
-      _stateStreamController.add(state);
-    });
-    await hubConnection!.start();
-    state = SignalRConnectionState.connected;
-    _stateStreamController.add(state);
-    _listen();
+  WebSocket? _socket;
+  StreamSubscription<dynamic>? _subscription;
+  Timer? _heartbeat;
+  final Map<String, Completer<Map<String, dynamic>>> _pending = {};
+  int _nextRequestId = 0;
+  bool _disposed = false;
+  final _remoteConnection = RemoteSyncConnection();
+
+  Future<void> connect({List<String> relayAddresses = const []}) async {
+    await disconnect();
+    _setState(SignalRConnectionState.connecting);
+    try {
+      final socket = Platform.isAndroid || Platform.isIOS
+          ? await _connectMobile(relayAddresses)
+          : await _remoteConnection.connect(kUrl);
+      _socket = socket;
+      _subscription = socket.listen(
+        _onMessage,
+        onError: (Object error) {
+          Log.logPrint(error);
+          _onClosed();
+        },
+        onDone: _onClosed,
+      );
+      _setState(SignalRConnectionState.connected);
+      _heartbeat = Timer.periodic(const Duration(seconds: 20), (_) {
+        if (state == SignalRConnectionState.connected) {
+          _socket?.add(jsonEncode({
+            'type': 'ping',
+            'requestId': 'ping_${DateTime.now().millisecondsSinceEpoch}',
+          }));
+        }
+      });
+    } catch (_) {
+      _onClosed();
+      rethrow;
+    }
   }
 
-  void _listen() {
-    hubConnection?.on("onFavoriteReceived", (args) {
-      _onFavoriteStreamController.add((args![0] as bool, args[1] as String));
-    });
-    hubConnection?.on("onHistoryReceived", (args) {
-      _onHistoryStreamController.add((args![0] as bool, args[1] as String));
-    });
-    hubConnection?.on("onShieldWordReceived", (args) {
-      _onShieldWordStreamController.add((args![0] as bool, args[1] as String));
-    });
-    hubConnection?.on("onBiliAccountReceived", (args) {
-      _onBiliAccountStreamController.add((args![0] as bool, args[1] as String));
-    });
-    hubConnection?.on("onRoomDestroyed", (args) {
-      _onRoomDestroyedStreamController.add(args![0].toString());
-    });
-    hubConnection?.on("onUserUpdated", (args) {
-      var list = (args![0] as List).map((e) => RoomUser.fromObject(e)).toList();
-      _onRoomUserUpdatedStreamController.add(list);
-    });
+  Future<WebSocket> _connectMobile(List<String> relayAddresses) {
+    final result = Completer<WebSocket>();
+    var failures = 0;
+
+    void attempt(Future<WebSocket> connection) async {
+      try {
+        final socket = await connection;
+        if (result.isCompleted) {
+          await socket.close();
+        } else {
+          result.complete(socket);
+        }
+      } catch (error) {
+        Log.logPrint('同步连接尝试失败：$error');
+        failures++;
+        if (failures == 2 && !result.isCompleted) {
+          result.completeError(error);
+        }
+      }
+    }
+
+    attempt(_remoteConnection.connect(kUrl));
+    attempt(_connectViaLanRelay(relayAddresses));
+    return result.future;
+  }
+
+  Future<WebSocket> _connectViaLanRelay(List<String> relayAddresses) async {
+    final sync = SyncService.instance;
+    final tried = <String>{};
+    Future<WebSocket?> tryAddress(String rawAddress, {int? defaultPort}) async {
+      var trimmed = rawAddress.trim();
+      var port = defaultPort ?? SyncService.httpPort;
+      if (trimmed.contains(':')) {
+        final parts = trimmed.split(':');
+        trimmed = parts.first.trim();
+        port = int.tryParse(parts.last.trim()) ?? port;
+      }
+      if (InternetAddress.tryParse(trimmed)?.type != InternetAddressType.IPv4 ||
+          !tried.add('$trimmed:$port')) {
+        return null;
+      }
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 2)
+        ..findProxy = (_) => 'DIRECT';
+      try {
+        return await WebSocket.connect(
+          'ws://$trimmed:$port/sync-relay',
+          customClient: client,
+        ).timeout(const Duration(seconds: 2));
+      } catch (error) {
+        Log.logPrint('局域网同步转接失败 ($trimmed:$port)：$error');
+        return null;
+      } finally {
+        client.close(force: true);
+      }
+    }
+
+    for (final address in relayAddresses) {
+      final socket = await tryAddress(address);
+      if (socket != null) return socket;
+    }
+    if (sync.udp == null) {
+      throw const SocketException('远程服务不可达，局域网设备发现尚未启动');
+    }
+    sync.sendHello();
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    while (DateTime.now().isBefore(deadline)) {
+      for (final client in sync.scanClients.toList()) {
+        if (!{'windows', 'macos', 'linux'}.contains(client.type)) continue;
+        final socket = await tryAddress(client.address, defaultPort: client.port);
+        if (socket != null) return socket;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    throw const SocketException('远程服务不可达，局域网内也未发现可用的同步转接设备');
+  }
+
+  void _setState(SignalRConnectionState value) {
+    state = value;
+    if (!_disposed) _stateStreamController.add(value);
+  }
+
+  void _onClosed() {
+    _heartbeat?.cancel();
+    _socket = null;
+    for (final request in _pending.values) {
+      if (!request.isCompleted) {
+        request.complete({'type': 'error', 'error': '连接已断开'});
+      }
+    }
+    _pending.clear();
+    if (state != SignalRConnectionState.disconnected) {
+      _setState(SignalRConnectionState.disconnected);
+    }
+  }
+
+  void _onMessage(dynamic raw) {
+    if (_disposed) return;
+    try {
+      final message = jsonDecode(raw as String) as Map<String, dynamic>;
+      final requestId = message['requestId']?.toString();
+      final pending = requestId == null ? null : _pending.remove(requestId);
+      if (pending != null) {
+        pending.complete(message);
+        return;
+      }
+      final payload = message['payload'];
+      if (payload is Map) {
+        final data =
+            (payload['overlay'] == true, payload['content']?.toString() ?? '');
+        switch (message['type']) {
+          case 'favoriteReceived':
+            _onFavoriteStreamController.add(data);
+          case 'historyReceived':
+            _onHistoryStreamController.add(data);
+          case 'shieldWordReceived':
+            _onShieldWordStreamController.add(data);
+          case 'biliAccountReceived':
+            _onBiliAccountStreamController.add(data);
+        }
+      }
+      switch (message['type']) {
+        case 'roomDestroyed':
+          _onRoomDestroyedStreamController
+              .add(message['reason']?.toString() ?? '');
+        case 'userUpdated':
+          final users = message['users'];
+          if (users is List) {
+            _onRoomUserUpdatedStreamController.add(
+              users.map((user) => RoomUser.fromObject(user)).toList(),
+            );
+          }
+      }
+    } catch (error) {
+      Log.logPrint(error);
+    }
   }
 
   Future<void> disconnect() async {
-    await hubConnection?.stop();
-    state = SignalRConnectionState.disconnected;
-    _stateStreamController.add(state);
+    final subscription = _subscription;
+    final socket = _socket;
+    _subscription = null;
+    _socket = null;
+    _heartbeat?.cancel();
+    await subscription?.cancel();
+    await socket?.close();
+    _onClosed();
   }
 
+  Map<String, String> get _clientInfo => {
+        'app': 'Simple Live',
+        'platform': Platform.operatingSystem,
+        'version': Utils.packageInfo.version,
+      };
+
   Future<Resp<String>> createRoom() async {
-    if (state != SignalRConnectionState.connected) {
-      throw Exception("not connected");
-    }
-    String app = "Simple Live";
-    String platform = Platform.operatingSystem;
-    String version = Utils.packageInfo.version;
-    var resp = await hubConnection
-        ?.invoke("CreateRoom", args: [app, platform, version]);
-    return Resp<String>.fromObject(resp);
+    final response = await _request('createRoom', payload: _clientInfo);
+    final roomId = response['roomId']?.toString();
+    return Resp(
+      response['type'] == 'roomCreated' && roomId?.length == kRoomIdLength,
+      _errorMessage(response),
+      roomId,
+    );
   }
 
   Future<Resp> joinRoom(String roomId) async {
-    if (state != SignalRConnectionState.connected) {
-      throw Exception("not connected");
-    }
-    String app = "Simple Live";
-    String platform = Platform.operatingSystem;
-    String version = Utils.packageInfo.version;
-    var resp = await hubConnection
-        ?.invoke("JoinRoom", args: [roomId, app, platform, version]);
-    return Resp.fromObject(resp);
+    final response = await _request(
+      'joinRoom',
+      roomId: roomId.trim().toUpperCase(),
+      payload: _clientInfo,
+    );
+    return Resp(
+        response['type'] == 'roomJoined', _errorMessage(response), null);
   }
 
   Future<Resp> sendContent({
@@ -126,15 +265,63 @@ class SignalRService {
     required bool overlay,
     required String content,
   }) async {
-    if (state != SignalRConnectionState.connected) {
-      throw Exception("not connected");
+    final response = await _request(
+      '${action[0].toLowerCase()}${action.substring(1)}',
+      roomId: roomName,
+      payload: {'overlay': overlay, 'content': content},
+    );
+    return Resp(response['type'] == 'ack', _errorMessage(response), null);
+  }
+
+  Future<Map<String, dynamic>> _request(
+    String type, {
+    String? roomId,
+    Object? payload,
+  }) async {
+    final socket = _socket;
+    if (state != SignalRConnectionState.connected || socket == null) {
+      return {'type': 'error', 'error': '连接已断开'};
     }
-    var resp =
-        await hubConnection?.invoke(action, args: [roomName, overlay, content]);
-    return Resp.fromObject(resp);
+    final requestId = '${++_nextRequestId}';
+    final completer = Completer<Map<String, dynamic>>();
+    _pending[requestId] = completer;
+    try {
+      socket.add(jsonEncode({
+        'type': type,
+        'requestId': requestId,
+        if (roomId != null) 'roomId': roomId,
+        if (payload != null) 'payload': payload,
+      }));
+      return await completer.future.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      return {'type': 'error', 'error': '同步服务响应超时'};
+    } catch (error) {
+      Log.logPrint(error);
+      return {'type': 'error', 'error': '发送同步请求失败'};
+    } finally {
+      _pending.remove(requestId);
+    }
+  }
+
+  String _errorMessage(Map<String, dynamic> response) {
+    if (response['type'] != 'error') {
+      return response['type'] == 'roomCreated' ||
+              response['type'] == 'roomJoined' ||
+              response['type'] == 'ack'
+          ? ''
+          : '同步服务返回异常';
+    }
+    final error = response['error'];
+    if (error is Map) return error['message']?.toString() ?? '同步服务暂不可用';
+    return error?.toString() ?? '同步服务暂不可用';
   }
 
   void dispose() {
+    _disposed = true;
+    _heartbeat?.cancel();
+    _subscription?.cancel();
+    _socket?.close();
+    _onClosed();
     _stateStreamController.close();
     _onFavoriteStreamController.close();
     _onHistoryStreamController.close();
@@ -142,8 +329,6 @@ class SignalRService {
     _onBiliAccountStreamController.close();
     _onRoomDestroyedStreamController.close();
     _onRoomUserUpdatedStreamController.close();
-
-    hubConnection?.stop();
   }
 }
 
@@ -152,21 +337,6 @@ class Resp<T> {
   final String message;
   final T? data;
   Resp(this.isSuccess, this.message, this.data);
-
-  factory Resp.fromJson(Map<String, dynamic> json) {
-    return Resp(
-      json['isSuccess'],
-      json['message'] ?? "",
-      json['data'],
-    );
-  }
-
-  factory Resp.fromObject(Object? obj) {
-    if (obj is Map<String, dynamic>) {
-      return Resp.fromJson(obj);
-    }
-    return Resp(false, "unknown", null);
-  }
 }
 
 class RoomUser {
@@ -175,38 +345,16 @@ class RoomUser {
   final String platform;
   final String version;
   final String app;
-  final bool? isCreator;
+  final bool isCreator;
+  final bool isSelf;
 
-  RoomUser({
-    required this.connectionId,
-    required this.shortId,
-    required this.platform,
-    required this.version,
-    required this.app,
-    this.isCreator = false,
-  });
-
-  factory RoomUser.fromJson(Map<String, dynamic> json) {
-    return RoomUser(
-      connectionId: json['connectionId'],
-      shortId: json['shortId'],
-      platform: json['platform'],
-      version: json['version'],
-      app: json['app'],
-      isCreator: json['isCreator'],
-    );
-  }
-
-  factory RoomUser.fromObject(Object? obj) {
-    if (obj is Map<String, dynamic>) {
-      return RoomUser.fromJson(obj);
-    }
-    return RoomUser(
-      connectionId: "",
-      shortId: "",
-      platform: "",
-      version: "",
-      app: "",
-    );
-  }
+  RoomUser.fromObject(Object? obj)
+      : connectionId =
+            (obj is Map ? obj['connectionId'] : null)?.toString() ?? '',
+        shortId = (obj is Map ? obj['shortId'] : null)?.toString() ?? '',
+        platform = (obj is Map ? obj['platform'] : null)?.toString() ?? '',
+        version = (obj is Map ? obj['version'] : null)?.toString() ?? '',
+        app = (obj is Map ? obj['app'] : null)?.toString() ?? '',
+        isCreator = obj is Map && obj['isCreator'] == true,
+        isSelf = obj is Map && obj['isSelf'] == true;
 }

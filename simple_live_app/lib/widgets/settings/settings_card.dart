@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:simple_live_app/app/app_style.dart';
 
@@ -7,19 +8,25 @@ class SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final material = (Platform.isWindows || Platform.isAndroid) &&
+        theme.scaffoldBackgroundColor == Colors.transparent;
+    final radius = material ? BorderRadius.circular(12) : AppStyle.radius8;
     return Material(
-      color: Theme.of(context).brightness == Brightness.dark
+      color: material ? theme.colorScheme.surface.withAlpha(205)
+          : theme.brightness == Brightness.dark
           ? Colors.grey.withAlpha(50)
           : Colors.white70,
       shape: RoundedRectangleBorder(
-        borderRadius: AppStyle.radius8,
+        borderRadius: radius,
         side: BorderSide(
-          color: Colors.grey.withAlpha(25),
+          color: material ? theme.colorScheme.outlineVariant.withAlpha(100)
+              : Colors.grey.withAlpha(25),
         ),
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: AppStyle.radius8,
+          borderRadius: radius,
         ),
         child: child,
       ),

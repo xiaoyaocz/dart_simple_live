@@ -1,0 +1,282 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'dart:math' as math;
+import 'package:simple_live_app/services/room_emoticons.dart';
+import 'danmaku_emoticon_panel.dart';
+
+/// Inline and floating composers share the room's draft, not their focus nodes.
+class DanmakuComposer extends StatefulWidget {
+  const DanmakuComposer(
+      {super.key,
+      required this.draft,
+      required this.send,
+      this.prepare,
+      this.status,
+      this.emoticons,
+      this.onEmoticonRoute,
+      this.autofocus = false,
+      this.focusRequest = 0,
+      this.onSent});
+  final TextEditingController draft;
+  final Future<bool> Function() send;
+  final VoidCallback? prepare;
+  final ValueListenable<String>? status;
+  final RoomEmoticons? Function()? emoticons;
+  final ValueChanged<Route<String>>? onEmoticonRoute;
+  final bool autofocus;
+  final int focusRequest;
+  final VoidCallback? onSent;
+  @override
+  State<DanmakuComposer> createState() => _DanmakuComposerState();
+}
+
+class _DanmakuComposerState extends State<DanmakuComposer> {
+  bool busy = false;
+  final focus = FocusNode();
+  Route<String>? _emoticonRoute;
+  int _draftRevision = 0;
+  late TextEditingValue _lastDraft;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastDraft = widget.draft.value;
+    widget.draft.addListener(_trackDraft);
+    focus.addListener(_prepareOnFocus);
+  }
+
+  void _trackDraft() {
+    final value = widget.draft.value;
+    // Selection moves are not edits; retyping the same text IS a new draft.
+    if (value.text != _lastDraft.text ||
+        value.composing != _lastDraft.composing) {
+      _draftRevision++;
+    }
+    _lastDraft = value;
+  }
+
+  void _prepareOnFocus() {
+    if (focus.hasFocus && !busy) widget.prepare?.call();
+  }
+
+  @override
+  void didUpdateWidget(covariant DanmakuComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.draft, widget.draft)) {
+      oldWidget.draft.removeListener(_trackDraft);
+      _lastDraft = widget.draft.value;
+      _draftRevision++;
+      widget.draft.addListener(_trackDraft);
+    }
+    if (widget.focusRequest > oldWidget.focusRequest) focus.requestFocus();
+  }
+
+  @override
+  void dispose() {
+    widget.draft.removeListener(_trackDraft);
+    focus.removeListener(_prepareOnFocus);
+    final menu = _emoticonRoute;
+    // dispose runs while the widget tree is locked. Remove a surviving popup
+    // after finalization rather than setState on Navigator during teardown.
+    if (menu != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (menu.isActive) menu.navigator?.removeRoute(menu);
+      });
+    }
+    focus.dispose();
+    super.dispose();
+  }
+
+  Future<void> submit() async {
+    if (busy ||
+        widget.draft.text.trim().isEmpty ||
+        !widget.draft.value.composing.isCollapsed) {
+      return;
+    }
+    final draft = widget.draft;
+    final revision = _draftRevision;
+    setState(() => busy = true);
+    // Keep typing on the Flutter editor, not on the send button or hidden host.
+    // The next keystroke can replace the submitted text without manual clearing.
+    focus.requestFocus();
+    draft.selection =
+        TextSelection(baseOffset: 0, extentOffset: draft.text.length);
+    try {
+      final success = await widget.send();
+      if (!mounted) return;
+      if (success &&
+          identical(widget.draft, draft) &&
+          _draftRevision == revision) {
+        draft.clear();
+        // A picker opened during confirmation is already composing the next
+        // message. Do not tear it down by closing the floating editor.
+        if (_emoticonRoute?.isActive != true) widget.onSent?.call();
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  void insertEmoji(String emoji) {
+    final value = widget.draft.value;
+    final start =
+        value.selection.isValid ? value.selection.start : value.text.length;
+    final end =
+        value.selection.isValid ? value.selection.end : value.text.length;
+    widget.draft.value = TextEditingValue(
+      text: value.text.replaceRange(start, end, emoji),
+      selection: TextSelection.collapsed(offset: start + emoji.length),
+    );
+    focus.requestFocus();
+  }
+
+  Future<void> openEmoticons(BuildContext anchorContext) async {
+    final overlay =
+        Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
+    final anchor = anchorContext.findRenderObject()! as RenderBox;
+    final rect =
+        anchor.localToGlobal(Offset.zero, ancestor: overlay) & anchor.size;
+    final width = math.min(448.0, overlay.size.width - 16);
+    final height = math.min(320.0, overlay.size.height - 32);
+    final left = (rect.right - width)
+        .clamp(8.0, math.max(8.0, overlay.size.width - width - 8))
+        .toDouble();
+    final top = (rect.top - height - 8)
+        .clamp(8.0, math.max(8.0, overlay.size.height - height - 8))
+        .toDouble();
+    final selected = await showMenu<String>(
+        context: context,
+        color: const Color(0xff30313d),
+        surfaceTintColor: Colors.transparent,
+        menuPadding: EdgeInsets.zero,
+        constraints: BoxConstraints.tightFor(width: width),
+        position: RelativeRect.fromLTRB(
+            left, top, overlay.size.width - left - width, 0),
+        items: [
+          EmoticonMenuEntry(
+              height: height,
+              child: SizedBox(
+                  width: width,
+                  height: height,
+                  child: Builder(builder: (menuContext) {
+                    final menu = ModalRoute.of(menuContext)! as Route<String>;
+                    if (!identical(_emoticonRoute, menu)) {
+                      _emoticonRoute = menu;
+                      widget.onEmoticonRoute?.call(menu);
+                    }
+                    final navigator = Navigator.of(menuContext);
+                    return DanmakuEmoticonPanel(
+                        catalog: widget.emoticons?.call(),
+                        onSelected: (text) => navigator.pop(text));
+                  })))
+        ]);
+    if (mounted && selected != null) insertEmoji(selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final editor = Padding(
+      padding: const EdgeInsets.all(8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(children: [
+          Expanded(
+              child: TextField(
+            controller: widget.draft, focusNode: focus,
+            autofocus: widget.autofocus,
+            textInputAction: TextInputAction.send,
+            // EditableText's default completion clears IME composing before
+            // onSubmitted. Preserve it so accepting a Chinese candidate cannot send.
+            onEditingComplete: () {},
+            onSubmitted: (_) => submit(),
+            decoration: const InputDecoration(
+              hintText: '与大家互动一下…',
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+          )),
+          Builder(
+              builder: (anchorContext) => IconButton(
+                  tooltip: '表情',
+                  padding: EdgeInsets.zero,
+                  onPressed: () => openEmoticons(anchorContext),
+                  icon: const Icon(Icons.sentiment_satisfied_alt, size: 20))),
+          IconButton(
+            tooltip: '发送弹幕（Enter）',
+            onPressed: busy ? null : submit,
+            visualDensity: VisualDensity.compact,
+            icon: busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.arrow_circle_up, size: 24),
+          ),
+        ]),
+      ),
+    );
+    final status = widget.status;
+    if (status == null) return editor;
+    // Keep the input compact; status remains available on hover and to screen
+    // readers, without a permanent text row or an empty space below the input.
+    return ValueListenableBuilder<String>(
+        valueListenable: status,
+        child: editor,
+        builder: (_, value, child) => Semantics(
+            liveRegion: true,
+            label: value,
+            child: Tooltip(message: value, child: child!)));
+  }
+}
+
+Future<void> showDanmakuComposer(
+  BuildContext context, {
+  required TextEditingController draft,
+  required Future<bool> Function() send,
+  VoidCallback? prepare,
+  ValueListenable<String>? status,
+  RoomEmoticons? Function()? emoticons,
+  ValueChanged<Route<String>>? onEmoticonRoute,
+  void Function(DialogRoute<void>)? onRoute,
+}) async {
+  late final DialogRoute<void> route;
+  route = DialogRoute<void>(
+    context: context,
+    barrierColor: Colors.transparent,
+    builder: (dialogContext) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              Navigator.of(dialogContext).pop(),
+        },
+        child: Dialog(
+          alignment: Alignment.bottomCenter,
+          insetPadding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: DanmakuComposer(
+                draft: draft,
+                send: send,
+                prepare: prepare,
+                status: status,
+                emoticons: emoticons,
+                onEmoticonRoute: onEmoticonRoute,
+                autofocus: true,
+                onSent: () {
+                  if (!route.isActive) return;
+                  if (route.isCurrent) {
+                    route.navigator?.pop();
+                  } else {
+                    route.navigator?.removeRoute(route);
+                  }
+                }),
+          ),
+        )),
+  );
+  onRoute?.call(route);
+  await Navigator.of(context, rootNavigator: true).push(route);
+}

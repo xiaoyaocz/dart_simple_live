@@ -96,7 +96,11 @@ class LocalSyncPage extends GetView<LocalSyncController> {
                   var client = SyncService.instance.scanClients[index];
                   return ListTile(
                     title: Text(client.name),
-                    subtitle: Text(client.address),
+                    subtitle: Text(
+                      client.port == SyncService.httpPort
+                          ? client.address
+                          : '${client.address}:${client.port}',
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       controller.connectClient(client);

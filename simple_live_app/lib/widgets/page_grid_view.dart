@@ -8,6 +8,7 @@ import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_easyrefresh/easy_refresh.dart';
 import 'package:get/get.dart';
+import 'package:simple_live_app/widgets/auto_load_viewport.dart';
 
 class PageGridView extends StatelessWidget {
   final BasePageController pageController;
@@ -19,6 +20,8 @@ class PageGridView extends StatelessWidget {
   final double crossAxisSpacing, mainAxisSpacing;
   final int crossAxisCount;
   final bool showPCRefreshButton;
+  final bool autoLoadMore;
+  final bool Function()? autoLoadAllowed;
   const PageGridView({
     required this.itemBuilder,
     required this.pageController,
@@ -29,6 +32,8 @@ class PageGridView extends StatelessWidget {
     this.crossAxisSpacing = 0.0,
     this.mainAxisSpacing = 0.0,
     this.showPCRefreshButton = true,
+    this.autoLoadMore = false,
+    this.autoLoadAllowed,
     required this.crossAxisCount,
     Key? key,
   }) : super(key: key);
@@ -38,7 +43,7 @@ class PageGridView extends StatelessWidget {
     return Obx(
       () => Stack(
         children: [
-          EasyRefresh(
+          _withAutoLoad(EasyRefresh(
             header: MaterialHeader(
               completeDuration: const Duration(milliseconds: 400),
             ),
@@ -58,7 +63,7 @@ class PageGridView extends StatelessWidget {
               crossAxisSpacing: crossAxisSpacing,
               mainAxisSpacing: mainAxisSpacing,
             ),
-          ),
+          )),
           Positioned(
             bottom: 0,
             left: 0,
@@ -124,6 +129,17 @@ class PageGridView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _withAutoLoad(Widget child) {
+    if (!autoLoadMore) return child;
+    return AutoLoadViewport(
+      canLoad: () => !pageController.isClosed && !pageController.loadding &&
+          pageController.canLoadMore.value && !pageController.pageError.value &&
+          (autoLoadAllowed?.call() ?? true),
+      loadMore: () async { await pageController.loadData(); },
+      child: child,
     );
   }
 }

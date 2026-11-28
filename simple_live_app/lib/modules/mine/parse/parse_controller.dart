@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,11 +8,98 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
+import 'package:simple_live_app/routes/route_path.dart';
 
 class ParseController extends GetxController {
   final TextEditingController roomJumpToController = TextEditingController();
   final TextEditingController getUrlController = TextEditingController();
+  Timer? _clipboardTimer;
+  String? _lastClipboardText;
+  bool _checkingClipboard = false;
+  bool _showingPrompt = false;
+
+  @override
+  void onReady() {
+    super.onReady();
+    _checkClipboard();
+    _clipboardTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _checkClipboard(),
+    );
+  }
+
+  Future<void> _checkClipboard() async {
+    if (_checkingClipboard ||
+        _showingPrompt ||
+        Get.currentRoute != RoutePath.kTools) {
+      return;
+    }
+    _checkingClipboard = true;
+    try {
+      final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+      if (text == null || text == _lastClipboardText) return;
+      _lastClipboardText = text;
+      String? link;
+      for (final match
+          in RegExp(r'https?://[^\s，。<>"\u0027]+').allMatches(text)) {
+        final candidate =
+            match.group(0)!.replaceFirst(RegExp(r'[)\]】；;]+$'), '');
+        final host = Uri.tryParse(candidate)?.host;
+        if ({
+          'live.bilibili.com',
+          'b23.tv',
+          'www.huya.com',
+          'huya.com',
+          'www.douyu.com',
+          'douyu.com',
+          'live.douyin.com',
+          'www.douyin.com',
+          'v.douyin.com',
+          'webcast.amemv.com',
+        }.contains(host)) {
+          link = candidate;
+          break;
+        }
+      }
+      if (link == null) return;
+      final result = await parse(link);
+      if (result.isEmpty ||
+          result.first == '' ||
+          isClosed ||
+          Get.currentRoute != RoutePath.kTools) {
+        return;
+      }
+      _showingPrompt = true;
+      final open = await Utils.showAlertDialog(
+        link,
+        title: '检测到直播间链接',
+        confirm: '打开直播间',
+        cancel: '留在此页',
+        selectable: true,
+        constraints: const BoxConstraints(maxWidth: 520),
+        maxContentHeight: 144,
+        doubleTapConfirm: true,
+      );
+      if (open && !isClosed) {
+        AppNavigator.toLiveRoomDetail(site: result[1], roomId: result.first);
+      }
+    } catch (e) {
+      Log.logPrint(e);
+    } finally {
+      _showingPrompt = false;
+      _checkingClipboard = false;
+    }
+  }
+
+  @override
+  void onClose() {
+    _clipboardTimer?.cancel();
+    roomJumpToController.dispose();
+    getUrlController.dispose();
+    super.onClose();
+  }
 
   void jumpToRoom(String e) async {
     if (e.isEmpty) {
@@ -21,7 +110,7 @@ class ParseController extends GetxController {
     FocusManager.instance.primaryFocus?.unfocus();
 
     var parseResult = await parse(e);
-    if (parseResult.isEmpty && parseResult.first == "") {
+    if (parseResult.isEmpty || parseResult.first == "") {
       SmartDialog.showToast("无法解析此链接");
       return;
     }
@@ -39,7 +128,7 @@ class ParseController extends GetxController {
       return;
     }
     var parseResult = await parse(e);
-    if (parseResult.isEmpty && parseResult.first == "") {
+    if (parseResult.isEmpty || parseResult.first == "") {
       SmartDialog.showToast("无法解析此链接");
       return;
     }
@@ -125,7 +214,7 @@ class ParseController extends GetxController {
     if (url.contains("douyu.com")) {
       var regExp = RegExp(r"douyu\.com/([\d|\w]+)");
       // 适配 topic_url
-      if(url.contains("topic")){
+      if (url.contains("topic")) {
         regExp = RegExp(r"[?&]rid=([\d]+)");
       }
       id = regExp.firstMatch(url)?.group(1) ?? "";
@@ -142,6 +231,11 @@ class ParseController extends GetxController {
       var regExp = RegExp(r"live\.douyin\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
+      return [id, Sites.allSites[Constant.kDouyin]!];
+    }
+    if (url.contains("www.douyin.com/root/live/")) {
+      var regExp = RegExp(r"www\.douyin\.com/root/live/(\d+)");
+      id = regExp.firstMatch(url)?.group(1) ?? "";
       return [id, Sites.allSites[Constant.kDouyin]!];
     }
     if (url.contains("webcast.amemv.com")) {
@@ -169,8 +263,9 @@ class ParseController extends GetxController {
         ),
       );
     } on DioException catch (e) {
-      if (e.response!.statusCode == 302) {
-        var redirectUrl = e.response!.headers.value("Location");
+      final status = e.response?.statusCode;
+      if (status != null && status >= 300 && status < 400) {
+        var redirectUrl = e.response?.headers.value("Location");
         if (redirectUrl != null) {
           return redirectUrl;
         }

@@ -11,6 +11,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
+import 'package:simple_live_app/modules/live_room/player/mobile_video_quality.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
 import 'package:simple_live_app/modules/live_room/player/windows_video_quality.dart';
 import 'package:simple_live_app/modules/multi_view/multi_view_slot.dart';
@@ -37,6 +38,14 @@ class MultiViewTileRuntime {
   VideoController? videoController;
   int generation = 0;
   bool configured = false;
+
+  @visibleForTesting
+  bool get isWindowsPlayback => Platform.isWindows;
+  @visibleForTesting
+  bool get isAndroidPlayback => Platform.isAndroid;
+  @visibleForTesting
+  bool get isIosPlayback => Platform.isIOS;
+  bool get isMobilePlayback => isAndroidPlayback || isIosPlayback;
 
   Future<void> ensurePlayer() async {
     if (player != null && videoController != null) return;
@@ -79,17 +88,24 @@ class MultiViewTileRuntime {
     try {
       final platform = target.platform;
       if (platform is NativePlayer) {
-        if (Platform.isWindows) {
+        if (isWindowsPlayback) {
           await platform.setProperty('http-proxy', '');
           await WindowsVideoQuality.applyBaseProperties(platform);
+        } else if (isMobilePlayback) {
+          await MobileVideoQuality.applyBaseProperties(
+            platform,
+            isAndroid: isAndroidPlayback,
+          );
+        } else {
+          await platform.setProperty('audio-resample-cutoff', '0.96');
         }
         await platform.setProperty('interpolation', 'no');
         await platform.setProperty('video-sync', 'audio');
         await platform.setProperty('audio-pitch-correction', 'yes');
         await platform.setProperty('cache-on-disk', 'no');
-        await platform.setProperty('cache-secs', Platform.isWindows ? '20' : '15');
+        await platform.setProperty('cache-secs', isWindowsPlayback ? '20' : '15');
         await platform.setProperty(
-            'demuxer-max-back-bytes', Platform.isWindows ? '8388608' : '2097152');
+            'demuxer-max-back-bytes', isWindowsPlayback ? '8388608' : '4194304');
         await platform.setProperty('cache-pause', 'yes');
         await platform.setProperty('cache-pause-wait', '0.5');
         await platform.setProperty('network-timeout', '10');

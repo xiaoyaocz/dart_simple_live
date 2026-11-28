@@ -143,6 +143,11 @@ class AppSettingsController extends GetxController {
     windowsAudioExclusive.value = LocalStorageService.instance
         .getValue(LocalStorageService.kWindowsAudioExclusive, false);
 
+    mobileDeband.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kMobileDeband, true);
+    mobileInterpolation.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kMobileInterpolation, false);
+
     initSiteSort();
     initHomeSort();
 
@@ -328,7 +333,8 @@ class AppSettingsController extends GetxController {
 
   final playerCompatMode = false.obs;
 
-  final playerBufferSize = (Platform.isWindows ? 256 : 64).obs;
+  late final playerBufferSize =
+      (outputPolicy.platform == 'windows' ? 256 : 128).obs;
 
   /// Windows AI 超分着色器开关（FSRCNNX）
   var windowsSuperResolution = true.obs;
@@ -352,6 +358,21 @@ class AppSettingsController extends GetxController {
     windowsAudioExclusive.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kWindowsAudioExclusive, e);
+  }
+
+  /// 手机端画面去色带（Deband）开关
+  var mobileDeband = true.obs;
+  void setMobileDeband(bool e) {
+    mobileDeband.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kMobileDeband, e);
+  }
+
+  /// 手机端高刷动态画面平滑（补帧）开关
+  var mobileInterpolation = false.obs;
+  void setMobileInterpolation(bool e) {
+    mobileInterpolation.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kMobileInterpolation, e);
   }
 
   /// 缓冲策略：0=均衡（默认），1=抗抖稳流，2=低延迟

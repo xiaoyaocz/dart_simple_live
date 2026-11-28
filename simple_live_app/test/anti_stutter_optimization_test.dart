@@ -66,6 +66,18 @@ class _PlayerHarness with PlayerMixin {
   Player get player => _fake;
 }
 
+class _MobilePlayerHarness with PlayerMixin {
+  final _fake = _FakePlayer();
+  @override
+  Player get player => _fake;
+  @override
+  bool get isWindowsPlayback => false;
+  @override
+  bool get isAndroidPlayback => true;
+  @override
+  bool get isIosPlayback => false;
+}
+
 class _TestSite extends HuyaSite {
   int getPlayUrlsCalls = 0;
   List<String> urls = ['https://cdn.example/live.flv'];
@@ -109,7 +121,7 @@ void main() {
         'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=2',
       );
       expect(p0['cache-secs'], Platform.isWindows ? '30' : '20');
-      expect(p0['cache-pause-wait'], Platform.isWindows ? '0.5' : '2');
+      expect(p0['cache-pause-wait'], Platform.isWindows ? '0.5' : '0.8');
 
       // 模式 1：抗抖稳流
       AppSettingsController.instance.playerBufferMode.value = 1;
@@ -125,7 +137,17 @@ void main() {
       await lowLatency.initializePlayer();
       final p2 = (lowLatency.player.platform as _Native).properties;
       expect(p2['cache-secs'], '10');
-      expect(p2['cache-pause-wait'], Platform.isWindows ? '0.3' : '0.8');
+      expect(p2['cache-pause-wait'], Platform.isWindows ? '0.3' : '0.5');
+
+      // Android 手机端：均衡 0.8s 起播，低延迟 0.5s，自适应抖动后 2s
+      AppSettingsController.instance.playerBufferMode.value = 0;
+      final mobile = _MobilePlayerHarness();
+      await mobile.initializePlayer();
+      final pm = (mobile.player.platform as _Native).properties;
+      expect(pm['cache-pause-wait'], '0.8');
+      expect(mobile.playbackBufferWait(adaptive: true), '2');
+      AppSettingsController.instance.playerBufferMode.value = 2;
+      expect(mobile.playbackBufferWait(), '0.5');
     });
   });
 
@@ -311,10 +333,10 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
         room.mediaBuffering(false);
       }
-      expect(native.properties['cache-pause-wait'], Platform.isWindows ? '1.5' : '3');
+      expect(native.properties['cache-pause-wait'], Platform.isWindows ? '1.5' : '2');
       room.changePlayLine(1);
       await tester.pump();
-      expect(native.properties['cache-pause-wait'], Platform.isWindows ? '0.5' : '2');
+      expect(native.properties['cache-pause-wait'], Platform.isWindows ? '0.5' : '0.8');
     });
     setUp(() => Get.put<AppSettingsController>(_Settings()));
     tearDown(() => Get.reset());

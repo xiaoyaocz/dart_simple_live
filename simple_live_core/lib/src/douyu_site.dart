@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'model/room_category_name.dart';
 import 'common/core_log.dart';
+import 'model/live_follow_status.dart';
 import 'dart:math';
 
 import 'package:simple_live_core/src/common/http_client.dart';
@@ -424,7 +425,12 @@ class DouyuSite implements LiveSite {
   }
 
   Future<Map> _getRoomInfo(String roomId) async {
-    final direct = await _getBetardRoomInfo(roomId);
+    final payload = await _getRoomPayload(roomId);
+    return payload['room'] as Map;
+  }
+
+  Future<Map> _getRoomPayload(String roomId) async {
+    final direct = await _getBetardPayload(roomId);
     if (direct != null) return direct;
 
     // /betard/<VIP alias> can return a 200 HTML "room closed" page even
@@ -455,12 +461,12 @@ class DouyuSite implements LiveSite {
         !RegExp(r'^[1-9]\d*$').hasMatch(realRoomId)) {
       throw CoreError('未获取到斗鱼直播间信息，请检查房间号或稍后刷新');
     }
-    final resolved = await _getBetardRoomInfo(realRoomId);
+    final resolved = await _getBetardPayload(realRoomId);
     if (resolved == null) throw CoreError('斗鱼直播间信息返回异常，请稍后刷新');
     return resolved;
   }
 
-  Future<Map?> _getBetardRoomInfo(String roomId) async {
+  Future<Map?> _getBetardPayload(String roomId) async {
     var result = await HttpClient.instance.getJson(
       "https://www.douyu.com/betard/$roomId",
       queryParameters: {},
@@ -477,9 +483,7 @@ class DouyuSite implements LiveSite {
         return null;
       }
     }
-    return result is Map && result['room'] is Map
-        ? result['room'] as Map
-        : null;
+    return result is Map && result['room'] is Map ? result : null;
   }
 
   //生成指定长度的16进制随机字符串
@@ -531,6 +535,56 @@ class DouyuSite implements LiveSite {
     }
     var hasMore = result["data"]["relateUser"].isNotEmpty;
     return LiveSearchAnchorResult(hasMore: hasMore, items: items);
+  }
+
+  @override
+  bool get supportsFollowStatusBatch => false;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async =>
+      const {};
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != DouyuSite) {
+      final isLive = await getLiveStatus(roomId: roomId);
+      return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+    }
+    final payload = await _getRoomPayload(roomId);
+    final room = payload['room'] as Map;
+    final game = payload['game'] is Map ? payload['game'] as Map : null;
+    final status = int.tryParse('${room['show_status']}');
+    if (status == null) throw StateError('斗鱼房间未返回直播状态');
+    final bizAll =
+        room['room_biz_all'] is Map ? room['room_biz_all'] as Map : null;
+    final replay = room['videoLoop']?.toString() == '1' ||
+        bizAll?['videoLoop']?.toString() == '1';
+    final isLive = status == 1 && !replay;
+    final onlineVal = int.tryParse('${bizAll?['hot'] ?? room['hot'] ?? ''}') ?? 0;
+    final rawShowTime = room['show_time']?.toString().trim();
+    final showTime = isLive &&
+            rawShowTime != null &&
+            RegExp(r'^[1-9]\d*$').hasMatch(rawShowTime)
+        ? rawShowTime
+        : null;
+    final resolved = room['room_id']?.toString().trim();
+    return LiveFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: resolved != null && resolved.isNotEmpty ? resolved : null,
+      online: isLive && onlineVal > 0 ? onlineVal : null,
+      categoryName: firstCategoryName([
+        room['cate2_name'],
+        room['second_lvl_name'],
+        game?['tag_name'],
+        room['cate_name'],
+        room['cate1_name'],
+      ]),
+      showTime: showTime,
+      title: room['room_name']?.toString(),
+      needsDetailFallback: false,
+    );
   }
 
   @override

@@ -243,6 +243,12 @@ class DBService extends GetxService {
     await followBox.put(follow.id, follow);
   }
 
+  /// 本轮关注刷新结束时一次性批量写入元数据，减少逐条写入磁盘的开销。
+  Future<void> putFollowsSilently(Map<String, FollowUser> entries) async {
+    if (entries.isEmpty || !followBox.isOpen) return;
+    await followBox.putAll(entries);
+  }
+
   Future deleteFollow(String id) => deleteFollows([id]);
 
   Future<void> deleteFollows(Iterable<String> ids) =>

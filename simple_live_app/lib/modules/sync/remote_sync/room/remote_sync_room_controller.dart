@@ -14,11 +14,14 @@ import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
+import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/signalr_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
+import 'package:simple_live_app/services/webdav_account_sync.dart';
+import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 
 class RemoteSyncRoomController extends BaseController {
   final String roomId;
@@ -42,6 +45,13 @@ class RemoteSyncRoomController extends BaseController {
   RxList<RoomUser> roomUsers = <RoomUser>[].obs;
   bool _qrSheetOpen = false;
   Set<String> _qrKnownUserIds = {};
+  bool _syncingAll = false;
+
+  void _showToast(String msg) {
+    try {
+      SmartDialog.showToast(msg);
+    } catch (_) {}
+  }
 
   static String _userId(RoomUser user) =>
       user.connectionId.isNotEmpty ? user.connectionId : user.shortId;
@@ -170,16 +180,30 @@ class RemoteSyncRoomController extends BaseController {
     }
   }
 
-  void onReceiveFavorite(bool overlay, String data) async {
+  Future<void> onReceiveFavorite(bool overlay, String data) async {
     try {
-      var jsonBody = json.decode(data) as List;
+      final decoded = json.decode(data);
+      final List<dynamic> followItems;
+      final List<dynamic> tagItems;
+      if (decoded is List) {
+        followItems = decoded;
+        tagItems = const [];
+      } else if (decoded is Map) {
+        followItems =
+            decoded['follows'] is List ? decoded['follows'] as List : const [];
+        tagItems = decoded['tags'] is List ? decoded['tags'] as List : const [];
+      } else {
+        return;
+      }
+
+      final db = DBService.instance;
       var added = 0;
       var updated = 0;
-      for (var item in jsonBody) {
+      for (var item in followItems) {
         var user = FollowUser.fromJson(Map<String, dynamic>.from(item as Map));
-        final existing = DBService.instance.followBox.get(user.id);
+        final existing = db.followBox.get(user.id);
         if (existing == null) {
-          await DBService.instance.followBox.put(user.id, user);
+          await db.followBox.put(user.id, user);
           added++;
         } else {
           var changed = false;
@@ -203,24 +227,56 @@ class RemoteSyncRoomController extends BaseController {
             changed = true;
           }
           if (changed) {
-            await DBService.instance.followBox.put(user.id, existing);
+            await db.followBox.put(user.id, existing);
             updated++;
           }
         }
       }
+
+      var tagsChanged = 0;
+      if (tagItems.isNotEmpty) {
+        final tags = tagItems
+            .map((e) =>
+                FollowUserTag.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+        await db.normalizeFollowTags();
+        await db.runFollowTagMutation(() async {
+          for (final tag in tags) {
+            final localTag = db.tagBox.get(tag.id);
+            if (localTag == null) {
+              await db.tagBox.put(tag.id, tag);
+              tagsChanged++;
+            } else {
+              final userIds = {...localTag.userId, ...tag.userId}.toList();
+              if (userIds.length != localTag.userId.length) {
+                await db.tagBox.put(
+                  tag.id,
+                  localTag.copyWith(userId: userIds),
+                );
+                tagsChanged++;
+              }
+            }
+          }
+        });
+        await db.normalizeFollowTags();
+      }
+
+      if (added > 0 || updated > 0 || tagsChanged > 0) {
+        WebDavAutoSyncService.notifyLocalMutation();
+      }
       EventBus.instance.emit(Constant.kUpdateFollow, 0);
-      SmartDialog.showToast(
-        added > 0 || updated > 0
-            ? "已同步关注列表（新增$added，更新$updated）"
+      _showToast(
+        added > 0 || updated > 0 || tagsChanged > 0
+            ? "已同步关注列表（新增$added，更新$updated${tagsChanged > 0 ? '，标签$tagsChanged' : ''}）"
             : "已同步关注列表（无新增）",
       );
     } catch (e) {
-      SmartDialog.showToast("同步失败:$e");
+      _showToast("同步失败:$e");
       Log.logPrint(e);
     }
   }
 
-  void onReceiveHistory(bool overlay, String data) async {
+  Future<void> onReceiveHistory(bool overlay, String data) async {
     try {
       var jsonBody = json.decode(data) as List;
       var added = 0;
@@ -232,46 +288,204 @@ class RemoteSyncRoomController extends BaseController {
           added++;
         }
       }
-      SmartDialog.showToast(
+      _showToast(
         added > 0 ? '已同步历史记录（新增/更新$added条）' : '已同步历史记录（无新增）',
       );
       EventBus.instance.emit(Constant.kUpdateHistory, 0);
     } catch (e) {
-      SmartDialog.showToast("同步失败:$e");
+      _showToast("同步失败:$e");
       Log.logPrint(e);
     }
   }
 
-  void onReceiveShieldWord(bool overlay, String data) async {
+  Future<void> onReceiveShieldWord(bool overlay, String data) async {
     try {
       var jsonBody = json.decode(data);
-      for (var item in jsonBody) {
-        // add to Hive
-        AppSettingsController.instance.addShieldList(item.toString());
+      final settings = AppSettingsController.instance;
+      var addedWords = 0;
+      var addedUsers = 0;
+      if (jsonBody is List) {
+        for (var item in jsonBody) {
+          final text = item.toString().trim();
+          if (text.isNotEmpty && !settings.shieldList.contains(text)) {
+            settings.addShieldList(text);
+            addedWords++;
+          }
+        }
+      } else if (jsonBody is Map) {
+        final words = jsonBody['words'];
+        if (words is List) {
+          for (var item in words) {
+            final text = item.toString().trim();
+            if (text.isNotEmpty && !settings.shieldList.contains(text)) {
+              settings.addShieldList(text);
+              addedWords++;
+            }
+          }
+        }
+        final users = jsonBody['users'];
+        if (users is List) {
+          for (var item in users) {
+            final text = item.toString().trim();
+            if (text.isNotEmpty && !settings.shieldUserList.contains(text)) {
+              settings.addShieldUser(text);
+              addedUsers++;
+            }
+          }
+        }
       }
-      SmartDialog.showToast('已同步屏蔽词');
+      _showToast(
+        addedWords > 0 || addedUsers > 0
+            ? '已同步弹幕屏蔽（新增词$addedWords，用户$addedUsers）'
+            : '已同步弹幕屏蔽词（无新增）',
+      );
     } catch (e) {
-      SmartDialog.showToast("同步失败:$e");
+      _showToast("同步失败:$e");
       Log.logPrint(e);
     }
   }
 
-  void onReceiveBiliAccount(bool overlay, String data) async {
+  Future<void> onReceiveBiliAccount(bool overlay, String data) async {
     try {
       var jsonBody = json.decode(data);
-      var cookie = jsonBody['cookie'];
-      if (cookie is String && cookie.isNotEmpty) {
+      if (jsonBody is! Map) return;
+      final cookie = jsonBody['cookie'];
+      var biliUpdated = false;
+      var biliProvided = false;
+      if (cookie is String &&
+          cookie.isNotEmpty &&
+          Get.isRegistered<BiliBiliAccountService>()) {
+        biliProvided = true;
         if (BiliBiliAccountService.instance.cookie != cookie) {
           BiliBiliAccountService.instance.setCookie(cookie);
           BiliBiliAccountService.instance.loadUserInfo();
-          SmartDialog.showToast('已同步哔哩哔哩账号');
-        } else {
-          SmartDialog.showToast('哔哩哔哩账号已是最新');
+          biliUpdated = true;
         }
       }
+
+      final webdavPayload = WebDavAccountPayload.fromJson(jsonBody['webdav']);
+      var webdavUpdated = false;
+      var webdavProvided = false;
+      if (webdavPayload != null) {
+        webdavProvided = true;
+        webdavUpdated = await WebDavAccountSync.applyLocal(webdavPayload);
+      }
+
+      if (biliUpdated && webdavUpdated) {
+        _showToast('已同步哔哩哔哩与 WebDAV 账号');
+      } else if (biliUpdated) {
+        _showToast('已同步哔哩哔哩账号');
+      } else if (webdavUpdated) {
+        _showToast('已同步 WebDAV 账号');
+      } else if (biliProvided || webdavProvided) {
+        _showToast('账号配置已是最新');
+      }
     } catch (e) {
-      SmartDialog.showToast("同步失败:$e");
+      _showToast("同步失败:$e");
       Log.logPrint(e);
+    }
+  }
+
+  Future<void> syncAll() async {
+    if (_syncingAll) return;
+    if (roomUsers.length <= 1) {
+      _showToast("无设备连接");
+      return;
+    }
+    _syncingAll = true;
+    try {
+      final db = DBService.instance;
+      final users = db.getFollowList();
+      final tags = db.getFollowTagList();
+      final histories = db.getHistores();
+      final settings = AppSettingsController.instance;
+      final shieldWords = settings.shieldList.toList();
+      final shieldUsers = settings.shieldUserList.toList();
+      final biliCookie = Get.isRegistered<BiliBiliAccountService>() &&
+              BiliBiliAccountService.instance.logined.value
+          ? BiliBiliAccountService.instance.cookie
+          : '';
+      final webdavPayload = WebDavAccountSync.readLocal();
+
+      if (users.isEmpty &&
+          tags.isEmpty &&
+          histories.isEmpty &&
+          shieldWords.isEmpty &&
+          shieldUsers.isEmpty &&
+          biliCookie.isEmpty &&
+          webdavPayload == null) {
+        _showToast("本机暂无可同步的数据");
+        return;
+      }
+
+      try {
+        SmartDialog.showLoading(msg: "正在一键同步全部数据...");
+      } catch (_) {}
+
+      final sent = <String>[];
+      Future<void> sendOrThrow(String action, String content) async {
+        final resp = await signalR.sendContent(
+          roomName: currentRoomId.value,
+          action: action,
+          overlay: false,
+          content: content,
+        );
+        if (!resp.isSuccess) {
+          throw resp.message.isNotEmpty ? resp.message : '发送 $action 失败';
+        }
+      }
+
+      if (users.isNotEmpty || tags.isNotEmpty) {
+        final followJson = users.map((e) => e.toJson()).toList();
+        final content = tags.isEmpty
+            ? json.encode(followJson)
+            : json.encode({
+                'follows': followJson,
+                'tags': tags.map((e) => e.toJson()).toList(),
+              });
+        await sendOrThrow("SendFavorite", content);
+        sent.add(
+          tags.isEmpty ? "关注 ${users.length}" : "关注 ${users.length}/标签 ${tags.length}",
+        );
+      }
+
+      if (histories.isNotEmpty) {
+        await sendOrThrow(
+          "SendHistory",
+          json.encode(histories.map((e) => e.toJson()).toList()),
+        );
+        sent.add("观看记录 ${histories.length}");
+      }
+
+      if (shieldWords.isNotEmpty || shieldUsers.isNotEmpty) {
+        final content = shieldUsers.isEmpty
+            ? json.encode(shieldWords)
+            : json.encode({'words': shieldWords, 'users': shieldUsers});
+        await sendOrThrow("SendShieldWord", content);
+        sent.add("屏蔽规则 ${shieldWords.length + shieldUsers.length}");
+      }
+
+      if (biliCookie.isNotEmpty || webdavPayload != null) {
+        await sendOrThrow(
+          "SendBiliAccount",
+          json.encode({
+            'cookie': biliCookie,
+            if (webdavPayload != null) 'webdav': webdavPayload.toJson(),
+          }),
+        );
+        if (biliCookie.isNotEmpty) sent.add("B站账号");
+        if (webdavPayload != null) sent.add("WebDAV 账号");
+      }
+
+      _showToast("已一键同步：${sent.join('、')}");
+    } catch (e) {
+      _showToast("同步失败:$e");
+      Log.logPrint(e);
+    } finally {
+      _syncingAll = false;
+      try {
+        await SmartDialog.dismiss(status: SmartStatus.loading);
+      } catch (_) {}
     }
   }
 

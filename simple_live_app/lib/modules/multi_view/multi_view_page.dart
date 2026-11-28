@@ -377,6 +377,7 @@ class _MultiViewPageState extends State<MultiViewPage> {
               Video(
                 controller: tile.videoController!,
                 controls: NoVideoControls,
+                filterQuality: FilterQuality.medium,
                 wakelock: false,
               ),
             if (tile.loading.value)

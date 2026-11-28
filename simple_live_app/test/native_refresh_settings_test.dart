@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
@@ -18,6 +19,12 @@ class _Settings extends AppSettingsController {
 
   @override
   void setWindowsAudioExclusive(bool e) => windowsAudioExclusive.value = e;
+
+  @override
+  void setMobileDeband(bool e) => mobileDeband.value = e;
+
+  @override
+  void setMobileInterpolation(bool e) => mobileInterpolation.value = e;
 }
 
 void main() {
@@ -67,6 +74,33 @@ void main() {
         expect(settings.windowsAudioExclusive.value, isTrue);
       }
     } finally {
+      Get.reset();
+    }
+  });
+
+  testWidgets('手机端直播间设置展示去色带与高刷画面平滑开关并隐藏桌面独有项', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final settings = Get.put<AppSettingsController>(_Settings());
+    try {
+      await tester.pumpWidget(const GetMaterialApp(home: PlaySettingsPage()));
+      expect(find.text('AI 超分增强（FSRCNNX）'), findsNothing);
+      expect(find.text('WASAPI 音频独占'), findsNothing);
+
+      final deband = find.text('画面去色带（Deband）');
+      await tester.scrollUntilVisible(deband, 120);
+      expect(deband, findsOneWidget);
+      await tester.tap(deband);
+      await tester.pump();
+      expect(settings.mobileDeband.value, isFalse);
+
+      final smooth = find.text('高刷动态画面平滑（补帧）');
+      await tester.scrollUntilVisible(smooth, 120);
+      expect(smooth, findsOneWidget);
+      await tester.tap(smooth);
+      await tester.pump();
+      expect(settings.mobileInterpolation.value, isTrue);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
       Get.reset();
     }
   });

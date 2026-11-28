@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -14,6 +15,14 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
 
   @override
   Widget build(BuildContext context) {
+    final overridePlatform = debugDefaultTargetPlatformOverride;
+    final showWindowsEnhancements =
+        overridePlatform == TargetPlatform.windows ||
+            (overridePlatform == null && Platform.isWindows);
+    final showMobileEnhancements =
+        overridePlatform == TargetPlatform.android ||
+            overridePlatform == TargetPlatform.iOS ||
+            (overridePlatform == null && (Platform.isAndroid || Platform.isIOS));
     return Scaffold(
       appBar: AppBar(
         title: const Text("直播间设置"),
@@ -154,7 +163,7 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               ],
             ),
           ),
-          if (Platform.isWindows) ...[
+          if (showWindowsEnhancements) ...[
             Padding(
               padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
               child: Text(
@@ -190,6 +199,40 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                       subtitle: "绕过系统混音直出声卡；开启后播放直播时其他软件将静音，重进直播间生效",
                       value: controller.windowsAudioExclusive.value,
                       onChanged: controller.setWindowsAudioExclusive,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (showMobileEnhancements) ...[
+            Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "画质与流畅增强",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+            SettingsCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "画面去色带（Deband）",
+                      subtitle: "消除直播暗部压缩色块与断层；GPU 开销极低，默认开启",
+                      value: controller.mobileDeband.value,
+                      onChanged: controller.setMobileDeband,
+                    ),
+                  ),
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "高刷动态画面平滑（补帧）",
+                      subtitle:
+                          "mpv 时间域帧平滑（非 AI 光流）；90/120Hz 旗舰机可按需开启，可能轻微增加功耗与延迟",
+                      value: controller.mobileInterpolation.value,
+                      onChanged: controller.setMobileInterpolation,
                     ),
                   ),
                 ],

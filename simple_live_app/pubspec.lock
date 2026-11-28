@@ -274,6 +274,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.11.1"
+  dio_http2_adapter:
+    dependency: transitive
+    description:
+      name: dio_http2_adapter
+      sha256: "92c9dd3c3a80bf50f8ac3cde5751a02b63b9149eb9084dd5c0aede286ad10269"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.9.0"
   dio_web_adapter:
     dependency: transitive
     description:
@@ -573,6 +581,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.6.0"
+  http2:
+    dependency: transitive
+    description:
+      name: http2
+      sha256: "382d3aefc5bd6dc68c6b892d7664f29b5beb3251611ae946a98d35158a82bbfa"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   http_client_helper:
     dependency: transitive
     description:

@@ -16,6 +16,7 @@ import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/remote_sync_connection.dart';
+import 'package:simple_live_app/services/webdav_account_sync.dart';
 import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 import 'package:udp/udp.dart';
 import 'package:shelf/shelf.dart' as shelf;
@@ -53,6 +54,12 @@ class SyncService extends GetxService {
   var httpErrorMsg = "".obs;
 
   var deviceId = "";
+
+  void _showToast(String msg) {
+    try {
+      SmartDialog.showToast(msg);
+    } catch (_) {}
+  }
 
   /// 供扫码和远程中转使用的本机地址列表；非默认端口时附带端口号。
   String get qrAddress {
@@ -258,6 +265,7 @@ class SyncService extends GetxService {
     serverRouter.post('/sync/history', _syncHistoryReuqest);
     serverRouter.post('/sync/blocked_word', _syncBlockedWordReuqest);
     serverRouter.post('/sync/account/bilibili', _syncBiliAccountReuqest);
+    serverRouter.post('/sync/account/webdav', _syncWebDavAccountRequest);
 
     // 双向同步：允许新设备主动从对方拉取数据
     serverRouter.get('/sync/follow', _exportFollowUserRequest);
@@ -265,6 +273,7 @@ class SyncService extends GetxService {
     serverRouter.get('/sync/history', _exportHistoryRequest);
     serverRouter.get('/sync/blocked_word', _exportBlockedWordRequest);
     serverRouter.get('/sync/account/bilibili', _exportBiliAccountRequest);
+    serverRouter.get('/sync/account/webdav', _exportWebDavAccountRequest);
     return serverRouter;
   }
 
@@ -392,6 +401,14 @@ class SyncService extends GetxService {
     });
   }
 
+  Future<shelf.Response> _exportWebDavAccountRequest(
+      shelf.Request request) async {
+    return toJsonResponse({
+      'status': true,
+      'data': WebDavAccountSync.readLocal()?.toJson(),
+    });
+  }
+
   /// 同步关注用户列表
   Future<shelf.Response> _syncFollowUserReuqest(shelf.Request request) async {
     try {
@@ -437,7 +454,7 @@ class SyncService extends GetxService {
       if (added > 0 || updated > 0) {
         WebDavAutoSyncService.notifyLocalMutation();
       }
-      SmartDialog.showToast(
+      _showToast(
         added > 0 || updated > 0
             ? '已接收关注列表（新增$added，更新$updated）'
             : '已同步关注用户列表（无新增）',
@@ -498,7 +515,7 @@ class SyncService extends GetxService {
       if (changedCount > 0) {
         WebDavAutoSyncService.notifyLocalMutation();
       }
-      SmartDialog.showToast('已同步标签列表');
+      _showToast('已同步标签列表');
       EventBus.instance.emit(Constant.kUpdateFollow, 0);
       return toJsonResponse({
         'status': true,
@@ -534,7 +551,7 @@ class SyncService extends GetxService {
         }
       }
 
-      SmartDialog.showToast(
+      _showToast(
         added > 0 || updated > 0
             ? '已接收观看记录（新增$added，更新$updated）'
             : '已同步观看记录（无新增）',
@@ -594,7 +611,7 @@ class SyncService extends GetxService {
           }
         }
       }
-      SmartDialog.showToast(
+      _showToast(
         addedWords > 0 || addedUsers > 0
             ? '已接收弹幕屏蔽（新增词$addedWords，用户$addedUsers）'
             : '已同步弹幕屏蔽词（无新增）',
@@ -626,11 +643,40 @@ class SyncService extends GetxService {
           BiliBiliAccountService.instance.setCookie(cookie);
           BiliBiliAccountService.instance.loadUserInfo();
           updated = true;
-          SmartDialog.showToast('已同步哔哩哔哩账号');
+          _showToast('已同步哔哩哔哩账号');
         } else {
-          SmartDialog.showToast('哔哩哔哩账号已是最新');
+          _showToast('哔哩哔哩账号已是最新');
         }
       }
+      return toJsonResponse({
+        'status': true,
+        'message': 'success',
+        'updated': updated,
+      });
+    } catch (e) {
+      return toJsonResponse({
+        'status': false,
+        'message': e.toString(),
+      });
+    }
+  }
+
+  /// 同步 WebDAV 账号配置
+  Future<shelf.Response> _syncWebDavAccountRequest(
+      shelf.Request request) async {
+    try {
+      var body = await request.readAsString();
+      Log.d('_syncWebDavAccountRequest: $body');
+      var jsonBody = json.decode(body);
+      final payload = WebDavAccountPayload.fromJson(jsonBody);
+      if (payload == null) {
+        return toJsonResponse({
+          'status': false,
+          'message': 'WebDAV 服务器地址为空',
+        });
+      }
+      final updated = await WebDavAccountSync.applyLocal(payload);
+      _showToast(updated ? '已同步 WebDAV 账号' : 'WebDAV 账号已是最新');
       return toJsonResponse({
         'status': true,
         'message': 'success',

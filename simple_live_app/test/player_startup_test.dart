@@ -40,6 +40,44 @@ class _Harness with PlayerMixin {
   Player get player => _fake;
 }
 
+class _AndroidHarness with PlayerMixin {
+  final _fake = _Player();
+  @override
+  Player get player => _fake;
+  @override
+  bool get isWindowsPlayback => false;
+  @override
+  bool get isAndroidPlayback => true;
+  @override
+  bool get isIosPlayback => false;
+  @override
+  double get windowsDisplayHz => 120.0;
+}
+
+class _IosHarness with PlayerMixin {
+  final _fake = _Player();
+  @override
+  Player get player => _fake;
+  @override
+  bool get isWindowsPlayback => false;
+  @override
+  bool get isAndroidPlayback => false;
+  @override
+  bool get isIosPlayback => true;
+  @override
+  double get windowsDisplayHz => 120.0;
+}
+
+class _AndroidMultiViewRuntime extends MultiViewTileRuntime {
+  _AndroidMultiViewRuntime(super.index);
+  @override
+  bool get isWindowsPlayback => false;
+  @override
+  bool get isAndroidPlayback => true;
+  @override
+  bool get isIosPlayback => false;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
@@ -55,12 +93,12 @@ void main() {
     final controller = _Harness();
     await Future.wait([controller.initializePlayer(), controller.initializePlayer()]);
     final native = controller.player.platform as _Native;
-    expect(native.properties['cache-pause-wait'], Platform.isWindows ? '0.5' : '2');
+    expect(native.properties['cache-pause-wait'], Platform.isWindows ? '0.5' : '0.8');
     expect(native.properties['cache-pause-initial'], 'yes');
     expect(native.properties['cache-pause'], 'yes');
     expect(native.properties['cache-secs'], Platform.isWindows ? '30' : '20');
     expect(native.properties['demuxer-max-back-bytes'],
-        Platform.isWindows ? '16777216' : '4194304');
+        Platform.isWindows ? '16777216' : '8388608');
     expect(native.properties['cache-on-disk'], 'no');
     expect(native.properties['interpolation'], 'no');
     expect(native.properties['video-sync'], 'audio');
@@ -198,5 +236,92 @@ void main() {
       expect(native.properties.containsKey('glsl-shaders'), isFalse);
       expect(native.properties.containsKey('audio-exclusive'), isFalse);
     }
+  });
+
+  test('Android 端应用轻量顶级画质基线、aaudio优先回退、0.8s起播与8MB回退缓冲', () async {
+    final controller = _AndroidHarness();
+    await controller.initializePlayer();
+    final native = controller.player.platform as _Native;
+    expect(native.properties['scale'], 'spline36');
+    expect(native.properties['cscale'], 'spline36');
+    expect(native.properties['dscale'], 'mitchell');
+    expect(native.properties['correct-downscaling'], 'yes');
+    expect(native.properties['linear-downscaling'], 'yes');
+    expect(native.properties['dither-depth'], 'auto');
+    expect(native.properties['tone-mapping'], 'bt.2446a');
+    expect(native.properties['audio-buffer'], '0.3');
+    expect(native.properties['audio-resample-cutoff'], '0.96');
+    expect(native.properties['audio-pitch-correction'], 'yes');
+    expect(native.properties['ao'], 'aaudio,audiotrack');
+    expect(native.properties['deband'], 'yes');
+    expect(native.properties['deband-iterations'], '1');
+    expect(native.properties['deband-threshold'], '35');
+    expect(native.properties['deband-range'], '16');
+    expect(native.properties['deband-grain'], '12');
+    expect(native.properties['interpolation'], 'no');
+    expect(native.properties['video-sync'], 'audio');
+    expect(native.properties['cache-pause-wait'], '0.8');
+    expect(native.properties['cache-secs'], '20');
+    expect(native.properties['demuxer-max-back-bytes'], '8388608');
+    expect(native.properties['force-seekable'], 'yes');
+    expect(native.properties.containsKey('glsl-shaders'), isFalse);
+    expect(native.properties.containsKey('audio-exclusive'), isFalse);
+    expect(native.properties.containsKey('override-display-fps'), isFalse);
+  });
+
+  test('iOS 端应用画质基线与去色带，不写入 Android 专属 ao/force-seekable', () async {
+    final controller = _IosHarness();
+    await controller.initializePlayer();
+    final native = controller.player.platform as _Native;
+    expect(native.properties['scale'], 'spline36');
+    expect(native.properties['tone-mapping'], 'bt.2446a');
+    expect(native.properties['deband'], 'yes');
+    expect(native.properties['audio-buffer'], '0.3');
+    expect(native.properties['cache-pause-wait'], '0.8');
+    expect(native.properties['demuxer-max-back-bytes'], '8388608');
+    expect(native.properties.containsKey('ao'), isFalse);
+    expect(native.properties.containsKey('force-seekable'), isFalse);
+  });
+
+  test('手机端开关可关闭 Deband、开启与关闭高刷时间域平滑并复位帧率覆盖', () async {
+    final settings = AppSettingsController.instance;
+    settings.mobileDeband.value = false;
+    settings.mobileInterpolation.value = true;
+    final controller = _AndroidHarness();
+    await controller.initializePlayer();
+    final native = controller.player.platform as _Native;
+    expect(native.properties['deband'], 'no');
+    expect(native.properties['video-sync'], 'display-resample');
+    expect(native.properties['interpolation'], 'yes');
+    expect(native.properties['tscale'], 'oversample');
+    expect(native.properties['override-display-fps'], '120.000');
+
+    settings.mobileDeband.value = true;
+    settings.mobileInterpolation.value = false;
+    await controller.initializePlayer();
+    // 已初始化情况下直接通过 Worker / 属性方法生效；新实例关闭平滑不保留 override-display-fps
+    final disabled = _AndroidHarness();
+    await disabled.initializePlayer();
+    final native2 = disabled.player.platform as _Native;
+    expect(native2.properties['deband'], 'yes');
+    expect(native2.properties['interpolation'], 'no');
+    expect(native2.properties['video-sync'], 'audio');
+  });
+
+  test('Android 多画面模式应用轻量画质与音频基线，保持4MB回退缓冲且不开去色带/补帧', () async {
+    final runtime = _AndroidMultiViewRuntime(0);
+    final fake = _Player();
+    await runtime.configurePlayerForTest(fake);
+    final native = fake.platform as _Native;
+    expect(native.properties['scale'], 'spline36');
+    expect(native.properties['cscale'], 'spline36');
+    expect(native.properties['tone-mapping'], 'bt.2446a');
+    expect(native.properties['audio-buffer'], '0.3');
+    expect(native.properties['ao'], 'aaudio,audiotrack');
+    expect(native.properties['interpolation'], 'no');
+    expect(native.properties['video-sync'], 'audio');
+    expect(native.properties['cache-secs'], '15');
+    expect(native.properties['demuxer-max-back-bytes'], '4194304');
+    expect(native.properties.containsKey('deband'), isFalse);
   });
 }

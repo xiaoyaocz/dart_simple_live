@@ -24,6 +24,9 @@ class LocalStorageService extends GetxService {
   /// 关注页默认状态：0 全部、1 直播中、2 未开播（不保存临时筛选）。
   static const String kFollowDefaultFilter = "FollowDefaultFilter";
 
+  /// 关注列表最近一次开播状态快照（本地冷启动秒开用，不上传 WebDAV）。
+  static const String kFollowStatusSnapshot = "FollowStatusSnapshot";
+
   /// 显示模式
   /// * [0] 跟随系统
   /// * [1] 浅色模式
@@ -219,6 +222,12 @@ class LocalStorageService extends GetxService {
 
   /// Windows WASAPI 音频独占开关
   static const String kWindowsAudioExclusive = "WindowsAudioExclusive";
+
+  /// 手机端画面去色带（Deband）开关
+  static const String kMobileDeband = "MobileDeband";
+
+  /// 手机端高刷动态画面平滑（补帧）开关
+  static const String kMobileInterpolation = "MobileInterpolation";
 
   late Box settingsBox;
   late Box<String> shieldBox;

@@ -54,36 +54,14 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
             ),
           ),
           SettingsCard(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Remix.heart_line),
-                  title: const Text("发送关注列表和标签"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.syncFollowAndTag,
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text("发送观看记录"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.syncHistory,
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.shield_keyhole_line),
-                  title: const Text("发送弹幕屏蔽词"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.syncBlockedWord,
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.account_circle_line),
-                  title: const Text("发送哔哩哔哩账号"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.syncBiliAccount,
-                ),
-              ],
+            child: ListTile(
+              leading: const Icon(Icons.cloud_upload_outlined),
+              title: const Text("一键发送全部数据"),
+              subtitle: const Text(
+                "包含关注与标签、观看记录、弹幕屏蔽、哔哩哔哩与 WebDAV 账号",
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.syncAll,
             ),
           ),
           Padding(
@@ -94,36 +72,14 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
             ),
           ),
           SettingsCard(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Remix.download_2_line),
-                  title: const Text("拉取关注列表和标签"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.pullFollowAndTag,
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text("拉取观看记录"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.pullHistory,
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.shield_keyhole_line),
-                  title: const Text("拉取弹幕屏蔽词"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.pullBlockedWord,
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.account_circle_line),
-                  title: const Text("拉取哔哩哔哩账号"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: controller.pullBiliAccount,
-                ),
-              ],
+            child: ListTile(
+              leading: const Icon(Remix.download_2_line),
+              title: const Text("一键拉取全部数据"),
+              subtitle: const Text(
+                "包含关注与标签、观看记录、弹幕屏蔽、哔哩哔哩与 WebDAV 账号",
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.pullAll,
             ),
           ),
         ],

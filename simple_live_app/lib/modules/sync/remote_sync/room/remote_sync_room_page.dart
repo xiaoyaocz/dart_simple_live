@@ -158,45 +158,14 @@ class RemoteSyncRoomPage extends GetView<RemoteSyncRoomController> {
             ),
           ),
           SettingsCard(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Remix.heart_line),
-                  title: const Text("发送关注列表"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncFollow();
-                  },
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text("发送观看记录"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncHistory();
-                  },
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.shield_keyhole_line),
-                  title: const Text("发送弹幕屏蔽词"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncBlockedWord();
-                  },
-                ),
-                AppStyle.divider,
-                ListTile(
-                  leading: const Icon(Remix.account_circle_line),
-                  title: const Text("发送哔哩哔哩账号"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    controller.syncBiliAccount();
-                  },
-                ),
-              ],
+            child: ListTile(
+              leading: const Icon(Icons.sync),
+              title: const Text("一键同步全部数据"),
+              subtitle: const Text(
+                "包含关注列表、标签、观看记录、弹幕屏蔽、哔哩哔哩与 WebDAV 账号",
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.syncAll,
             ),
           ),
           Padding(

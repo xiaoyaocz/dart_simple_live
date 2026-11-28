@@ -284,8 +284,7 @@ class LiveRoomPage extends StatelessWidget {
           },
           aspectRatio: aspectRatio,
           fit: boxFit,
-          filterQuality:
-              Platform.isWindows ? FilterQuality.medium : FilterQuality.low,
+          filterQuality: FilterQuality.medium,
           // 自己实现
           wakelock: false,
         );

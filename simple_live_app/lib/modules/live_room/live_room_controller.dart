@@ -38,8 +38,7 @@ import 'package:simple_live_app/services/danmaku_filter.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
-import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
-import 'package:simple_live_app/widgets/follow_user_item.dart';
+import 'package:simple_live_app/modules/live_room/player/fullscreen_follow_panel.dart';
 import 'package:simple_live_app/services/windows_share_service.dart';
 import 'playback_session.dart';
 import 'player/native_playback_events.dart';
@@ -2067,47 +2066,19 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   void showFollowUserSheet() {
+    final isMobile = defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
     Utils.showBottomSheet(
       title: "关注列表",
-      child: Obx(
-        () => Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: FollowService.instance.loadData,
-              child: ListView.builder(
-                itemCount: FollowService.instance.liveList.length,
-                itemBuilder: (_, i) {
-                  var item = FollowService.instance.liveList[i];
-                  return Obx(
-                    () => FollowUserItem(
-                      item: item,
-                      playing: rxSite.value.id == item.siteId &&
-                          rxRoomId.value == item.roomId,
-                      onTap: () {
-                        Get.back();
-                        resetRoom(
-                          Sites.allSites[item.siteId]!,
-                          item.roomId,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: Obx(
-                  () => DesktopRefreshButton(
-                    refreshing: FollowService.instance.updating.value,
-                    onPressed: FollowService.instance.loadData,
-                  ),
-                ),
-              ),
-          ],
-        ),
+      child: FullscreenFollowPanel(
+        controller: this,
+        fromLeft: false,
+        isMobile: isMobile,
+        showHeader: false,
+        onSelectRoom: (site, roomId) {
+          Get.back();
+          resetRoom(site, roomId);
+        },
       ),
     );
   }

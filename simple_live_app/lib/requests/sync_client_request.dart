@@ -210,4 +210,28 @@ class SyncClientRequest {
     }
     throw data['message'] ?? '拉取哔哩哔哩账号失败';
   }
+
+  Future<Map<String, dynamic>> syncWebDavAccount(
+      SyncClinet client, Map<String, dynamic> payload) async {
+    final data = await _post(
+      "${_baseUrl(client)}/sync/account/webdav",
+      data: payload,
+    );
+    if (data["status"] == true) {
+      return data;
+    }
+    throw data["message"] ?? '同步 WebDAV 账号失败';
+  }
+
+  Future<Map<String, dynamic>?> fetchWebDavAccount(SyncClinet client) async {
+    final data = await _get("${_baseUrl(client)}/sync/account/webdav");
+    if (data['status'] == true) {
+      final raw = data['data'];
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return null;
+    }
+    throw data['message'] ?? '拉取 WebDAV 账号失败';
+  }
 }

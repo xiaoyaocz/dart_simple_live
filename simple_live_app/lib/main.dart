@@ -41,6 +41,7 @@ import 'package:simple_live_app/services/system_proxy_service.dart';
 import 'package:simple_live_app/services/webdav_auto_sync_service.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_core/src/common/http_client.dart' as core_http;
 import 'package:window_manager/window_manager.dart';
 
 import 'package:path/path.dart' as p;
@@ -50,6 +51,11 @@ void main() async {
   WindowsDirectNetwork.initialize();
   WidgetsFlutterBinding.ensureInitialized();
   await SystemProxyService.instance.initialize();
+  core_http.HttpClient.instance.enableHttp2(
+    shouldUseHttp2: (uri) =>
+        !Platform.isAndroid ||
+        SystemProxyService.instance.playbackProxy(uri.toString()) == null,
+  );
   await migrateData();
   await initWindow();
   MediaKit.ensureInitialized();
@@ -60,6 +66,7 @@ void main() async {
   );
   //初始化服务
   await initServices();
+  unawaited(FollowService.instance.warmupNetwork());
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   //设置状态栏为透明
   SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(

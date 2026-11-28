@@ -8,6 +8,7 @@ import '../model/live_room_detail.dart';
 import '../model/live_search_result.dart';
 
 import '../model/live_category.dart';
+import '../model/live_follow_status.dart';
 import '../model/live_play_quality.dart';
 import '../model/live_room_item.dart';
 
@@ -90,6 +91,22 @@ class LiveSite {
   /// 查询直播状态
   Future<bool> getLiveStatus({required String roomId}) {
     return Future.value(false);
+  }
+
+  /// 查询关注列表所需的轻量房间状态（默认回退 getLiveStatus + 详情补齐）
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    final isLive = await getLiveStatus(roomId: roomId);
+    return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+  }
+
+  /// 是否支持关注状态批量查询
+  bool get supportsFollowStatusBatch => false;
+
+  /// 批量查询关注列表所需的轻量房间状态（key 为传入的 roomId）
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async {
+    return const {};
   }
 
   /// 读取指定房间的SC

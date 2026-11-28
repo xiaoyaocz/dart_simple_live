@@ -56,12 +56,14 @@ void main() {
   late FollowService service;
   late Site original;
   late _Site site;
+  late DateTime fakeNow;
 
   void lifecycle(AppLifecycleState state) =>
       binding.handleAppLifecycleStateChanged(state);
 
   setUp(() async {
     lifecycle(AppLifecycleState.resumed);
+    fakeNow = DateTime(2026, 11, 28, 9, 0, 0);
     directory = await Directory.systemTemp.createTemp('follow-foreground-');
     Hive.init(directory.path);
     if (!Hive.isAdapterRegistered(1)) {
@@ -89,6 +91,8 @@ void main() {
     Sites.allSites['huya'] = Site(
         id: 'huya', name: original.name, logo: original.logo, liveSite: site);
     service = Get.put(FollowService());
+    service.clock = () => fakeNow;
+    service.foregroundRefreshDebounce = const Duration(milliseconds: 20);
     await service.loadData(updateStatus: false);
   });
 
@@ -104,23 +108,48 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  test('默认前台防抖300ms与SWR冷却45s', () {
+    final fresh = FollowService();
+    expect(fresh.foregroundRefreshDebounce, const Duration(milliseconds: 300));
+    expect(fresh.foregroundRefreshCooldown, const Duration(seconds: 45));
+  });
+
   for (final away in [AppLifecycleState.inactive, AppLifecycleState.paused]) {
-    test('从${away.name}回到前台自动更新开播状态，每次只刷新一轮', () async {
+    test('从${away.name}回到前台防抖刷新，45s冷却期内跳过，手动刷新绕过冷却', () async {
       lifecycle(away);
       expect(site.requests, isEmpty);
       lifecycle(AppLifecycleState.resumed);
+      // 防抖窗口未到期前不立即发请求
+      expect(site.requests, isEmpty);
       await _until(() => site.requests.length == 1);
       site.requests.single.complete(true);
       await _until(
           () => service.liveList.length == 1 && !service.updating.value);
       expect(service.liveList.single.roomId, '1');
+
+      // 重复 resumed 不额外触发
       lifecycle(AppLifecycleState.resumed);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await Future<void>.delayed(const Duration(milliseconds: 35));
       expect(site.requests.length, 1);
 
+      // 45s 冷却期内再次切回前台跳过冗余网络请求
+      fakeNow = fakeNow.add(const Duration(seconds: 20));
       lifecycle(away);
       lifecycle(AppLifecycleState.resumed);
+      await Future<void>.delayed(const Duration(milliseconds: 35));
+      expect(site.requests.length, 1);
+
+      // 手动刷新无视 45s 冷却期立即请求
+      await service.loadData();
       await _until(() => site.requests.length == 2);
+      site.requests.last.complete(true);
+      await _until(() => !service.updating.value);
+
+      // 超过 45s 冷却后切回前台恢复自动刷新
+      fakeNow = fakeNow.add(const Duration(seconds: 46));
+      lifecycle(away);
+      lifecycle(AppLifecycleState.resumed);
+      await _until(() => site.requests.length == 3);
       site.requests.last.complete(false);
       await _until(
           () => service.notLiveList.length == 1 && !service.updating.value);
@@ -128,26 +157,46 @@ void main() {
     });
   }
 
+  test('连续快速切换前后台在防抖窗口内合并为一次刷新', () async {
+    lifecycle(AppLifecycleState.inactive);
+    lifecycle(AppLifecycleState.resumed);
+    lifecycle(AppLifecycleState.paused);
+    lifecycle(AppLifecycleState.resumed);
+    lifecycle(AppLifecycleState.inactive);
+    lifecycle(AppLifecycleState.resumed);
+    await _until(() => site.requests.length == 1);
+    await Future<void>.delayed(const Duration(milliseconds: 35));
+    expect(site.requests.length, 1);
+    site.requests.single.complete(false);
+    await _until(() => !service.updating.value);
+  });
+
   test('已有刷新进行中时切回前台不重启或重复请求', () async {
     await service.loadData();
     await _until(() => site.requests.length == 1);
     lifecycle(AppLifecycleState.inactive);
     lifecycle(AppLifecycleState.resumed);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await Future<void>.delayed(const Duration(milliseconds: 35));
     expect(site.requests.length, 1);
     site.requests.single.complete(false);
     await _until(() => !service.updating.value);
     expect(service.notLiveList.length, 1);
   });
 
-  test('首次resumed不额外刷新，关闭服务后不再监听前台事件', () async {
+  test('首次resumed不额外刷新，关闭服务会取消待触发防抖与后续监听', () async {
     lifecycle(AppLifecycleState.resumed);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await Future<void>.delayed(const Duration(milliseconds: 35));
     expect(site.requests, isEmpty);
-    service.onClose();
+
     lifecycle(AppLifecycleState.inactive);
     lifecycle(AppLifecycleState.resumed);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    service.onClose();
+    await Future<void>.delayed(const Duration(milliseconds: 35));
+    expect(site.requests, isEmpty);
+
+    lifecycle(AppLifecycleState.paused);
+    lifecycle(AppLifecycleState.resumed);
+    await Future<void>.delayed(const Duration(milliseconds: 35));
     expect(site.requests, isEmpty);
   });
 }

@@ -1,6 +1,8 @@
+import 'common/core_log.dart';
 import 'common/native_quality.dart';
 import 'common/request_pool.dart';
 import 'dart:convert';
+import 'model/live_follow_status.dart';
 import 'model/room_category_name.dart';
 
 import 'package:crypto/crypto.dart';
@@ -551,6 +553,152 @@ class BiliBiliSite implements LiveSite {
     return LiveSearchAnchorResult(hasMore: items.length >= 40, items: items);
   }
 
+  static const int kFollowBatchSize = 40;
+
+  /// 将 B 站开播时间（CST "YYYY-MM-DD HH:MM:SS" 或 Unix 时间戳）转换为秒级时间戳字符串。
+  static String? parseLiveTimeToUnixSeconds(Object? raw) {
+    final text = raw?.toString().trim() ?? '';
+    if (text.isEmpty || text == '0' || text.startsWith('0000-00-00')) {
+      return null;
+    }
+    if (RegExp(r'^[1-9]\d*$').hasMatch(text)) {
+      if (text.length >= 13) {
+        final ms = int.tryParse(text);
+        return ms != null && ms > 0 ? '${ms ~/ 1000}' : null;
+      }
+      return text;
+    }
+    var iso = text.replaceFirst(' ', 'T');
+    if (!RegExp(r'(Z|[+-]\d{2}:?\d{2})$').hasMatch(iso)) {
+      iso = '$iso+08:00';
+    }
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null || parsed.millisecondsSinceEpoch <= 0) {
+      return null;
+    }
+    return '${parsed.millisecondsSinceEpoch ~/ 1000}';
+  }
+
+  @override
+  bool get supportsFollowStatusBatch => runtimeType == BiliBiliSite;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async {
+    if (runtimeType != BiliBiliSite) {
+      return const {};
+    }
+    final ids = <String>[];
+    final seen = <String>{};
+    for (final raw in roomIds) {
+      final clean = raw.trim();
+      if (clean.isNotEmpty && seen.add(clean)) {
+        ids.add(clean);
+      }
+    }
+    if (ids.isEmpty) {
+      return const {};
+    }
+    final results = <String, LiveFollowStatus>{};
+    final header = await getHeader();
+    for (var offset = 0; offset < ids.length; offset += kFollowBatchSize) {
+      final end = (offset + kFollowBatchSize) > ids.length
+          ? ids.length
+          : offset + kFollowBatchSize;
+      final chunk = ids.sublist(offset, end);
+      try {
+        final query = [
+          'req_biz=web_room_componet',
+          ...chunk.map((id) => 'room_ids=${Uri.encodeQueryComponent(id)}'),
+        ].join('&');
+        final url =
+            'https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo?$query';
+        final result = await HttpClient.instance.getJson(url, header: header);
+        if (result is! Map || result['code'] != 0) continue;
+        final data = result['data'];
+        final byRoomIds = data is Map ? data['by_room_ids'] : null;
+        if (byRoomIds is! Map) continue;
+
+        final index = <String, Map>{};
+        for (final mapEntry in byRoomIds.entries) {
+          final value = mapEntry.value;
+          if (value is! Map) continue;
+          final mapKey = mapEntry.key?.toString().trim() ?? '';
+          if (mapKey.isNotEmpty) {
+            index[mapKey] = value;
+          }
+          final canonicalId = value['room_id']?.toString().trim() ?? '';
+          if (canonicalId.isNotEmpty) {
+            index[canonicalId] = value;
+          }
+          final shortId = value['short_id']?.toString().trim() ?? '';
+          if (shortId.isNotEmpty && shortId != '0') {
+            index[shortId] = value;
+          }
+        }
+
+        for (final requestedId in chunk) {
+          final entry = index[requestedId];
+          if (entry == null) continue;
+          final status = int.tryParse('${entry['live_status']}');
+          if (status == null) continue;
+          final isLive = status == 1;
+          final onlineVal = int.tryParse('${entry['online'] ?? ''}') ?? 0;
+          final resolved = entry['room_id']?.toString().trim();
+          results[requestedId] = LiveFollowStatus(
+            isLive: isLive,
+            resolvedRoomId:
+                resolved != null && resolved.isNotEmpty ? resolved : null,
+            online: isLive && onlineVal > 0 ? onlineVal : null,
+            categoryName: firstCategoryName([
+              entry['area_name'],
+              entry['parent_area_name'],
+            ]),
+            showTime:
+                isLive ? parseLiveTimeToUnixSeconds(entry['live_time']) : null,
+            title: entry['title']?.toString(),
+            needsDetailFallback: false,
+          );
+        }
+      } catch (error) {
+        CoreLog.error(error);
+      }
+    }
+    return results;
+  }
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != BiliBiliSite) {
+      final isLive = await getLiveStatus(roomId: roomId);
+      return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+    }
+    var result = await HttpClient.instance.getJson(
+      "https://api.live.bilibili.com/room/v1/Room/get_info",
+      queryParameters: {"room_id": roomId},
+      header: await getHeader(),
+    );
+    final data = result["data"];
+    final status = int.tryParse('${data?["live_status"]}');
+    if (status == null) throw StateError('B站房间未返回直播状态');
+    final isLive = status == 1;
+    final onlineVal = int.tryParse('${data?["online"] ?? ''}') ?? 0;
+    final resolved = data?["room_id"]?.toString().trim();
+    return LiveFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: resolved != null && resolved.isNotEmpty ? resolved : null,
+      online: isLive && onlineVal > 0 ? onlineVal : null,
+      categoryName: firstCategoryName([
+        data?['area_name'],
+        data?['parent_area_name'],
+      ]),
+      showTime: isLive ? parseLiveTimeToUnixSeconds(data?['live_time']) : null,
+      title: data?['title']?.toString(),
+      needsDetailFallback: false,
+    );
+  }
+
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     var result = await HttpClient.instance.getJson(
@@ -589,6 +737,14 @@ class BiliBiliSite implements LiveSite {
       ls.add(message);
     }
     return ls;
+  }
+
+  /// 预热 B 站访客 Cookie（buvid3/buvid4），跳过首轮批查前的往返耗时。
+  Future<void> warmup() async {
+    if (buvid3.isNotEmpty || cookie.contains('buvid3')) return;
+    try {
+      await getHeader().timeout(const Duration(seconds: 2));
+    } catch (_) {}
   }
 
   /// 获取 buvid3 和 buvid4

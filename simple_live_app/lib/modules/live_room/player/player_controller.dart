@@ -21,6 +21,7 @@ import 'package:simple_live_app/app/custom_throttle.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/modules/live_room/player/mobile_video_quality.dart';
 import 'package:simple_live_app/modules/live_room/player/windows_video_quality.dart';
 import 'package:simple_live_app/services/system_proxy_service.dart';
 import 'package:simple_live_app/services/native_refresh_controller.dart';
@@ -35,8 +36,16 @@ mixin PlayerMixin {
   Future<void>? _playerInitialization;
   bool get hasInitializedPlayer => _playerInitialization != null;
   bool get isPlayerClosing => false;
+  @visibleForTesting
+  bool get isWindowsPlayback => Platform.isWindows;
+  @visibleForTesting
+  bool get isAndroidPlayback => Platform.isAndroid;
+  @visibleForTesting
+  bool get isIosPlayback => Platform.isIOS;
+  bool get isMobilePlayback => isAndroidPlayback || isIosPlayback;
   double get windowsDisplayHz => 0;
   bool _windowsInterpolationWasEnabled = false;
+  bool _mobileInterpolationWasEnabled = false;
   Size? _windowsViewportSize;
   double _windowsViewportDpr = 1.0;
   ({int width, int height})? _appliedWindowsOutputSize;
@@ -81,13 +90,13 @@ mixin PlayerMixin {
   String playbackBufferWait({bool adaptive = false}) =>
       switch (AppSettingsController.instance.playerBufferMode.value) {
         1 => '2.5',
-        2 => Platform.isWindows ? '0.3' : '0.8',
-        _ when adaptive => Platform.isWindows ? '1.5' : '3',
-        _ => Platform.isWindows ? '0.5' : '2',
+        2 => isWindowsPlayback ? '0.3' : '0.5',
+        _ when adaptive => isWindowsPlayback ? '1.5' : '2',
+        _ => isWindowsPlayback ? '0.5' : '0.8',
       };
 
   Future<void> _applyWindowsSuperResolution(NativePlayer pp) async {
-    if (!Platform.isWindows || isPlayerClosing) return;
+    if (!isWindowsPlayback || isPlayerClosing) return;
     final enabled = AppSettingsController.instance.windowsSuperResolution.value;
     if (!enabled) {
       await pp.setProperty('glsl-shaders', '');
@@ -99,11 +108,12 @@ mixin PlayerMixin {
     }
   }
 
-  Future<void> _applyWindowsInterpolation(NativePlayer pp) async {
-    if (!Platform.isWindows || isPlayerClosing) return;
-    final enabled = AppSettingsController.instance.windowsInterpolation.value;
+  Future<bool> _setInterpolationProperties(
+    NativePlayer pp, {
+    required bool enabled,
+    required bool wasEnabled,
+  }) async {
     if (enabled) {
-      _windowsInterpolationWasEnabled = true;
       await pp.setProperty('video-sync', 'display-resample');
       await pp.setProperty('interpolation', 'yes');
       await pp.setProperty('tscale', 'oversample');
@@ -111,14 +121,40 @@ mixin PlayerMixin {
       if (hz > 0) {
         await pp.setProperty('override-display-fps', hz.toStringAsFixed(3));
       }
-      return;
+      return true;
     }
     await pp.setProperty('interpolation', 'no');
     await pp.setProperty('video-sync', 'audio');
-    if (_windowsInterpolationWasEnabled) {
-      _windowsInterpolationWasEnabled = false;
+    if (wasEnabled) {
       await pp.setProperty('override-display-fps', '0');
     }
+    return false;
+  }
+
+  Future<void> _applyWindowsInterpolation(NativePlayer pp) async {
+    if (!isWindowsPlayback || isPlayerClosing) return;
+    _windowsInterpolationWasEnabled = await _setInterpolationProperties(
+      pp,
+      enabled: AppSettingsController.instance.windowsInterpolation.value,
+      wasEnabled: _windowsInterpolationWasEnabled,
+    );
+  }
+
+  Future<void> _applyMobileDeband(NativePlayer pp) async {
+    if (!isMobilePlayback || isPlayerClosing) return;
+    await MobileVideoQuality.applyDeband(
+      pp,
+      enabled: AppSettingsController.instance.mobileDeband.value,
+    );
+  }
+
+  Future<void> _applyMobileInterpolation(NativePlayer pp) async {
+    if (!isMobilePlayback || isPlayerClosing) return;
+    _mobileInterpolationWasEnabled = await _setInterpolationProperties(
+      pp,
+      enabled: AppSettingsController.instance.mobileInterpolation.value,
+      wasEnabled: _mobileInterpolationWasEnabled,
+    );
   }
 
   void updateWindowsVideoViewport(Size size, double devicePixelRatio) {
@@ -191,11 +227,21 @@ mixin PlayerMixin {
   Future<void> _configurePlayer() async {
     var pp = player.platform as NativePlayer;
     final settings = AppSettingsController.instance;
-    if (Platform.isWindows) {
+    if (isWindowsPlayback) {
       await pp.setProperty('http-proxy', '');
       await WindowsVideoQuality.applyBaseProperties(pp);
       await _applyWindowsSuperResolution(pp);
       await _applyWindowsInterpolation(pp);
+      // 保留音频变速防变调，配合稳态画质参数。
+      await pp.setProperty('audio-pitch-correction', 'yes');
+    } else if (isMobilePlayback) {
+      await MobileVideoQuality.applyBaseProperties(
+        pp,
+        isAndroid: isAndroidPlayback,
+      );
+      await _applyMobileDeband(pp);
+      await _applyMobileInterpolation(pp);
+      await pp.setProperty('audio-pitch-correction', 'yes');
     } else {
       // Keep source timestamps/frame count; physical display Hz is managed separately.
       await pp.setProperty('interpolation', 'no');
@@ -203,21 +249,17 @@ mixin PlayerMixin {
       await pp.setProperty('audio-pitch-correction', 'yes');
       await pp.setProperty('audio-resample-cutoff', '0.96');
     }
-    if (Platform.isWindows) {
-      // 保留音频变速防变调，配合稳态画质参数。
-      await pp.setProperty('audio-pitch-correction', 'yes');
-    }
     // 直播使用有上限的内存缓存。cache-secs 是预读上限，不是起播等待时间。
     final bufferMode = settings.playerBufferMode.value;
     final cacheSecs = switch (bufferMode) {
       1 => '30',
       2 => '10',
-      _ => Platform.isWindows ? '30' : '20',
+      _ => isWindowsPlayback ? '30' : '20',
     };
     await pp.setProperty('cache-on-disk', 'no');
     await pp.setProperty('cache-secs', cacheSecs);
     await pp.setProperty(
-        'demuxer-max-back-bytes', Platform.isWindows ? '16777216' : '4194304');
+        'demuxer-max-back-bytes', isWindowsPlayback ? '16777216' : '8388608');
     await pp.setProperty('cache-pause', 'yes');
     // Desktop live-edge streams may deliver in real time: requiring two seconds
     // here can delay startup while leaving the first decoded image frozen.
@@ -236,7 +278,7 @@ mixin PlayerMixin {
       onSample: playbackSample,
     );
     // 设置音频输出驱动
-    if (Platform.isWindows && settings.windowsAudioExclusive.value) {
+    if (isWindowsPlayback && settings.windowsAudioExclusive.value) {
       await pp.setProperty('ao', 'wasapi');
       await pp.setProperty('audio-exclusive', 'yes');
     } else if (settings.customPlayerOutput.value) {
@@ -249,7 +291,7 @@ mixin PlayerMixin {
       }
     }
     // media_kit 仓库更新导致的问题，临时解决办法
-    if (Platform.isAndroid) {
+    if (isAndroidPlayback) {
       await pp.setProperty('force-seekable', 'yes');
     }
   }
@@ -1047,6 +1089,8 @@ class PlayerController extends BaseController
   StreamSubscription<Tracks>? _sourceTracks;
   Worker? _superResWorker;
   Worker? _interpolationWorker;
+  Worker? _mobileDebandWorker;
+  Worker? _mobileInterpolationWorker;
   Worker? _displayHzWorker;
 
   double get nativeDisplayHz => _nativeRefresh?.displayHz.value ?? 0;
@@ -1058,17 +1102,20 @@ class PlayerController extends BaseController
     if (_nativeRefresh != null || _playerClosing) return;
     final refresh = _nativeRefresh = NativeRefreshController();
     refresh.start();
-    if (Platform.isWindows) {
+    if (isWindowsPlayback || isMobilePlayback) {
       _displayHzWorker = ever<double>(refresh.displayHz, (_) {
-        if (!_playerClosing &&
-            hasInitializedPlayer &&
-            AppSettingsController.instance.windowsInterpolation.value &&
-            player.platform is NativePlayer) {
-          unawaited((() async {
-            try {
-              await _applyWindowsInterpolation(player.platform as NativePlayer);
-            } catch (_) {}
-          })());
+        if (_playerClosing ||
+            !hasInitializedPlayer ||
+            player.platform is! NativePlayer) {
+          return;
+        }
+        final pp = player.platform as NativePlayer;
+        if (isWindowsPlayback &&
+            AppSettingsController.instance.windowsInterpolation.value) {
+          unawaited(_applyWindowsInterpolation(pp).catchError((Object _) {}));
+        } else if (isMobilePlayback &&
+            AppSettingsController.instance.mobileInterpolation.value) {
+          unawaited(_applyMobileInterpolation(pp).catchError((Object _) {}));
         }
       });
     }
@@ -1084,32 +1131,59 @@ class PlayerController extends BaseController
   void initStream() {
     if (_playerClosing || _streamsInitialized) return;
     _streamsInitialized = true;
-    if (Platform.isWindows && Get.isRegistered<AppSettingsController>()) {
+    if (Get.isRegistered<AppSettingsController>()) {
       final settings = AppSettingsController.instance;
-      _superResWorker = ever<bool>(settings.windowsSuperResolution, (_) {
-        if (!_playerClosing &&
-            hasInitializedPlayer &&
-            player.platform is NativePlayer) {
-          unawaited((() async {
-            try {
-              await _applyWindowsSuperResolution(
-                  player.platform as NativePlayer);
-            } catch (_) {}
-          })());
-        }
-      });
-      _interpolationWorker = ever<bool>(settings.windowsInterpolation, (_) {
-        if (!_playerClosing &&
-            hasInitializedPlayer &&
-            player.platform is NativePlayer) {
-          unawaited((() async {
-            try {
-              await _applyWindowsInterpolation(
-                  player.platform as NativePlayer);
-            } catch (_) {}
-          })());
-        }
-      });
+      if (isWindowsPlayback) {
+        _superResWorker = ever<bool>(settings.windowsSuperResolution, (_) {
+          if (!_playerClosing &&
+              hasInitializedPlayer &&
+              player.platform is NativePlayer) {
+            unawaited((() async {
+              try {
+                await _applyWindowsSuperResolution(
+                    player.platform as NativePlayer);
+              } catch (_) {}
+            })());
+          }
+        });
+        _interpolationWorker = ever<bool>(settings.windowsInterpolation, (_) {
+          if (!_playerClosing &&
+              hasInitializedPlayer &&
+              player.platform is NativePlayer) {
+            unawaited((() async {
+              try {
+                await _applyWindowsInterpolation(
+                    player.platform as NativePlayer);
+              } catch (_) {}
+            })());
+          }
+        });
+      } else if (isMobilePlayback) {
+        _mobileDebandWorker = ever<bool>(settings.mobileDeband, (_) {
+          if (!_playerClosing &&
+              hasInitializedPlayer &&
+              player.platform is NativePlayer) {
+            unawaited((() async {
+              try {
+                await _applyMobileDeband(player.platform as NativePlayer);
+              } catch (_) {}
+            })());
+          }
+        });
+        _mobileInterpolationWorker =
+            ever<bool>(settings.mobileInterpolation, (_) {
+          if (!_playerClosing &&
+              hasInitializedPlayer &&
+              player.platform is NativePlayer) {
+            unawaited((() async {
+              try {
+                await _applyMobileInterpolation(
+                    player.platform as NativePlayer);
+              } catch (_) {}
+            })());
+          }
+        });
+      }
     }
     _bufferingSubscription = player.stream.buffering.listen(mediaBuffering);
     _errorSubscription = player.stream.error.listen((event) {
@@ -1178,6 +1252,10 @@ class PlayerController extends BaseController
     _superResWorker = null;
     _interpolationWorker?.dispose();
     _interpolationWorker = null;
+    _mobileDebandWorker?.dispose();
+    _mobileDebandWorker = null;
+    _mobileInterpolationWorker?.dispose();
+    _mobileInterpolationWorker = null;
     _displayHzWorker?.dispose();
     _displayHzWorker = null;
     cancelWindowsVideoOutputSync();
@@ -1221,11 +1299,18 @@ class PlayerController extends BaseController
             subtitle: Text(startupTiming.value.isEmpty
                 ? '等待播放进度，非首帧渲染计时' : startupTiming.value),
           )),
-          if (refresh != null) Obx(() => ListTile(
-            title: const Text('原生帧率 / 屏幕刷新率'),
-            subtitle: Text('直播源 ${refresh.sourceFps.value > 0 ? '${refresh.sourceFps.value.toStringAsFixed(2)} fps' : '读取中'} · '
-                '屏幕 ${refresh.displayHz.value > 0 ? '${refresh.displayHz.value.toStringAsFixed(2)} Hz' : '系统管理'} · 插帧关闭'),
-          )),
+          if (refresh != null) Obx(() {
+            final settings = AppSettingsController.instance;
+            final interpOn =
+                (isWindowsPlayback && settings.windowsInterpolation.value) ||
+                    (isMobilePlayback && settings.mobileInterpolation.value);
+            return ListTile(
+              title: const Text('原生帧率 / 屏幕刷新率'),
+              subtitle: Text('直播源 ${refresh.sourceFps.value > 0 ? '${refresh.sourceFps.value.toStringAsFixed(2)} fps' : '读取中'} · '
+                  '屏幕 ${refresh.displayHz.value > 0 ? '${refresh.displayHz.value.toStringAsFixed(2)} Hz' : '系统管理'} · '
+                  '${interpOn ? '插帧开启（时间域平滑）' : '插帧关闭'}'),
+            );
+          }),
           if (playbackDiagnostics != null) Obx(() {
             final sample = playbackDiagnostics!.snapshot.value;
             String fps(double? v) => v == null ? '未提供' : '${v.toStringAsFixed(2)} fps';

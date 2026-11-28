@@ -109,6 +109,14 @@ class DouyinSite implements LiveSite {
   @override
   void prefetchRoom(String roomId) {}
 
+  /// 预热抖音访客会话 Cookie（ttwid），避免首次批量刷新时现抓首页。
+  Future<void> warmup() async {
+    if (cookie.isNotEmpty || _visitorCookie != null) return;
+    try {
+      await _refreshVisitorCookie().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
   @override
   Future<List<LiveCategory>> getCategores() async {
     var result = await HttpClient.instance.getText(
@@ -762,18 +770,8 @@ class DouyinSite implements LiveSite {
     );
   }
 
-  /// 通过webRid获取直播间Web信息
-  /// - [webRid] 直播间RID
-  Future<Map> _getRoomDataByApi(String webRid) async {
-    String serverUrl = "https://live.douyin.com/webcast/room/web/enter/";
-
-    // 提前获取 headers
-    var requestHeader = await getRequestHeaders();
-
-    // 使用动态 Referer（包含房间号，参考 DouyinLiveRecorder）
-    requestHeader["Referer"] = "https://live.douyin.com/$webRid";
-
-    var uri = Uri.parse(serverUrl).replace(
+  Uri _buildWebEnterUri(String webRid) {
+    return Uri.parse("https://live.douyin.com/webcast/room/web/enter/").replace(
       scheme: "https",
       port: 443,
       queryParameters: {
@@ -789,23 +787,72 @@ class DouyinSite implements LiveSite {
         "web_rid": webRid,
       },
     );
+  }
+
+  Future<Map> _loadWebEnterData(
+    String url,
+    Map<String, dynamic> requestHeaders,
+  ) async {
+    final result = await HttpClient.instance.getJson(
+      url,
+      header: requestHeaders,
+    );
+    final data = result is Map ? result['data'] : null;
+    final rooms = data is Map ? data['data'] : null;
+    if (rooms is! List || rooms.isEmpty || rooms.first is! Map) {
+      throw const FormatException('抖音直播间接口未返回有效数据');
+    }
+    return data as Map;
+  }
+
+  /// 关注刷新专用轻量接口：只走签名 enter API，444/空响应时刷新访客会话并重签重试一次，
+  /// 不回退重型 HTML 抓取、不做二次睡眠重试。
+  Future<Map> _getFollowRoomDataByApi(String webRid) async {
+    final requestHeader = {
+      ...await getRequestHeaders(),
+      "Referer": "https://live.douyin.com/$webRid",
+    };
+    final uri = _buildWebEnterUri(webRid);
+    try {
+      return await _loadWebEnterData(
+        DouyinSign.getAbogusUrl(uri.toString(), kDefaultUserAgent),
+        requestHeader,
+      );
+    } catch (error) {
+      if (error is! FormatException &&
+          !(error is CoreError && error.statusCode == 444)) {
+        rethrow;
+      }
+      try {
+        await _refreshVisitorCookie();
+      } catch (refreshError) {
+        CoreLog.error(refreshError);
+      }
+      final refreshedHeaders = {
+        ...await getRequestHeaders(),
+        'Referer': 'https://live.douyin.com/$webRid',
+      };
+      return _loadWebEnterData(
+        DouyinSign.getAbogusUrl(uri.toString(), kDefaultUserAgent),
+        refreshedHeaders,
+      );
+    }
+  }
+
+  /// 通过webRid获取直播间Web信息
+  /// - [webRid] 直播间RID
+  Future<Map> _getRoomDataByApi(String webRid) async {
+    // 提前获取 headers
+    var requestHeader = await getRequestHeaders();
+
+    // 使用动态 Referer（包含房间号，参考 DouyinLiveRecorder）
+    requestHeader["Referer"] = "https://live.douyin.com/$webRid";
+
+    var uri = _buildWebEnterUri(webRid);
     var requestUrl = DouyinSign.getAbogusUrl(uri.toString(), kDefaultUserAgent);
 
-    Future<Map> load(String url, Map<String, dynamic> requestHeaders) async {
-      final result = await HttpClient.instance.getJson(
-        url,
-        header: requestHeaders,
-      );
-      final data = result is Map ? result['data'] : null;
-      final rooms = data is Map ? data['data'] : null;
-      if (rooms is! List || rooms.isEmpty || rooms.first is! Map) {
-        throw const FormatException('抖音直播间接口未返回有效数据');
-      }
-      return data as Map;
-    }
-
     try {
-      return await load(requestUrl, requestHeader);
+      return await _loadWebEnterData(requestUrl, requestHeader);
     } catch (error) {
       if (error is! FormatException &&
           !(error is CoreError && error.statusCode == 444)) {
@@ -822,7 +869,7 @@ class DouyinSite implements LiveSite {
         'Referer': 'https://live.douyin.com/$webRid',
       };
       try {
-        return await load(uri.toString(), refreshedHeaders);
+        return await _loadWebEnterData(uri.toString(), refreshedHeaders);
       } catch (fallbackError, stackTrace) {
         if (fallbackError is! FormatException &&
             !(fallbackError is CoreError && fallbackError.statusCode == 444)) {
@@ -830,7 +877,7 @@ class DouyinSite implements LiveSite {
         }
         // 备用请求也被拒绝时，新会话重新签名一次，不复用失败的签名。
         try {
-          return await load(
+          return await _loadWebEnterData(
             DouyinSign.getAbogusUrl(uri.toString(), kDefaultUserAgent),
             refreshedHeaders,
           );
@@ -1157,6 +1204,177 @@ class DouyinSite implements LiveSite {
   Future<bool> getLiveStatus({required String roomId}) async {
     var result = await getRoomDetail(roomId: roomId);
     return result.status;
+  }
+
+  LiveFollowStatus _resolveDouyinFollowStatus({
+    required bool isLive,
+    required String resolvedRoomId,
+    required int online,
+    String? title,
+    String? showTime,
+    String? leafCategoryName,
+    String? categoryId,
+    String? parentCategoryName,
+  }) {
+    if (!isLive) {
+      return LiveFollowStatus(
+        isLive: false,
+        resolvedRoomId: resolvedRoomId,
+        needsDetailFallback: false,
+      );
+    }
+    final trimmedLeaf = leafCategoryName?.trim();
+    if (trimmedLeaf != null && trimmedLeaf.isNotEmpty && trimmedLeaf != '游戏') {
+      return LiveFollowStatus(
+        isLive: true,
+        resolvedRoomId: resolvedRoomId,
+        online: online > 0 ? online : null,
+        categoryName: trimmedLeaf,
+        showTime: showTime,
+        title: title,
+        categoryId: categoryId,
+        parentCategoryName: parentCategoryName,
+        needsDetailFallback: false,
+      );
+    }
+    if (categoryId != null && _webPartitionNames.containsKey(categoryId)) {
+      final cached = _webPartitionNames[categoryId]!;
+      final resolved = cached != '游戏'
+          ? cached
+          : ((parentCategoryName?.trim().isNotEmpty == true)
+              ? parentCategoryName!.trim()
+              : '其他');
+      return LiveFollowStatus(
+        isLive: true,
+        resolvedRoomId: resolvedRoomId,
+        online: online > 0 ? online : null,
+        categoryName: resolved,
+        showTime: showTime,
+        title: title,
+        categoryId: categoryId,
+        parentCategoryName: parentCategoryName,
+        needsDetailFallback: false,
+      );
+    }
+    if (categoryId == null) {
+      final fallback =
+          (parentCategoryName?.trim().isNotEmpty == true)
+              ? parentCategoryName!.trim()
+              : '其他';
+      return LiveFollowStatus(
+        isLive: true,
+        resolvedRoomId: resolvedRoomId,
+        online: online > 0 ? online : null,
+        categoryName: fallback,
+        showTime: showTime,
+        title: title,
+        needsDetailFallback: false,
+      );
+    }
+    // 命中“游戏”且尚未加载网页分类映射时，只做轻量的二级分类查表，不再重拉房间详情。
+    return LiveFollowStatus(
+      isLive: true,
+      resolvedRoomId: resolvedRoomId,
+      online: online > 0 ? online : null,
+      showTime: showTime,
+      title: title,
+      categoryId: categoryId,
+      parentCategoryName: parentCategoryName,
+      needsDetailFallback: true,
+    );
+  }
+
+  LiveFollowStatus _buildFollowStatusFromRoom({
+    required String webRid,
+    required bool isLive,
+    required Map room,
+    required Map? webPartition,
+    required Map? context,
+  }) {
+    final onlineVal =
+        int.tryParse('${room['room_view_stats']?['display_value']}') ?? 0;
+    return _resolveDouyinFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: webRid,
+      online: onlineVal,
+      title: room['title']?.toString(),
+      leafCategoryName: firstCategoryName([webPartition?['title']]),
+      categoryId: douyinWebPartitionId(webPartition),
+      parentCategoryName: douyinWebParentCategoryName(room, context),
+    );
+  }
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != DouyinSite) {
+      final detail = await getRoomDetail(roomId: roomId);
+      return _resolveDouyinFollowStatus(
+        isLive: detail.status,
+        resolvedRoomId: detail.roomId,
+        online: detail.online,
+        title: detail.title,
+        showTime: detail.showTime,
+        leafCategoryName: detail.leafCategoryName,
+        categoryId: detail.categoryId,
+        parentCategoryName: detail.webParentCategoryName,
+      );
+    }
+    Map data;
+    if (roomId.length > 16) {
+      final reflow = await _getRoomDataByRoomId(roomId);
+      final room = reflow['data']?['room'];
+      if (room is! Map) throw StateError('抖音房间未返回数据');
+      final webRid = room['owner']?['web_rid']?.toString() ?? roomId;
+      final status = int.tryParse(room['status']?.toString() ?? '');
+      if (status == null) throw StateError('抖音房间未返回直播状态');
+      if (status == 4) {
+        data = await _getFollowRoomDataByApi(webRid);
+      } else {
+        final context = reflow['data'] is Map ? reflow['data'] as Map : null;
+        return _buildFollowStatusFromRoom(
+          webRid: webRid,
+          isLive: status == 2,
+          room: room,
+          webPartition: douyinWebPartition(room, context),
+          context: context,
+        );
+      }
+      final rooms = data['data'];
+      final roomData = rooms is List && rooms.isNotEmpty ? rooms.first : null;
+      if (roomData is! Map) throw StateError('抖音房间未返回直播数据');
+      final nextStatus = int.tryParse(roomData['status']?.toString() ?? '');
+      if (nextStatus == null) throw StateError('抖音房间未返回直播状态');
+      return _buildFollowStatusFromRoom(
+        webRid: webRid,
+        isLive: nextStatus == 2,
+        room: roomData,
+        webPartition: douyinWebPartition(roomData, data),
+        context: data,
+      );
+    }
+    data = await _getFollowRoomDataByApi(roomId);
+    final rooms = data['data'];
+    final roomData = rooms is List && rooms.isNotEmpty ? rooms.first : null;
+    if (roomData is! Map) throw StateError('抖音房间未返回直播数据');
+    final status = int.tryParse(roomData['status']?.toString() ?? '');
+    if (status == null) throw StateError('抖音房间未返回直播状态');
+    return _buildFollowStatusFromRoom(
+      webRid: roomId,
+      isLive: status == 2,
+      room: roomData,
+      webPartition: douyinWebPartition(roomData, data),
+      context: data,
+    );
+  }
+
+  @override
+  bool get supportsFollowStatusBatch => false;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async {
+    return const {};
   }
 
   @override

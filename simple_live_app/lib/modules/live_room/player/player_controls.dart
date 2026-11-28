@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,14 +10,10 @@ import 'package:simple_live_app/widgets/danmaku/canvas_danmaku.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
-import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
-import 'package:simple_live_app/modules/live_room/quick_live_room_sort.dart';
+import 'package:simple_live_app/modules/live_room/player/fullscreen_follow_panel.dart';
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
-import 'package:simple_live_app/services/follow_service.dart';
-import 'package:simple_live_app/widgets/desktop_refresh_button.dart';
-import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
 import 'dart:async';
@@ -1184,52 +1181,28 @@ void showFollowUser(LiveRoomController controller) {
     return;
   }
 
-  Utils.showRightDialog(
-    title: "关注列表",
-    width: 400,
+  final isMobile = defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+  Utils.showSideDialog(
+    fromLeft: !isMobile,
     useSystem: true,
-    child: Obx(
-      () {
-        final items = sortQuickLiveRooms(FollowService.instance.liveList.toList(),
-            AppSettingsController.instance.siteSort.toList());
-        return Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: FollowService.instance.loadData,
-              child: ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (_, i) {
-                  var item = items[i];
-                  return Obx(
-                    () => FollowUserItem(
-                      item: item,
-                      playing: controller.rxSite.value.id == item.siteId &&
-                          controller.rxRoomId.value == item.roomId,
-                      onTap: () {
-                        Utils.hideRightDialog();
-                        controller.resetRoom(
-                          Sites.allSites[item.siteId]!,
-                          item.roomId,
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: Obx(
-                  () => DesktopRefreshButton(
-                    refreshing: FollowService.instance.updating.value,
-                    onPressed: FollowService.instance.loadData,
-                  ),
-                ),
-              ),
-          ],
-        );
+    showHeader: false,
+    borderRadius: 12,
+    surfaceAlpha: 244,
+    maskColor: Colors.black.withAlpha(48),
+    widthBuilder: (context) => computeFullscreenFollowLayout(
+      MediaQuery.sizeOf(context),
+      MediaQuery.paddingOf(context),
+      isMobile: isMobile,
+    ).panelWidth,
+    child: FullscreenFollowPanel(
+      controller: controller,
+      fromLeft: !isMobile,
+      isMobile: isMobile,
+      onClose: Utils.hideRightDialog,
+      onSelectRoom: (site, roomId) {
+        Utils.hideRightDialog();
+        controller.resetRoom(site, roomId);
       },
     ),
   );

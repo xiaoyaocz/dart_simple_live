@@ -844,6 +844,96 @@ class HuyaSite implements LiveSite {
   }
 
   @override
+  bool get supportsFollowStatusBatch => false;
+
+  @override
+  Future<Map<String, LiveFollowStatus>> getFollowStatusBatch({
+    required List<String> roomIds,
+  }) async =>
+      const {};
+
+  @override
+  Future<LiveFollowStatus> getFollowStatus({required String roomId}) async {
+    if (runtimeType != HuyaSite) {
+      final isLive = await getLiveStatus(roomId: roomId);
+      return LiveFollowStatus(isLive: isLive, needsDetailFallback: true);
+    }
+    try {
+      final room = await _getProfileRoom(roomId)
+          .timeout(const Duration(seconds: 4));
+      final liveStatus = room['liveStatus']?.toString();
+      if (liveStatus == 'ON' || liveStatus == 'OFF') {
+        final isLive = liveStatus == 'ON';
+        final live = (room['liveData'] as Map?) ?? const {};
+        final resolved = live['profileRoom']?.toString().trim();
+        final onlineVal =
+            int.tryParse('${live['userCount'] ?? live['totalCount'] ?? ''}') ??
+                0;
+        final rawStart = live['startTime']?.toString().trim();
+        final showTime = isLive &&
+                rawStart != null &&
+                RegExp(r'^[1-9]\d*$').hasMatch(rawStart)
+            ? rawStart
+            : null;
+        final intro = live['introduction']?.toString() ?? '';
+        final title = intro.isNotEmpty ? intro : live['roomName']?.toString();
+        return LiveFollowStatus(
+          isLive: isLive,
+          resolvedRoomId:
+              resolved != null && resolved.isNotEmpty ? resolved : null,
+          online: isLive && onlineVal > 0 ? onlineVal : null,
+          categoryName: firstCategoryName([
+            live['gameFullName'],
+            live['gameHostName'],
+          ]),
+          showTime: showTime,
+          title: title,
+          needsDetailFallback: false,
+        );
+      }
+    } catch (error) {
+      CoreLog.error(error);
+    }
+
+    final room = await _getRoomInfo(roomId);
+    final roomInfo = room['roomInfo'] is Map ? room['roomInfo'] as Map : null;
+    final status = int.tryParse('${roomInfo?["eLiveStatus"]}');
+    if (status == null) throw StateError('虎牙房间未返回直播状态');
+    final isLive = status == 2;
+    final tLiveInfo =
+        roomInfo?['tLiveInfo'] is Map ? roomInfo!['tLiveInfo'] as Map : null;
+    final tProfileInfo = roomInfo?['tProfileInfo'] is Map
+        ? roomInfo!['tProfileInfo'] as Map
+        : null;
+    final resolved =
+        (tLiveInfo?['lProfileRoom'] ?? tProfileInfo?['lProfileRoom'])
+            ?.toString()
+            .trim();
+    final onlineVal = int.tryParse('${tLiveInfo?['lTotalCount'] ?? ''}') ?? 0;
+    final rawStart = tLiveInfo?['lStartTime']?.toString().trim();
+    final showTime = isLive &&
+            rawStart != null &&
+            RegExp(r'^[1-9]\d*$').hasMatch(rawStart)
+        ? rawStart
+        : null;
+    final intro = tLiveInfo?['sIntroduction']?.toString() ?? '';
+    final title = intro.isNotEmpty ? intro : tLiveInfo?['sRoomName']?.toString();
+    return LiveFollowStatus(
+      isLive: isLive,
+      resolvedRoomId: resolved != null && resolved.isNotEmpty ? resolved : null,
+      online: isLive && onlineVal > 0 ? onlineVal : null,
+      categoryName: firstCategoryName([
+        tLiveInfo?['sGameFullName'],
+        tLiveInfo?['sGameName'],
+        tLiveInfo?['sGameHostName'],
+      ]),
+      showTime: showTime,
+      title: title,
+      needsDetailFallback: false,
+    );
+  }
+
+  @override
   Future<bool> getLiveStatus({required String roomId}) async {
     try {
       final room = await _getProfileRoom(roomId)

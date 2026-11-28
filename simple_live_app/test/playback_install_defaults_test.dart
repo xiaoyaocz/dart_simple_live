@@ -29,6 +29,8 @@ void main() {
     expect(settings.windowsSuperResolution.value, isTrue);
     expect(settings.windowsInterpolation.value, isFalse);
     expect(settings.windowsAudioExclusive.value, isFalse);
+    expect(settings.mobileDeband.value, isTrue);
+    expect(settings.mobileInterpolation.value, isFalse);
   });
 
   test('升级保留弹幕偏好，播放按源码中的自动策略执行', () async {
@@ -55,7 +57,7 @@ void main() {
     expect(settings.preferNativeFrameRate.value, isFalse);
     expect(settings.hardwareDecode.value, isTrue);
     expect(settings.playerCompatMode.value, isFalse);
-    expect(settings.playerBufferSize.value, Platform.isWindows ? 256 : 64);
+    expect(settings.playerBufferSize.value, Platform.isWindows ? 256 : 128);
     expect(settings.playerBufferMode.value, 0);
     expect(settings.liveCatchupEnable.value, isTrue);
     expect(settings.streamRouteProbeEnable.value, isTrue);
@@ -66,15 +68,20 @@ void main() {
     settings.setWindowsSuperResolution(false);
     settings.setWindowsInterpolation(true);
     settings.setWindowsAudioExclusive(true);
+    settings.setMobileDeband(false);
+    settings.setMobileInterpolation(true);
     expect(storage.getValue(LocalStorageService.kWindowsSuperResolution, true),
         isFalse);
     expect(storage.getValue(LocalStorageService.kWindowsInterpolation, false),
         isTrue);
     expect(storage.getValue(LocalStorageService.kWindowsAudioExclusive, false),
         isTrue);
+    expect(storage.getValue(LocalStorageService.kMobileDeband, true), isFalse);
+    expect(storage.getValue(LocalStorageService.kMobileInterpolation, false),
+        isTrue);
   });
 
-  test('手机加载电脑导入配置继续使用自动驱动，不改写原存储', () async {
+  test('手机加载电脑导入配置继续使用自动驱动与128MB缓冲，不改写原存储', () async {
     final storage = LocalStorageService.instance;
     await storage.settingsBox.putAll({
       LocalStorageService.kCustomPlayerOutput: true,
@@ -85,6 +92,7 @@ void main() {
     });
     final settings = Get.put(AppSettingsController(
         outputPolicy: const PlayerOutputPolicy('android')));
+    expect(settings.playerBufferSize.value, 128);
     expect(settings.customPlayerOutput.value, isFalse);
     expect(settings.videoOutputDriver.value, 'auto');
     expect(settings.audioOutputDriver.value, 'auto');
@@ -92,6 +100,12 @@ void main() {
     expect(storage.settingsBox.get(LocalStorageService.kVideoOutputDriver),
         'libmpv');
     expect(storage.settingsBox.get('unrelated-preference'), 'retain');
+    expect(
+      AppSettingsController(outputPolicy: const PlayerOutputPolicy('ios'))
+          .playerBufferSize
+          .value,
+      128,
+    );
   });
 
   test('电脑也忽略旧版手动驱动配置', () async {

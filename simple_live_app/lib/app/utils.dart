@@ -180,69 +180,119 @@ class Utils {
     double width = 320,
     bool useSystem = false,
   }) {
+    showSideDialog(
+      title: title,
+      onDismiss: onDismiss,
+      child: child,
+      width: width,
+      useSystem: useSystem,
+    );
+  }
+
+  static void showSideDialog({
+    String? title,
+    Function()? onDismiss,
+    required Widget child,
+    double width = 320,
+    double Function(BuildContext context)? widthBuilder,
+    bool fromLeft = false,
+    bool useSystem = false,
+    bool showHeader = true,
+    Color? maskColor,
+    double borderRadius = 4,
+    int? surfaceAlpha,
+  }) {
     SmartDialog.show(
-      alignment: Alignment.topRight,
+      alignment: fromLeft ? Alignment.topLeft : Alignment.topRight,
       animationBuilder: (controller, child, animationParam) {
-        //从右到左
         return SlideTransition(
           position: Tween<Offset>(
-            begin: const Offset(1, 0),
+            begin: fromLeft ? const Offset(-1, 0) : const Offset(1, 0),
             end: Offset.zero,
-          ).animate(controller.view),
+          ).animate(CurvedAnimation(
+            parent: controller.view,
+            curve: Curves.easeOutCubic,
+          )),
           child: child,
         );
       },
       useSystem: useSystem,
-      maskColor: Colors.transparent,
+      maskColor: maskColor ?? Colors.transparent,
+      onDismiss: onDismiss,
       animationTime: const Duration(milliseconds: 200),
-      builder: (context) => Container(
-        width: width + MediaQuery.of(context).padding.right,
-        padding: EdgeInsets.only(right: MediaQuery.of(context).padding.right),
-        decoration: BoxDecoration(
-          color: Get.theme.cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(4),
-            bottomLeft: Radius.circular(4),
+      builder: (context) {
+        final mediaPadding = MediaQuery.paddingOf(context);
+        final edgeInset = fromLeft ? mediaPadding.left : mediaPadding.right;
+        final contentWidth = widthBuilder?.call(context) ?? width;
+        final theme = Theme.of(context);
+        final borderSide = BorderSide(
+          color: theme.dividerColor.withAlpha(36),
+          width: 0.8,
+        );
+        final cardSurface = surfaceAlpha != null
+            ? theme.cardColor.withAlpha(surfaceAlpha)
+            : theme.cardColor;
+        return Container(
+          width: contentWidth + edgeInset,
+          padding: EdgeInsets.only(
+            left: fromLeft ? edgeInset : 0,
+            right: fromLeft ? 0 : edgeInset,
           ),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: SafeArea(
-            left: false,
-            right: false,
-            child: MediaQuery(
-              data: const MediaQueryData(padding: EdgeInsets.zero),
-              child: Column(
-                children: [
-                  ListTile(
-                    visualDensity: VisualDensity.compact,
-                    contentPadding: EdgeInsets.zero,
-                    leading: IconButton(
-                      onPressed: () {
-                        SmartDialog.dismiss(status: SmartStatus.allCustom).then(
-                          (value) => onDismiss?.call(),
-                        );
-                      },
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    title: Text(
-                      title,
-                      style: Get.textTheme.titleMedium,
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    color: Colors.grey.withAlpha(25),
-                  ),
-                  Expanded(
-                    child: child,
-                  ),
-                ],
+          decoration: BoxDecoration(
+            color: cardSurface,
+            border: fromLeft
+                ? Border(right: borderSide)
+                : Border(left: borderSide),
+            borderRadius: BorderRadius.only(
+              topLeft: fromLeft ? Radius.zero : Radius.circular(borderRadius),
+              bottomLeft:
+                  fromLeft ? Radius.zero : Radius.circular(borderRadius),
+              topRight: fromLeft ? Radius.circular(borderRadius) : Radius.zero,
+              bottomRight:
+                  fromLeft ? Radius.circular(borderRadius) : Radius.zero,
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: SafeArea(
+              left: false,
+              right: false,
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                removeBottom: true,
+                removeLeft: true,
+                removeRight: true,
+                child: showHeader
+                    ? Column(
+                        children: [
+                          ListTile(
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: EdgeInsets.zero,
+                            leading: IconButton(
+                              onPressed: () {
+                                SmartDialog.dismiss(status: SmartStatus.allCustom);
+                              },
+                              icon: const Icon(Icons.arrow_back),
+                            ),
+                            title: Text(
+                              title ?? '',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                          Divider(
+                            height: 1,
+                            color: Colors.grey.withAlpha(25),
+                          ),
+                          Expanded(child: child),
+                        ],
+                      )
+                    : child,
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

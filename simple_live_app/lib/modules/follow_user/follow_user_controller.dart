@@ -9,6 +9,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
+import 'package:simple_live_app/modules/follow_user/follow_category_group.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
@@ -33,56 +34,12 @@ class FollowUserController extends BasePageController<FollowUser> {
   int _snapshotRevision = 0;
 
   List<FollowUser> sortCategoryMembers(
-      List<FollowUser> members, List<String> siteOrder) {
-    final indexed = members.asMap().entries.toList();
-    final ranks = {for (var i = 0; i < siteOrder.length; i++) siteOrder[i]: i};
-    for (final item in members) {
-      ranks.putIfAbsent(item.siteId, () => ranks.length);
-    }
-    indexed.sort((a, b) {
-      final platform = ranks[a.value.siteId]!.compareTo(ranks[b.value.siteId]!);
-      if (platform != 0) return platform;
-      final aHeat = a.value.heat;
-      final bHeat = b.value.heat;
-      if (aHeat == null && bHeat != null) return 1;
-      if (aHeat != null && bHeat == null) return -1;
-      final heat = aHeat == null ? 0 : bHeat!.compareTo(aHeat);
-      return heat != 0 ? heat : a.key.compareTo(b.key);
-    });
-    return indexed.map((entry) => entry.value).toList();
-  }
+          List<FollowUser> members, List<String> siteOrder) =>
+      sortFollowCategoryMembers(members, siteOrder);
 
   List<MapEntry<String, List<FollowUser>>> sortCategoryGroups(
-      Map<String, List<FollowUser>> groups) {
-    final entries = groups.entries.toList();
-    final previousOrder = {
-      for (var i = 0; i < _categoryOrder.length; i++) _categoryOrder[i]: i,
-    };
-    final order = {
-      for (var i = 0; i < entries.length; i++)
-        entries[i].key: previousOrder[entries[i].key] ?? _categoryOrder.length + i,
-    };
-    final liveCounts = {
-      for (final entry in entries)
-        entry.key: entry.value.where((item) => item.liveStatus.value == 2).length,
-    };
-    entries.sort((a, b) {
-      if (a.key == b.key) return 0;
-      if (a.key == '其他') return 1;
-      if (b.key == '其他') return -1;
-      final difference = liveCounts[b.key]!.compareTo(liveCounts[a.key]!);
-      return difference != 0
-          ? difference
-          : order[a.key]!.compareTo(order[b.key]!);
-    });
-    // 刷新暂时清空列表时保留顺序，避免同人数分类在重新加载后跳动。
-    if (entries.isNotEmpty) {
-      _categoryOrder
-        ..clear()
-        ..addAll(entries.map((entry) => entry.key));
-    }
-    return entries;
-  }
+          Map<String, List<FollowUser>> groups) =>
+      sortFollowCategoryGroups(groups, previousOrder: _categoryOrder);
 
   @override
   void onInit() {
@@ -184,6 +141,7 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   void setFilterMode(FollowUserTag tag) {
     filterMode.value = tag;
+    FollowService.instance.setActiveFilter(tag);
     filterData();
   }
 
